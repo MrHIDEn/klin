@@ -309,6 +309,9 @@ sealed class Expr {
 
   /// Wypełniane przez checker.
   KlinType? resolvedType;
+
+  /// Gdy wyrażenie tablicowe jest użyte jako `[]T` — emisja owija w slice.
+  ArrayType? arrayToSliceFrom;
 }
 
 final class IntLit extends Expr {

@@ -181,6 +181,12 @@ final class Checker {
         null || 'void' => const VoidType(),
         final name => _resolveType(name, func.pos),
       };
+      if (returnType is ArrayType) {
+        throw CheckError(
+          'funkcja nie może zwracać tablicy (użyj slice `[]T`)',
+          func.pos,
+        );
+      }
       func.resolvedReturnType = returnType;
       final receiver = func.receiver;
       if (receiver != null) {
@@ -338,6 +344,12 @@ final class Checker {
             resolved = _defaultConcrete(initType, init.pos);
             _materialize(init, resolved);
           }
+          if (resolved is ArrayType && init is! ArrayLitExpr) {
+            throw CheckError(
+              'inicjalizacja tablicy wymaga literału `[...]`',
+              init.pos,
+            );
+          }
         } else if (annotated != null) {
           // ZII — brak inicjalizatora, typ z adnotacji.
           resolved = annotated;
@@ -355,6 +367,12 @@ final class Checker {
 
       case AssignStmt(:final target, :final value, :final pos):
         final targetType = _checkAssignableTarget(target, pos);
+        if (targetType is ArrayType) {
+          throw CheckError(
+            'nie można przypisać całej tablicy (użyj elementów lub slice)',
+            pos,
+          );
+        }
         final valueType = _inferExpr(value);
         _expectAssignable(targetType, valueType, value.pos);
         _materialize(value, targetType);
@@ -785,6 +803,12 @@ final class Checker {
           };
         }(),
       SliceFromExpr(:final array, :final pos) => () {
+          if (!_isAddressablePlace(array)) {
+            throw CheckError(
+              '`[:]` wymaga tablicy-l-value, nie literału ani wyrażenia chwilowego',
+              pos,
+            );
+          }
           final arrayType = _inferExpr(array);
           if (arrayType is! ArrayType || arrayType.elem is! PrimType) {
             throw CheckError('`[:]` wymaga tablicy typu prymitywnego', pos);
@@ -1078,9 +1102,11 @@ final class Checker {
   /// Ustawia konkretny typ na wyrażeniu (i rekurencyjnie na poddrzewie
   /// tam, gdzie były literały untyped).
   void _materialize(Expr expr, KlinType type) {
-    // `cast(T, x)` zachowuje jawny typ T także gdy kontekst pozwala na
-    // konwersję wskaźnika (np. odrzucenie volatile).
+    // `cast(T, x)` zachowuje jawny typ T — nie nadpisuj kontekstem zewnętrznym.
     if (expr is CastExpr) return;
+    if (type is SliceType && expr.resolvedType is ArrayType) {
+      expr.arrayToSliceFrom = expr.resolvedType as ArrayType;
+    }
     expr.resolvedType = type;
     switch (expr) {
       case UnaryExpr(:final operand, :final op):
@@ -1147,6 +1173,7 @@ final class Checker {
     if (target is PtrType &&
         source is PtrType &&
         target.pointee == source.pointee &&
+        target.isVolatile == source.isVolatile &&
         (!target.isMut || source.isMut)) {
       return true;
     }

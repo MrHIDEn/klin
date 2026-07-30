@@ -13,7 +13,7 @@ fn main() {
     printf("%d\n", sum(buf[:]))
 
     let mut reg: u32 = 0
-    let mut p: *mut u32 = cast(*mut volatile u32, &reg)
+    let mut p: *mut volatile u32 = cast(*mut volatile u32, &reg)
     *p = 1
     printf("%d\n", reg)
 }

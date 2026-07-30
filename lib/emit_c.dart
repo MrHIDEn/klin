@@ -364,6 +364,18 @@ bool _exprIsPtrReceiver(Expr expr) {
 }
 
 String _emitExpr(Expr expr) {
+  final raw = _emitExprRaw(expr);
+  final from = expr.arrayToSliceFrom;
+  if (from != null) {
+    final elem = from.elem;
+    if (elem is! PrimType) {
+      throw StateError('emit: konwersja tablicy→slice wymaga prymitywu');
+    }
+    return '(${_sliceCName(elem)}){ $raw, ${from.len} }';  }
+  return raw;
+}
+
+String _emitExprRaw(Expr expr) {
   return switch (expr) {
     IntLit(:final lexeme) => lexeme.replaceAll('_', ''),
     FloatLit(:final lexeme) => lexeme.replaceAll('_', ''),

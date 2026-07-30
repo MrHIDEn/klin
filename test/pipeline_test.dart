@@ -432,8 +432,24 @@ fn main() {
     final c = emitC(program, 'test/slice_sum.kl');
     expect(c, contains('klin_slice_i32'));
     expect(c, contains('int32_t buf[4] = { 10, 20, 30, 40 };'));
+    expect(c, contains('(klin_slice_i32){ buf, 4 }'));
     expect(c, contains('xs.ptr[i]'));
+    expect(c, contains('volatile uint32_t *p'));
     expect(c, contains('(volatile uint32_t *)(uintptr_t)'));
+  });
+
+  test('niejawna tablica→slice emituje nagłówek slice', () {
+    const source = '''
+fn sum(xs: []i32): i32 { return xs.len }
+fn main() {
+  let buf: [2]i32 = [1, 2]
+  printf("%d\\n", sum(buf))
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'coerce.kl');
+    expect(c, contains('(klin_slice_i32){ buf, 2 }'));
   });
 
   test('błąd: zapis przez niemutowalny wskaźnik', () {
