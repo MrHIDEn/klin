@@ -1,0 +1,128 @@
+# Decyzje projektowe
+
+Trzy pierwsze podjąć **przed pierwszą linią parsera** — przenikają
+tablicę symboli, checker i codegen. Zmiana później to przepisywanie.
+
+---
+
+## D1. Model czasu życia pamięci — ROZSTRZYGNIĘTE
+
+**Wybór: ręczny + `defer` + alokator jako jawny argument (model Zig/Odin).**
+
+Odrzucone:
+- **GC** — wyklucza bare-metal, łamie zasadę nadrzędną.
+- **Borrow checker** — problem badawczy. Zespół Rusta poświęcił lata
+  (NLL, Polonius) i nadal dokłada. Solo = projekt, który nie osiągnie 1.0.
+- **Autofree** — patrz `00-idea.md`.
+
+```
+pub fn parse(a: *Allocator, src: []u8): !Doc {
+    let buf = a.alloc(u8, src.len)   // widać, że alokuje
+    defer a.free(buf)
+    ...
+}
+```
+
+Tryby do rozważenia później (wzorzec z V, ale bez autofree):
+ręczny (domyślny) / arena / opcjonalnie oznaczanie pojedynczych funkcji.
+
+---
+
+## D2. Model błędów — ROZSTRZYGNIĘTE
+
+**Wybór: typ sumaryczny `!T` + operator propagacji + blok `or { }`.**
+
+```
+let f = os.open(path)!          // propaguj wyżej
+let cfg = load(path) or {       // obsłuż lokalnie
+    log.warn("brak: ${err}")
+    Config.defaults()
+}
+```
+
+Odrzucone:
+- **Wyjątki** — ukryty przepływ sterowania, łamie zasadę nadrzędną.
+- **Para `(T, error)` jak w Go** — zaśmieca kod przez `if err != nil`.
+
+Uzasadnienie: Zig i Rust zbiegły się na tym niezależnie.
+
+W emisji: `!T` to struct z tagiem. Operator propagacji to `if (r.is_err)
+return r;`. Zero narzutu poza sprawdzeniem flagi.
+
+---
+
+## D3. Generyki — ROZSTRZYGNIĘTE
+
+**Wybór: preprocesor/makra czasu kompilacji, NIE w gramatyce języka.**
+
+Model Nelui: potężny preprocesor mający dostęp do AST generuje
+wyspecjalizowany kod. Klasy, generyki i polimorfizm implementowane
+ad hoc, bez wpisywania ich do rdzenia.
+
+```
+$fn point(name: str, T: type) {
+    pub struct $name { x: $T, y: $T }
+    pub fn (p: $name) sqlen(): $T { return p.x*p.x + p.y*p.y }
+}
+$point("Vec2f", f64)
+$point("Vec2i", i32)
+```
+
+Uzasadnienie: tańsze w implementacji niż pełny system typów
+z parametrami; pozwala odroczyć decyzję zamiast podejmować ją
+przed pierwszą linią parsera; monomorfizacja i tak jest jedyną sensowną
+strategią przy backendzie C.
+
+Ryzyko: czas kompilacji, komunikaty błędów z rozwiniętych makr.
+
+---
+
+## D4. Mangling nazw
+
+Schemat: `modul_Typ_metoda`, np. `geom_Vec2_translate`.
+
+**Musi być wyłączalny.** Na bare-metal nazwy symboli muszą się zgadzać
+co do znaku z tablicą wektorów (`TIM2_IRQHandler`, `SysTick_Handler`).
+
+```
+@[codename("TIM2_IRQHandler")]
+pub fn on_timer() { counter += 1 }
+```
+
+Mangling musi być odporny na kolizje ze wszystkim z `<stdio.h>`
+i na słowa kluczowe C.
+
+---
+
+## D5. Receiver metody
+
+`fn (v: Vec2) len()` — kopia. `fn (mut v: Vec2) translate()` — wskaźnik.
+
+**Mutacja widoczna w sygnaturze.** To ulepszenie względem Nelui, gdzie
+`function Vec2:translate` daje `self: *Vec2` niejawnie i z wywołania
+nie wiadomo, czy obiekt zostanie zmieniony.
+
+`mut` znika w emisji — zostaje `*`. Cała niezmienność to zjawisko czasu
+kompilacji, zero kosztu w runtime. **To dobry test dla każdej cechy:
+jeśli nie znika w emisji, prawdopodobnie łamie zasadę nadrzędną.**
+
+---
+
+## D6. Inicjalizacja — ZII
+
+Zmienne zadeklarowane bez wartości są zerowane (za Neluą).
+Brak konstruktorów i destruktorów (brak RAII).
+Ewentualnie adnotacja wyłączająca zerowanie dla mikrooptymalizacji.
+
+---
+
+## D7. Do rozstrzygnięcia później
+
+- Domknięcia — czy w ogóle? Nelua ich nie ma poza top-level. Struct
+  z environment + wskaźnik na funkcję to średnia trudność, ale alokacja
+  środowiska łamie zasadę nadrzędną.
+- Interfejsy — fat pointer `{ void* data; Vtable* vt; }`. Jeśli tak, to
+  dispatch dynamiczny **jawny** w składni (`dyn Writer`), domyślny statyczny.
+- Slice: `struct { T* ptr; size_t len, cap; }` — wymusza generyki, więc
+  zależy od D3.
+- Operatory na typach użytkownika — czy w ogóle. Ryzyko ukrytego kosztu.

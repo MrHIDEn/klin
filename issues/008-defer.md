@@ -1,0 +1,26 @@
+# 008 — defer
+
+**Status:** ⬜ do zrobienia
+**Zależy od:** 007
+
+## Zakres
+
+```
+let buf = a.alloc(u8, n)
+defer a.free(buf)
+```
+
+Emisja: wspólny epilog + `goto cleanup`.
+
+## Pułapki
+
+Kolejność odwrotna. Musi zadziałać przed **każdym** wyjściem z zakresu:
+`return`, `break`, `continue`, normalne zakończenie bloku.
+Konflikt z wczesnymi wyjściami to główne źródło błędów w implementacji.
+
+## Kryterium ukończenia
+
+- [ ] `defer` przed `return` w środku pętli
+- [ ] `defer` przed `break`
+- [ ] dwa `defer` w jednym zakresie — kolejność odwrotna
+- [ ] testy złote na wszystkie trzy

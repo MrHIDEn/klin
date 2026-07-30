@@ -1,0 +1,32 @@
+# 006 — Moduły
+
+**Status:** ⬜ do zrobienia
+**Zależy od:** 005
+
+## Zakres
+
+- wiele plików
+- `module nazwa` / `import`
+- `pub` — bez niego symbol jest prywatny
+- prefiks modułu w manglingu
+- `static` w C dla symboli prywatnych
+
+## Uzasadnienie
+
+To odpowiedź na pierwotny problem: w C nazwy zewnętrzne mają domyślnie
+external linkage i leżą w jednej płaskiej przestrzeni. Obejścia to
+`static` i konwencja prefiksów (`gtk_widget_show`, `sqlite3_open`).
+Klin ma to zrobić za programistę.
+
+C23 nadal nie ma modułów; C++ dostał je dopiero w C++20.
+
+## Decyzja
+
+`pub` jawne, a nie eksport przez wielkość litery jak w Go — jawne bije
+ukryte w konwencji nazewniczej.
+
+## Kryterium ukończenia
+
+- [ ] projekt z 3 modułów kompiluje się do jednego `.c`
+- [ ] symbol bez `pub` niedostępny z innego modułu (błąd kompilacji)
+- [ ] symbole prywatne są `static` w wyjściu

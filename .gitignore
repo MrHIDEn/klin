@@ -27,3 +27,16 @@ doc/api/
 
 .flutter-plugins
 .flutter-plugins-dependencies
+
+# Wyjście kompilatora Klin (generowany C i artefakty budowania)
+*.c
+*.o
+*.out
+*.exe
+a.out
+
+# Narzędzia / IDE / system
+.idea/
+*.iml
+.vscode/
+.DS_Store
