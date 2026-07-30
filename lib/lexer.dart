@@ -78,6 +78,9 @@ final class Lexer {
       case '&':
         _advance();
         return Token(TokenKind.ampersand, '&', start);
+      case '@':
+        _advance();
+        return Token(TokenKind.atSign, '@', start);
       case ':':
         _advance();
         return Token(TokenKind.colon, ':', start);
@@ -161,6 +164,7 @@ final class Lexer {
       'defer' => Token(TokenKind.defer_, lexeme, start),
       'or' => Token(TokenKind.or_, lexeme, start),
       'error' => Token(TokenKind.error_, lexeme, start),
+      'asm' => Token(TokenKind.asm_, lexeme, start),
       _ => Token(TokenKind.ident, lexeme, start),
     };
   }

@@ -98,6 +98,7 @@ final class Checker {
       ..clear()
       ..addAll(program.funcs);
     _importAliases = program.importAliases;
+    _checkAttrs(program);
     _registerStructs(program);
     _registerFunctions(program);
     final main = program.funcs
@@ -116,6 +117,7 @@ final class Checker {
     }
 
     for (final func in program.funcs) {
+      if (_hasAttr(func.attrs, 'cimport')) continue;
       _scope = _Scope(null);
       _loopDepth = 0;
       _deferDepth = 0;
@@ -144,10 +146,10 @@ final class Checker {
           ),
         );
       }
-      _checkBlock(func.body);
+      _checkBlock(func.body!);
       if (func.name != 'main' &&
           _currentReturn is! VoidType &&
-          !_returnsOnAllPaths(func.body)) {
+          !_returnsOnAllPaths(func.body!)) {
         throw CheckError(
           'funkcja `${func.name}` musi zwrócić wartość na wszystkich ścieżkach',
           func.pos,
@@ -155,6 +157,51 @@ final class Checker {
       }
     }
   }
+
+  void _checkAttrs(Program program) {
+    final cNames = <String>{};
+    for (final decl in [...program.structs, ...program.funcs]) {
+      final attrs = switch (decl) {
+        StructDecl(:final attrs) => attrs,
+        FuncDecl(:final attrs) => attrs,
+        _ => throw StateError('nieznana deklaracja'),
+      };
+      for (final attr in attrs) {
+        if (!{'codename', 'cimport', 'cinclude', 'link'}.contains(attr.name)) {
+          throw CheckError('nieznany atrybut `${attr.name}`', attr.pos);
+        }
+        final needsArg = attr.name == 'codename' ||
+            attr.name == 'cinclude' ||
+            attr.name == 'link';
+        if (needsArg && attr.arg == null) {
+          throw CheckError('atrybut `${attr.name}` wymaga napisu', attr.pos);
+        }
+        if (attr.name == 'cimport' && attr.arg != null) {
+          throw CheckError(
+              'atrybut `cimport` nie przyjmuje argumentu', attr.pos);
+        }
+        if (attr.name == 'codename' && !cNames.add(attr.arg!)) {
+          throw CheckError('powtórzony codename `${attr.arg}`', attr.pos);
+        }
+      }
+      if (decl is StructDecl && _hasAttr(attrs, 'cimport')) {
+        throw CheckError(
+            '`cimport` jest dozwolony tylko dla funkcji', decl.pos);
+      }
+      if (decl is FuncDecl) {
+        final imported = _hasAttr(attrs, 'cimport');
+        if (imported && decl.body != null) {
+          throw CheckError('funkcja `cimport` nie może mieć ciała', decl.pos);
+        }
+        if (!imported && decl.body == null) {
+          throw CheckError('funkcja bez `cimport` wymaga ciała', decl.pos);
+        }
+      }
+    }
+  }
+
+  bool _hasAttr(List<Attr> attrs, String name) =>
+      attrs.any((attr) => attr.name == name);
 
   void _registerFunctions(Program program) {
     for (final func in program.funcs) {
@@ -330,6 +377,9 @@ final class Checker {
 
   void _checkStmt(Stmt stmt) {
     switch (stmt) {
+      case AsmStmt():
+        break;
+
       case LetStmt(
           :final isMut,
           :final name,
@@ -625,7 +675,7 @@ final class Checker {
       _expectAssignable(expected, actual, arg.pos);
       _materialize(arg, expected);
     }
-    return _CheckedCall(signature.returnType, _mangledFreeName(module, callee));
+    return _CheckedCall(signature.returnType, _cNameForFunction(decl));
   }
 
   FuncDecl _functionDecl(String module, String name) =>
@@ -636,6 +686,13 @@ final class Checker {
 
   String _mangledFreeName(String module, String name) =>
       module.isEmpty ? name : '${module}_$name';
+
+  String _cNameForFunction(FuncDecl func) {
+    for (final attr in func.attrs) {
+      if (attr.name == 'codename') return attr.arg!;
+    }
+    return _mangledFreeName(func.moduleName, func.name);
+  }
 
   KlinType _checkMethodCall(MethodCallExpr call) {
     final receiverType = _inferExpr(call.receiver);

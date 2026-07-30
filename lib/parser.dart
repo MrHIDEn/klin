@@ -61,15 +61,16 @@ final class Parser {
       _importedModules.add(name.lexeme);
     }
     while (!_check(TokenKind.eof)) {
+      final attrs = _attrs();
       var isPub = false;
       if (_check(TokenKind.pub)) {
         _advance();
         isPub = true;
       }
       if (_check(TokenKind.struct)) {
-        structs.add(_struct(isPub));
+        structs.add(_struct(isPub, attrs));
       } else if (_check(TokenKind.fn)) {
-        funcs.add(_func(isPub));
+        funcs.add(_func(isPub, attrs));
       } else {
         throw ParseError(
             'oczekiwano deklarację struktury lub funkcji', _current.pos);
@@ -93,7 +94,29 @@ final class Parser {
     );
   }
 
-  StructDecl _struct(bool isPub) {
+  List<Attr> _attrs() {
+    final attrs = <Attr>[];
+    while (_check(TokenKind.atSign)) {
+      _advance();
+      _expect(TokenKind.lBracket, 'oczekiwano `[` po `@`');
+      do {
+        final name = _expect(TokenKind.ident, 'oczekiwano nazwę atrybutu');
+        String? arg;
+        if (_check(TokenKind.lParen)) {
+          _advance();
+          arg = _expect(TokenKind.string, 'oczekiwano napis atrybutu').lexeme;
+          _expect(TokenKind.rParen, 'oczekiwano `)` po napisie atrybutu');
+        }
+        attrs.add(Attr(name.lexeme, arg, name.pos));
+        if (!_check(TokenKind.comma)) break;
+        _advance();
+      } while (true);
+      _expect(TokenKind.rBracket, 'oczekiwano `]` po atrybutach');
+    }
+    return attrs;
+  }
+
+  StructDecl _struct(bool isPub, List<Attr> attrs) {
     final keyword = _expect(TokenKind.struct, 'oczekiwano `struct`');
     final name = _expect(TokenKind.ident, 'oczekiwano nazwę struktury');
     _rejectCKeyword(name, 'nazwą struktury');
@@ -108,10 +131,15 @@ final class Parser {
     }
     _expect(TokenKind.rBrace, 'oczekiwano `}`');
     return StructDecl(
-        name: name.lexeme, fields: fields, pos: keyword.pos, isPub: isPub);
+      name: name.lexeme,
+      fields: fields,
+      attrs: attrs,
+      pos: keyword.pos,
+      isPub: isPub,
+    );
   }
 
-  FuncDecl _func(bool isPub) {
+  FuncDecl _func(bool isPub, List<Attr> attrs) {
     final fn = _expect(TokenKind.fn, 'oczekiwano `fn`');
     Receiver? receiver;
     if (_check(TokenKind.lParen)) {
@@ -164,8 +192,9 @@ final class Parser {
       receiver: receiver,
       params: params,
       returnTypeName: returnTypeName,
-      body: _block(),
+      body: attrs.any((attr) => attr.name == 'cimport') ? null : _block(),
       pos: fn.pos,
+      attrs: attrs,
       isPub: isPub,
     );
   }
@@ -187,6 +216,7 @@ final class Parser {
     if (_check(TokenKind.for_)) return _forStmt();
     if (_check(TokenKind.return_)) return _returnStmt();
     if (_check(TokenKind.defer_)) return _deferStmt();
+    if (_check(TokenKind.asm_)) return _asmStmt();
     if (_check(TokenKind.break_)) {
       final t = _advance();
       return BreakStmt(t.pos);
@@ -203,6 +233,14 @@ final class Parser {
     }
 
     throw ParseError('oczekiwano instrukcję', _current.pos);
+  }
+
+  AsmStmt _asmStmt() {
+    final keyword = _expect(TokenKind.asm_, 'oczekiwano `asm`');
+    _expect(TokenKind.lParen, 'oczekiwano `(` po `asm`');
+    final code = _expect(TokenKind.string, 'oczekiwano napis instrukcji asm');
+    _expect(TokenKind.rParen, 'oczekiwano `)` po instrukcji asm');
+    return AsmStmt(code.lexeme, keyword.pos);
   }
 
   Stmt _stmtFromExpr(Expr expr) {

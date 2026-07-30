@@ -15,8 +15,8 @@ komponenty istnieją. Inaczej się w tym tonie.
 | [007](007-wskazniki-tablice-slice.md) | Wskaźniki, tablice, slice'y | ✅ | 006 |
 | [008](008-defer.md) | `defer` | ✅ | 007 |
 | [009](009-bledy.md) | Błędy jako wartości | ✅ | 008 |
-| [010](010-bare-metal.md) | **Bare metal: LED na STM32** | 🔜 | 009 |
-| [011](011-svd.md) | Generator SVD | ⬜ | 010* |
+| [010](010-bare-metal.md) | **Bare metal: LED na STM32** | ✅ | 009 |
+| [011](011-svd.md) | Generator SVD | 🔜 | 010* |
 
 \* 011 jest projektem niezależnym — może powstać wcześniej jako osobne
 narzędzie. Generator SVD nie ma nic wspólnego z kompilatorem: czyta XML,

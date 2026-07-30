@@ -7,13 +7,13 @@ import 'package:klin/lexer.dart';
 import 'package:klin/parser.dart';
 import 'package:klin/project.dart';
 
-/// CLI: argv → czytaj → lex → parse → check → emit → cc → run
+/// CLI: argv → czytaj → lex → parse → check → emit → opcjonalnie cc → run
 ///
-/// Użycie: dart run bin/klin.dart [--cc gcc|clang|tcc] <plik.kl>
+/// Użycie: dart run bin/klin.dart [--cc gcc|clang|tcc] [--emit-c] <plik.kl>
 Future<void> main(List<String> args) async {
   final opts = _parseArgs(args);
   if (opts == null) {
-    stderr.writeln('użycie: klin [--cc gcc|clang|tcc] <plik.kl>');
+    stderr.writeln('użycie: klin [--cc gcc|clang|tcc] [--emit-c] <plik.kl>');
     exit(2);
   }
 
@@ -50,6 +50,13 @@ Future<void> main(List<String> args) async {
 
   final cSource = emitC(program, sourcePath);
   await File(cPath).writeAsString(cSource);
+  if (opts.emitC) {
+    final links = collectLinkAttrs(program);
+    if (links.isNotEmpty) {
+      await File('out/$base.link').writeAsString('${links.join('\n')}\n');
+    }
+    return;
+  }
 
   final compile = await Process.run(opts.cc, [cPath, '-o', binPath]);
   if (compile.exitCode != 0) {
@@ -69,18 +76,22 @@ Future<void> main(List<String> args) async {
 final class _Opts {
   final String sourcePath;
   final String cc;
+  final bool emitC;
 
-  const _Opts(this.sourcePath, this.cc);
+  const _Opts(this.sourcePath, this.cc, this.emitC);
 }
 
 _Opts? _parseArgs(List<String> args) {
   String cc = 'gcc';
+  var emitC = false;
   String? source;
   for (var i = 0; i < args.length; i++) {
     final a = args[i];
     if (a == '--cc') {
       if (i + 1 >= args.length) return null;
       cc = args[++i];
+    } else if (a == '--emit-c') {
+      emitC = true;
     } else if (a.startsWith('-')) {
       return null;
     } else if (source == null) {
@@ -90,7 +101,7 @@ _Opts? _parseArgs(List<String> args) {
     }
   }
   if (source == null) return null;
-  return _Opts(source, cc);
+  return _Opts(source, cc, emitC);
 }
 
 String _basenameWithoutExt(String path) {
