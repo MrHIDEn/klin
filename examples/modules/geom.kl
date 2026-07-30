@@ -1,0 +1,10 @@
+module geom
+
+pub struct Vec2 {
+    x: i32
+    y: i32
+}
+
+pub fn (v: Vec2) len_sq(): i32 {
+    return v.x * v.x + v.y * v.y
+}

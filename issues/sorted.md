@@ -36,6 +36,8 @@ wypluwa plik z definicjami rejestrów. Wejście → wyjście, koniec.
 | [020](020-biblioteki-klin.md) | Własne biblioteki Klina | 💭 | 006 |
 | [021](021-biblioteki-c.md) | Biblioteki C (FFI / link) | 💭 | 006? |
 | [022](022-biblioteki-asm.md) | Biblioteki / jednostki ASM | 💭 | 010? |
+| [023](023-examples.md) | Katalog `examples/` (demo) | 💭 | 001+ |
+| [024](024-rtos.md) | RTOS (FreeRTOS / Zephyr / …) | 💭 | 010+ |
 
 ---
 
