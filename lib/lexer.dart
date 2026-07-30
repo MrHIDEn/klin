@@ -38,6 +38,7 @@ final class Lexer {
     final c = _peek;
 
     if (_isIdentStart(c)) return _identOrKeyword(start);
+    if (_isDigit(c)) return _number(start);
     if (c == '"') return _string(start);
 
     switch (c) {
@@ -53,6 +54,24 @@ final class Lexer {
       case '}':
         _advance();
         return Token(TokenKind.rBrace, '}', start);
+      case '+':
+        _advance();
+        return Token(TokenKind.plus, '+', start);
+      case '-':
+        _advance();
+        return Token(TokenKind.minus, '-', start);
+      case '*':
+        _advance();
+        return Token(TokenKind.star, '*', start);
+      case '/':
+        _advance();
+        return Token(TokenKind.slash, '/', start);
+      case ':':
+        _advance();
+        return Token(TokenKind.colon, ':', start);
+      case '=':
+        _advance();
+        return Token(TokenKind.equal, '=', start);
       default:
         throw LexError('nieoczekiwany znak `$c`', start);
     }
@@ -64,10 +83,29 @@ final class Lexer {
       buf.write(_advance());
     }
     final lexeme = buf.toString();
-    if (lexeme == 'fn') {
-      return Token(TokenKind.fn, lexeme, start);
+    return switch (lexeme) {
+      'fn' => Token(TokenKind.fn, lexeme, start),
+      'let' => Token(TokenKind.let, lexeme, start),
+      'mut' => Token(TokenKind.mut, lexeme, start),
+      'true' => Token(TokenKind.true_, lexeme, start),
+      'false' => Token(TokenKind.false_, lexeme, start),
+      _ => Token(TokenKind.ident, lexeme, start),
+    };
+  }
+
+  Token _number(SourcePos start) {
+    final buf = StringBuffer();
+    while (!_atEnd && _isDigit(_peek)) {
+      buf.write(_advance());
     }
-    return Token(TokenKind.ident, lexeme, start);
+    if (!_atEnd && _peek == '.' && _i + 1 < source.length && _isDigit(source[_i + 1])) {
+      buf.write(_advance()); // .
+      while (!_atEnd && _isDigit(_peek)) {
+        buf.write(_advance());
+      }
+      return Token(TokenKind.floatLit, buf.toString(), start);
+    }
+    return Token(TokenKind.intLit, buf.toString(), start);
   }
 
   Token _string(SourcePos start) {
@@ -138,7 +176,11 @@ final class Lexer {
   }
 
   static bool _isIdentContinue(String c) {
+    return _isIdentStart(c) || _isDigit(c);
+  }
+
+  static bool _isDigit(String c) {
     final u = c.codeUnitAt(0);
-    return _isIdentStart(c) || (u >= 48 && u <= 57); // 0-9
+    return u >= 48 && u <= 57;
   }
 }

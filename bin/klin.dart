@@ -1,11 +1,12 @@
 import 'dart:io';
 
 import 'package:klin/ast.dart';
+import 'package:klin/checker.dart';
 import 'package:klin/emit_c.dart';
 import 'package:klin/lexer.dart';
 import 'package:klin/parser.dart';
 
-/// CLI: argv → czytaj → lex → parse → emit → cc → run
+/// CLI: argv → czytaj → lex → parse → check → emit → cc → run
 ///
 /// Użycie: dart run bin/klin.dart [--cc gcc|clang|tcc] <plik.kl>
 Future<void> main(List<String> args) async {
@@ -27,10 +28,14 @@ Future<void> main(List<String> args) async {
   try {
     final tokens = Lexer(source).tokenize();
     program = Parser(tokens).parse();
+    Checker().check(program);
   } on LexError catch (e) {
     stderr.writeln('$sourcePath:$e');
     exit(1);
   } on ParseError catch (e) {
+    stderr.writeln('$sourcePath:$e');
+    exit(1);
+  } on CheckError catch (e) {
     stderr.writeln('$sourcePath:$e');
     exit(1);
   }
