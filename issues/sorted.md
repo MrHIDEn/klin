@@ -33,6 +33,9 @@ wypluwa plik z definicjami rejestrów. Wejście → wyjście, koniec.
 | [017](017-collection-methods.md) | Metody kolekcji (`map`/`filter`/…) | 💭 | 007 |
 | [018](018-generators-yield.md) | Generatory / `yield` | 💭 | 004+ |
 | [019](019-default-int-types.md) | Domyślne typy (`int` / literały) | 💭 | 002 |
+| [020](020-biblioteki-klin.md) | Własne biblioteki Klina | 💭 | 006 |
+| [021](021-biblioteki-c.md) | Biblioteki C (FFI / link) | 💭 | 006? |
+| [022](022-biblioteki-asm.md) | Biblioteki / jednostki ASM | 💭 | 010? |
 
 ---
 
