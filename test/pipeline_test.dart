@@ -78,6 +78,22 @@ void main() {
     expect(proc.stderr.toString(), contains('3:'));
   });
 
+  test('błąd: wywołanie słowa kluczowego C łapie frontend, nie gcc', () {
+    final source = File('test/c_keyword_call.kl').readAsStringSync();
+    expect(
+      () => Parser(Lexer(source).tokenize()).parse(),
+      throwsA(
+        predicate((e) {
+          if (e is! ParseError) return false;
+          final msg = e.toString();
+          return msg.contains('2:') &&
+              msg.contains('słowem kluczowym C') &&
+              msg.contains('return');
+        }),
+      ),
+    );
+  });
+
   test('błąd typów: niezgodność z pozycją', () {
     final source = File('test/type_mismatch.kl').readAsStringSync();
     final program = Parser(Lexer(source).tokenize()).parse();

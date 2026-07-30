@@ -105,6 +105,13 @@ final class Parser {
 
   CallStmt _callStmt() {
     final callee = _expect(TokenKind.ident, 'oczekiwano nazwę funkcji');
+    // Z3: nie emitować słów kluczowych C jako callee — gcc nie powinien krzyczeć.
+    if (_cKeywords.contains(callee.lexeme)) {
+      throw ParseError(
+        '`${callee.lexeme}` jest słowem kluczowym C i nie może być nazwą wywołania',
+        callee.pos,
+      );
+    }
     _expect(TokenKind.lParen, 'oczekiwano `(`');
     final arg = _expect(TokenKind.string, 'oczekiwano napis');
     _expect(TokenKind.rParen, 'oczekiwano `)`');
@@ -192,4 +199,58 @@ final class Parser {
     _i++;
     return t;
   }
+
+  /// Słowa kluczowe C — nie mogą trafić do emisji jako identyfikatory wywołań.
+  static const _cKeywords = {
+    'auto',
+    'break',
+    'case',
+    'char',
+    'const',
+    'continue',
+    'default',
+    'do',
+    'double',
+    'else',
+    'enum',
+    'extern',
+    'float',
+    'for',
+    'goto',
+    'if',
+    'inline',
+    'int',
+    'long',
+    'register',
+    'restrict',
+    'return',
+    'short',
+    'signed',
+    'sizeof',
+    'static',
+    'struct',
+    'switch',
+    'typedef',
+    'union',
+    'unsigned',
+    'void',
+    'volatile',
+    'while',
+    '_Alignas',
+    '_Alignof',
+    '_Atomic',
+    '_Bool',
+    '_Complex',
+    '_Generic',
+    '_Imaginary',
+    '_Noreturn',
+    '_Static_assert',
+    '_Thread_local',
+    'bool', // C23 / <stdbool.h>
+    'true',
+    'false',
+    'nullptr',
+    'typeof',
+    'typeof_unqual',
+  };
 }

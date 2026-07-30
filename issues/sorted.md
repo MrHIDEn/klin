@@ -24,6 +24,14 @@ wypluwa plik z definicjami rejestrów. Wejście → wyjście, koniec.
 
 ---
 
+## Do rozważenia (nie w kolejce głównej)
+
+| # | Zadanie | Status | Zależy od |
+|---|---|---|---|
+| [012](012-stdlib-io.md) | Opcjonalny moduł I/O (`println`) | 💭 | 006 |
+
+---
+
 ## Dwa kamienie milowe
 
 **Po 001** — cały rurociąg działa. Każda następna cecha to dokładanie
