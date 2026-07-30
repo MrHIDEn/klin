@@ -59,6 +59,7 @@ final class Parser {
     if (!_check(TokenKind.rParen)) {
       do {
         final paramName = _expect(TokenKind.ident, 'oczekiwano nazwę parametru');
+        _rejectCKeyword(paramName, 'nazwą parametru');
         _expect(TokenKind.colon, 'oczekiwano `:` po nazwie parametru');
         final type = _expect(TokenKind.ident, 'oczekiwano nazwę typu parametru');
         params.add(
@@ -228,18 +229,22 @@ final class Parser {
     final tok = _expect(TokenKind.return_, 'oczekiwano `return`');
     Expr? value;
     // Bez średników: nie pożeraj następnej instrukcji (`return` + `puts(...)`
-    // albo `x = ...` w kolejnej linii).
-    if (_looksLikeReturnValue()) {
+    // albo `x = ...` w kolejnej linii). `return fib(n)` w tej samej linii OK.
+    if (_looksLikeReturnValue(tok.pos)) {
       value = _expr();
     }
     return ReturnStmt(value: value, pos: tok.pos);
   }
 
-  bool _looksLikeReturnValue() {
+  bool _looksLikeReturnValue(SourcePos returnPos) {
     if (!_canStartExpr(_current.kind)) return false;
     if (_check(TokenKind.ident) && _i + 1 < _tokens.length) {
       final next = _tokens[_i + 1].kind;
       if (next == TokenKind.equal) {
+        return false;
+      }
+      // Wywołanie zaczynające się w następnej linii → osobny stmt, nie wartość.
+      if (next == TokenKind.lParen && _current.pos.line > returnPos.line) {
         return false;
       }
     }

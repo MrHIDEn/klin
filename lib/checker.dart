@@ -125,9 +125,10 @@ final class Checker {
         param.resolvedType = type;
         params.add(type);
       }
-      final returnType = func.returnTypeName == null
-          ? const VoidType()
-          : _resolvePrimType(func.returnTypeName!, func.pos);
+      final returnType = switch (func.returnTypeName) {
+        null || 'void' => const VoidType(),
+        final name => _resolvePrimType(name, func.pos),
+      };
       func.resolvedReturnType = returnType;
       _functions[func.name] = _FuncSignature(
         paramTypes: params,
@@ -345,6 +346,13 @@ final class Checker {
   }
 
   KlinType _checkCall(String callee, List<Expr> args, SourcePos pos) {
+    final local = _scope.lookup(callee);
+    if (local != null) {
+      throw CheckError(
+        '`$callee` nie jest funkcją (to zmienna `${local.type.displayName}`)',
+        pos,
+      );
+    }
     final signature = _functions[callee];
     if (signature == null) {
       // FFI do C (np. puts/printf) — nie znamy sygnatury.

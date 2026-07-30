@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:klin/ast.dart';
 import 'package:klin/checker.dart';
 import 'package:klin/emit_c.dart';
 import 'package:klin/lexer.dart';
@@ -204,6 +205,40 @@ void main() {
           (e) => e is CheckError &&
               e.toString().contains('oczekiwano `i32`') &&
               e.toString().contains('dostano `bool`'),
+        ),
+      ),
+    );
+  });
+
+  test('return + wywołanie w następnej linii nie pożera stmt', () {
+    const source = '''
+fn main() {
+  return
+  puts("after")
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    final body = program.funcs.single.body.stmts;
+    expect(body.length, 2);
+    expect(body[0], isA<ReturnStmt>());
+    expect((body[0] as ReturnStmt).value, isNull);
+    expect(body[1], isA<CallStmt>());
+  });
+
+  test('błąd: wywołanie lokalnej zmiennej zamiast funkcji', () {
+    const source = '''
+fn foo(): i32 { return 1 }
+fn main() {
+  let foo = 1
+  foo()
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) => e is CheckError && e.toString().contains('nie jest funkcją'),
         ),
       ),
     );
