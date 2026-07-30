@@ -206,6 +206,46 @@ void main() {
     );
   });
 
+  test('zacieniony mut receiver emituje `.` nie `->`', () {
+    const source = '''
+struct Vec2 {
+  x: i32
+}
+fn (mut v: Vec2) bump() {
+  let mut v = Vec2{ 1 }
+  v.x = v.x + 1
+}
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'shadow.kl');
+    expect(c, contains('v.x = (v.x + 1);'));
+    expect(c, isNot(contains('v->x')));
+  });
+
+  test('błąd: przypisanie do pola literału struktury', () {
+    const source = '''
+struct Vec2 {
+  x: i32
+}
+fn main() {
+  Vec2{ 1 }.x = 2
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) =>
+              e is CheckError &&
+              e.toString().contains('pola niemutowalnego wyrażenia'),
+        ),
+      ),
+    );
+  });
+
   test('błąd: zła liczba argumentów funkcji', () {
     final source = File('test/bad_arity.kl').readAsStringSync();
     final program = Parser(Lexer(source).tokenize()).parse();

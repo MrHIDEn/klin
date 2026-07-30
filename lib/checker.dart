@@ -17,12 +17,15 @@ final class _Symbol {
   final KlinType type;
   final bool isMut;
   final SourcePos pos;
+  /// Mut receiver metody — w C parametr wskaźnikowy (`T *`).
+  final bool isPtrReceiver;
 
   const _Symbol({
     required this.name,
     required this.type,
     required this.isMut,
     required this.pos,
+    this.isPtrReceiver = false,
   });
 }
 
@@ -100,6 +103,7 @@ final class Checker {
             type: receiver.resolvedType!,
             isMut: receiver.isMut,
             pos: receiver.pos,
+            isPtrReceiver: receiver.isMut,
           ),
         );
       }
@@ -465,26 +469,45 @@ final class Checker {
   }
 
   KlinType _checkAssignableTarget(Expr target, SourcePos pos) {
-    if (target is NameExpr) {
-      final symbol = _scope.lookup(target.name);
-      if (symbol == null) throw CheckError('nieznana zmienna `${target.name}`', pos);
+    final place = _unwrapGroups(target);
+    if (place is NameExpr) {
+      final symbol = _scope.lookup(place.name);
+      if (symbol == null) throw CheckError('nieznana zmienna `${place.name}`', pos);
       if (!symbol.isMut) {
-        throw CheckError('nie można przypisać do niemutowalnej zmiennej `${target.name}`', pos);
+        throw CheckError('nie można przypisać do niemutowalnej zmiennej `${place.name}`', pos);
       }
+      place.isPtrReceiver = symbol.isPtrReceiver;
       return symbol.type;
     }
-    if (target is FieldExpr) {
-      final type = _inferExpr(target);
-      if (target.object is NameExpr) {
-        final object = target.object as NameExpr;
-        final symbol = _scope.lookup(object.name);
-        if (symbol == null || !symbol.isMut) {
-          throw CheckError('nie można przypisać do pola niemutowalnej zmiennej', pos);
-        }
-      }
-      return type;
+    if (place is FieldExpr) {
+      _requireMutableStructPlace(place.object, pos);
+      return _inferExpr(place);
     }
     throw CheckError('niepoprawny cel przypisania', pos);
+  }
+
+  void _requireMutableStructPlace(Expr object, SourcePos pos) {
+    final base = _unwrapGroups(object);
+    if (base is NameExpr) {
+      final symbol = _scope.lookup(base.name);
+      if (symbol == null) {
+        throw CheckError('nieznana zmienna `${base.name}`', pos);
+      }
+      if (!symbol.isMut) {
+        throw CheckError('nie można przypisać do pola niemutowalnej zmiennej', pos);
+      }
+      base.isPtrReceiver = symbol.isPtrReceiver;
+      return;
+    }
+    throw CheckError('nie można przypisać do pola niemutowalnego wyrażenia', pos);
+  }
+
+  Expr _unwrapGroups(Expr expr) {
+    var current = expr;
+    while (current is GroupExpr) {
+      current = current.inner;
+    }
+    return current;
   }
 
   bool _returnsOnAllPaths(Block block) {
@@ -511,11 +534,12 @@ final class Checker {
       FloatLit() => const UntypedFloat(),
       BoolLit() => const PrimType(PrimKind.bool_),
       StringLit() => const StrType(),
-      NameExpr(:final name, :final pos) => () {
-          final sym = _scope.lookup(name);
+      NameExpr nameExpr => () {
+          final sym = _scope.lookup(nameExpr.name);
           if (sym == null) {
-            throw CheckError('nieznana zmienna `$name`', pos);
+            throw CheckError('nieznana zmienna `${nameExpr.name}`', nameExpr.pos);
           }
+          nameExpr.isPtrReceiver = sym.isPtrReceiver;
           return sym.type;
         }(),
       FieldExpr(:final object, :final name, :final pos) => () {

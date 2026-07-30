@@ -87,6 +87,7 @@ final class Parser {
         isMut = true;
       }
       final receiverName = _expect(TokenKind.ident, 'oczekiwano nazwę receivera');
+      _rejectCKeyword(receiverName, 'nazwą receivera');
       _expect(TokenKind.colon, 'oczekiwano `:` po receiverze');
       final receiverType = _expect(TokenKind.ident, 'oczekiwano typ receivera');
       _expect(TokenKind.rParen, 'oczekiwano `)` po receiverze');

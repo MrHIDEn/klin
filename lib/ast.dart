@@ -303,6 +303,9 @@ final class NameExpr extends Expr {
   final String name;
   final SourcePos pos;
 
+  /// Wypełniane przez checker: mut receiver emitowany jako wskaźnik (`->`).
+  bool isPtrReceiver = false;
+
   NameExpr(this.name, this.pos);
 }
 

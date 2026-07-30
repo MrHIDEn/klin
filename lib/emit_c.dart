@@ -1,8 +1,6 @@
 import 'ast.dart';
 import 'type.dart';
 
-String? _mutReceiverName;
-
 /// Emisja AST → jeden czytelny plik .c z dyrektywami `#line`.
 String emitC(Program program, String sourcePath) {
   final buf = StringBuffer();
@@ -28,7 +26,6 @@ String emitC(Program program, String sourcePath) {
   for (final func in program.funcs) {
     _line(buf, func.pos.line, sourcePath);
     buf.writeln('${_functionHeader(func)} {');
-    _mutReceiverName = func.receiver?.isMut == true ? func.receiver!.name : null;
     _emitBlock(
       buf,
       func.body,
@@ -40,7 +37,6 @@ String emitC(Program program, String sourcePath) {
     buf.writeln('}');
     buf.writeln();
   }
-  _mutReceiverName = null;
   return buf.toString();
 }
 
@@ -297,6 +293,14 @@ void _emitElse(
   throw StateError('emit: nieoczekiwany else branch ${elseBranch.runtimeType}');
 }
 
+bool _exprIsPtrReceiver(Expr expr) {
+  var current = expr;
+  while (current is GroupExpr) {
+    current = current.inner;
+  }
+  return current is NameExpr && current.isPtrReceiver;
+}
+
 String _emitExpr(Expr expr) {
   return switch (expr) {
     IntLit(:final lexeme) => lexeme,
@@ -305,7 +309,7 @@ String _emitExpr(Expr expr) {
     StringLit(:final value) => '"${_escapeC(value)}"',
     NameExpr(:final name) => name,
     FieldExpr(:final object, :final name) =>
-      object is NameExpr && object.name == _mutReceiverName
+      _exprIsPtrReceiver(object)
           ? '${_emitExpr(object)}->$name'
           : '${_emitExpr(object)}.$name',
     MethodCallExpr(
