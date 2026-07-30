@@ -222,6 +222,47 @@ final class Checker {
   }
 
   KlinType _resolveType(String name, SourcePos pos) {
+    if (name.startsWith('*')) {
+      var rest = name.substring(1);
+      var isMut = false;
+      var isVolatile = false;
+      if (rest.startsWith('mut ')) {
+        isMut = true;
+        rest = rest.substring(4);
+      }
+      if (rest.startsWith('volatile ')) {
+        isVolatile = true;
+        rest = rest.substring(9);
+      }
+      if (rest.isEmpty) throw CheckError('brak typu wskazywanego', pos);
+      return PtrType(
+        _resolveType(rest, pos),
+        isMut: isMut,
+        isVolatile: isVolatile,
+      );
+    }
+    if (name.startsWith('[]')) {
+      final elem = _resolveType(name.substring(2), pos);
+      if (elem is! PrimType) {
+        throw CheckError('slice wymaga typu prymitywnego elementu', pos);
+      }
+      return SliceType(elem);
+    }
+    if (name.startsWith('[')) {
+      final close = name.indexOf(']');
+      if (close < 2) throw CheckError('niepoprawny typ tablicy `$name`', pos);
+      final lenText = name.substring(1, close).replaceAll('_', '');
+      final len = int.tryParse(
+        lenText.startsWith('0x') || lenText.startsWith('0X')
+            ? lenText.substring(2)
+            : lenText,
+        radix: lenText.startsWith('0x') || lenText.startsWith('0X') ? 16 : 10,
+      );
+      if (len == null || len < 0 || close == name.length - 1) {
+        throw CheckError('niepoprawny typ tablicy `$name`', pos);
+      }
+      return ArrayType(_resolveType(name.substring(close + 1), pos), len);
+    }
     if (name == 'void') return const VoidType();
     final parts = name.split('.');
     final qualifier = parts.length == 2 ? parts.first : null;
@@ -602,8 +643,27 @@ final class Checker {
       return symbol.type;
     }
     if (place is FieldExpr) {
+      final objectType = _inferExpr(place.object);
+      if (objectType is ArrayType || objectType is SliceType) {
+        throw CheckError('`len` jest tylko do odczytu', pos);
+      }
       _requireMutableStructPlace(place.object, pos);
       return _inferExpr(place);
+    }
+    if (place is UnaryExpr && place.op == '*') {
+      final pointer = _inferExpr(place.operand);
+      if (pointer is! PtrType) {
+        throw CheckError('dereferencja wymaga wskaźnika', pos);
+      }
+      if (!pointer.isMut) {
+        throw CheckError('nie można pisać przez niemutowalny wskaźnik', pos);
+      }
+      return pointer.pointee;
+    }
+    if (place is IndexExpr) {
+      final type = _inferExpr(place);
+      _requireMutableArrayPlace(place.object, pos);
+      return type;
     }
     throw CheckError('niepoprawny cel przypisania', pos);
   }
@@ -624,6 +684,20 @@ final class Checker {
     }
     throw CheckError(
         'nie można przypisać do pola niemutowalnego wyrażenia', pos);
+  }
+
+  void _requireMutableArrayPlace(Expr object, SourcePos pos) {
+    final base = _unwrapGroups(object);
+    if (base is NameExpr) {
+      final symbol = _scope.lookup(base.name);
+      if (symbol == null)
+        throw CheckError('nieznana zmienna `${base.name}`', pos);
+      if (!symbol.isMut) {
+        throw CheckError('nie można przypisać do niemutowalnej tablicy', pos);
+      }
+      return;
+    }
+    throw CheckError('nie można przypisać przez niemutowalne wyrażenie', pos);
   }
 
   Expr _unwrapGroups(Expr expr) {
@@ -668,6 +742,12 @@ final class Checker {
         }(),
       FieldExpr(:final object, :final name, :final pos) => () {
           final objectType = _inferExpr(object);
+          if (name == 'len' && objectType is ArrayType) {
+            return const PrimType(PrimKind.i32);
+          }
+          if (name == 'len' && objectType is SliceType) {
+            return const PrimType(PrimKind.i32);
+          }
           if (objectType is! StructType) {
             throw CheckError(
                 'odczyt pola wymaga struktury, dostano `${objectType.displayName}`',
@@ -687,6 +767,71 @@ final class Checker {
                 'struktura `${objectType.name}` nie ma pola `$name`', pos);
           }
           return field.resolvedType!;
+        }(),
+      IndexExpr(:final object, :final index, :final pos) => () {
+          final objectType = _inferExpr(object);
+          final indexType = _defaultConcrete(_inferExpr(index), index.pos);
+          if (indexType is! PrimType || !indexType.kind.isInteger) {
+            throw CheckError('indeks wymaga typu całkowitego', index.pos);
+          }
+          _materialize(index, indexType);
+          return switch (objectType) {
+            ArrayType(:final elem) => elem,
+            SliceType(:final elem) => elem,
+            _ => throw CheckError(
+                'indeksowanie wymaga tablicy lub slice, dostano `${objectType.displayName}`',
+                pos,
+              ),
+          };
+        }(),
+      SliceFromExpr(:final array, :final pos) => () {
+          final arrayType = _inferExpr(array);
+          if (arrayType is! ArrayType || arrayType.elem is! PrimType) {
+            throw CheckError('`[:]` wymaga tablicy typu prymitywnego', pos);
+          }
+          return SliceType(arrayType.elem as PrimType);
+        }(),
+      ArrayLitExpr(:final elements, :final pos) => () {
+          if (elements.isEmpty) {
+            throw CheckError('nie można wywnioskować typu pustej tablicy', pos);
+          }
+          var elemType = _inferExpr(elements.first);
+          for (final element in elements.skip(1)) {
+            final nextType = _inferExpr(element);
+            elemType = (elemType is PrimType ||
+                        elemType is UntypedInt ||
+                        elemType is UntypedFloat) &&
+                    (nextType is PrimType ||
+                        nextType is UntypedInt ||
+                        nextType is UntypedFloat)
+                ? _unifyNumeric(elemType, nextType, element.pos)
+                : (elemType == nextType
+                    ? elemType
+                    : throw CheckError(
+                        'niezgodność typów elementów tablicy: `${elemType.displayName}` i `${nextType.displayName}`',
+                        element.pos,
+                      ));
+          }
+          elemType = _defaultConcrete(elemType, pos);
+          for (final element in elements) {
+            _expectAssignable(elemType, _inferExpr(element), element.pos);
+            _materialize(element, elemType);
+          }
+          return ArrayType(elemType, elements.length);
+        }(),
+      CastExpr(:final typeName, :final expr, :final pos) => () {
+          final target = _resolveType(typeName, pos);
+          if (target is! PtrType) {
+            throw CheckError('cast MVP obsługuje tylko typy wskaźnikowe', pos);
+          }
+          final source = _inferExpr(expr);
+          if (source is! UntypedInt &&
+              source is! PrimType &&
+              source is! PtrType) {
+            throw CheckError(
+                'cast wskaźnika wymaga liczby całkowitej lub wskaźnika', pos);
+          }
+          return target;
         }(),
       MethodCallExpr() => _checkMethodCall(expr),
       StructLitExpr(
@@ -708,8 +853,7 @@ final class Checker {
           }
           if (module != _currentModule && !struct.isPub) {
             final shown = moduleName ?? module;
-            throw CheckError(
-                'struktura `$shown.$typeName` jest prywatna', pos);
+            throw CheckError('struktura `$shown.$typeName` jest prywatna', pos);
           }
           if (namedFields != null) {
             if (namedFields.length != struct.fields.length) {
@@ -752,6 +896,23 @@ final class Checker {
           return call.type;
         }(),
       UnaryExpr(:final op, :final operand, :final pos) => () {
+          if (op == '&') {
+            if (!_isAddressablePlace(operand)) {
+              throw CheckError('operator `&` wymaga miejsca w pamięci', pos);
+            }
+            final pointee = _inferExpr(operand);
+            return PtrType(
+              pointee,
+              isMut: _isMutablePlace(operand),
+            );
+          }
+          if (op == '*') {
+            final pointer = _inferExpr(operand);
+            if (pointer is! PtrType) {
+              throw CheckError('dereferencja wymaga wskaźnika', pos);
+            }
+            return pointer.pointee;
+          }
           if (op == '!') {
             final t = _inferExpr(operand);
             if (t is! PrimType || t.kind != PrimKind.bool_) {
@@ -787,9 +948,26 @@ final class Checker {
         _inferBinary(left, op, right, pos),
       GroupExpr(:final inner) => _inferExpr(inner),
     };
-    if (type is PrimType || type is StrType || type is StructType)
-      expr.resolvedType = type;
+    if (type is PrimType ||
+        type is StrType ||
+        type is StructType ||
+        type is PtrType ||
+        type is ArrayType ||
+        type is SliceType) expr.resolvedType = type;
     return type;
+  }
+
+  bool _isMutablePlace(Expr expr) {
+    final place = _unwrapGroups(expr);
+    if (place is NameExpr) return _scope.lookup(place.name)?.isMut ?? false;
+    if (place is FieldExpr) return _isMutablePlace(place.object);
+    if (place is IndexExpr) return _isMutablePlace(place.object);
+    return false;
+  }
+
+  bool _isAddressablePlace(Expr expr) {
+    final place = _unwrapGroups(expr);
+    return place is NameExpr || place is FieldExpr || place is IndexExpr;
   }
 
   static const _cmpOps = {'==', '!=', '<', '<=', '>', '>='};
@@ -900,10 +1078,13 @@ final class Checker {
   /// Ustawia konkretny typ na wyrażeniu (i rekurencyjnie na poddrzewie
   /// tam, gdzie były literały untyped).
   void _materialize(Expr expr, KlinType type) {
+    // `cast(T, x)` zachowuje jawny typ T także gdy kontekst pozwala na
+    // konwersję wskaźnika (np. odrzucenie volatile).
+    if (expr is CastExpr) return;
     expr.resolvedType = type;
     switch (expr) {
-      case UnaryExpr(:final operand):
-        _materialize(operand, type);
+      case UnaryExpr(:final operand, :final op):
+        if (op != '&' && op != '*') _materialize(operand, type);
       case BinaryExpr(:final left, :final right, :final op):
         if (_cmpOps.contains(op)) {
           // Operandy porównania mają typ liczbowy; wynik bool jest na węźle.
@@ -923,8 +1104,17 @@ final class Checker {
             CallExpr() ||
             FieldExpr() ||
             MethodCallExpr() ||
-            StructLitExpr():
+            StructLitExpr() ||
+            IndexExpr() ||
+            SliceFromExpr() ||
+            CastExpr():
         break;
+      case ArrayLitExpr(:final elements):
+        if (type is! ArrayType) break;
+        for (final element in elements) {
+          _expectAssignable(type.elem, _inferExpr(element), element.pos);
+          _materialize(element, type.elem);
+        }
     }
   }
 
@@ -949,6 +1139,17 @@ final class Checker {
     if (source is UntypedInt && target is PrimType && target.kind.isFloat) {
       return true;
     }
+    if (target is SliceType &&
+        source is ArrayType &&
+        source.elem == target.elem) {
+      return true;
+    }
+    if (target is PtrType &&
+        source is PtrType &&
+        target.pointee == source.pointee &&
+        (!target.isMut || source.isMut)) {
+      return true;
+    }
     return false;
   }
 
@@ -958,6 +1159,9 @@ final class Checker {
       UntypedFloat() => const PrimType(PrimKind.f64),
       PrimType() => type,
       StructType() => type,
+      PtrType() => type,
+      ArrayType() => type,
+      SliceType() => type,
       VoidType() => throw CheckError(
           'nie można użyć wartości void w tym kontekście',
           pos,

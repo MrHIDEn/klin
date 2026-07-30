@@ -9,6 +9,24 @@ String emitC(Program program, String sourcePath) {
   buf.writeln('#include <stddef.h>');
   buf.writeln('#include <stdbool.h>');
   buf.writeln();
+  final sliceTypes = <PrimType>{};
+  for (final struct in program.structs) {
+    for (final field in struct.fields) {
+      _collectSliceTypes(field.resolvedType, sliceTypes);
+    }
+  }
+  for (final func in program.funcs) {
+    _collectSliceTypes(func.resolvedReturnType, sliceTypes);
+    for (final param in func.params) {
+      _collectSliceTypes(param.resolvedType, sliceTypes);
+    }
+  }
+  for (final type in sliceTypes) {
+    final name = _sliceCName(type);
+    buf.writeln(
+        'typedef struct { ${type.kind.cType} *ptr; size_t len; } $name;');
+  }
+  if (sliceTypes.isNotEmpty) buf.writeln();
   for (final struct in program.structs) {
     _line(buf, struct.pos.line, struct.sourcePath ?? sourcePath);
     buf.writeln('typedef struct {');
@@ -16,7 +34,7 @@ String emitC(Program program, String sourcePath) {
       final type = field.resolvedType;
       if (type == null)
         throw StateError('emit: brak typu pola `${field.name}`');
-      buf.writeln('    ${_cType(type)} ${field.name};');
+      buf.writeln('    ${_cDecl(type, field.name)};');
     }
     buf.writeln('} ${_structCName(struct.moduleName, struct.name)};');
     buf.writeln();
@@ -56,7 +74,7 @@ String _functionHeader(FuncDecl func) {
       if (type == null) {
         throw StateError('emit: brak typu parametru `${param.name}`');
       }
-      return '${_cType(type)} ${param.name}';
+      return _cDecl(type, param.name);
     }),
   ];
   final name = func.name == 'main'
@@ -82,8 +100,25 @@ String _cType(KlinType type) => switch (type) {
       StrType() => 'const char*',
       StructType(:final moduleName, :final name) =>
         _structCName(moduleName, name),
+      PtrType(:final pointee, :final isVolatile) =>
+        '${isVolatile ? 'volatile ' : ''}${_cType(pointee)} *',
+      ArrayType(:final elem) => _cType(elem),
+      SliceType(:final elem) => _sliceCName(elem),
       _ => throw StateError('emit: typ `${type.displayName}` nie ma typu C'),
     };
+
+String _cDecl(KlinType type, String name) => switch (type) {
+      ArrayType(:final elem, :final len) => '${_cType(elem)} $name[$len]',
+      _ => '${_cType(type)} $name',
+    };
+
+String _sliceCName(PrimType elem) => 'klin_slice_${elem.kind.klinName}';
+
+void _collectSliceTypes(KlinType? type, Set<PrimType> output) {
+  if (type case SliceType(:final elem)) output.add(elem);
+  if (type case PtrType(:final pointee)) _collectSliceTypes(pointee, output);
+  if (type case ArrayType(:final elem)) _collectSliceTypes(elem, output);
+}
 
 void _emitBlock(
   StringBuffer buf,
@@ -117,17 +152,22 @@ void _emitStmt(
     case LetStmt(:final name, :final init, :final pos, :final resolvedType):
       _line(buf, pos.line, sourcePath);
       final ty = resolvedType;
-      if (ty == null ||
-          (ty is! PrimType && ty is! StrType && ty is! StructType)) {
+      if (ty == null) {
         throw StateError('emit: brak typu dla `$name` — uruchom checker');
       }
       if (init != null) {
-        buf.writeln('$pad${_cType(ty)} $name = ${_emitExpr(init)};');
+        buf.writeln('$pad${_cDecl(ty, name)} = ${_emitExpr(init)};');
       } else {
-        if (ty is! PrimType) {
-          throw StateError('emit: brak wartości domyślnej dla `$name`');
-        }
-        buf.writeln('$pad${ty.kind.cType} $name = ${ty.kind.cZero};');
+        final zero = switch (ty) {
+          PrimType(:final kind) => kind.cZero,
+          PtrType() => 'NULL',
+          ArrayType() => '{0}',
+          SliceType() => '{ NULL, 0 }',
+          StructType() => '{0}',
+          StrType() => 'NULL',
+          _ => throw StateError('emit: brak wartości domyślnej dla `$name`'),
+        };
+        buf.writeln('$pad${_cDecl(ty, name)} = $zero;');
       }
 
     case AssignStmt(:final target, :final value, :final pos):
@@ -325,14 +365,20 @@ bool _exprIsPtrReceiver(Expr expr) {
 
 String _emitExpr(Expr expr) {
   return switch (expr) {
-    IntLit(:final lexeme) => lexeme,
-    FloatLit(:final lexeme) => lexeme,
+    IntLit(:final lexeme) => lexeme.replaceAll('_', ''),
+    FloatLit(:final lexeme) => lexeme.replaceAll('_', ''),
     BoolLit(:final value) => value ? 'true' : 'false',
     StringLit(:final value) => '"${_escapeC(value)}"',
     NameExpr(:final name) => name,
-    FieldExpr(:final object, :final name) => _exprIsPtrReceiver(object)
-        ? '${_emitExpr(object)}->$name'
-        : '${_emitExpr(object)}.$name',
+    FieldExpr(:final object, :final name) => () {
+        final objectType = object.resolvedType;
+        if (name == 'len' && objectType is ArrayType) {
+          return objectType.len.toString();
+        }
+        return _exprIsPtrReceiver(object)
+            ? '${_emitExpr(object)}->$name'
+            : '${_emitExpr(object)}.$name';
+      }(),
     MethodCallExpr(
       :final receiver,
       :final args,
@@ -354,6 +400,28 @@ String _emitExpr(Expr expr) {
     CallExpr(:final callee, :final args, :final resolvedCallee) =>
       '${resolvedCallee ?? callee}(${args.map(_emitExpr).join(', ')})',
     UnaryExpr(:final op, :final operand) => '$op(${_emitExpr(operand)})',
+    IndexExpr(:final object, :final index) => object.resolvedType is SliceType
+        ? '${_emitExpr(object)}.ptr[${_emitExpr(index)}]'
+        : '${_emitExpr(object)}[${_emitExpr(index)}]',
+    SliceFromExpr(:final array) => () {
+        final type = array.resolvedType;
+        if (type is! ArrayType) {
+          throw StateError('emit: `[:]` bez typu tablicy');
+        }
+        final elem = type.elem;
+        if (elem is! PrimType) {
+          throw StateError('emit: slice nieprymitywnego typu');
+        }
+        return '(${_sliceCName(elem)}){ ${_emitExpr(array)}, ${type.len} }';
+      }(),
+    ArrayLitExpr(:final elements) =>
+      '{ ${elements.map(_emitExpr).join(', ')} }',
+    CastExpr(:final resolvedType, :final expr) => () {
+        if (resolvedType is! PtrType) {
+          throw StateError('emit: cast bez typu wskaźnikowego');
+        }
+        return '(${_cType(resolvedType)})(uintptr_t)(${_emitExpr(expr)})';
+      }(),
     BinaryExpr(:final left, :final op, :final right) =>
       '(${_emitExpr(left)} $op ${_emitExpr(right)})',
     GroupExpr(:final inner) => '(${_emitExpr(inner)})',

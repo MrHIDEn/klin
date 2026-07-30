@@ -1,6 +1,6 @@
 # 007 — Wskaźniki, tablice, slice'y
 
-**Status:** ⬜ do zrobienia
+**Status:** ✅ ukończone
 **Zależy od:** 006
 
 ## Zakres
@@ -20,5 +20,5 @@
 
 ## Kryterium ukończenia
 
-- [ ] slice przekazany do funkcji bez kopii
-- [ ] zapis do rejestru przez rzutowany wskaźnik volatile
+- [x] slice przekazany do funkcji bez kopii
+- [x] zapis do rejestru przez rzutowany wskaźnik volatile

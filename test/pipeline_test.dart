@@ -420,6 +420,52 @@ fn main() {
       ),
     );
   });
+
+  test('złoty: slice, tablica i mutowalny wskaźnik', () async {
+    final result = await _compileAndRun('test/slice_sum.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/slice_sum.out').readAsString());
+
+    final source = File('test/slice_sum.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/slice_sum.kl');
+    expect(c, contains('klin_slice_i32'));
+    expect(c, contains('int32_t buf[4] = { 10, 20, 30, 40 };'));
+    expect(c, contains('xs.ptr[i]'));
+    expect(c, contains('(volatile uint32_t *)(uintptr_t)'));
+  });
+
+  test('błąd: zapis przez niemutowalny wskaźnik', () {
+    const source = '''
+fn main() {
+  let mut value: i32 = 0
+  let p: *i32 = &value
+  *p = 1
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) =>
+              e is CheckError && e.toString().contains('niemutowalny wskaźnik'),
+        ),
+      ),
+    );
+  });
+
+  test('literał szesnastkowy akceptuje podkreślenia', () {
+    const source = '''
+fn main() {
+  let address: u32 = 0x4000_1000
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    expect(emitC(program, 'hex.kl'), contains('0x40001000'));
+  });
 }
 
 Future<({int exitCode, String stdout, String stderr})> _compileAndRun(

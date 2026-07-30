@@ -6,6 +6,7 @@ final class Program {
   final List<StructDecl> structs;
   final List<FuncDecl> funcs;
   final SourcePos pos;
+
   /// Per moduł: alias z `import X` → faktyczna nazwa `module` załadowanego pliku.
   final Map<String, Map<String, String>> importAliases;
 
@@ -424,6 +425,44 @@ final class UnaryExpr extends Expr {
   final SourcePos pos;
 
   UnaryExpr(this.op, this.operand, this.pos);
+}
+
+final class IndexExpr extends Expr {
+  final Expr object;
+  final Expr index;
+  final SourcePos pos;
+
+  IndexExpr({
+    required this.object,
+    required this.index,
+    required this.pos,
+  });
+}
+
+final class SliceFromExpr extends Expr {
+  final Expr array;
+  final SourcePos pos;
+
+  SliceFromExpr({required this.array, required this.pos});
+}
+
+final class ArrayLitExpr extends Expr {
+  final List<Expr> elements;
+  final SourcePos pos;
+
+  ArrayLitExpr({required this.elements, required this.pos});
+}
+
+final class CastExpr extends Expr {
+  final String typeName;
+  final Expr expr;
+  final SourcePos pos;
+
+  CastExpr({
+    required this.typeName,
+    required this.expr,
+    required this.pos,
+  });
 }
 
 final class BinaryExpr extends Expr {

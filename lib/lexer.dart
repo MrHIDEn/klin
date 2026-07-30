@@ -54,6 +54,12 @@ final class Lexer {
       case '}':
         _advance();
         return Token(TokenKind.rBrace, '}', start);
+      case '[':
+        _advance();
+        return Token(TokenKind.lBracket, '[', start);
+      case ']':
+        _advance();
+        return Token(TokenKind.rBracket, ']', start);
       case '+':
         _advance();
         return Token(TokenKind.plus, '+', start);
@@ -69,6 +75,9 @@ final class Lexer {
       case '%':
         _advance();
         return Token(TokenKind.percent, '%', start);
+      case '&':
+        _advance();
+        return Token(TokenKind.ampersand, '&', start);
       case ':':
         _advance();
         return Token(TokenKind.colon, ':', start);
@@ -137,6 +146,8 @@ final class Lexer {
       'import' => Token(TokenKind.import, lexeme, start),
       'let' => Token(TokenKind.let, lexeme, start),
       'mut' => Token(TokenKind.mut, lexeme, start),
+      'cast' => Token(TokenKind.cast, lexeme, start),
+      'volatile' => Token(TokenKind.volatile, lexeme, start),
       'true' => Token(TokenKind.true_, lexeme, start),
       'false' => Token(TokenKind.false_, lexeme, start),
       'if' => Token(TokenKind.if_, lexeme, start),
@@ -153,7 +164,20 @@ final class Lexer {
 
   Token _number(SourcePos start) {
     final buf = StringBuffer();
-    while (!_atEnd && _isDigit(_peek)) {
+    if (_peek == '0' &&
+        _i + 1 < source.length &&
+        (source[_i + 1] == 'x' || source[_i + 1] == 'X')) {
+      buf.write(_advance());
+      buf.write(_advance());
+      if (_atEnd || !_isHexDigit(_peek)) {
+        throw LexError('oczekiwano cyfry szesnastkowej po `0x`', start);
+      }
+      while (!_atEnd && (_isHexDigit(_peek) || _peek == '_')) {
+        buf.write(_advance());
+      }
+      return Token(TokenKind.intLit, buf.toString(), start);
+    }
+    while (!_atEnd && (_isDigit(_peek) || _peek == '_')) {
       buf.write(_advance());
     }
     if (!_atEnd &&
@@ -161,7 +185,7 @@ final class Lexer {
         _i + 1 < source.length &&
         _isDigit(source[_i + 1])) {
       buf.write(_advance()); // .
-      while (!_atEnd && _isDigit(_peek)) {
+      while (!_atEnd && (_isDigit(_peek) || _peek == '_')) {
         buf.write(_advance());
       }
       return Token(TokenKind.floatLit, buf.toString(), start);
@@ -243,5 +267,10 @@ final class Lexer {
   static bool _isDigit(String c) {
     final u = c.codeUnitAt(0);
     return u >= 48 && u <= 57;
+  }
+
+  static bool _isHexDigit(String c) {
+    final u = c.codeUnitAt(0);
+    return _isDigit(c) || (u >= 65 && u <= 70) || (u >= 97 && u <= 102);
   }
 }
