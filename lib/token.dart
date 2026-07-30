@@ -33,6 +33,7 @@ enum TokenKind {
   defer_,
   or_,
   error_,
+  asm_,
 
   // literały i nazwy
   ident,
@@ -47,6 +48,7 @@ enum TokenKind {
   slash,
   percent,
   ampersand,
+  atSign,
   colon,
   equal,
   equalEqual,

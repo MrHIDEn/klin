@@ -4,7 +4,9 @@ import 'type.dart';
 /// Emisja AST → jeden czytelny plik .c z dyrektywami `#line`.
 String emitC(Program program, String sourcePath) {
   final buf = StringBuffer();
-  buf.writeln('#include <stdio.h>');
+  for (final include in _collectCIncludes(program)) {
+    buf.writeln('#include $include');
+  }
   buf.writeln('#include <stdint.h>');
   buf.writeln('#include <stddef.h>');
   buf.writeln('#include <stdbool.h>');
@@ -64,11 +66,12 @@ String emitC(Program program, String sourcePath) {
   }
   buf.writeln();
   for (final func in program.funcs) {
+    if (func.body == null) continue;
     _line(buf, func.pos.line, func.sourcePath ?? sourcePath);
     buf.writeln('${_functionHeader(func)} {');
     _emitBlock(
       buf,
-      func.body,
+      func.body!,
       func.sourcePath ?? sourcePath,
       indent: 1,
       bareReturnAsZero: func.name == 'main',
@@ -82,6 +85,89 @@ String emitC(Program program, String sourcePath) {
   }
   return buf.toString();
 }
+
+List<String> collectLinkAttrs(Program program) => [
+      for (final decl in [...program.structs, ...program.funcs])
+        for (final attr in switch (decl) {
+          StructDecl(:final attrs) => attrs,
+          FuncDecl(:final attrs) => attrs,
+          _ => const <Attr>[],
+        })
+          if (attr.name == 'link' && attr.arg != null) attr.arg!,
+    ];
+
+Set<String> _collectCIncludes(Program program) {
+  final includes = <String>{};
+  for (final decl in [...program.structs, ...program.funcs]) {
+    final attrs = switch (decl) {
+      StructDecl(:final attrs) => attrs,
+      FuncDecl(:final attrs) => attrs,
+      _ => const <Attr>[],
+    };
+    for (final attr in attrs) {
+      if (attr.name == 'cinclude') includes.add('<${attr.arg!}>');
+    }
+  }
+  if (program.funcs.any(_callsStdio)) includes.add('<stdio.h>');
+  return includes;
+}
+
+bool _callsStdio(FuncDecl func) =>
+    func.body?.stmts.any(_stmtCallsStdio) ?? false;
+
+bool _stmtCallsStdio(Stmt stmt) => switch (stmt) {
+      CallStmt(:final callee, :final args) =>
+        callee == 'puts' || callee == 'printf' || args.any(_exprCallsStdio),
+      MethodCallStmt(:final call) => _exprCallsStdio(call),
+      LetStmt(:final init) => init != null && _exprCallsStdio(init),
+      AssignStmt(:final target, :final value) =>
+        _exprCallsStdio(target) || _exprCallsStdio(value),
+      IfStmt(:final cond, :final thenBlock, :final elseBranch) =>
+        _exprCallsStdio(cond) ||
+            thenBlock.stmts.any(_stmtCallsStdio) ||
+            (elseBranch != null && _stmtCallsStdio(elseBranch)),
+      WhileStmt(:final cond, :final body) =>
+        _exprCallsStdio(cond) || body.stmts.any(_stmtCallsStdio),
+      ForRangeStmt(:final start, :final endExclusive, :final body) =>
+        _exprCallsStdio(start) ||
+            _exprCallsStdio(endExclusive) ||
+            body.stmts.any(_stmtCallsStdio),
+      ForCStmt(:final initExpr, :final cond, :final postExpr, :final body) =>
+        (initExpr != null && _exprCallsStdio(initExpr)) ||
+            (cond != null && _exprCallsStdio(cond)) ||
+            (postExpr != null && _exprCallsStdio(postExpr)) ||
+            body.stmts.any(_stmtCallsStdio),
+      ReturnStmt(:final value) => value != null && _exprCallsStdio(value),
+      DeferStmt(:final body) => _stmtCallsStdio(body),
+      BlockStmt(:final block) => block.stmts.any(_stmtCallsStdio),
+      _ => false,
+    };
+
+bool _exprCallsStdio(Expr expr) => switch (expr) {
+      CallExpr(:final callee, :final args) =>
+        callee == 'puts' || callee == 'printf' || args.any(_exprCallsStdio),
+      MethodCallExpr(:final receiver, :final args) =>
+        _exprCallsStdio(receiver) || args.any(_exprCallsStdio),
+      FieldExpr(:final object) => _exprCallsStdio(object),
+      IndexExpr(:final object, :final index) =>
+        _exprCallsStdio(object) || _exprCallsStdio(index),
+      SliceFromExpr(:final array) => _exprCallsStdio(array),
+      ArrayLitExpr(:final elements) => elements.any(_exprCallsStdio),
+      CastExpr(:final expr) => _exprCallsStdio(expr),
+      BinaryExpr(:final left, :final right) =>
+        _exprCallsStdio(left) || _exprCallsStdio(right),
+      UnaryExpr(:final operand) => _exprCallsStdio(operand),
+      GroupExpr(:final inner) => _exprCallsStdio(inner),
+      ErrorExpr(:final code) => _exprCallsStdio(code),
+      PropagateExpr(:final result) => _exprCallsStdio(result),
+      OrExpr(:final result, :final fallback) => _exprCallsStdio(result) ||
+          fallback.stmts.any(_stmtCallsStdio) ||
+          _exprCallsStdio(fallback.value),
+      StructLitExpr(:final namedFields, :final positionalFields) =>
+        namedFields?.values.any(_exprCallsStdio) ??
+            positionalFields!.any(_exprCallsStdio),
+      _ => false,
+    };
 
 String _functionHeader(FuncDecl func) {
   if (func.name == 'main') return 'int main(void)';
@@ -100,16 +186,26 @@ String _functionHeader(FuncDecl func) {
       return _cDecl(type, param.name);
     }),
   ];
+  final codename = func.attrs
+      .where((attr) => attr.name == 'codename')
+      .map((attr) => attr.arg!)
+      .firstOrNull;
   final name = func.name == 'main'
       ? 'main'
-      : func.receiver == null
-          ? _freeCName(func.moduleName, func.name)
-          : _methodCName(
-              func.moduleName,
-              _receiverTypeName(func.receiver!),
-              func.name,
-            );
-  final staticPrefix = !func.isPub && func.name != 'main' ? 'static ' : '';
+      : codename ??
+          (func.receiver == null
+              ? _freeCName(func.moduleName, func.name)
+              : _methodCName(
+                  func.moduleName,
+                  _receiverTypeName(func.receiver!),
+                  func.name,
+                ));
+  final staticPrefix = !func.isPub &&
+          func.name != 'main' &&
+          codename == null &&
+          func.body != null
+      ? 'static '
+      : '';
   return '$staticPrefix${_cType(returnType)} $name(${params.isEmpty ? 'void' : params.join(', ')})';
 }
 
@@ -163,8 +259,7 @@ String _typeToken(KlinType type) => switch (type) {
       SliceType(:final elem) => _sliceCName(elem),
       PtrType(:final pointee, :final isMut, :final isVolatile) =>
         '${isMut ? 'mut_' : ''}${isVolatile ? 'volatile_' : ''}ptr_${_typeToken(pointee)}',
-      ArrayType(:final elem, :final len) =>
-        'arr${len}_${_typeToken(elem)}',
+      ArrayType(:final elem, :final len) => 'arr${len}_${_typeToken(elem)}',
       ResultType(:final ok) => 'res_${_typeToken(ok)}',
       StrType() => 'str',
       _ => throw StateError('emit: brak tokenu typu `${type.displayName}`'),
@@ -278,7 +373,8 @@ String _emitPropagate(Expr result, _ExprCtx ctx) {
   }
   final pad = '    ' * ctx.indent;
   final temp = ctx.state.nextValueTemp();
-  ctx.buf.writeln('$pad${_cType(resultType)} $temp = ${_emitExpr(result, ctx)};');
+  ctx.buf
+      .writeln('$pad${_cType(resultType)} $temp = ${_emitExpr(result, ctx)};');
   ctx.buf.writeln('${pad}if ($temp.is_err) {');
   _emitExitCleanups(
     ctx.buf,
@@ -350,6 +446,10 @@ void _emitStmt(
     state: state,
   );
   switch (stmt) {
+    case AsmStmt(:final code, :final pos):
+      _line(buf, pos.line, sourcePath);
+      buf.writeln('${pad}asm volatile("${_escapeC(code)}");');
+
     case LetStmt(:final name, :final init, :final pos, :final resolvedType):
       _line(buf, pos.line, sourcePath);
       final ty = resolvedType;
@@ -402,7 +502,8 @@ void _emitStmt(
           state: state,
         );
       } else {
-        buf.writeln('$pad${_emitExpr(target, ctx)} = ${_emitExpr(value, ctx)};');
+        buf.writeln(
+            '$pad${_emitExpr(target, ctx)} = ${_emitExpr(value, ctx)};');
       }
 
     case CallStmt(

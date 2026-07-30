@@ -24,6 +24,7 @@ doc/api/
 
 # Wyjście kompilatora Klin — wyłącznie do out/
 /out/
+examples/**/out/
 
 # Cache go-task (checksumy sources/generates)
 .task/

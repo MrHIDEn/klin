@@ -35,9 +35,18 @@ final class ModuleUnit {
   });
 }
 
+final class Attr {
+  final String name;
+  final String? arg;
+  final SourcePos pos;
+
+  const Attr(this.name, this.arg, this.pos);
+}
+
 final class StructDecl {
   final String name;
   final List<FieldDecl> fields;
+  final List<Attr> attrs;
   final SourcePos pos;
   bool isPub;
   String moduleName;
@@ -46,6 +55,7 @@ final class StructDecl {
   StructDecl({
     required this.name,
     required this.fields,
+    this.attrs = const [],
     required this.pos,
     this.isPub = false,
     this.moduleName = '',
@@ -75,7 +85,8 @@ final class FuncDecl {
   final Receiver? receiver;
   final List<Param> params;
   final String? returnTypeName;
-  final Block body;
+  final Block? body;
+  final List<Attr> attrs;
   final SourcePos pos;
   bool isPub;
   String moduleName;
@@ -91,6 +102,7 @@ final class FuncDecl {
     required this.returnTypeName,
     required this.body,
     required this.pos,
+    this.attrs = const [],
     this.isPub = false,
     this.moduleName = '',
     this.sourcePath,
@@ -139,6 +151,13 @@ final class Block {
 
 sealed class Stmt {
   SourcePos get pos;
+}
+
+final class AsmStmt extends Stmt {
+  final String code;
+  final SourcePos pos;
+
+  AsmStmt(this.code, this.pos);
 }
 
 /// let [mut] name [: type] [= expr]

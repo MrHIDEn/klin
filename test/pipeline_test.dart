@@ -6,6 +6,7 @@ import 'package:klin/emit_c.dart';
 import 'package:klin/lexer.dart';
 import 'package:klin/parser.dart';
 import 'package:klin/project.dart';
+import 'package:klin/token.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -507,7 +508,7 @@ fn main() {
 }
 ''';
     final program = Parser(Lexer(source).tokenize()).parse();
-    final body = program.funcs.single.body.stmts;
+    final body = program.funcs.single.body!.stmts;
     expect(body.length, 2);
     expect(body[0], isA<ReturnStmt>());
     expect((body[0] as ReturnStmt).value, isNull);
@@ -627,6 +628,153 @@ fn main() {
     final program = Parser(Lexer(source).tokenize()).parse();
     Checker().check(program);
     expect(emitC(program, 'hex.kl'), contains('0x40001000'));
+  });
+
+  test('codename emituje globalny symbol C', () {
+    const source = '''
+@[codename("SysTick_Handler")]
+fn tick() {}
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'tick.kl');
+    expect(c, contains('void SysTick_Handler(void);'));
+    expect(c, contains('void SysTick_Handler(void) {'));
+    expect(c, isNot(contains('static void SysTick_Handler')));
+  });
+
+  test('cimport emituje deklarację i sprawdza sygnaturę', () {
+    const source = '''
+@[cimport, codename("pin_set")]
+fn set_pin(value: u32)
+fn main() {
+  set_pin(1)
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'ffi.kl');
+    expect(c, contains('uint32_t value'));
+    expect(c, contains('void pin_set(uint32_t value);'));
+    expect(c, isNot(contains('void pin_set(uint32_t value) {')));
+
+    const badSource = '''
+@[cimport]
+fn set_pin(value: u32)
+fn main() {
+  set_pin()
+}
+''';
+    final bad = Parser(Lexer(badSource).tokenize()).parse();
+    expect(
+      () => Checker().check(bad),
+      throwsA(predicate(
+        (e) =>
+            e is CheckError && e.toString().contains('oczekuje 1 argumentów'),
+      )),
+    );
+  });
+
+  test('cimport z ciałem i ciało bez cimport są błędami checkera', () {
+    final pos = const SourcePos(1, 1);
+    final main = FuncDecl(
+      name: 'main',
+      receiver: null,
+      params: [],
+      returnTypeName: null,
+      body: Block([], pos),
+      pos: pos,
+    );
+    final importedWithBody = FuncDecl(
+      name: 'ffi',
+      receiver: null,
+      params: [],
+      returnTypeName: null,
+      body: Block([], pos),
+      attrs: [Attr('cimport', null, pos)],
+      pos: pos,
+    );
+    expect(
+      () => Checker().check(Program([], [importedWithBody, main], pos)),
+      throwsA(isA<CheckError>()),
+    );
+    final missingBody = FuncDecl(
+      name: 'missing',
+      receiver: null,
+      params: [],
+      returnTypeName: null,
+      body: null,
+      pos: pos,
+    );
+    expect(
+      () => Checker().check(Program([], [missingBody, main], pos)),
+      throwsA(isA<CheckError>()),
+    );
+  });
+
+  test('asm emituje asm volatile bez stdio', () {
+    const source = '''
+fn main() {
+  asm("wfi")
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'asm.kl');
+    expect(c, contains('asm volatile("wfi");'));
+    expect(c, isNot(contains('#include <stdio.h>')));
+  });
+
+  test('--emit-c zapisuje C bez kompilacji ani uruchamiania', () async {
+    final source = File('${tmp.path}/emit_only.kl');
+    await source.writeAsString('''
+@[link("driver.a")]
+fn main() {}
+''');
+    final proc = await Process.run(
+      'dart',
+      ['run', 'bin/klin.dart', '--emit-c', source.path],
+    );
+    final cFile = File('out/emit_only.c');
+    final linkFile = File('out/emit_only.link');
+    addTearDown(() async {
+      if (await cFile.exists()) await cFile.delete();
+      if (await linkFile.exists()) await linkFile.delete();
+    });
+    expect(proc.exitCode, 0, reason: proc.stderr.toString());
+    expect(await cFile.exists(), isTrue);
+    expect(await linkFile.readAsString(), 'driver.a\n');
+  });
+
+  test('przykład STM32 buduje się i eksportuje SysTick_Handler', () async {
+    final compiler = await Process.run(
+      'sh',
+      ['-c', 'command -v arm-none-eabi-gcc'],
+    );
+    if (compiler.exitCode != 0) return;
+
+    const example = 'examples/blink_f411';
+    addTearDown(
+        () => Process.run('make', ['clean'], workingDirectory: example));
+    final build = await Process.run('make', [], workingDirectory: example);
+    expect(build.exitCode, 0, reason: '${build.stdout}${build.stderr}');
+
+    final nm = await Process.run(
+      'arm-none-eabi-nm',
+      ['blink.elf'],
+      workingDirectory: example,
+    );
+    expect(nm.exitCode, 0, reason: nm.stderr.toString());
+    expect(nm.stdout.toString(), contains('SysTick_Handler'));
+
+    final objdump = await Process.run(
+      'arm-none-eabi-objdump',
+      ['-d', 'blink.elf'],
+      workingDirectory: example,
+    );
+    expect(objdump.exitCode, 0, reason: objdump.stderr.toString());
+    expect(objdump.stdout.toString(), contains('<SysTick_Handler>'));
   });
 }
 
