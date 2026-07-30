@@ -24,19 +24,29 @@ SvdEmitResult emitSvd(
   for (final peripheral in device.peripherals) {
     for (final register in peripheral.registers) {
       for (final field in register.fields) {
+        if (field.isReadOnly || register.isReadOnly) continue;
         final prefix = '${peripheral.name}_${register.name}_${field.name}';
         final address = _hex(peripheral.baseAddress + register.addressOffset);
         final mask = _mask(field.bitWidth, field.bitOffset);
+        final writeOnly = field.isWriteOnly || register.isWriteOnly;
         header
           ..writeln('static inline void ${prefix}_write(uint32_t v) {')
-          ..writeln('  volatile uint32_t *r = (volatile uint32_t *)($address);')
-          ..writeln('  uint32_t m = $mask;')
-          ..writeln('  *r = (*r & ~m) | ((v << ${field.bitOffset}) & m);')
+          ..writeln('  volatile uint32_t *r = (volatile uint32_t *)($address);');
+        if (writeOnly) {
+          header.writeln(
+            '  *r = ((v << ${field.bitOffset}) & $mask);',
+          );
+        } else {
+          header
+            ..writeln('  uint32_t m = $mask;')
+            ..writeln('  *r = (*r & ~m) | ((v << ${field.bitOffset}) & m);');
+        }
+        header
           ..writeln('}')
           ..writeln('static inline void ${prefix}_set(uint32_t v) {')
           ..writeln('  ${prefix}_write(v);')
           ..writeln('}');
-        if (field.bitWidth == 1) {
+        if (field.bitWidth == 1 && !writeOnly) {
           header
             ..writeln('static inline void ${prefix}_toggle(void) {')
             ..writeln('  *(volatile uint32_t *)($address) ^= '
@@ -57,7 +67,7 @@ SvdEmitResult emitSvd(
           ..writeln('pub fn ${prefix}_write(v: u32)')
           ..writeln('@[cimport, codename("${prefix}_set")]')
           ..writeln('pub fn ${prefix}_set(v: u32)');
-        if (field.bitWidth == 1) {
+        if (field.bitWidth == 1 && !writeOnly) {
           klin
             ..writeln('@[cimport, codename("${prefix}_toggle")]')
             ..writeln('pub fn ${prefix}_toggle()');

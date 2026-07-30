@@ -7,6 +7,7 @@ SvdDevice parseSvd(String source, {Set<String>? peripherals}) {
   final document = XmlDocument.parse(source);
   final pendingEnums = <SvdField, String>{};
   final enumGroups = <SvdField, String>{};
+  final pendingRegisterDerived = <SvdRegister, String>{};
   final parsed = <SvdPeripheral>[];
 
   for (final element in document.findAllElements('peripheral')) {
@@ -20,15 +21,23 @@ SvdDevice parseSvd(String source, {Set<String>? peripherals}) {
     if (registersElement != null) {
       for (final registerElement in registersElement.findElements('register')) {
         registers.addAll(
-          _parseRegisters(registerElement, pendingEnums, enumGroups),
+          _parseRegisters(
+            registerElement,
+            pendingEnums,
+            enumGroups,
+            pendingRegisterDerived,
+          ),
         );
       }
     }
     parsed.add(SvdPeripheral(name, baseAddress, registers));
   }
 
+  _resolveRegisterDerived(parsed, pendingRegisterDerived);
   _resolveEnums(parsed, pendingEnums, enumGroups);
-  if (peripherals?.contains('STK') ?? false) parsed.add(_sysTick());
+  if (peripherals == null || peripherals.contains('STK')) {
+    parsed.add(_sysTick());
+  }
   return SvdDevice(parsed);
 }
 
@@ -36,12 +45,15 @@ List<SvdRegister> _parseRegisters(
   XmlElement element,
   Map<SvdField, String> pendingEnums,
   Map<SvdField, String> enumGroups,
+  Map<SvdRegister, String> pendingRegisterDerived,
 ) {
   final name = _childText(element, 'name')!;
   final offset = _number(_childText(element, 'addressOffset')!);
+  final access = _childText(element, 'access');
   final dim = _optionalNumber(element, 'dim') ?? 1;
   final increment = _optionalNumber(element, 'dimIncrement') ?? 0;
   final indices = _dimIndices(element, dim);
+  final derived = element.getAttribute('derivedFrom');
   final out = <SvdRegister>[];
   for (var i = 0; i < dim; i++) {
     final fieldsElement = element.getElement('fields');
@@ -51,11 +63,16 @@ List<SvdRegister> _parseRegisters(
         fields.addAll(_parseFields(fieldElement, pendingEnums, enumGroups));
       }
     }
-    out.add(SvdRegister(
+    final register = SvdRegister(
       _expandName(name, indices[i]),
       offset + i * increment,
       fields,
-    ));
+      access: access,
+    );
+    if (derived != null) {
+      pendingRegisterDerived[register] = derived.replaceAll('%s', indices[i]);
+    }
+    out.add(register);
   }
   return out;
 }
@@ -68,6 +85,7 @@ List<SvdField> _parseFields(
   final name = _childText(element, 'name')!;
   final offset = _number(_childText(element, 'bitOffset')!);
   final width = _number(_childText(element, 'bitWidth')!);
+  final access = _childText(element, 'access');
   final dim = _optionalNumber(element, 'dim') ?? 1;
   final increment = _optionalNumber(element, 'dimIncrement') ?? 0;
   final indices = _dimIndices(element, dim);
@@ -89,6 +107,7 @@ List<SvdField> _parseFields(
       offset + i * increment,
       width,
       List.of(enums),
+      access: access,
     );
     final derived = enumsElement?.getAttribute('derivedFrom') ??
         element.getAttribute('derivedFrom');
@@ -97,6 +116,32 @@ List<SvdField> _parseFields(
     out.add(field);
   }
   return out;
+}
+
+void _resolveRegisterDerived(
+  List<SvdPeripheral> peripherals,
+  Map<SvdRegister, String> pending,
+) {
+  final byPath = <String, SvdRegister>{};
+  for (final peripheral in peripherals) {
+    for (final register in peripheral.registers) {
+      byPath['${peripheral.name}.${register.name}'] = register;
+    }
+  }
+  for (final entry in pending.entries) {
+    final target = byPath[entry.value];
+    if (target == null) continue;
+    entry.key.fields = [
+      for (final field in target.fields)
+        SvdField(
+          field.name,
+          field.bitOffset,
+          field.bitWidth,
+          List.of(field.enums),
+          access: field.access ?? target.access,
+        ),
+    ];
+  }
 }
 
 void _resolveEnums(
@@ -199,7 +244,9 @@ SvdPeripheral _sysTick() => SvdPeripheral('STK', 0xE000E010, [
         SvdField('ENABLE', 0, 1, []),
         SvdField('TICKINT', 1, 1, []),
         SvdField('CLKSOURCE', 2, 1, []),
-      ]),
-      SvdRegister('RVR', 4, [SvdField('RELOAD', 0, 24, [])]),
-      SvdRegister('CVR', 8, [SvdField('CURRENT', 0, 24, [])]),
+      ], access: 'read-write'),
+      SvdRegister('RVR', 4, [SvdField('RELOAD', 0, 24, [])],
+          access: 'read-write'),
+      SvdRegister('CVR', 8, [SvdField('CURRENT', 0, 24, [])],
+          access: 'read-write'),
     ]);

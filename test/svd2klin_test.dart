@@ -63,6 +63,43 @@ void main() {
     expect(generated.klin, contains('@[cinclude("stm32f411_regs.h")]'));
   });
 
+  test('register derivedFrom copies fields; write-only avoids RMW', () {
+    const svd = '''
+<device><peripherals>
+  <peripheral><name>GPIOA</name><baseAddress>0x40020000</baseAddress><registers>
+    <register><name>ODR</name><addressOffset>0x14</addressOffset><access>read-write</access><fields>
+      <field><name>ODR5</name><bitOffset>5</bitOffset><bitWidth>1</bitWidth></field>
+    </fields></register>
+    <register><name>BSRR</name><addressOffset>0x18</addressOffset><access>write-only</access><fields>
+      <field><name>BS5</name><bitOffset>5</bitOffset><bitWidth>1</bitWidth></field>
+    </fields></register>
+  </registers></peripheral>
+  <peripheral><name>GPIOB</name><baseAddress>0x40020400</baseAddress><registers>
+    <register derivedFrom="GPIOA.ODR"><name>ODR</name><addressOffset>0x14</addressOffset></register>
+  </registers></peripheral>
+</peripherals></device>''';
+    final device = parseSvd(svd);
+    final gpiobOdr = device.peripherals
+        .singleWhere((p) => p.name == 'GPIOB')
+        .registers
+        .singleWhere((r) => r.name == 'ODR');
+    expect(gpiobOdr.fields.single.name, 'ODR5');
+    expect(device.peripherals.any((p) => p.name == 'STK'), isTrue);
+
+    final output = emitSvd(
+      device,
+      headerGuard: 'WO_H',
+      includeName: 'wo.h',
+    );
+    expect(output.header, contains('GPIOA_BSRR_BS5_write'));
+    expect(output.header, isNot(contains('GPIOA_BSRR_BS5_toggle')));
+    expect(
+      output.header,
+      contains('*r = ((v << 5) & (1u << 5));'),
+    );
+    expect(output.header, isNot(contains('GPIOA_BSRR_BS5_write(uint32_t v) {\n  volatile uint32_t *r = (volatile uint32_t *)(0x40020018u);\n  uint32_t m =')));
+  });
+
   test('CLI writes generated header and Klin declarations', () async {
     final temp = await Directory.systemTemp.createTemp('klin_svd_');
     addTearDown(() => temp.delete(recursive: true));

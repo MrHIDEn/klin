@@ -15,9 +15,13 @@ class SvdPeripheral {
 class SvdRegister {
   final String name;
   final int addressOffset;
-  final List<SvdField> fields;
+  List<SvdField> fields;
+  final String? access;
 
-  SvdRegister(this.name, this.addressOffset, this.fields);
+  SvdRegister(this.name, this.addressOffset, this.fields, {this.access});
+
+  bool get isWriteOnly => access == 'write-only';
+  bool get isReadOnly => access == 'read-only';
 }
 
 class SvdField {
@@ -25,8 +29,12 @@ class SvdField {
   final int bitOffset;
   final int bitWidth;
   List<SvdEnumValue> enums;
+  final String? access;
 
-  SvdField(this.name, this.bitOffset, this.bitWidth, this.enums);
+  SvdField(this.name, this.bitOffset, this.bitWidth, this.enums, {this.access});
+
+  bool get isWriteOnly => access == 'write-only';
+  bool get isReadOnly => access == 'read-only';
 }
 
 class SvdEnumValue {
