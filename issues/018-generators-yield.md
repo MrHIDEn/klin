@@ -18,3 +18,6 @@ JS/`async`/`function*`: `yield` zawiesza funkcję i oddaje wartość do iterator
 - Nie obiecywać `yield` jak w Pythonie/JS przed decyzją o koszcie i alokacji.
 - Nie dodawać przed solidnymi funkcjami (004) i slice’ami/iteratorami (007).
 - Test zasady nadrzędnej: generator vs ręczna pętla w C — ten sam kod maszynowy albo cecha wypada.
+
+`yield` nie jest związany z generatorem SVD z [011](011-svd.md): tamten jest
+narzędziem build-time, bez ukrytego stanu programu użytkownika.

@@ -20,8 +20,9 @@
 **Startup zostaje surowym `.s` obok.** Tablica wektorów, reset handler,
 kopiowanie `.data` z flash do RAM, zerowanie `.bss`. Nie opakowywać.
 
-**Nie parsować nagłówków CMSIS** — są zbudowane z makr i bitfieldów,
-sygnatury pisane ręcznie jako deklaracje FFI.
+**Nie parsować nagłówków CMSIS** — są zbudowane z makr i bitfieldów.
+Rejestry STM32F411 pochodzą teraz z generatora SVD ([011](011-svd.md));
+sygnatury pozostałego FFI nadal są deklarowane ręcznie.
 
 Flagi: `-Os`, `-ffunction-sections -fdata-sections`, `--gc-sections`.
 

@@ -239,6 +239,10 @@ final class Lexer {
         _advance();
       } else if (c == '\n') {
         _advance();
+      } else if (c == '/' && _i + 1 < source.length && source[_i + 1] == '/') {
+        while (!_atEnd && _peek != '\n') {
+          _advance();
+        }
       } else {
         break;
       }

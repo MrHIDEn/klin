@@ -11,3 +11,5 @@ executables:
 
 dev_dependencies:
   test: ^1.25.0
+dependencies:
+  xml: ^7.0.1

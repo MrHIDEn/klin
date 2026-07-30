@@ -105,7 +105,7 @@ Set<String> _collectCIncludes(Program program) {
       _ => const <Attr>[],
     };
     for (final attr in attrs) {
-      if (attr.name == 'cinclude') includes.add('<${attr.arg!}>');
+      if (attr.name == 'cinclude') includes.add('"${attr.arg!}"');
     }
   }
   if (program.funcs.any(_callsStdio)) includes.add('<stdio.h>');
