@@ -10,13 +10,15 @@ String emitC(Program program, String sourcePath) {
   buf.writeln('#include <stdbool.h>');
   buf.writeln();
   for (final struct in program.structs) {
+    _line(buf, struct.pos.line, struct.sourcePath ?? sourcePath);
     buf.writeln('typedef struct {');
     for (final field in struct.fields) {
       final type = field.resolvedType;
-      if (type == null) throw StateError('emit: brak typu pola `${field.name}`');
+      if (type == null)
+        throw StateError('emit: brak typu pola `${field.name}`');
       buf.writeln('    ${_cType(type)} ${field.name};');
     }
-    buf.writeln('} ${struct.name};');
+    buf.writeln('} ${_structCName(struct.moduleName, struct.name)};');
     buf.writeln();
   }
   for (final func in program.funcs) {
@@ -24,12 +26,12 @@ String emitC(Program program, String sourcePath) {
   }
   buf.writeln();
   for (final func in program.funcs) {
-    _line(buf, func.pos.line, sourcePath);
+    _line(buf, func.pos.line, func.sourcePath ?? sourcePath);
     buf.writeln('${_functionHeader(func)} {');
     _emitBlock(
       buf,
       func.body,
-      sourcePath,
+      func.sourcePath ?? sourcePath,
       indent: 1,
       bareReturnAsZero: func.name == 'main',
     );
@@ -50,24 +52,38 @@ String _functionHeader(FuncDecl func) {
     if (func.receiver case final receiver?)
       '${_cType(receiver.resolvedType!)}${receiver.isMut ? ' *' : ' '}${receiver.name}',
     ...func.params.map((param) {
-    final type = param.resolvedType;
-    if (type == null) {
-      throw StateError('emit: brak typu parametru `${param.name}`');
-    }
-    return '${_cType(type)} ${param.name}';
-  }),
+      final type = param.resolvedType;
+      if (type == null) {
+        throw StateError('emit: brak typu parametru `${param.name}`');
+      }
+      return '${_cType(type)} ${param.name}';
+    }),
   ];
-  final name = func.receiver == null ? func.name : '${func.receiver!.typeName}_${func.name}';
-  return '${_cType(returnType)} $name(${params.isEmpty ? 'void' : params.join(', ')})';
+  final name = func.name == 'main'
+      ? 'main'
+      : func.receiver == null
+          ? _freeCName(func.moduleName, func.name)
+          : _methodCName(
+              func.moduleName,
+              _receiverTypeName(func.receiver!),
+              func.name,
+            );
+  final staticPrefix = !func.isPub && func.name != 'main' ? 'static ' : '';
+  return '$staticPrefix${_cType(returnType)} $name(${params.isEmpty ? 'void' : params.join(', ')})';
 }
 
+String _receiverTypeName(Receiver receiver) => receiver.typeName.contains('.')
+    ? receiver.typeName.split('.').last
+    : receiver.typeName;
+
 String _cType(KlinType type) => switch (type) {
-  PrimType(:final kind) => kind.cType,
-  VoidType() => 'void',
-  StrType() => 'const char*',
-  StructType(:final name) => name,
-  _ => throw StateError('emit: typ `${type.displayName}` nie ma typu C'),
-};
+      PrimType(:final kind) => kind.cType,
+      VoidType() => 'void',
+      StrType() => 'const char*',
+      StructType(:final moduleName, :final name) =>
+        _structCName(moduleName, name),
+      _ => throw StateError('emit: typ `${type.displayName}` nie ma typu C'),
+    };
 
 void _emitBlock(
   StringBuffer buf,
@@ -101,7 +117,8 @@ void _emitStmt(
     case LetStmt(:final name, :final init, :final pos, :final resolvedType):
       _line(buf, pos.line, sourcePath);
       final ty = resolvedType;
-      if (ty == null || (ty is! PrimType && ty is! StrType && ty is! StructType)) {
+      if (ty == null ||
+          (ty is! PrimType && ty is! StrType && ty is! StructType)) {
         throw StateError('emit: brak typu dla `$name` — uruchom checker');
       }
       if (init != null) {
@@ -117,10 +134,15 @@ void _emitStmt(
       _line(buf, pos.line, sourcePath);
       buf.writeln('$pad${_emitExpr(target)} = ${_emitExpr(value)};');
 
-    case CallStmt(:final callee, :final args, :final pos):
+    case CallStmt(
+        :final callee,
+        :final args,
+        :final pos,
+        :final resolvedCallee
+      ):
       _line(buf, pos.line, sourcePath);
       final argList = args.map(_emitExpr).join(', ');
-      buf.writeln('$pad$callee($argList);');
+      buf.writeln('$pad${resolvedCallee ?? callee}($argList);');
 
     case MethodCallStmt(:final call):
       _line(buf, call.pos.line, sourcePath);
@@ -308,10 +330,9 @@ String _emitExpr(Expr expr) {
     BoolLit(:final value) => value ? 'true' : 'false',
     StringLit(:final value) => '"${_escapeC(value)}"',
     NameExpr(:final name) => name,
-    FieldExpr(:final object, :final name) =>
-      _exprIsPtrReceiver(object)
-          ? '${_emitExpr(object)}->$name'
-          : '${_emitExpr(object)}.$name',
+    FieldExpr(:final object, :final name) => _exprIsPtrReceiver(object)
+        ? '${_emitExpr(object)}->$name'
+        : '${_emitExpr(object)}.$name',
     MethodCallExpr(
       :final receiver,
       :final args,
@@ -319,20 +340,34 @@ String _emitExpr(Expr expr) {
       :final receiverByRef,
     ) =>
       '${mangledName ?? (throw StateError('emit: metoda bez manglingu'))}'
-      '(${receiverByRef ? '&' : ''}${_emitExpr(receiver)}'
-      '${args.isEmpty ? '' : ', ${args.map(_emitExpr).join(', ')}'})',
-    StructLitExpr(:final typeName, :final namedFields, :final positionalFields) =>
+          '(${receiverByRef ? '&' : ''}${_emitExpr(receiver)}'
+          '${args.isEmpty ? '' : ', ${args.map(_emitExpr).join(', ')}'})',
+    StructLitExpr(
+      :final resolvedType,
+      :final typeName,
+      :final namedFields,
+      :final positionalFields
+    ) =>
       namedFields != null
-          ? '($typeName){ ${namedFields.entries.map((entry) => '.${entry.key} = ${_emitExpr(entry.value)}').join(', ')} }'
-          : '($typeName){ ${positionalFields!.map(_emitExpr).join(', ')} }',
-    CallExpr(:final callee, :final args) =>
-      '$callee(${args.map(_emitExpr).join(', ')})',
+          ? '(${_cType(resolvedType ?? (throw StateError('emit: literał bez typu `$typeName`')))}){ ${namedFields.entries.map((entry) => '.${entry.key} = ${_emitExpr(entry.value)}').join(', ')} }'
+          : '(${_cType(resolvedType ?? (throw StateError('emit: literał bez typu `$typeName`')))}){ ${positionalFields!.map(_emitExpr).join(', ')} }',
+    CallExpr(:final callee, :final args, :final resolvedCallee) =>
+      '${resolvedCallee ?? callee}(${args.map(_emitExpr).join(', ')})',
     UnaryExpr(:final op, :final operand) => '$op(${_emitExpr(operand)})',
     BinaryExpr(:final left, :final op, :final right) =>
       '(${_emitExpr(left)} $op ${_emitExpr(right)})',
     GroupExpr(:final inner) => '(${_emitExpr(inner)})',
   };
 }
+
+String _structCName(String module, String name) =>
+    module.isEmpty ? name : '${module}_$name';
+
+String _freeCName(String module, String name) =>
+    module.isEmpty ? name : '${module}_$name';
+
+String _methodCName(String module, String type, String method) =>
+    module.isEmpty ? '${type}_$method' : '${module}_${type}_$method';
 
 void _line(StringBuffer buf, int line, String path) {
   buf.writeln('#line $line "${_escapeC(path)}"');

@@ -1,0 +1,9 @@
+module app
+import geom
+import util
+
+fn main() {
+  let p = geom.Vec2{ x: 3, y: 4 }
+  printf("%d\n", p.len_sq())
+  printf("%d\n", util.add(2, 3))
+}

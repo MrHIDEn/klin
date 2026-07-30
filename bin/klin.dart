@@ -5,6 +5,7 @@ import 'package:klin/checker.dart';
 import 'package:klin/emit_c.dart';
 import 'package:klin/lexer.dart';
 import 'package:klin/parser.dart';
+import 'package:klin/project.dart';
 
 /// CLI: argv → czytaj → lex → parse → check → emit → cc → run
 ///
@@ -23,11 +24,9 @@ Future<void> main(List<String> args) async {
     exit(1);
   }
 
-  final source = await file.readAsString();
   final Program program;
   try {
-    final tokens = Lexer(source).tokenize();
-    program = Parser(tokens).parse();
+    program = loadProject(sourcePath);
     Checker().check(program);
   } on LexError catch (e) {
     stderr.writeln('$sourcePath:$e');
@@ -37,6 +36,9 @@ Future<void> main(List<String> args) async {
     exit(1);
   } on CheckError catch (e) {
     stderr.writeln('$sourcePath:$e');
+    exit(1);
+  } on FileSystemException catch (e) {
+    stderr.writeln('klin: ${e.message}: ${e.path}');
     exit(1);
   }
 

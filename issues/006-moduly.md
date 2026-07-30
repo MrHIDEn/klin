@@ -1,6 +1,6 @@
 # 006 — Moduły
 
-**Status:** ⬜ do zrobienia
+**Status:** ✅ ukończone
 **Zależy od:** 005
 
 ## Zakres
@@ -27,6 +27,6 @@ ukryte w konwencji nazewniczej.
 
 ## Kryterium ukończenia
 
-- [ ] projekt z 3 modułów kompiluje się do jednego `.c`
-- [ ] symbol bez `pub` niedostępny z innego modułu (błąd kompilacji)
-- [ ] symbole prywatne są `static` w wyjściu
+- [x] projekt z 3 modułów kompiluje się do jednego `.c`
+- [x] symbol bez `pub` niedostępny z innego modułu (błąd kompilacji)
+- [x] symbole prywatne są `static` w wyjściu

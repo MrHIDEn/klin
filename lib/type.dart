@@ -111,18 +111,22 @@ final class VoidType extends KlinType {
 }
 
 final class StructType extends KlinType {
+  final String moduleName;
   final String name;
 
-  const StructType(this.name);
+  const StructType(this.moduleName, this.name);
 
   @override
-  String get displayName => name;
+  String get displayName => moduleName.isEmpty ? name : '$moduleName.$name';
 
   @override
-  bool operator ==(Object other) => other is StructType && other.name == name;
+  bool operator ==(Object other) =>
+      other is StructType &&
+      other.moduleName == moduleName &&
+      other.name == name;
 
   @override
-  int get hashCode => name.hashCode;
+  int get hashCode => Object.hash(moduleName, name);
 }
 
 /// Literał całkowity bez przypisanego jeszcze typu konkretnego.
