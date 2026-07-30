@@ -757,6 +757,22 @@ fn main() {}
     const example = 'examples/blink_f411';
     addTearDown(
         () => Process.run('make', ['clean'], workingDirectory: example));
+    final registers = await Process.run(
+      'dart',
+      [
+        'run',
+        'bin/svd2klin.dart',
+        '--svd',
+        'third_party/svd/stm32f411.svd',
+        '--out-h',
+        '$example/stm32f411_regs.h',
+        '--out-kl',
+        '$example/stm32f411_regs.kl',
+        '--peripherals',
+        'RCC,GPIOA,STK',
+      ],
+    );
+    expect(registers.exitCode, 0, reason: registers.stderr.toString());
     final build = await Process.run('make', [], workingDirectory: example);
     expect(build.exitCode, 0, reason: '${build.stdout}${build.stderr}');
 

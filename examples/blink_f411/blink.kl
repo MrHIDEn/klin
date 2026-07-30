@@ -1,26 +1,17 @@
+@[cinclude("stm32f411_regs.h")]
 @[codename("SysTick_Handler")]
 fn systick_handler() {
-  let odr: *mut volatile u32 = cast(*mut volatile u32, 0x4002_0014)
-  if *odr == 0 {
-    *odr = 32
-  } else {
-    *odr = 0
-  }
+  GPIOA_ODR_ODR5_toggle()
 }
 
 fn main() {
-  let rcc_ahb1enr: *mut volatile u32 = cast(*mut volatile u32, 0x4002_3830)
-  let gpioa_moder: *mut volatile u32 = cast(*mut volatile u32, 0x4002_0000)
-  let systick_csr: *mut volatile u32 = cast(*mut volatile u32, 0xE000_E010)
-  let systick_rvr: *mut volatile u32 = cast(*mut volatile u32, 0xE000_E014)
-  let systick_cvr: *mut volatile u32 = cast(*mut volatile u32, 0xE000_E018)
-
-  *rcc_ahb1enr = 1
-  *gpioa_moder = 0x0000_0400
-  *systick_rvr = 7_999_999
-  *systick_cvr = 0
-  *systick_csr = 7
-
+  RCC_AHB1ENR_GPIOAEN_set(1)
+  GPIOA_MODER_MODER5_write(1) // Output
+  STK_RVR_RELOAD_write(7_999_999)
+  STK_CVR_CURRENT_write(0)
+  STK_CSR_ENABLE_set(1)
+  STK_CSR_TICKINT_set(1)
+  STK_CSR_CLKSOURCE_set(1)
   while true {
     asm("wfi")
   }

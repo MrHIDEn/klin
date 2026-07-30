@@ -39,6 +39,8 @@ async/await z runtime, GC, ani „task” jako ukrytej cechy składni.
 - czy cienki moduł `rtos` w Klinie (012-style: opcjonalny, nie builtin)
 - ISR vs task: te same reguły co C (`FromISR`, priorytety) — Klin nie
   ukrywa
+- konkretny przykład FreeRTOS jest opisany w [028](028-freertos.md), a
+  adnotacje ISR do rozważenia w [030](030-isr-decorators.md)
 
 ## Kryterium (gdy kiedyś wchodzi do prac)
 

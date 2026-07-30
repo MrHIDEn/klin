@@ -25,6 +25,9 @@ doc/api/
 # Wyjście kompilatora Klin — wyłącznie do out/
 /out/
 examples/**/out/
+# Rejestry wygenerowane z SVD przez Makefile przykładu.
+examples/**/stm32f411_regs.h
+examples/**/stm32f411_regs.kl
 
 # Cache go-task (checksumy sources/generates)
 .task/
