@@ -5,6 +5,7 @@ import 'package:klin/checker.dart';
 import 'package:klin/emit_c.dart';
 import 'package:klin/lexer.dart';
 import 'package:klin/parser.dart';
+import 'package:klin/project.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -63,8 +64,7 @@ void main() {
         predicate((e) {
           final msg = e.toString();
           // `42` w linii 3 — lekser zgłasza pozycję.
-          return msg.contains('3:') &&
-              (e is LexError || e is ParseError);
+          return msg.contains('3:') && (e is LexError || e is ParseError);
         }),
       ),
     );
@@ -185,12 +185,38 @@ void main() {
     expect(result.exitCode, 0, reason: result.stderr);
     expect(result.stdout, await File('test/vec2.out').readAsString());
 
-    final source = File('test/vec2.kl').readAsStringSync();
-    final program = Parser(Lexer(source).tokenize()).parse();
+    final program = loadProject('test/vec2.kl');
     Checker().check(program);
     final c = emitC(program, 'test/vec2.kl');
-    expect(c, contains('Vec2_translate(Vec2 *v'));
+    expect(c, contains('vec2_Vec2_translate(vec2_Vec2 *v'));
     expect(c, isNot(contains('mut')));
+  });
+
+  test('złoty: projekt z modułami', () async {
+    final result = await _compileAndRun('test/modules/app.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/modules/app.out').readAsString());
+
+    final program = loadProject('test/modules/app.kl');
+    Checker().check(program);
+    final c = emitC(program, 'test/modules/app.kl');
+    expect(c, contains('typedef struct {'));
+    expect(c, contains('} geom_Vec2;'));
+    expect(c, contains('static void geom_helper(void);'));
+    expect(c, contains('geom_Vec2_len_sq(geom_Vec2 v)'));
+    expect(c, contains('util_add(2, 3)'));
+  });
+
+  test('błąd: prywatny symbol importowanego modułu', () {
+    final program = loadProject('test/modules/private_app.kl');
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) => e is CheckError && e.toString().contains('jest prywatna'),
+        ),
+      ),
+    );
   });
 
   test('błąd: metoda mutująca na niemutowalnej zmiennej', () {
@@ -253,7 +279,8 @@ fn main() {
       () => Checker().check(program),
       throwsA(
         predicate(
-          (e) => e is CheckError &&
+          (e) =>
+              e is CheckError &&
               e.toString().contains('oczekuje 2 argumentów') &&
               e.toString().contains('dostano 1'),
         ),
@@ -268,7 +295,8 @@ fn main() {
       () => Checker().check(program),
       throwsA(
         predicate(
-          (e) => e is CheckError &&
+          (e) =>
+              e is CheckError &&
               e.toString().contains('oczekiwano `i32`') &&
               e.toString().contains('dostano `bool`'),
         ),
@@ -319,7 +347,9 @@ fn main() {
         predicate((e) {
           if (e is! CheckError) return false;
           final msg = e.toString();
-          return msg.contains('2:') && msg.contains('break') && msg.contains('pętlą');
+          return msg.contains('2:') &&
+              msg.contains('break') &&
+              msg.contains('pętlą');
         }),
       ),
     );
@@ -347,8 +377,7 @@ Future<({int exitCode, String stdout, String stderr})> _compileAndRun(
   String klPath,
   Directory tmp,
 ) async {
-  final source = await File(klPath).readAsString();
-  final program = Parser(Lexer(source).tokenize()).parse();
+  final program = loadProject(klPath);
   Checker().check(program);
   final base = klPath.split('/').last.replaceAll('.kl', '');
   final cPath = '${tmp.path}/$base.c';

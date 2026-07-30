@@ -1,0 +1,5 @@
+module private
+
+fn hidden(): i32 {
+  return 1
+}

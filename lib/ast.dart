@@ -6,19 +6,43 @@ final class Program {
   final List<StructDecl> structs;
   final List<FuncDecl> funcs;
   final SourcePos pos;
+  final Map<String, Set<String>> imports;
 
-  const Program(this.structs, this.funcs, this.pos);
+  const Program(this.structs, this.funcs, this.pos, {this.imports = const {}});
+}
+
+/// Jedna jednostka źródłowa przed połączeniem jej przez loader projektu.
+final class ModuleUnit {
+  final String? declaredName;
+  final List<String> imports;
+  final List<StructDecl> structs;
+  final List<FuncDecl> funcs;
+  final SourcePos pos;
+
+  const ModuleUnit({
+    required this.declaredName,
+    required this.imports,
+    required this.structs,
+    required this.funcs,
+    required this.pos,
+  });
 }
 
 final class StructDecl {
   final String name;
   final List<FieldDecl> fields;
   final SourcePos pos;
+  bool isPub;
+  String moduleName;
+  String? sourcePath;
 
-  const StructDecl({
+  StructDecl({
     required this.name,
     required this.fields,
     required this.pos,
+    this.isPub = false,
+    this.moduleName = '',
+    this.sourcePath,
   });
 }
 
@@ -46,6 +70,9 @@ final class FuncDecl {
   final String? returnTypeName;
   final Block body;
   final SourcePos pos;
+  bool isPub;
+  String moduleName;
+  String? sourcePath;
 
   /// Wypełniane przez checker.
   KlinType? resolvedReturnType;
@@ -57,6 +84,9 @@ final class FuncDecl {
     required this.returnTypeName,
     required this.body,
     required this.pos,
+    this.isPub = false,
+    this.moduleName = '',
+    this.sourcePath,
   });
 }
 
@@ -139,11 +169,14 @@ final class AssignStmt extends Stmt {
 
 /// call := ident "(" (expr ("," expr)*)? ")"
 final class CallStmt extends Stmt {
+  final String? moduleName;
   final String callee;
   final List<Expr> args;
   final SourcePos pos;
+  String? resolvedCallee;
 
   CallStmt({
+    this.moduleName,
     required this.callee,
     required this.args,
     required this.pos,
@@ -340,12 +373,14 @@ final class MethodCallExpr extends Expr {
 }
 
 final class StructLitExpr extends Expr {
+  final String? moduleName;
   final String typeName;
   final Map<String, Expr>? namedFields;
   final List<Expr>? positionalFields;
   final SourcePos pos;
 
   StructLitExpr.named({
+    this.moduleName,
     required this.typeName,
     required Map<String, Expr> fields,
     required this.pos,
@@ -353,6 +388,7 @@ final class StructLitExpr extends Expr {
         positionalFields = null;
 
   StructLitExpr.positional({
+    this.moduleName,
     required this.typeName,
     required List<Expr> fields,
     required this.pos,
@@ -362,11 +398,14 @@ final class StructLitExpr extends Expr {
 
 /// call := ident "(" (expr ("," expr)*)? ")"
 final class CallExpr extends Expr {
+  final String? moduleName;
   final String callee;
   final List<Expr> args;
   final SourcePos pos;
+  String? resolvedCallee;
 
   CallExpr({
+    this.moduleName,
     required this.callee,
     required this.args,
     required this.pos,

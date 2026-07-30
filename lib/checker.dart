@@ -17,6 +17,7 @@ final class _Symbol {
   final KlinType type;
   final bool isMut;
   final SourcePos pos;
+
   /// Mut receiver metody — w C parametr wskaźnikowy (`T *`).
   final bool isPtrReceiver;
 
@@ -57,13 +58,22 @@ final class _FuncSignature {
   final KlinType returnType;
   final SourcePos pos;
   final bool isMutReceiver;
+  final bool isPub;
 
   const _FuncSignature({
     required this.paramTypes,
     required this.returnType,
     required this.pos,
     this.isMutReceiver = false,
+    this.isPub = false,
   });
+}
+
+final class _CheckedCall {
+  final KlinType type;
+  final String? cName;
+
+  const _CheckedCall(this.type, this.cName);
 }
 
 /// Tablica symboli + sprawdzanie typów. Mutuje `resolvedType` na węzłach AST.
@@ -73,27 +83,42 @@ final class Checker {
   final Map<String, _FuncSignature> _functions = {};
   final Map<String, StructDecl> _structs = {};
   final Map<String, _FuncSignature> _methods = {};
+  final List<FuncDecl> _allFunctions = [];
+  Map<String, Set<String>> _imports = {};
   KlinType _currentReturn = const VoidType();
   String _currentFunction = '';
+  String _currentModule = '';
 
   void check(Program program) {
     _functions.clear();
     _structs.clear();
     _methods.clear();
+    _allFunctions
+      ..clear()
+      ..addAll(program.funcs);
+    _imports = program.imports;
     _registerStructs(program);
     _registerFunctions(program);
-    final main = program.funcs.where((func) => func.name == 'main').toList();
+    final main = program.funcs
+        .where((func) => func.receiver == null && func.name == 'main')
+        .toList();
     if (main.isEmpty) {
       throw CheckError('brak wymaganej funkcji `main`', program.pos);
     }
+    if (main.length != 1) {
+      throw CheckError(
+          'w projekcie może być tylko jedna funkcja `main`', main[1].pos);
+    }
     if (main.single.params.isNotEmpty) {
-      throw CheckError('funkcja `main` nie może mieć parametrów', main.single.pos);
+      throw CheckError(
+          'funkcja `main` nie może mieć parametrów', main.single.pos);
     }
 
     for (final func in program.funcs) {
       _scope = _Scope(null);
       _loopDepth = 0;
       _currentFunction = func.name;
+      _currentModule = func.moduleName;
       _currentReturn = func.resolvedReturnType!;
       final receiver = func.receiver;
       if (receiver != null) {
@@ -131,9 +156,10 @@ final class Checker {
 
   void _registerFunctions(Program program) {
     for (final func in program.funcs) {
+      _currentModule = func.moduleName;
       final key = func.receiver == null
-          ? func.name
-          : '${func.receiver!.typeName}.${func.name}';
+          ? _key(func.moduleName, func.name)
+          : '${_resolveType(func.receiver!.typeName, func.receiver!.pos).displayName}.${func.name}';
       final collection = func.receiver == null ? _functions : _methods;
       if (collection.containsKey(key)) {
         throw CheckError('ponowna deklaracja funkcji `${func.name}`', func.pos);
@@ -169,34 +195,56 @@ final class Checker {
         returnType: returnType,
         pos: func.pos,
         isMutReceiver: receiver?.isMut ?? false,
+        isPub: func.isPub,
       );
     }
   }
 
   void _registerStructs(Program program) {
     for (final struct in program.structs) {
-      if (_structs.containsKey(struct.name)) {
-        throw CheckError('ponowna deklaracja struktury `${struct.name}`', struct.pos);
+      final key = _key(struct.moduleName, struct.name);
+      if (_structs.containsKey(key)) {
+        throw CheckError(
+            'ponowna deklaracja struktury `${struct.name}`', struct.pos);
       }
-      _structs[struct.name] = struct;
+      _structs[key] = struct;
     }
     for (final struct in program.structs) {
+      _currentModule = struct.moduleName;
       final names = <String>{};
       for (final field in struct.fields) {
         if (!names.add(field.name)) {
           throw CheckError('powtórzone pole `${field.name}`', field.pos);
         }
-        field.resolvedType = _resolvePrimType(field.typeName, field.pos);
+        field.resolvedType = _resolveType(field.typeName, field.pos);
       }
     }
   }
 
   KlinType _resolveType(String name, SourcePos pos) {
     if (name == 'void') return const VoidType();
-    final struct = _structs[name];
-    if (struct != null) return StructType(struct.name);
+    final parts = name.split('.');
+    final module = parts.length == 2 ? parts.first : _currentModule;
+    final typeName = parts.length == 2 ? parts.last : name;
+    if (parts.length > 2)
+      throw CheckError('niepoprawna nazwa typu `$name`', pos);
+    if (module != _currentModule && !_isImported(module)) {
+      throw CheckError('moduł `$module` nie jest zaimportowany', pos);
+    }
+    final struct = _structs[_key(module, typeName)];
+    if (struct != null) {
+      if (module != _currentModule && !struct.isPub) {
+        throw CheckError('struktura `$module.$typeName` jest prywatna', pos);
+      }
+      return StructType(module, struct.name);
+    }
     return _resolvePrimType(name, pos);
   }
+
+  String _key(String module, String name) => '$module.$name';
+
+  bool _isImported(String module) =>
+      _imports[_currentModule]?.contains(module) ?? false;
 
   PrimType _resolvePrimType(String name, SourcePos pos) {
     final kind = PrimKind.tryParse(name);
@@ -214,7 +262,13 @@ final class Checker {
 
   void _checkStmt(Stmt stmt) {
     switch (stmt) {
-      case LetStmt(:final isMut, :final name, :final typeName, :final init, :final pos):
+      case LetStmt(
+          :final isMut,
+          :final name,
+          :final typeName,
+          :final init,
+          :final pos
+        ):
         KlinType? annotated;
         if (typeName != null) {
           annotated = _resolveType(typeName, pos);
@@ -252,8 +306,9 @@ final class Checker {
         _expectAssignable(targetType, valueType, value.pos);
         _materialize(value, targetType);
 
-      case CallStmt(:final callee, :final args, :final pos):
-        _checkCall(callee, args, pos);
+      case CallStmt(:final moduleName, :final callee, :final args, :final pos):
+        stmt.resolvedCallee =
+            _checkCall(callee, args, pos, moduleName: moduleName).cName;
 
       case MethodCallStmt(:final call):
         _checkMethodCall(call);
@@ -399,21 +454,37 @@ final class Checker {
     _materialize(value, _currentReturn);
   }
 
-  KlinType _checkCall(String callee, List<Expr> args, SourcePos pos) {
+  _CheckedCall _checkCall(
+    String callee,
+    List<Expr> args,
+    SourcePos pos, {
+    String? moduleName,
+  }) {
     final local = _scope.lookup(callee);
-    if (local != null) {
+    if (local != null && moduleName == null) {
       throw CheckError(
         '`$callee` nie jest funkcją (to zmienna `${local.type.displayName}`)',
         pos,
       );
     }
-    final signature = _functions[callee];
+    final module = moduleName ?? _currentModule;
+    if (moduleName != null && !_isImported(module)) {
+      throw CheckError('moduł `$module` nie jest zaimportowany', pos);
+    }
+    final signature = _functions[_key(module, callee)];
     if (signature == null) {
+      if (moduleName != null) {
+        throw CheckError('nieznana funkcja `$module.$callee`', pos);
+      }
       // FFI do C (np. puts/printf) — nie znamy sygnatury.
       for (final arg in args) {
         _inferExpr(arg);
       }
-      return const PrimType(PrimKind.i32);
+      return const _CheckedCall(PrimType(PrimKind.i32), null);
+    }
+    final decl = _functionDecl(module, callee);
+    if (module != _currentModule && !decl.isPub) {
+      throw CheckError('funkcja `$module.$callee` jest prywatna', pos);
     }
     if (args.length != signature.paramTypes.length) {
       throw CheckError(
@@ -429,26 +500,48 @@ final class Checker {
       _expectAssignable(expected, actual, arg.pos);
       _materialize(arg, expected);
     }
-    return signature.returnType;
+    return _CheckedCall(signature.returnType, _mangledFreeName(module, callee));
   }
+
+  FuncDecl _functionDecl(String module, String name) =>
+      _allFunctions.firstWhere((func) =>
+          func.receiver == null &&
+          func.moduleName == module &&
+          func.name == name);
+
+  String _mangledFreeName(String module, String name) =>
+      module.isEmpty ? name : '${module}_$name';
 
   KlinType _checkMethodCall(MethodCallExpr call) {
     final receiverType = _inferExpr(call.receiver);
     if (receiverType is! StructType) {
-      throw CheckError('metoda wymaga struktury, dostano `${receiverType.displayName}`', call.pos);
+      throw CheckError(
+          'metoda wymaga struktury, dostano `${receiverType.displayName}`',
+          call.pos);
     }
-    final signature = _methods['${receiverType.name}.${call.name}'];
+    final signature = _methods['${receiverType.displayName}.${call.name}'];
     if (signature == null) {
-      throw CheckError('struktura `${receiverType.name}` nie ma metody `${call.name}`', call.pos);
+      throw CheckError(
+          'struktura `${receiverType.name}` nie ma metody `${call.name}`',
+          call.pos);
+    }
+    if (receiverType.moduleName != _currentModule && !signature.isPub) {
+      throw CheckError(
+        'metoda `${receiverType.moduleName}.${receiverType.name}.${call.name}` jest prywatna',
+        call.pos,
+      );
     }
     if (signature.isMutReceiver) {
       if (call.receiver is! NameExpr) {
-        throw CheckError('metoda mutująca wymaga mutowalnej zmiennej', call.receiver.pos);
+        throw CheckError(
+            'metoda mutująca wymaga mutowalnej zmiennej', call.receiver.pos);
       }
       final receiver = call.receiver as NameExpr;
       final symbol = _scope.lookup(receiver.name);
       if (symbol == null || !symbol.isMut) {
-        throw CheckError('nie można wywołać metody mutującej na niemutowalnej zmiennej', call.receiver.pos);
+        throw CheckError(
+            'nie można wywołać metody mutującej na niemutowalnej zmiennej',
+            call.receiver.pos);
       }
     }
     if (call.args.length != signature.paramTypes.length) {
@@ -463,7 +556,8 @@ final class Checker {
       _expectAssignable(expected, _inferExpr(arg), arg.pos);
       _materialize(arg, expected);
     }
-    call.mangledName = '${receiverType.name}_${call.name}';
+    call.mangledName =
+        '${receiverType.moduleName}_${receiverType.name}_${call.name}';
     call.receiverByRef = signature.isMutReceiver;
     return signature.returnType;
   }
@@ -472,9 +566,12 @@ final class Checker {
     final place = _unwrapGroups(target);
     if (place is NameExpr) {
       final symbol = _scope.lookup(place.name);
-      if (symbol == null) throw CheckError('nieznana zmienna `${place.name}`', pos);
+      if (symbol == null)
+        throw CheckError('nieznana zmienna `${place.name}`', pos);
       if (!symbol.isMut) {
-        throw CheckError('nie można przypisać do niemutowalnej zmiennej `${place.name}`', pos);
+        throw CheckError(
+            'nie można przypisać do niemutowalnej zmiennej `${place.name}`',
+            pos);
       }
       place.isPtrReceiver = symbol.isPtrReceiver;
       return symbol.type;
@@ -494,12 +591,14 @@ final class Checker {
         throw CheckError('nieznana zmienna `${base.name}`', pos);
       }
       if (!symbol.isMut) {
-        throw CheckError('nie można przypisać do pola niemutowalnej zmiennej', pos);
+        throw CheckError(
+            'nie można przypisać do pola niemutowalnej zmiennej', pos);
       }
       base.isPtrReceiver = symbol.isPtrReceiver;
       return;
     }
-    throw CheckError('nie można przypisać do pola niemutowalnego wyrażenia', pos);
+    throw CheckError(
+        'nie można przypisać do pola niemutowalnego wyrażenia', pos);
   }
 
   Expr _unwrapGroups(Expr expr) {
@@ -518,14 +617,13 @@ final class Checker {
   }
 
   bool _stmtReturns(Stmt stmt) => switch (stmt) {
-    ReturnStmt() => true,
-    BlockStmt(:final block) => _returnsOnAllPaths(block),
-    IfStmt(:final thenBlock, :final elseBranch) =>
-      elseBranch != null &&
-          _returnsOnAllPaths(thenBlock) &&
-          _stmtReturns(elseBranch),
-    _ => false,
-  };
+        ReturnStmt() => true,
+        BlockStmt(:final block) => _returnsOnAllPaths(block),
+        IfStmt(:final thenBlock, :final elseBranch) => elseBranch != null &&
+            _returnsOnAllPaths(thenBlock) &&
+            _stmtReturns(elseBranch),
+        _ => false,
+      };
 
   /// Wnioskowanie bez kontekstu — może zwrócić typ untyped.
   KlinType _inferExpr(Expr expr) {
@@ -537,7 +635,8 @@ final class Checker {
       NameExpr nameExpr => () {
           final sym = _scope.lookup(nameExpr.name);
           if (sym == null) {
-            throw CheckError('nieznana zmienna `${nameExpr.name}`', nameExpr.pos);
+            throw CheckError(
+                'nieznana zmienna `${nameExpr.name}`', nameExpr.pos);
           }
           nameExpr.isPtrReceiver = sym.isPtrReceiver;
           return sym.type;
@@ -545,55 +644,84 @@ final class Checker {
       FieldExpr(:final object, :final name, :final pos) => () {
           final objectType = _inferExpr(object);
           if (objectType is! StructType) {
-            throw CheckError('odczyt pola wymaga struktury, dostano `${objectType.displayName}`', pos);
+            throw CheckError(
+                'odczyt pola wymaga struktury, dostano `${objectType.displayName}`',
+                pos);
           }
           FieldDecl? field;
-          for (final candidate in _structs[objectType.name]!.fields) {
+          for (final candidate
+              in _structs[_key(objectType.moduleName, objectType.name)]!
+                  .fields) {
             if (candidate.name == name) {
               field = candidate;
               break;
             }
           }
           if (field == null) {
-            throw CheckError('struktura `${objectType.name}` nie ma pola `$name`', pos);
+            throw CheckError(
+                'struktura `${objectType.name}` nie ma pola `$name`', pos);
           }
           return field.resolvedType!;
         }(),
       MethodCallExpr() => _checkMethodCall(expr),
-      StructLitExpr(:final typeName, :final namedFields, :final positionalFields, :final pos) => () {
-          final struct = _structs[typeName];
-          if (struct == null) throw CheckError('nieznana struktura `$typeName`', pos);
+      StructLitExpr(
+        :final moduleName,
+        :final typeName,
+        :final namedFields,
+        :final positionalFields,
+        :final pos
+      ) =>
+        () {
+          final module = moduleName ?? _currentModule;
+          if (moduleName != null && !_isImported(module)) {
+            throw CheckError('moduł `$module` nie jest zaimportowany', pos);
+          }
+          final struct = _structs[_key(module, typeName)];
+          if (struct == null)
+            throw CheckError('nieznana struktura `$typeName`', pos);
+          if (module != _currentModule && !struct.isPub) {
+            throw CheckError(
+                'struktura `$module.$typeName` jest prywatna', pos);
+          }
           if (namedFields != null) {
             if (namedFields.length != struct.fields.length) {
-              throw CheckError('literał `$typeName` wymaga wszystkich pól', pos);
+              throw CheckError(
+                  'literał `$typeName` wymaga wszystkich pól', pos);
             }
             for (final field in struct.fields) {
               final value = namedFields[field.name];
-              if (value == null) throw CheckError('brak pola `${field.name}` w literałe', pos);
-              _expectAssignable(field.resolvedType!, _inferExpr(value), value.pos);
+              if (value == null)
+                throw CheckError('brak pola `${field.name}` w literałe', pos);
+              _expectAssignable(
+                  field.resolvedType!, _inferExpr(value), value.pos);
               _materialize(value, field.resolvedType!);
             }
           } else {
             final values = positionalFields!;
             if (values.length != struct.fields.length) {
-              throw CheckError('literał `$typeName` oczekuje ${struct.fields.length} pól', pos);
+              throw CheckError(
+                  'literał `$typeName` oczekuje ${struct.fields.length} pól',
+                  pos);
             }
             for (var i = 0; i < values.length; i++) {
-              _expectAssignable(struct.fields[i].resolvedType!, _inferExpr(values[i]), values[i].pos);
+              _expectAssignable(struct.fields[i].resolvedType!,
+                  _inferExpr(values[i]), values[i].pos);
               _materialize(values[i], struct.fields[i].resolvedType!);
             }
           }
-          return StructType(typeName);
+          return StructType(module, typeName);
         }(),
-      CallExpr(:final callee, :final args, :final pos) => () {
-          final returnType = _checkCall(callee, args, pos);
-          if (returnType is VoidType) {
+      CallExpr(:final moduleName, :final callee, :final args, :final pos) =>
+        () {
+          final call = _checkCall(callee, args, pos, moduleName: moduleName);
+          expr.resolvedCallee = call.cName;
+          if (call.type is VoidType) {
             throw CheckError(
               'wynik funkcji void `$callee` nie może być użyty jako wartość',
               pos,
             );
           }
-          return returnType;
+          return call.type;
         }(),
       UnaryExpr(:final op, :final operand, :final pos) => () {
           if (op == '!') {
@@ -631,7 +759,8 @@ final class Checker {
         _inferBinary(left, op, right, pos),
       GroupExpr(:final inner) => _inferExpr(inner),
     };
-    if (type is PrimType || type is StrType || type is StructType) expr.resolvedType = type;
+    if (type is PrimType || type is StrType || type is StructType)
+      expr.resolvedType = type;
     return type;
   }
 

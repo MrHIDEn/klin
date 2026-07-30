@@ -1,0 +1,6 @@
+module private_app
+import private
+
+fn main() {
+  printf("%d\n", private.hidden())
+}
