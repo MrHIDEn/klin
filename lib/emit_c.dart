@@ -124,10 +124,11 @@ void _collectSliceTypes(KlinType? type, Set<PrimType> output) {
 }
 
 final class _DeferFrame {
-  final List<Stmt> defers;
+  /// Ciała defer zarejestrowane w kolejności napotkania (nie z całego bloku z góry).
+  final List<Stmt> defers = [];
   final bool isLoopBody;
 
-  const _DeferFrame(this.defers, {this.isLoopBody = false});
+  _DeferFrame({this.isLoopBody = false});
 }
 
 final class _EmitState {
@@ -148,13 +149,7 @@ void _emitBlock(
   bool isLoopBody = false,
 }) {
   final pad = '    ' * indent;
-  final frame = _DeferFrame(
-    [
-      for (final stmt in block.stmts)
-        if (stmt case DeferStmt(:final body)) body,
-    ],
-    isLoopBody: isLoopBody,
-  );
+  final frame = _DeferFrame(isLoopBody: isLoopBody);
   state.deferStack.add(frame);
   for (final stmt in block.stmts) {
     _emitStmt(
@@ -385,9 +380,12 @@ void _emitStmt(
       );
       buf.writeln('${pad}continue;');
 
-    case DeferStmt():
-      // Ciało jest emitowane przez epilog bieżącego bloku.
-      break;
+    case DeferStmt(:final body):
+      // Rejestruj dopiero w miejscu defer — wcześniejszy exit nie widzi późniejszych.
+      if (state.deferStack.isEmpty) {
+        throw StateError('emit: defer poza blokiem');
+      }
+      state.deferStack.last.defers.add(body);
 
     case BlockStmt(:final block):
       _line(buf, block.pos.line, sourcePath);

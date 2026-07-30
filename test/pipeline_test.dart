@@ -207,6 +207,26 @@ fn main() {
     );
   });
 
+  test('wczesny return nie uruchamia późniejszego defer', () async {
+    const source = '''
+fn main() {
+  defer puts("a")
+  puts("body")
+  return
+  defer puts("b")
+}
+''';
+    final dir = await Directory.systemTemp.createTemp('klin_defer_early_');
+    addTearDown(() async {
+      if (await dir.exists()) await dir.delete(recursive: true);
+    });
+    final kl = File('${dir.path}/early.kl');
+    await kl.writeAsString(source);
+    final result = await _compileAndRun(kl.path, dir);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, 'body\na\n');
+  });
+
   test('złoty: funkcja wywołana przed definicją', () async {
     final result = await _compileAndRun('test/call_before_def.kl', tmp);
     expect(result.exitCode, 0, reason: result.stderr);
