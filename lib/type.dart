@@ -110,6 +110,21 @@ final class VoidType extends KlinType {
   int get hashCode => 0;
 }
 
+final class StructType extends KlinType {
+  final String name;
+
+  const StructType(this.name);
+
+  @override
+  String get displayName => name;
+
+  @override
+  bool operator ==(Object other) => other is StructType && other.name == name;
+
+  @override
+  int get hashCode => name.hashCode;
+}
+
 /// Literał całkowity bez przypisanego jeszcze typu konkretnego.
 final class UntypedInt extends KlinType {
   const UntypedInt();

@@ -1,17 +1,47 @@
 import 'token.dart';
 import 'type.dart';
 
-/// program := func+
+/// program := (struct | func)+
 final class Program {
+  final List<StructDecl> structs;
   final List<FuncDecl> funcs;
   final SourcePos pos;
 
-  const Program(this.funcs, this.pos);
+  const Program(this.structs, this.funcs, this.pos);
 }
 
-/// fn name(params): returnType? block
+final class StructDecl {
+  final String name;
+  final List<FieldDecl> fields;
+  final SourcePos pos;
+
+  const StructDecl({
+    required this.name,
+    required this.fields,
+    required this.pos,
+  });
+}
+
+/// name: primitive-type
+final class FieldDecl {
+  final String name;
+  final String typeName;
+  final SourcePos pos;
+
+  /// Wypełniane przez checker.
+  KlinType? resolvedType;
+
+  FieldDecl({
+    required this.name,
+    required this.typeName,
+    required this.pos,
+  });
+}
+
+/// fn [(mut)? name: Type] name(params): returnType? block
 final class FuncDecl {
   final String name;
+  final Receiver? receiver;
   final List<Param> params;
   final String? returnTypeName;
   final Block body;
@@ -22,9 +52,27 @@ final class FuncDecl {
 
   FuncDecl({
     required this.name,
+    required this.receiver,
     required this.params,
     required this.returnTypeName,
     required this.body,
+    required this.pos,
+  });
+}
+
+final class Receiver {
+  final String name;
+  final String typeName;
+  final bool isMut;
+  final SourcePos pos;
+
+  /// Wypełniane przez checker.
+  KlinType? resolvedType;
+
+  Receiver({
+    required this.name,
+    required this.typeName,
+    required this.isMut,
     required this.pos,
   });
 }
@@ -76,14 +124,14 @@ final class LetStmt extends Stmt {
   });
 }
 
-/// name = expr
+/// target = expr, gdzie target to NameExpr lub FieldExpr.
 final class AssignStmt extends Stmt {
-  final String name;
+  final Expr target;
   final Expr value;
   final SourcePos pos;
 
   AssignStmt({
-    required this.name,
+    required this.target,
     required this.value,
     required this.pos,
   });
@@ -100,6 +148,15 @@ final class CallStmt extends Stmt {
     required this.args,
     required this.pos,
   });
+}
+
+final class MethodCallStmt extends Stmt {
+  final MethodCallExpr call;
+
+  MethodCallStmt(this.call);
+
+  @override
+  SourcePos get pos => call.pos;
 }
 
 /// if cond block [else (block | if)]
@@ -246,7 +303,61 @@ final class NameExpr extends Expr {
   final String name;
   final SourcePos pos;
 
+  /// Wypełniane przez checker: mut receiver emitowany jako wskaźnik (`->`).
+  bool isPtrReceiver = false;
+
   NameExpr(this.name, this.pos);
+}
+
+final class FieldExpr extends Expr {
+  final Expr object;
+  final String name;
+  final SourcePos pos;
+
+  FieldExpr({
+    required this.object,
+    required this.name,
+    required this.pos,
+  });
+}
+
+final class MethodCallExpr extends Expr {
+  final Expr receiver;
+  final String name;
+  final List<Expr> args;
+  final SourcePos pos;
+
+  /// Wypełniane przez checker.
+  String? mangledName;
+  bool receiverByRef = false;
+
+  MethodCallExpr({
+    required this.receiver,
+    required this.name,
+    required this.args,
+    required this.pos,
+  });
+}
+
+final class StructLitExpr extends Expr {
+  final String typeName;
+  final Map<String, Expr>? namedFields;
+  final List<Expr>? positionalFields;
+  final SourcePos pos;
+
+  StructLitExpr.named({
+    required this.typeName,
+    required Map<String, Expr> fields,
+    required this.pos,
+  })  : namedFields = fields,
+        positionalFields = null;
+
+  StructLitExpr.positional({
+    required this.typeName,
+    required List<Expr> fields,
+    required this.pos,
+  })  : namedFields = null,
+        positionalFields = fields;
 }
 
 /// call := ident "(" (expr ("," expr)*)? ")"

@@ -180,6 +180,72 @@ void main() {
     expect(result.stdout, expected);
   });
 
+  test('złoty: Vec2 — struktury, pola i metody', () async {
+    final result = await _compileAndRun('test/vec2.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/vec2.out').readAsString());
+
+    final source = File('test/vec2.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/vec2.kl');
+    expect(c, contains('Vec2_translate(Vec2 *v'));
+    expect(c, isNot(contains('mut')));
+  });
+
+  test('błąd: metoda mutująca na niemutowalnej zmiennej', () {
+    final source = File('test/bad_mut_method.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) => e is CheckError && e.toString().contains('metody mutującej'),
+        ),
+      ),
+    );
+  });
+
+  test('zacieniony mut receiver emituje `.` nie `->`', () {
+    const source = '''
+struct Vec2 {
+  x: i32
+}
+fn (mut v: Vec2) bump() {
+  let mut v = Vec2{ 1 }
+  v.x = v.x + 1
+}
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'shadow.kl');
+    expect(c, contains('v.x = (v.x + 1);'));
+    expect(c, isNot(contains('v->x')));
+  });
+
+  test('błąd: przypisanie do pola literału struktury', () {
+    const source = '''
+struct Vec2 {
+  x: i32
+}
+fn main() {
+  Vec2{ 1 }.x = 2
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) =>
+              e is CheckError &&
+              e.toString().contains('pola niemutowalnego wyrażenia'),
+        ),
+      ),
+    );
+  });
+
   test('błąd: zła liczba argumentów funkcji', () {
     final source = File('test/bad_arity.kl').readAsStringSync();
     final program = Parser(Lexer(source).tokenize()).parse();

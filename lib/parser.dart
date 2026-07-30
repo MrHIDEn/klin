@@ -40,18 +40,64 @@ final class Parser {
 
   Program parse() {
     final funcs = <FuncDecl>[];
+    final structs = <StructDecl>[];
     while (!_check(TokenKind.eof)) {
-      funcs.add(_func());
+      if (_check(TokenKind.pub)) _advance();
+      if (_check(TokenKind.struct)) {
+        structs.add(_struct());
+      } else if (_check(TokenKind.fn)) {
+        funcs.add(_func());
+      } else {
+        throw ParseError('oczekiwano deklarację struktury lub funkcji', _current.pos);
+      }
     }
-    if (funcs.isEmpty) {
-      throw ParseError('oczekiwano deklarację funkcji', _current.pos);
+    if (funcs.isEmpty && structs.isEmpty) {
+      throw ParseError('oczekiwano deklarację', _current.pos);
     }
     _expect(TokenKind.eof, 'oczekiwano koniec pliku');
-    return Program(funcs, funcs.first.pos);
+    final pos = structs.isNotEmpty ? structs.first.pos : funcs.first.pos;
+    return Program(structs, funcs, pos);
+  }
+
+  StructDecl _struct() {
+    final keyword = _expect(TokenKind.struct, 'oczekiwano `struct`');
+    final name = _expect(TokenKind.ident, 'oczekiwano nazwę struktury');
+    _rejectCKeyword(name, 'nazwą struktury');
+    _expect(TokenKind.lBrace, 'oczekiwano `{`');
+    final fields = <FieldDecl>[];
+    while (!_check(TokenKind.rBrace) && !_check(TokenKind.eof)) {
+      final field = _expect(TokenKind.ident, 'oczekiwano nazwę pola');
+      _rejectCKeyword(field, 'nazwą pola');
+      _expect(TokenKind.colon, 'oczekiwano `:` po nazwie pola');
+      final type = _expect(TokenKind.ident, 'oczekiwano typ pola');
+      fields.add(FieldDecl(name: field.lexeme, typeName: type.lexeme, pos: field.pos));
+    }
+    _expect(TokenKind.rBrace, 'oczekiwano `}`');
+    return StructDecl(name: name.lexeme, fields: fields, pos: keyword.pos);
   }
 
   FuncDecl _func() {
     final fn = _expect(TokenKind.fn, 'oczekiwano `fn`');
+    Receiver? receiver;
+    if (_check(TokenKind.lParen)) {
+      _advance();
+      var isMut = false;
+      if (_check(TokenKind.mut)) {
+        _advance();
+        isMut = true;
+      }
+      final receiverName = _expect(TokenKind.ident, 'oczekiwano nazwę receivera');
+      _rejectCKeyword(receiverName, 'nazwą receivera');
+      _expect(TokenKind.colon, 'oczekiwano `:` po receiverze');
+      final receiverType = _expect(TokenKind.ident, 'oczekiwano typ receivera');
+      _expect(TokenKind.rParen, 'oczekiwano `)` po receiverze');
+      receiver = Receiver(
+        name: receiverName.lexeme,
+        typeName: receiverType.lexeme,
+        isMut: isMut,
+        pos: receiverName.pos,
+      );
+    }
     final name = _expect(TokenKind.ident, 'oczekiwano nazwę funkcji');
     _rejectCKeyword(name, 'nazwą funkcji');
     _expect(TokenKind.lParen, 'oczekiwano `(`');
@@ -81,6 +127,7 @@ final class Parser {
     }
     return FuncDecl(
       name: name.lexeme,
+      receiver: receiver,
       params: params,
       returnTypeName: returnTypeName,
       body: _block(),
@@ -115,20 +162,19 @@ final class Parser {
     if (_check(TokenKind.lBrace)) return BlockStmt(_block());
 
     if (_check(TokenKind.ident)) {
-      final name = _current;
-      if (_i + 1 < _tokens.length && _tokens[_i + 1].kind == TokenKind.equal) {
-        _advance(); // name
-        _advance(); // =
-        final value = _expr();
-        return AssignStmt(name: name.lexeme, value: value, pos: name.pos);
+      final expr = _expr();
+      if (_check(TokenKind.equal)) {
+        if (expr is! NameExpr && expr is! FieldExpr) {
+          throw ParseError('lewa strona przypisania musi być zmienną lub polem', expr.pos);
+        }
+        _advance();
+        return AssignStmt(target: expr, value: _expr(), pos: expr.pos);
       }
-      if (_i + 1 < _tokens.length && _tokens[_i + 1].kind == TokenKind.lParen) {
-        return _callStmt();
+      if (expr is CallExpr) {
+        return CallStmt(callee: expr.callee, args: expr.args, pos: expr.pos);
       }
-      throw ParseError(
-        'oczekiwano przypisania `=` lub wywołania `(`',
-        name.pos,
-      );
+      if (expr is MethodCallExpr) return MethodCallStmt(expr);
+      throw ParseError('oczekiwano przypisania `=` lub wywołania', expr.pos);
     }
 
     throw ParseError('oczekiwano instrukcję', _current.pos);
@@ -293,17 +339,6 @@ final class Parser {
     );
   }
 
-  CallStmt _callStmt() {
-    final callee = _expect(TokenKind.ident, 'oczekiwano nazwę funkcji');
-    _rejectCKeyword(callee, 'nazwą wywołania');
-    final args = _argList();
-    return CallStmt(
-      callee: callee.lexeme,
-      args: args,
-      pos: callee.pos,
-    );
-  }
-
   List<Expr> _argList() {
     _expect(TokenKind.lParen, 'oczekiwano `(`');
     final args = <Expr>[];
@@ -376,37 +411,96 @@ final class Parser {
 
   Expr _primary() {
     final t = _current;
+    Expr expr;
     switch (t.kind) {
       case TokenKind.intLit:
         _advance();
-        return IntLit(t.lexeme, t.pos);
+        expr = IntLit(t.lexeme, t.pos);
+        break;
       case TokenKind.floatLit:
         _advance();
-        return FloatLit(t.lexeme, t.pos);
+        expr = FloatLit(t.lexeme, t.pos);
+        break;
       case TokenKind.string:
         _advance();
-        return StringLit(t.lexeme, t.pos);
+        expr = StringLit(t.lexeme, t.pos);
+        break;
       case TokenKind.true_:
         _advance();
-        return BoolLit(true, t.pos);
+        expr = BoolLit(true, t.pos);
+        break;
       case TokenKind.false_:
         _advance();
-        return BoolLit(false, t.pos);
+        expr = BoolLit(false, t.pos);
+        break;
       case TokenKind.ident:
         _advance();
         if (_check(TokenKind.lParen)) {
           _rejectCKeyword(t, 'nazwą wywołania');
-          return CallExpr(callee: t.lexeme, args: _argList(), pos: t.pos);
+          expr = CallExpr(callee: t.lexeme, args: _argList(), pos: t.pos);
+        } else if (_check(TokenKind.lBrace)) {
+          expr = _structLit(t);
+        } else {
+          expr = NameExpr(t.lexeme, t.pos);
         }
-        return NameExpr(t.lexeme, t.pos);
+        break;
       case TokenKind.lParen:
         final open = _advance();
         final inner = _expr();
         _expect(TokenKind.rParen, 'oczekiwano `)`');
-        return GroupExpr(inner, open.pos);
+        expr = GroupExpr(inner, open.pos);
+        break;
       default:
         throw ParseError('oczekiwano wyrażenie', t.pos);
     }
+    while (_check(TokenKind.dot)) {
+      _advance();
+      final member = _expect(TokenKind.ident, 'oczekiwano nazwę pola lub metody');
+      if (_check(TokenKind.lParen)) {
+        expr = MethodCallExpr(
+          receiver: expr,
+          name: member.lexeme,
+          args: _argList(),
+          pos: member.pos,
+        );
+      } else {
+        expr = FieldExpr(object: expr, name: member.lexeme, pos: member.pos);
+      }
+    }
+    return expr;
+  }
+
+  StructLitExpr _structLit(Token typeName) {
+    _expect(TokenKind.lBrace, 'oczekiwano `{`');
+    if (_check(TokenKind.rBrace)) {
+      _advance();
+      return StructLitExpr.positional(typeName: typeName.lexeme, fields: [], pos: typeName.pos);
+    }
+    final isNamed = _check(TokenKind.ident) &&
+        _i + 1 < _tokens.length &&
+        _tokens[_i + 1].kind == TokenKind.colon;
+    if (isNamed) {
+      final fields = <String, Expr>{};
+      do {
+        final name = _expect(TokenKind.ident, 'oczekiwano nazwę pola');
+        _expect(TokenKind.colon, 'oczekiwano `:` po nazwie pola');
+        if (fields.containsKey(name.lexeme)) {
+          throw ParseError('powtórzone pole `${name.lexeme}`', name.pos);
+        }
+        fields[name.lexeme] = _expr();
+        if (!_check(TokenKind.comma)) break;
+        _advance();
+      } while (true);
+      _expect(TokenKind.rBrace, 'oczekiwano `}`');
+      return StructLitExpr.named(typeName: typeName.lexeme, fields: fields, pos: typeName.pos);
+    }
+    final fields = <Expr>[_expr()];
+    while (_check(TokenKind.comma)) {
+      _advance();
+      fields.add(_expr());
+    }
+    _expect(TokenKind.rBrace, 'oczekiwano `}`');
+    return StructLitExpr.positional(typeName: typeName.lexeme, fields: fields, pos: typeName.pos);
   }
 
   bool _check(TokenKind kind) => _current.kind == kind;

@@ -10,8 +10,8 @@ komponenty istnieją. Inaczej się w tym tonie.
 | [002](002-tablica-symboli-checker.md) | Tablica symboli i type checker | ✅ | 001 |
 | [003](003-przeplyw-sterowania.md) | Przepływ sterowania | ✅ | 002 |
 | [004](004-funkcje.md) | Funkcje | ✅ | 003 |
-| [005](005-struktury-metody.md) | Struktury i metody | 🔜 | 004 |
-| [006](006-moduly.md) | Moduły | ⬜ | 005 |
+| [005](005-struktury-metody.md) | Struktury i metody | ✅ | 004 |
+| [006](006-moduly.md) | Moduły | 🔜 | 005 |
 | [007](007-wskazniki-tablice-slice.md) | Wskaźniki, tablice, slice'y | ⬜ | 006 |
 | [008](008-defer.md) | `defer` | ⬜ | 007 |
 | [009](009-bledy.md) | Błędy jako wartości | ⬜ | 008 |
@@ -33,6 +33,9 @@ wypluwa plik z definicjami rejestrów. Wejście → wyjście, koniec.
 | [017](017-collection-methods.md) | Metody kolekcji (`map`/`filter`/…) | 💭 | 007 |
 | [018](018-generators-yield.md) | Generatory / `yield` | 💭 | 004+ |
 | [019](019-default-int-types.md) | Domyślne typy (`int` / literały) | 💭 | 002 |
+| [020](020-biblioteki-klin.md) | Własne biblioteki Klina | 💭 | 006 |
+| [021](021-biblioteki-c.md) | Biblioteki C (FFI / link) | 💭 | 006? |
+| [022](022-biblioteki-asm.md) | Biblioteki / jednostki ASM | 💭 | 010? |
 
 ---
 

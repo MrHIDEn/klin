@@ -1,0 +1,12 @@
+struct Vec2 {
+    x: i32
+}
+
+fn (mut v: Vec2) translate(dx: i32) {
+    v.x = v.x + dx
+}
+
+fn main() {
+    let p = Vec2{ x: 3 }
+    p.translate(1)
+}
