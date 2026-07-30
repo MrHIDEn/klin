@@ -1,6 +1,6 @@
 # 003 — Przepływ sterowania
 
-**Status:** 🔜 następny
+**Status:** ✅ ukończone
 **Zależy od:** 002
 
 ## Zakres
@@ -9,16 +9,17 @@
 
 Prosto, bo C ma to samo — mapowanie niemal jeden do jednego.
 
-## Decyzje do podjęcia
+## Decyzje
 
-- `for` w stylu C czy zakresowy (`for i in 0..<5`)?
-- czy `switch`/`match`? Jeśli tak — bez domyślnego przechodzenia dalej,
-  jawny `fallthrough` (za Neluą).
-- czy `goto`? Prawdopodobnie nie w składni użytkownika, ale codegen
-  będzie go używał wewnętrznie (patrz 008).
+- **`for` — obie formy** (jak w V):
+  - zakresowy: `for i in 0..<5 { ... }` (`..<` exclusive; `i` zawsze mut)
+  - C: `for i = 0; i < 5; i = i + 1 { ... }` (bez nawiasów; init wprowadza mut `i`)
+- **`while`** osobno (nie kopiujemy V-owego `for cond`)
+- **`switch`/`match`** — odłożone (nie w kryterium 003)
+- **`goto`** — nie w składni użytkownika; codegen może użyć wewnętrznie (008)
 
 ## Kryterium ukończenia
 
-- [ ] fizzbuzz działa
-- [ ] pętla z `break` i `continue`
-- [ ] testy złote
+- [x] fizzbuzz działa
+- [x] pętla z `break` i `continue`
+- [x] testy złote

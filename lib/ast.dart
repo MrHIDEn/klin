@@ -53,17 +53,112 @@ final class AssignStmt extends Stmt {
   });
 }
 
-/// call := ident "(" string ")"  (jak w 001)
+/// call := ident "(" (expr ("," expr)*)? ")"
 final class CallStmt extends Stmt {
   final String callee;
-  final String argument;
+  final List<Expr> args;
   final SourcePos pos;
 
   CallStmt({
     required this.callee,
-    required this.argument,
+    required this.args,
     required this.pos,
   });
+}
+
+/// if cond block [else (block | if)]
+final class IfStmt extends Stmt {
+  final Expr cond;
+  final Block thenBlock;
+  final Stmt? elseBranch; // BlockStmt lub IfStmt
+  final SourcePos pos;
+
+  IfStmt({
+    required this.cond,
+    required this.thenBlock,
+    required this.elseBranch,
+    required this.pos,
+  });
+}
+
+/// while cond block
+final class WhileStmt extends Stmt {
+  final Expr cond;
+  final Block body;
+  final SourcePos pos;
+
+  WhileStmt({
+    required this.cond,
+    required this.body,
+    required this.pos,
+  });
+}
+
+/// for name in start..<end block
+final class ForRangeStmt extends Stmt {
+  final String name;
+  final Expr start;
+  final Expr endExclusive;
+  final Block body;
+  final SourcePos pos;
+
+  /// Typ zmiennej pętli — wypełniane przez checker.
+  KlinType? resolvedType;
+
+  ForRangeStmt({
+    required this.name,
+    required this.start,
+    required this.endExclusive,
+    required this.body,
+    required this.pos,
+  });
+}
+
+/// for [name = init]; [cond]; [post] block
+///
+/// Init wprowadza mutowalną zmienną `name` (jak `:=` w V).
+/// Post to opcjonalne przypisanie `name = expr`.
+final class ForCStmt extends Stmt {
+  final String? initName;
+  final Expr? initExpr;
+  final Expr? cond;
+  final String? postName;
+  final Expr? postExpr;
+  final Block body;
+  final SourcePos pos;
+
+  /// Typ zmiennej init — wypełniane przez checker.
+  KlinType? resolvedInitType;
+
+  ForCStmt({
+    required this.initName,
+    required this.initExpr,
+    required this.cond,
+    required this.postName,
+    required this.postExpr,
+    required this.body,
+    required this.pos,
+  });
+}
+
+/// return [expr]
+final class ReturnStmt extends Stmt {
+  final Expr? value;
+  final SourcePos pos;
+
+  ReturnStmt({required this.value, required this.pos});
+}
+
+final class BreakStmt extends Stmt {
+  final SourcePos pos;
+
+  BreakStmt(this.pos);
+}
+
+final class ContinueStmt extends Stmt {
+  final SourcePos pos;
+
+  ContinueStmt(this.pos);
 }
 
 /// Zagnieżdżony blok — osobny zakres.
@@ -102,6 +197,13 @@ final class BoolLit extends Expr {
   final SourcePos pos;
 
   BoolLit(this.value, this.pos);
+}
+
+final class StringLit extends Expr {
+  final String value;
+  final SourcePos pos;
+
+  StringLit(this.value, this.pos);
 }
 
 final class NameExpr extends Expr {

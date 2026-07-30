@@ -53,9 +53,85 @@ void _emitStmt(
       _line(buf, pos.line, sourcePath);
       buf.writeln('$pad$name = ${_emitExpr(value)};');
 
-    case CallStmt(:final callee, :final argument, :final pos):
+    case CallStmt(:final callee, :final args, :final pos):
       _line(buf, pos.line, sourcePath);
-      buf.writeln('$pad$callee("${_escapeC(argument)}");');
+      final argList = args.map(_emitExpr).join(', ');
+      buf.writeln('$pad$callee($argList);');
+
+    case IfStmt(:final cond, :final thenBlock, :final elseBranch, :final pos):
+      _line(buf, pos.line, sourcePath);
+      buf.writeln('${pad}if (${_emitExpr(cond)}) {');
+      _emitBlock(buf, thenBlock, sourcePath, indent: indent + 1);
+      _emitElse(buf, elseBranch, sourcePath, indent: indent, pad: pad);
+
+    case WhileStmt(:final cond, :final body, :final pos):
+      _line(buf, pos.line, sourcePath);
+      buf.writeln('${pad}while (${_emitExpr(cond)}) {');
+      _emitBlock(buf, body, sourcePath, indent: indent + 1);
+      buf.writeln('$pad}');
+
+    case ForRangeStmt(
+        :final name,
+        :final start,
+        :final endExclusive,
+        :final body,
+        :final pos,
+        :final resolvedType
+      ):
+      _line(buf, pos.line, sourcePath);
+      final ty = resolvedType;
+      if (ty is! PrimType) {
+        throw StateError('emit: brak typu dla zmiennej pętli `$name`');
+      }
+      buf.writeln(
+        '${pad}for (${ty.kind.cType} $name = ${_emitExpr(start)}; '
+        '$name < ${_emitExpr(endExclusive)}; $name++) {',
+      );
+      _emitBlock(buf, body, sourcePath, indent: indent + 1);
+      buf.writeln('$pad}');
+
+    case ForCStmt(
+        :final initName,
+        :final initExpr,
+        :final cond,
+        :final postName,
+        :final postExpr,
+        :final body,
+        :final pos,
+        :final resolvedInitType
+      ):
+      _line(buf, pos.line, sourcePath);
+      final initPart = () {
+        if (initName == null || initExpr == null) return '';
+        final ty = resolvedInitType;
+        if (ty is! PrimType) {
+          throw StateError('emit: brak typu dla init `$initName`');
+        }
+        return '${ty.kind.cType} $initName = ${_emitExpr(initExpr)}';
+      }();
+      final condPart = cond == null ? '' : _emitExpr(cond);
+      final postPart = (postName != null && postExpr != null)
+          ? '$postName = ${_emitExpr(postExpr)}'
+          : '';
+      buf.writeln('${pad}for ($initPart; $condPart; $postPart) {');
+      _emitBlock(buf, body, sourcePath, indent: indent + 1);
+      buf.writeln('$pad}');
+
+    case ReturnStmt(:final value, :final pos):
+      _line(buf, pos.line, sourcePath);
+      if (value == null) {
+        buf.writeln('${pad}return 0;');
+      } else {
+        buf.writeln('${pad}return ${_emitExpr(value)};');
+      }
+
+    case BreakStmt(:final pos):
+      _line(buf, pos.line, sourcePath);
+      buf.writeln('${pad}break;');
+
+    case ContinueStmt(:final pos):
+      _line(buf, pos.line, sourcePath);
+      buf.writeln('${pad}continue;');
 
     case BlockStmt(:final block):
       _line(buf, block.pos.line, sourcePath);
@@ -65,11 +141,45 @@ void _emitStmt(
   }
 }
 
+void _emitElse(
+  StringBuffer buf,
+  Stmt? elseBranch,
+  String sourcePath, {
+  required int indent,
+  required String pad,
+}) {
+  if (elseBranch == null) {
+    buf.writeln('$pad}');
+    return;
+  }
+  if (elseBranch is IfStmt) {
+    _line(buf, elseBranch.pos.line, sourcePath);
+    buf.writeln('$pad} else if (${_emitExpr(elseBranch.cond)}) {');
+    _emitBlock(buf, elseBranch.thenBlock, sourcePath, indent: indent + 1);
+    _emitElse(
+      buf,
+      elseBranch.elseBranch,
+      sourcePath,
+      indent: indent,
+      pad: pad,
+    );
+    return;
+  }
+  if (elseBranch is BlockStmt) {
+    buf.writeln('$pad} else {');
+    _emitBlock(buf, elseBranch.block, sourcePath, indent: indent + 1);
+    buf.writeln('$pad}');
+    return;
+  }
+  throw StateError('emit: nieoczekiwany else branch ${elseBranch.runtimeType}');
+}
+
 String _emitExpr(Expr expr) {
   return switch (expr) {
     IntLit(:final lexeme) => lexeme,
     FloatLit(:final lexeme) => lexeme,
     BoolLit(:final value) => value ? 'true' : 'false',
+    StringLit(:final value) => '"${_escapeC(value)}"',
     NameExpr(:final name) => name,
     UnaryExpr(:final op, :final operand) => '$op(${_emitExpr(operand)})',
     BinaryExpr(:final left, :final op, :final right) =>

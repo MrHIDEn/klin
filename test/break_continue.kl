@@ -1,0 +1,22 @@
+fn main() {
+    let mut n = 0
+    while n < 10 {
+        n = n + 1
+        if n % 2 == 0 {
+            continue
+        }
+        if n > 7 {
+            break
+        }
+        printf("%d\n", n)
+    }
+    for i = 0; i < 5; i = i + 1 {
+        if i == 2 {
+            continue
+        }
+        if i == 4 {
+            break
+        }
+        printf("c%d\n", i)
+    }
+}

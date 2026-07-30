@@ -52,9 +52,11 @@ final class _Scope {
 /// Tablica symboli + sprawdzanie typów. Mutuje `resolvedType` na węzłach AST.
 final class Checker {
   _Scope _scope = _Scope(null);
+  int _loopDepth = 0;
 
   void check(Program program) {
     _scope = _Scope(null);
+    _loopDepth = 0;
     _checkBlock(program.body);
   }
 
@@ -119,13 +121,131 @@ final class Checker {
         _expectAssignable(sym.type, valueType, value.pos);
         _materialize(value, sym.type);
 
-      case CallStmt():
-        // 001: puts(string) — bez sprawdzania sygnatur w tym kroku.
-        break;
+      case CallStmt(:final args):
+        // 001/003: FFI do C (puts/printf) — bez sprawdzania sygnatur.
+        for (final arg in args) {
+          _inferExpr(arg);
+        }
+
+      case IfStmt(:final cond, :final thenBlock, :final elseBranch):
+        _expectBoolCond(cond);
+        _checkBlock(thenBlock);
+        if (elseBranch != null) _checkStmt(elseBranch);
+
+      case WhileStmt(:final cond, :final body):
+        _expectBoolCond(cond);
+        _loopDepth++;
+        _checkBlock(body);
+        _loopDepth--;
+
+      case ForRangeStmt(
+          :final name,
+          :final start,
+          :final endExclusive,
+          :final body,
+          :final pos
+        ):
+        final startTy = _inferExpr(start);
+        final endTy = _inferExpr(endExclusive);
+        final unified = _unifyNumeric(startTy, endTy, pos);
+        final concrete = _defaultConcrete(unified, pos);
+        if (concrete is! PrimType || !concrete.kind.isInteger) {
+          throw CheckError(
+            'zakres `for` wymaga typów całkowitych, dostano `${concrete.displayName}`',
+            pos,
+          );
+        }
+        _materialize(start, concrete);
+        _materialize(endExclusive, concrete);
+        stmt.resolvedType = concrete;
+
+        _scope = _Scope(_scope);
+        _scope.define(
+          _Symbol(name: name, type: concrete, isMut: true, pos: pos),
+        );
+        _loopDepth++;
+        _checkBlock(body);
+        _loopDepth--;
+        _scope = _scope.parent!;
+
+      case ForCStmt(
+          :final initName,
+          :final initExpr,
+          :final cond,
+          :final postName,
+          :final postExpr,
+          :final body,
+          :final pos
+        ):
+        _scope = _Scope(_scope);
+        if (initName != null && initExpr != null) {
+          final initTy = _inferExpr(initExpr);
+          final concrete = _defaultConcrete(initTy, initExpr.pos);
+          _materialize(initExpr, concrete);
+          stmt.resolvedInitType = concrete;
+          _scope.define(
+            _Symbol(name: initName, type: concrete, isMut: true, pos: pos),
+          );
+        }
+        if (cond != null) _expectBoolCond(cond);
+        if (postName != null && postExpr != null) {
+          final sym = _scope.lookup(postName);
+          if (sym == null) {
+            throw CheckError('nieznana zmienna `$postName`', postExpr.pos);
+          }
+          if (!sym.isMut) {
+            throw CheckError(
+              'nie można przypisać do niemutowalnej zmiennej `$postName`',
+              postExpr.pos,
+            );
+          }
+          final postTy = _inferExpr(postExpr);
+          _expectAssignable(sym.type, postTy, postExpr.pos);
+          _materialize(postExpr, sym.type);
+        }
+        _loopDepth++;
+        _checkBlock(body);
+        _loopDepth--;
+        _scope = _scope.parent!;
+
+      case ReturnStmt(:final value):
+        if (value != null) {
+          final t = _inferExpr(value);
+          final concrete = _defaultConcrete(t, value.pos);
+          if (concrete is! PrimType || !concrete.kind.isInteger) {
+            throw CheckError(
+              '`return` w main wymaga typu całkowitego, dostano `${concrete.displayName}`',
+              value.pos,
+            );
+          }
+          _materialize(value, concrete);
+        }
+
+      case BreakStmt(:final pos):
+        if (_loopDepth == 0) {
+          throw CheckError('`break` poza pętlą', pos);
+        }
+
+      case ContinueStmt(:final pos):
+        if (_loopDepth == 0) {
+          throw CheckError('`continue` poza pętlą', pos);
+        }
 
       case BlockStmt(:final block):
         _checkBlock(block);
     }
+  }
+
+  void _expectBoolCond(Expr cond) {
+    final t = _inferExpr(cond);
+    // Porównania już dają bool. Literał bool OK. Untyped/liczby — nie.
+    if (t is PrimType && t.kind == PrimKind.bool_) {
+      return;
+    }
+    throw CheckError(
+      'warunek wymaga typu `bool`, dostano `${t.displayName}`',
+      cond.pos,
+    );
   }
 
   /// Wnioskowanie bez kontekstu — może zwrócić typ untyped.
@@ -134,6 +254,7 @@ final class Checker {
       IntLit() => const UntypedInt(),
       FloatLit() => const UntypedFloat(),
       BoolLit() => const PrimType(PrimKind.bool_),
+      StringLit() => const StrType(),
       NameExpr(:final name, :final pos) => () {
           final sym = _scope.lookup(name);
           if (sym == null) {
@@ -142,10 +263,20 @@ final class Checker {
           return sym.type;
         }(),
       UnaryExpr(:final op, :final operand, :final pos) => () {
-          final t = _inferExpr(operand);
+          if (op == '!') {
+            final t = _inferExpr(operand);
+            if (t is! PrimType || t.kind != PrimKind.bool_) {
+              throw CheckError(
+                'operator `!` wymaga typu `bool`, dostano `${t.displayName}`',
+                pos,
+              );
+            }
+            return const PrimType(PrimKind.bool_);
+          }
           if (op != '-') {
             throw CheckError('nieznany operator unarny `$op`', pos);
           }
+          final t = _inferExpr(operand);
           final concrete = _defaultConcrete(t, operand.pos);
           if (concrete is! PrimType ||
               !(concrete.kind.isInteger || concrete.kind.isFloat)) {
@@ -167,44 +298,67 @@ final class Checker {
         _inferBinary(left, op, right, pos),
       GroupExpr(:final inner) => _inferExpr(inner),
     };
-    if (type is PrimType) expr.resolvedType = type;
+    if (type is PrimType || type is StrType) expr.resolvedType = type;
     return type;
   }
 
+  static const _cmpOps = {'==', '!=', '<', '<=', '>', '>='};
+  static const _arithOps = {'+', '-', '*', '/', '%'};
+
   KlinType _inferBinary(Expr left, String op, Expr right, SourcePos pos) {
+    if (_cmpOps.contains(op)) {
+      return _inferComparison(left, op, right, pos);
+    }
+    if (!_arithOps.contains(op)) {
+      throw CheckError('nieznany operator `$op`', pos);
+    }
+
     final lt = _inferExpr(left);
     final rt = _inferExpr(right);
+    final unified = _unifyNumeric(lt, rt, pos);
+    final concrete = unified is UntypedInt || unified is UntypedFloat
+        ? _defaultConcrete(unified, pos)
+        : unified;
 
-    final KlinType unified;
-    if (lt is UntypedInt && rt is UntypedInt) {
-      unified = const UntypedInt();
-    } else if (lt is UntypedFloat && rt is UntypedFloat) {
-      unified = const UntypedFloat();
-    } else if (lt is UntypedInt && rt is UntypedFloat) {
-      unified = const UntypedFloat();
-    } else if (lt is UntypedFloat && rt is UntypedInt) {
-      unified = const UntypedFloat();
-    } else if (lt is UntypedInt && rt is PrimType && rt.kind.isInteger) {
-      unified = rt;
-    } else if (rt is UntypedInt && lt is PrimType && lt.kind.isInteger) {
-      unified = lt;
-    } else if (lt is UntypedFloat && rt is PrimType && rt.kind.isFloat) {
-      unified = rt;
-    } else if (rt is UntypedFloat && lt is PrimType && lt.kind.isFloat) {
-      unified = lt;
-    } else if (lt is UntypedInt && rt is PrimType && rt.kind.isFloat) {
-      unified = rt;
-    } else if (rt is UntypedInt && lt is PrimType && lt.kind.isFloat) {
-      unified = lt;
-    } else if (lt == rt) {
-      unified = lt;
-    } else {
+    if (concrete is! PrimType ||
+        !(concrete.kind.isInteger || concrete.kind.isFloat)) {
       throw CheckError(
-        'niezgodność typów: `${lt.displayName}` $op `${rt.displayName}`',
+        'operator `$op` wymaga typów liczbowych, dostano `${concrete.displayName}`',
         pos,
       );
     }
 
+    if (op == '%' && !concrete.kind.isInteger) {
+      throw CheckError(
+        'operator `%` wymaga typów całkowitych, dostano `${concrete.displayName}`',
+        pos,
+      );
+    }
+
+    _materialize(left, concrete);
+    _materialize(right, concrete);
+    return concrete;
+  }
+
+  KlinType _inferComparison(Expr left, String op, Expr right, SourcePos pos) {
+    final lt = _inferExpr(left);
+    final rt = _inferExpr(right);
+
+    // bool == bool / !=
+    if (lt is PrimType &&
+        lt.kind == PrimKind.bool_ &&
+        rt is PrimType &&
+        rt.kind == PrimKind.bool_) {
+      if (op != '==' && op != '!=') {
+        throw CheckError(
+          'operator `$op` nie jest dozwolony dla typu `bool`',
+          pos,
+        );
+      }
+      return const PrimType(PrimKind.bool_);
+    }
+
+    final unified = _unifyNumeric(lt, rt, pos);
     final concrete = unified is UntypedInt || unified is UntypedFloat
         ? _defaultConcrete(unified, pos)
         : unified;
@@ -219,7 +373,38 @@ final class Checker {
 
     _materialize(left, concrete);
     _materialize(right, concrete);
-    return concrete;
+    return const PrimType(PrimKind.bool_);
+  }
+
+  KlinType _unifyNumeric(KlinType lt, KlinType rt, SourcePos pos) {
+    if (lt is UntypedInt && rt is UntypedInt) {
+      return const UntypedInt();
+    } else if (lt is UntypedFloat && rt is UntypedFloat) {
+      return const UntypedFloat();
+    } else if (lt is UntypedInt && rt is UntypedFloat) {
+      return const UntypedFloat();
+    } else if (lt is UntypedFloat && rt is UntypedInt) {
+      return const UntypedFloat();
+    } else if (lt is UntypedInt && rt is PrimType && rt.kind.isInteger) {
+      return rt;
+    } else if (rt is UntypedInt && lt is PrimType && lt.kind.isInteger) {
+      return lt;
+    } else if (lt is UntypedFloat && rt is PrimType && rt.kind.isFloat) {
+      return rt;
+    } else if (rt is UntypedFloat && lt is PrimType && lt.kind.isFloat) {
+      return lt;
+    } else if (lt is UntypedInt && rt is PrimType && rt.kind.isFloat) {
+      return rt;
+    } else if (rt is UntypedInt && lt is PrimType && lt.kind.isFloat) {
+      return lt;
+    } else if (lt == rt) {
+      return lt;
+    } else {
+      throw CheckError(
+        'niezgodność typów: `${lt.displayName}` i `${rt.displayName}`',
+        pos,
+      );
+    }
   }
 
   /// Ustawia konkretny typ na wyrażeniu (i rekurencyjnie na poddrzewie
@@ -229,12 +414,22 @@ final class Checker {
     switch (expr) {
       case UnaryExpr(:final operand):
         _materialize(operand, type);
-      case BinaryExpr(:final left, :final right):
+      case BinaryExpr(:final left, :final right, :final op):
+        if (_cmpOps.contains(op)) {
+          // Operandy porównania mają typ liczbowy; wynik bool jest na węźle.
+          // Przy materializacji bool z góry nie schodzimy — typ operandów
+          // został ustawiony w _inferComparison.
+          break;
+        }
         _materialize(left, type);
         _materialize(right, type);
       case GroupExpr(:final inner):
         _materialize(inner, type);
-      case IntLit() || FloatLit() || BoolLit() || NameExpr():
+      case IntLit() ||
+            FloatLit() ||
+            BoolLit() ||
+            StringLit() ||
+            NameExpr():
         break;
     }
   }
@@ -268,6 +463,10 @@ final class Checker {
       UntypedInt() => const PrimType(PrimKind.i32),
       UntypedFloat() => const PrimType(PrimKind.f64),
       PrimType() => type,
+      StrType() => throw CheckError(
+          'nie można użyć napisu w tym kontekście',
+          pos,
+        ),
     };
   }
 

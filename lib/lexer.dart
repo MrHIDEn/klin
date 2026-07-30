@@ -66,12 +66,57 @@ final class Lexer {
       case '/':
         _advance();
         return Token(TokenKind.slash, '/', start);
+      case '%':
+        _advance();
+        return Token(TokenKind.percent, '%', start);
       case ':':
         _advance();
         return Token(TokenKind.colon, ':', start);
+      case ';':
+        _advance();
+        return Token(TokenKind.semicolon, ';', start);
+      case ',':
+        _advance();
+        return Token(TokenKind.comma, ',', start);
       case '=':
         _advance();
+        if (!_atEnd && _peek == '=') {
+          _advance();
+          return Token(TokenKind.equalEqual, '==', start);
+        }
         return Token(TokenKind.equal, '=', start);
+      case '!':
+        _advance();
+        if (!_atEnd && _peek == '=') {
+          _advance();
+          return Token(TokenKind.bangEqual, '!=', start);
+        }
+        return Token(TokenKind.bang, '!', start);
+      case '<':
+        _advance();
+        if (!_atEnd && _peek == '=') {
+          _advance();
+          return Token(TokenKind.lessEqual, '<=', start);
+        }
+        return Token(TokenKind.less, '<', start);
+      case '>':
+        _advance();
+        if (!_atEnd && _peek == '=') {
+          _advance();
+          return Token(TokenKind.greaterEqual, '>=', start);
+        }
+        return Token(TokenKind.greater, '>', start);
+      case '.':
+        // ..<
+        if (_i + 2 < source.length &&
+            source[_i + 1] == '.' &&
+            source[_i + 2] == '<') {
+          _advance();
+          _advance();
+          _advance();
+          return Token(TokenKind.dotDotLess, '..<', start);
+        }
+        throw LexError('nieoczekiwany znak `.`', start);
       default:
         throw LexError('nieoczekiwany znak `$c`', start);
     }
@@ -89,6 +134,14 @@ final class Lexer {
       'mut' => Token(TokenKind.mut, lexeme, start),
       'true' => Token(TokenKind.true_, lexeme, start),
       'false' => Token(TokenKind.false_, lexeme, start),
+      'if' => Token(TokenKind.if_, lexeme, start),
+      'else' => Token(TokenKind.else_, lexeme, start),
+      'while' => Token(TokenKind.while_, lexeme, start),
+      'for' => Token(TokenKind.for_, lexeme, start),
+      'in' => Token(TokenKind.in_, lexeme, start),
+      'return' => Token(TokenKind.return_, lexeme, start),
+      'break' => Token(TokenKind.break_, lexeme, start),
+      'continue' => Token(TokenKind.continue_, lexeme, start),
       _ => Token(TokenKind.ident, lexeme, start),
     };
   }
@@ -98,7 +151,10 @@ final class Lexer {
     while (!_atEnd && _isDigit(_peek)) {
       buf.write(_advance());
     }
-    if (!_atEnd && _peek == '.' && _i + 1 < source.length && _isDigit(source[_i + 1])) {
+    if (!_atEnd &&
+        _peek == '.' &&
+        _i + 1 < source.length &&
+        _isDigit(source[_i + 1])) {
       buf.write(_advance()); // .
       while (!_atEnd && _isDigit(_peek)) {
         buf.write(_advance());
