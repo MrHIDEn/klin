@@ -13,8 +13,8 @@ komponenty istnieją. Inaczej się w tym tonie.
 | [005](005-struktury-metody.md) | Struktury i metody | ✅ | 004 |
 | [006](006-moduly.md) | Moduły | ✅ | 005 |
 | [007](007-wskazniki-tablice-slice.md) | Wskaźniki, tablice, slice'y | ✅ | 006 |
-| [008](008-defer.md) | `defer` | 🔜 | 007 |
-| [009](009-bledy.md) | Błędy jako wartości | ⬜ | 008 |
+| [008](008-defer.md) | `defer` | ✅ | 007 |
+| [009](009-bledy.md) | Błędy jako wartości | 🔜 | 008 |
 | [010](010-bare-metal.md) | **Bare metal: LED na STM32** | ⬜ | 009 |
 | [011](011-svd.md) | Generator SVD | ⬜ | 010* |
 

@@ -17,7 +17,7 @@ final class ParseError implements Exception {
 ///   params  := ident ":" ident ("," ident ":" ident)*
 ///   block   := "{" stmt* "}"
 ///   stmt    := let | assign | call | if | while | for | return | break
-///            | continue | block
+///            | continue | defer | block
 ///   if      := "if" expr block ("else" (if | block))?
 ///   while   := "while" expr block
 ///   for     := "for" ident "in" expr "..<" expr block
@@ -186,6 +186,7 @@ final class Parser {
     if (_check(TokenKind.while_)) return _whileStmt();
     if (_check(TokenKind.for_)) return _forStmt();
     if (_check(TokenKind.return_)) return _returnStmt();
+    if (_check(TokenKind.defer_)) return _deferStmt();
     if (_check(TokenKind.break_)) {
       final t = _advance();
       return BreakStmt(t.pos);
@@ -326,6 +327,11 @@ final class Parser {
       value = _expr();
     }
     return ReturnStmt(value: value, pos: tok.pos);
+  }
+
+  DeferStmt _deferStmt() {
+    final tok = _expect(TokenKind.defer_, 'oczekiwano `defer`');
+    return DeferStmt(body: _stmt(), pos: tok.pos);
   }
 
   bool _looksLikeReturnValue(SourcePos returnPos) {

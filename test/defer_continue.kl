@@ -1,0 +1,8 @@
+fn main() {
+  let mut i: i32 = 0
+  while i < 2 {
+    defer puts("inner")
+    i = i + 1
+    continue
+  }
+}

@@ -294,6 +294,14 @@ final class ContinueStmt extends Stmt {
   ContinueStmt(this.pos);
 }
 
+/// defer stmt — wykonaj `body` przy wyjściu z bieżącego bloku.
+final class DeferStmt extends Stmt {
+  final Stmt body;
+  final SourcePos pos;
+
+  DeferStmt({required this.body, required this.pos});
+}
+
 /// Zagnieżdżony blok — osobny zakres.
 final class BlockStmt extends Stmt {
   final Block block;

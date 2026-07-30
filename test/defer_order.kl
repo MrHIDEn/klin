@@ -1,0 +1,5 @@
+fn main() {
+  defer puts("first")
+  defer puts("second")
+  puts("body")
+}

@@ -166,6 +166,67 @@ void main() {
     expect(result.stdout, expected);
   });
 
+  test('złoty: defer — kolejność LIFO', () async {
+    final result = await _compileAndRun('test/defer_order.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/defer_order.out').readAsString());
+  });
+
+  test('złoty: defer przed break jest blokowy', () async {
+    final result = await _compileAndRun('test/defer_break.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/defer_break.out').readAsString());
+  });
+
+  test('złoty: defer przed continue jest blokowy', () async {
+    final result = await _compileAndRun('test/defer_continue.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/defer_continue.out').readAsString());
+  });
+
+  test('złoty: defer przed return zachowuje wartość', () async {
+    final result = await _compileAndRun('test/defer_return.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/defer_return.out').readAsString());
+  });
+
+  test('błąd: defer wewnątrz defer', () {
+    const source = '''
+fn main() {
+  defer defer puts("nested")
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) => e is CheckError && e.toString().contains('wewnątrz `defer`'),
+        ),
+      ),
+    );
+  });
+
+  test('wczesny return nie uruchamia późniejszego defer', () async {
+    const source = '''
+fn main() {
+  defer puts("a")
+  puts("body")
+  return
+  defer puts("b")
+}
+''';
+    final dir = await Directory.systemTemp.createTemp('klin_defer_early_');
+    addTearDown(() async {
+      if (await dir.exists()) await dir.delete(recursive: true);
+    });
+    final kl = File('${dir.path}/early.kl');
+    await kl.writeAsString(source);
+    final result = await _compileAndRun(kl.path, dir);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, 'body\na\n');
+  });
+
   test('złoty: funkcja wywołana przed definicją', () async {
     final result = await _compileAndRun('test/call_before_def.kl', tmp);
     expect(result.exitCode, 0, reason: result.stderr);
