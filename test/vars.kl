@@ -1,0 +1,9 @@
+fn main() {
+    let x: i32 = 2 + 3
+    let mut y = x * 2
+    y = y + 1
+    {
+        let z: i32 = y
+    }
+    puts("ok")
+}

@@ -1,6 +1,6 @@
 # 002 — Tablica symboli i type checker
 
-**Status:** 🔜 następny
+**Status:** ✅ ukończone
 **Zależy od:** 001
 
 ## Opis
@@ -31,7 +31,7 @@ let mut y = x * 2
 
 ## Kryterium ukończenia
 
-- [ ] wyrażenia arytmetyczne z poprawnym typowaniem
-- [ ] komunikat błędu przy niezgodności typów, z pozycją
-- [ ] komunikat błędu przy mutacji `let` bez `mut`
-- [ ] testy złote na oba błędy
+- [x] wyrażenia arytmetyczne z poprawnym typowaniem
+- [x] komunikat błędu przy niezgodności typów, z pozycją
+- [x] komunikat błędu przy mutacji `let` bez `mut`
+- [x] testy złote na oba błędy
