@@ -165,6 +165,50 @@ void main() {
     expect(result.stdout, expected);
   });
 
+  test('złoty: funkcja wywołana przed definicją', () async {
+    final result = await _compileAndRun('test/call_before_def.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    final expected = await File('test/call_before_def.out').readAsString();
+    expect(result.stdout, expected);
+  });
+
+  test('złoty: rekurencyjny fib', () async {
+    final result = await _compileAndRun('test/fib.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    final expected = await File('test/fib.out').readAsString();
+    expect(result.stdout, expected);
+  });
+
+  test('błąd: zła liczba argumentów funkcji', () {
+    final source = File('test/bad_arity.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) => e is CheckError &&
+              e.toString().contains('oczekuje 2 argumentów') &&
+              e.toString().contains('dostano 1'),
+        ),
+      ),
+    );
+  });
+
+  test('błąd: niezgodny typ argumentu funkcji', () {
+    final source = File('test/bad_arg_type.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) => e is CheckError &&
+              e.toString().contains('oczekiwano `i32`') &&
+              e.toString().contains('dostano `bool`'),
+        ),
+      ),
+    );
+  });
+
   test('błąd: break poza pętlą', () {
     final source = File('test/break_outside.kl').readAsStringSync();
     final program = Parser(Lexer(source).tokenize()).parse();

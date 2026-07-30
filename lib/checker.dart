@@ -49,15 +49,98 @@ final class _Scope {
   }
 }
 
+final class _FuncSignature {
+  final List<KlinType> paramTypes;
+  final KlinType returnType;
+  final SourcePos pos;
+
+  const _FuncSignature({
+    required this.paramTypes,
+    required this.returnType,
+    required this.pos,
+  });
+}
+
 /// Tablica symboli + sprawdzanie typów. Mutuje `resolvedType` na węzłach AST.
 final class Checker {
   _Scope _scope = _Scope(null);
   int _loopDepth = 0;
+  final Map<String, _FuncSignature> _functions = {};
+  KlinType _currentReturn = const VoidType();
+  String _currentFunction = '';
 
   void check(Program program) {
-    _scope = _Scope(null);
-    _loopDepth = 0;
-    _checkBlock(program.body);
+    _functions.clear();
+    _registerFunctions(program);
+    final main = program.funcs.where((func) => func.name == 'main').toList();
+    if (main.isEmpty) {
+      throw CheckError('brak wymaganej funkcji `main`', program.pos);
+    }
+    if (main.single.params.isNotEmpty) {
+      throw CheckError('funkcja `main` nie może mieć parametrów', main.single.pos);
+    }
+
+    for (final func in program.funcs) {
+      _scope = _Scope(null);
+      _loopDepth = 0;
+      _currentFunction = func.name;
+      _currentReturn = func.resolvedReturnType!;
+      for (final param in func.params) {
+        _scope.define(
+          _Symbol(
+            name: param.name,
+            type: param.resolvedType!,
+            isMut: false,
+            pos: param.pos,
+          ),
+        );
+      }
+      _checkBlock(func.body);
+      if (func.name != 'main' &&
+          _currentReturn is! VoidType &&
+          !_returnsOnAllPaths(func.body)) {
+        throw CheckError(
+          'funkcja `${func.name}` musi zwrócić wartość na wszystkich ścieżkach',
+          func.pos,
+        );
+      }
+    }
+  }
+
+  void _registerFunctions(Program program) {
+    for (final func in program.funcs) {
+      if (_functions.containsKey(func.name)) {
+        throw CheckError('ponowna deklaracja funkcji `${func.name}`', func.pos);
+      }
+      final params = <KlinType>[];
+      final paramNames = <String>{};
+      for (final param in func.params) {
+        if (!paramNames.add(param.name)) {
+          throw CheckError(
+            'ponowna deklaracja parametru `${param.name}`',
+            param.pos,
+          );
+        }
+        final type = _resolvePrimType(param.typeName, param.pos);
+        param.resolvedType = type;
+        params.add(type);
+      }
+      final returnType = func.returnTypeName == null
+          ? const VoidType()
+          : _resolvePrimType(func.returnTypeName!, func.pos);
+      func.resolvedReturnType = returnType;
+      _functions[func.name] = _FuncSignature(
+        paramTypes: params,
+        returnType: returnType,
+        pos: func.pos,
+      );
+    }
+  }
+
+  PrimType _resolvePrimType(String name, SourcePos pos) {
+    final kind = PrimKind.tryParse(name);
+    if (kind == null) throw CheckError('nieznany typ `$name`', pos);
+    return PrimType(kind);
   }
 
   void _checkBlock(Block block) {
@@ -73,11 +156,7 @@ final class Checker {
       case LetStmt(:final isMut, :final name, :final typeName, :final init, :final pos):
         KlinType? annotated;
         if (typeName != null) {
-          final kind = PrimKind.tryParse(typeName);
-          if (kind == null) {
-            throw CheckError('nieznany typ `$typeName`', pos);
-          }
-          annotated = PrimType(kind);
+          annotated = _resolvePrimType(typeName, pos);
         }
 
         final KlinType resolved;
@@ -121,11 +200,8 @@ final class Checker {
         _expectAssignable(sym.type, valueType, value.pos);
         _materialize(value, sym.type);
 
-      case CallStmt(:final args):
-        // 001/003: FFI do C (puts/printf) — bez sprawdzania sygnatur.
-        for (final arg in args) {
-          _inferExpr(arg);
-        }
+      case CallStmt(:final callee, :final args, :final pos):
+        _checkCall(callee, args, pos);
 
       case IfStmt(:final cond, :final thenBlock, :final elseBranch):
         _expectBoolCond(cond);
@@ -208,18 +284,8 @@ final class Checker {
         _loopDepth--;
         _scope = _scope.parent!;
 
-      case ReturnStmt(:final value):
-        if (value != null) {
-          final t = _inferExpr(value);
-          final concrete = _defaultConcrete(t, value.pos);
-          if (concrete is! PrimType || !concrete.kind.isInteger) {
-            throw CheckError(
-              '`return` w main wymaga typu całkowitego, dostano `${concrete.displayName}`',
-              value.pos,
-            );
-          }
-          _materialize(value, concrete);
-        }
+      case ReturnStmt(:final value, :final pos):
+        _checkReturn(value, pos);
 
       case BreakStmt(:final pos):
         if (_loopDepth == 0) {
@@ -248,6 +314,79 @@ final class Checker {
     );
   }
 
+  void _checkReturn(Expr? value, SourcePos pos) {
+    if (_currentFunction == 'main') {
+      if (value == null) return;
+      final type = _defaultConcrete(_inferExpr(value), value.pos);
+      if (type is! PrimType || !type.kind.isInteger) {
+        throw CheckError(
+          '`return` w main wymaga typu całkowitego, dostano `${type.displayName}`',
+          value.pos,
+        );
+      }
+      _materialize(value, type);
+      return;
+    }
+    if (_currentReturn is VoidType) {
+      if (value != null) {
+        throw CheckError('funkcja void nie może zwracać wartości', value.pos);
+      }
+      return;
+    }
+    if (value == null) {
+      throw CheckError(
+        'funkcja `${_currentFunction}` musi zwrócić `${_currentReturn.displayName}`',
+        pos,
+      );
+    }
+    final valueType = _inferExpr(value);
+    _expectAssignable(_currentReturn, valueType, value.pos);
+    _materialize(value, _currentReturn);
+  }
+
+  KlinType _checkCall(String callee, List<Expr> args, SourcePos pos) {
+    final signature = _functions[callee];
+    if (signature == null) {
+      // FFI do C (np. puts/printf) — nie znamy sygnatury.
+      for (final arg in args) {
+        _inferExpr(arg);
+      }
+      return const PrimType(PrimKind.i32);
+    }
+    if (args.length != signature.paramTypes.length) {
+      throw CheckError(
+        'funkcja `$callee` oczekuje ${signature.paramTypes.length} argumentów, '
+        'dostano ${args.length}',
+        pos,
+      );
+    }
+    for (var i = 0; i < args.length; i++) {
+      final arg = args[i];
+      final expected = signature.paramTypes[i];
+      final actual = _inferExpr(arg);
+      _expectAssignable(expected, actual, arg.pos);
+      _materialize(arg, expected);
+    }
+    return signature.returnType;
+  }
+
+  bool _returnsOnAllPaths(Block block) {
+    for (final stmt in block.stmts) {
+      if (_stmtReturns(stmt)) return true;
+    }
+    return false;
+  }
+
+  bool _stmtReturns(Stmt stmt) => switch (stmt) {
+    ReturnStmt() => true,
+    BlockStmt(:final block) => _returnsOnAllPaths(block),
+    IfStmt(:final thenBlock, :final elseBranch) =>
+      elseBranch != null &&
+          _returnsOnAllPaths(thenBlock) &&
+          _stmtReturns(elseBranch),
+    _ => false,
+  };
+
   /// Wnioskowanie bez kontekstu — może zwrócić typ untyped.
   KlinType _inferExpr(Expr expr) {
     final type = switch (expr) {
@@ -261,6 +400,16 @@ final class Checker {
             throw CheckError('nieznana zmienna `$name`', pos);
           }
           return sym.type;
+        }(),
+      CallExpr(:final callee, :final args, :final pos) => () {
+          final returnType = _checkCall(callee, args, pos);
+          if (returnType is VoidType) {
+            throw CheckError(
+              'wynik funkcji void `$callee` nie może być użyty jako wartość',
+              pos,
+            );
+          }
+          return returnType;
         }(),
       UnaryExpr(:final op, :final operand, :final pos) => () {
           if (op == '!') {
@@ -429,7 +578,8 @@ final class Checker {
             FloatLit() ||
             BoolLit() ||
             StringLit() ||
-            NameExpr():
+            NameExpr() ||
+            CallExpr():
         break;
     }
   }
@@ -463,6 +613,10 @@ final class Checker {
       UntypedInt() => const PrimType(PrimKind.i32),
       UntypedFloat() => const PrimType(PrimKind.f64),
       PrimType() => type,
+      VoidType() => throw CheckError(
+          'nie można użyć wartości void w tym kontekście',
+          pos,
+        ),
       StrType() => throw CheckError(
           'nie można użyć napisu w tym kontekście',
           pos,

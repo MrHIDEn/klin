@@ -9,23 +9,67 @@ String emitC(Program program, String sourcePath) {
   buf.writeln('#include <stddef.h>');
   buf.writeln('#include <stdbool.h>');
   buf.writeln();
-  _line(buf, program.pos.line, sourcePath);
-  buf.writeln('int main(void) {');
-  _emitBlock(buf, program.body, sourcePath, indent: 1);
-  buf.writeln('    return 0;');
-  buf.writeln('}');
+  for (final func in program.funcs) {
+    buf.writeln('${_functionHeader(func)};');
+  }
+  buf.writeln();
+  for (final func in program.funcs) {
+    _line(buf, func.pos.line, sourcePath);
+    buf.writeln('${_functionHeader(func)} {');
+    _emitBlock(
+      buf,
+      func.body,
+      sourcePath,
+      indent: 1,
+      bareReturnAsZero: func.name == 'main',
+    );
+    if (func.name == 'main') buf.writeln('    return 0;');
+    buf.writeln('}');
+    buf.writeln();
+  }
   return buf.toString();
 }
+
+String _functionHeader(FuncDecl func) {
+  if (func.name == 'main') return 'int main(void)';
+  final returnType = func.resolvedReturnType;
+  if (returnType == null) {
+    throw StateError('emit: brak typu zwracanego funkcji `${func.name}`');
+  }
+  final params = func.params.map((param) {
+    final type = param.resolvedType;
+    if (type == null) {
+      throw StateError('emit: brak typu parametru `${param.name}`');
+    }
+    return '${_cType(type)} ${param.name}';
+  }).join(', ');
+  return '${_cType(returnType)} ${func.name}(${params.isEmpty ? 'void' : params})';
+}
+
+String _cType(KlinType type) => switch (type) {
+  PrimType(:final kind) => kind.cType,
+  VoidType() => 'void',
+  StrType() => 'const char*',
+  _ => throw StateError('emit: typ `${type.displayName}` nie ma typu C'),
+};
 
 void _emitBlock(
   StringBuffer buf,
   Block block,
   String sourcePath, {
   required int indent,
+  required bool bareReturnAsZero,
 }) {
   final pad = '    ' * indent;
   for (final stmt in block.stmts) {
-    _emitStmt(buf, stmt, sourcePath, indent: indent, pad: pad);
+    _emitStmt(
+      buf,
+      stmt,
+      sourcePath,
+      indent: indent,
+      pad: pad,
+      bareReturnAsZero: bareReturnAsZero,
+    );
   }
 }
 
@@ -35,17 +79,21 @@ void _emitStmt(
   String sourcePath, {
   required int indent,
   required String pad,
+  required bool bareReturnAsZero,
 }) {
   switch (stmt) {
     case LetStmt(:final name, :final init, :final pos, :final resolvedType):
       _line(buf, pos.line, sourcePath);
       final ty = resolvedType;
-      if (ty is! PrimType) {
+      if (ty == null || (ty is! PrimType && ty is! StrType)) {
         throw StateError('emit: brak typu dla `$name` — uruchom checker');
       }
       if (init != null) {
-        buf.writeln('$pad${ty.kind.cType} $name = ${_emitExpr(init)};');
+        buf.writeln('$pad${_cType(ty)} $name = ${_emitExpr(init)};');
       } else {
+        if (ty is! PrimType) {
+          throw StateError('emit: brak wartości domyślnej dla `$name`');
+        }
         buf.writeln('$pad${ty.kind.cType} $name = ${ty.kind.cZero};');
       }
 
@@ -61,13 +109,32 @@ void _emitStmt(
     case IfStmt(:final cond, :final thenBlock, :final elseBranch, :final pos):
       _line(buf, pos.line, sourcePath);
       buf.writeln('${pad}if (${_emitExpr(cond)}) {');
-      _emitBlock(buf, thenBlock, sourcePath, indent: indent + 1);
-      _emitElse(buf, elseBranch, sourcePath, indent: indent, pad: pad);
+      _emitBlock(
+        buf,
+        thenBlock,
+        sourcePath,
+        indent: indent + 1,
+        bareReturnAsZero: bareReturnAsZero,
+      );
+      _emitElse(
+        buf,
+        elseBranch,
+        sourcePath,
+        indent: indent,
+        pad: pad,
+        bareReturnAsZero: bareReturnAsZero,
+      );
 
     case WhileStmt(:final cond, :final body, :final pos):
       _line(buf, pos.line, sourcePath);
       buf.writeln('${pad}while (${_emitExpr(cond)}) {');
-      _emitBlock(buf, body, sourcePath, indent: indent + 1);
+      _emitBlock(
+        buf,
+        body,
+        sourcePath,
+        indent: indent + 1,
+        bareReturnAsZero: bareReturnAsZero,
+      );
       buf.writeln('$pad}');
 
     case ForRangeStmt(
@@ -87,7 +154,13 @@ void _emitStmt(
         '${pad}for (${ty.kind.cType} $name = ${_emitExpr(start)}; '
         '$name < ${_emitExpr(endExclusive)}; $name++) {',
       );
-      _emitBlock(buf, body, sourcePath, indent: indent + 1);
+      _emitBlock(
+        buf,
+        body,
+        sourcePath,
+        indent: indent + 1,
+        bareReturnAsZero: bareReturnAsZero,
+      );
       buf.writeln('$pad}');
 
     case ForCStmt(
@@ -114,13 +187,19 @@ void _emitStmt(
           ? '$postName = ${_emitExpr(postExpr)}'
           : '';
       buf.writeln('${pad}for ($initPart; $condPart; $postPart) {');
-      _emitBlock(buf, body, sourcePath, indent: indent + 1);
+      _emitBlock(
+        buf,
+        body,
+        sourcePath,
+        indent: indent + 1,
+        bareReturnAsZero: bareReturnAsZero,
+      );
       buf.writeln('$pad}');
 
     case ReturnStmt(:final value, :final pos):
       _line(buf, pos.line, sourcePath);
       if (value == null) {
-        buf.writeln('${pad}return 0;');
+        buf.writeln(bareReturnAsZero ? '${pad}return 0;' : '${pad}return;');
       } else {
         buf.writeln('${pad}return ${_emitExpr(value)};');
       }
@@ -136,7 +215,13 @@ void _emitStmt(
     case BlockStmt(:final block):
       _line(buf, block.pos.line, sourcePath);
       buf.writeln('$pad{');
-      _emitBlock(buf, block, sourcePath, indent: indent + 1);
+      _emitBlock(
+        buf,
+        block,
+        sourcePath,
+        indent: indent + 1,
+        bareReturnAsZero: bareReturnAsZero,
+      );
       buf.writeln('$pad}');
   }
 }
@@ -147,6 +232,7 @@ void _emitElse(
   String sourcePath, {
   required int indent,
   required String pad,
+  required bool bareReturnAsZero,
 }) {
   if (elseBranch == null) {
     buf.writeln('$pad}');
@@ -155,19 +241,32 @@ void _emitElse(
   if (elseBranch is IfStmt) {
     _line(buf, elseBranch.pos.line, sourcePath);
     buf.writeln('$pad} else if (${_emitExpr(elseBranch.cond)}) {');
-    _emitBlock(buf, elseBranch.thenBlock, sourcePath, indent: indent + 1);
+    _emitBlock(
+      buf,
+      elseBranch.thenBlock,
+      sourcePath,
+      indent: indent + 1,
+      bareReturnAsZero: bareReturnAsZero,
+    );
     _emitElse(
       buf,
       elseBranch.elseBranch,
       sourcePath,
       indent: indent,
       pad: pad,
+      bareReturnAsZero: bareReturnAsZero,
     );
     return;
   }
   if (elseBranch is BlockStmt) {
     buf.writeln('$pad} else {');
-    _emitBlock(buf, elseBranch.block, sourcePath, indent: indent + 1);
+    _emitBlock(
+      buf,
+      elseBranch.block,
+      sourcePath,
+      indent: indent + 1,
+      bareReturnAsZero: bareReturnAsZero,
+    );
     buf.writeln('$pad}');
     return;
   }
@@ -181,6 +280,8 @@ String _emitExpr(Expr expr) {
     BoolLit(:final value) => value ? 'true' : 'false',
     StringLit(:final value) => '"${_escapeC(value)}"',
     NameExpr(:final name) => name,
+    CallExpr(:final callee, :final args) =>
+      '$callee(${args.map(_emitExpr).join(', ')})',
     UnaryExpr(:final op, :final operand) => '$op(${_emitExpr(operand)})',
     BinaryExpr(:final left, :final op, :final right) =>
       '(${_emitExpr(left)} $op ${_emitExpr(right)})',

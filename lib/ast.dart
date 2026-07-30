@@ -1,12 +1,48 @@
 import 'token.dart';
 import 'type.dart';
 
-/// program := "fn" "main" "(" ")" block
+/// program := func+
 final class Program {
+  final List<FuncDecl> funcs;
+  final SourcePos pos;
+
+  const Program(this.funcs, this.pos);
+}
+
+/// fn name(params): returnType? block
+final class FuncDecl {
+  final String name;
+  final List<Param> params;
+  final String? returnTypeName;
   final Block body;
   final SourcePos pos;
 
-  const Program(this.body, this.pos);
+  /// Wypełniane przez checker.
+  KlinType? resolvedReturnType;
+
+  FuncDecl({
+    required this.name,
+    required this.params,
+    required this.returnTypeName,
+    required this.body,
+    required this.pos,
+  });
+}
+
+/// name: type
+final class Param {
+  final String name;
+  final String typeName;
+  final SourcePos pos;
+
+  /// Wypełniane przez checker.
+  KlinType? resolvedType;
+
+  Param({
+    required this.name,
+    required this.typeName,
+    required this.pos,
+  });
 }
 
 final class Block {
@@ -211,6 +247,19 @@ final class NameExpr extends Expr {
   final SourcePos pos;
 
   NameExpr(this.name, this.pos);
+}
+
+/// call := ident "(" (expr ("," expr)*)? ")"
+final class CallExpr extends Expr {
+  final String callee;
+  final List<Expr> args;
+  final SourcePos pos;
+
+  CallExpr({
+    required this.callee,
+    required this.args,
+    required this.pos,
+  });
 }
 
 final class UnaryExpr extends Expr {
