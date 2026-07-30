@@ -159,6 +159,8 @@ final class Lexer {
       'break' => Token(TokenKind.break_, lexeme, start),
       'continue' => Token(TokenKind.continue_, lexeme, start),
       'defer' => Token(TokenKind.defer_, lexeme, start),
+      'or' => Token(TokenKind.or_, lexeme, start),
+      'error' => Token(TokenKind.error_, lexeme, start),
       _ => Token(TokenKind.ident, lexeme, start),
     };
   }

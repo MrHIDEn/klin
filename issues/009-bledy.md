@@ -1,6 +1,6 @@
 # 009 — Błędy jako wartości
 
-**Status:** ⬜ do zrobienia
+**Status:** ✅ zrobione
 **Zależy od:** 008
 
 ## Zakres
@@ -25,7 +25,7 @@ let cfg = load("app.toml") or {
 
 ## Kryterium ukończenia
 
-- [ ] propagacja przez 3 poziomy wywołań
-- [ ] `or` z wartością domyślną
-- [ ] błąd kompilacji przy zignorowaniu `!T`
-- [ ] objdump: narzut = sprawdzenie flagi, nic więcej
+- [x] propagacja przez 3 poziomy wywołań
+- [x] `or` z wartością domyślną
+- [x] błąd kompilacji przy zignorowaniu `!T`
+- [x] objdump: narzut = sprawdzenie flagi, nic więcej

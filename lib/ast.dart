@@ -491,3 +491,37 @@ final class GroupExpr extends Expr {
 
   GroupExpr(this.inner, this.pos);
 }
+
+/// `error(code)` — konstrukcja błędnej gałęzi aktualnego `!T`.
+final class ErrorExpr extends Expr {
+  final Expr code;
+  final SourcePos pos;
+
+  ErrorExpr(this.code, this.pos);
+}
+
+/// Postfiksowe `result!` — zwraca OK albo propaguje ERR z funkcji.
+final class PropagateExpr extends Expr {
+  final Expr result;
+  final SourcePos pos;
+
+  PropagateExpr(this.result, this.pos);
+}
+
+/// Ciało gałęzi błędnej `or`: instrukcje i wymagana wartość końcowa.
+final class OrBlock {
+  final List<Stmt> stmts;
+  final Expr value;
+  final SourcePos pos;
+
+  const OrBlock(this.stmts, this.value, this.pos);
+}
+
+/// `result or { stmts; value }`.
+final class OrExpr extends Expr {
+  final Expr result;
+  final OrBlock fallback;
+  final SourcePos pos;
+
+  OrExpr(this.result, this.fallback, this.pos);
+}

@@ -39,6 +39,26 @@ String emitC(Program program, String sourcePath) {
     buf.writeln('} ${_structCName(struct.moduleName, struct.name)};');
     buf.writeln();
   }
+  final resultTypes = <ResultType>{};
+  for (final struct in program.structs) {
+    for (final field in struct.fields) {
+      _collectResultTypes(field.resolvedType, resultTypes);
+    }
+  }
+  for (final func in program.funcs) {
+    _collectResultTypes(func.resolvedReturnType, resultTypes);
+    for (final param in func.params) {
+      _collectResultTypes(param.resolvedType, resultTypes);
+    }
+  }
+  for (final type in resultTypes) {
+    final ok = _cType(type.ok);
+    buf.writeln('typedef struct {');
+    buf.writeln('    bool is_err;');
+    buf.writeln('    union { $ok ok; int32_t err; } u;');
+    buf.writeln('} ${_resultCName(type.ok)};');
+    buf.writeln();
+  }
   for (final func in program.funcs) {
     buf.writeln('${_functionHeader(func)};');
   }
@@ -107,6 +127,7 @@ String _cType(KlinType type) => switch (type) {
         '${isVolatile ? 'volatile ' : ''}${_cType(pointee)} *',
       ArrayType(:final elem) => _cType(elem),
       SliceType(:final elem) => _sliceCName(elem),
+      ResultType(:final ok) => _resultCName(ok),
       _ => throw StateError('emit: typ `${type.displayName}` nie ma typu C'),
     };
 
@@ -121,7 +142,26 @@ void _collectSliceTypes(KlinType? type, Set<PrimType> output) {
   if (type case SliceType(:final elem)) output.add(elem);
   if (type case PtrType(:final pointee)) _collectSliceTypes(pointee, output);
   if (type case ArrayType(:final elem)) _collectSliceTypes(elem, output);
+  if (type case ResultType(:final ok)) _collectSliceTypes(ok, output);
 }
+
+void _collectResultTypes(KlinType? type, Set<ResultType> output) {
+  if (type case ResultType(:final ok)) {
+    output.add(type);
+    _collectResultTypes(ok, output);
+  }
+  if (type case PtrType(:final pointee)) _collectResultTypes(pointee, output);
+  if (type case ArrayType(:final elem)) _collectResultTypes(elem, output);
+}
+
+String _resultCName(KlinType ok) => switch (ok) {
+      PrimType(:final kind) => 'klin_res_${kind.klinName}',
+      StructType(:final moduleName, :final name) =>
+        'klin_res_${_structCName(moduleName, name)}',
+      SliceType(:final elem) => 'klin_res_${_sliceCName(elem)}',
+      PtrType() => 'klin_res_ptr',
+      _ => throw StateError('emit: niedozwolony typ OK `${ok.displayName}`'),
+    };
 
 final class _DeferFrame {
   /// Ciała defer zarejestrowane w kolejności napotkania (nie z całego bloku z góry).
@@ -134,8 +174,109 @@ final class _DeferFrame {
 final class _EmitState {
   final List<_DeferFrame> deferStack = [];
   int _returnTemp = 0;
+  int _valueTemp = 0;
 
   String nextReturnTemp() => 'klin_ret_${_returnTemp++}';
+  String nextValueTemp() => 'klin_val_${_valueTemp++}';
+}
+
+void _emitValueAssignment(
+  StringBuffer buf, {
+  required String target,
+  required KlinType targetType,
+  required Expr value,
+  required String sourcePath,
+  required int indent,
+  required bool bareReturnAsZero,
+  required String returnCType,
+  required _EmitState state,
+}) {
+  final pad = '    ' * indent;
+  if (value case PropagateExpr(:final result)) {
+    final temp = _emitPropagate(
+      buf,
+      result: result,
+      target: target,
+      sourcePath: sourcePath,
+      indent: indent,
+      bareReturnAsZero: bareReturnAsZero,
+      returnCType: returnCType,
+      state: state,
+    );
+    buf.writeln('$pad$target = $temp.u.ok;');
+    return;
+  }
+  if (value case OrExpr(:final result, :final fallback)) {
+    final resultType = result.resolvedType;
+    if (resultType is! ResultType) {
+      throw StateError('emit: `or` bez typu wyniku');
+    }
+    final temp = state.nextValueTemp();
+    buf.writeln('$pad${_cType(resultType)} $temp = ${_emitExpr(result)};');
+    buf.writeln('${pad}if ($temp.is_err) {');
+    final innerPad = '    ' * (indent + 1);
+    buf.writeln('${innerPad}int32_t err = $temp.u.err;');
+    for (final stmt in fallback.stmts) {
+      _emitStmt(
+        buf,
+        stmt,
+        sourcePath,
+        indent: indent + 1,
+        pad: innerPad,
+        bareReturnAsZero: bareReturnAsZero,
+        returnCType: returnCType,
+        state: state,
+      );
+    }
+    _emitValueAssignment(
+      buf,
+      target: target,
+      targetType: targetType,
+      value: fallback.value,
+      sourcePath: sourcePath,
+      indent: indent + 1,
+      bareReturnAsZero: bareReturnAsZero,
+      returnCType: returnCType,
+      state: state,
+    );
+    buf.writeln('$pad} else {');
+    buf.writeln('${innerPad}$target = $temp.u.ok;');
+    buf.writeln('$pad}');
+    return;
+  }
+  buf.writeln('$pad$target = ${_emitExpr(value)};');
+}
+
+String _emitPropagate(
+  StringBuffer buf, {
+  required Expr result,
+  required String? target,
+  required String sourcePath,
+  required int indent,
+  required bool bareReturnAsZero,
+  required String returnCType,
+  required _EmitState state,
+}) {
+  final resultType = result.resolvedType;
+  if (resultType is! ResultType) {
+    throw StateError('emit: propagacja bez typu wyniku');
+  }
+  final pad = '    ' * indent;
+  final temp = state.nextValueTemp();
+  buf.writeln('$pad${_cType(resultType)} $temp = ${_emitExpr(result)};');
+  buf.writeln('${pad}if ($temp.is_err) {');
+  _emitExitCleanups(
+    buf,
+    state.deferStack,
+    sourcePath,
+    indent: indent + 1,
+    bareReturnAsZero: bareReturnAsZero,
+    returnCType: returnCType,
+    state: state,
+  );
+  buf.writeln('${'    ' * (indent + 1)}return $temp;');
+  buf.writeln('$pad}');
+  return temp;
 }
 
 void _emitBlock(
@@ -193,7 +334,22 @@ void _emitStmt(
         throw StateError('emit: brak typu dla `$name` — uruchom checker');
       }
       if (init != null) {
-        buf.writeln('$pad${_cDecl(ty, name)} = ${_emitExpr(init)};');
+        if (init is OrExpr || init is PropagateExpr) {
+          buf.writeln('$pad${_cDecl(ty, name)};');
+          _emitValueAssignment(
+            buf,
+            target: name,
+            targetType: ty,
+            value: init,
+            sourcePath: sourcePath,
+            indent: indent,
+            bareReturnAsZero: bareReturnAsZero,
+            returnCType: returnCType,
+            state: state,
+          );
+        } else {
+          buf.writeln('$pad${_cDecl(ty, name)} = ${_emitExpr(init)};');
+        }
       } else {
         final zero = switch (ty) {
           PrimType(:final kind) => kind.cZero,
@@ -202,6 +358,7 @@ void _emitStmt(
           SliceType() => '{ NULL, 0 }',
           StructType() => '{0}',
           StrType() => 'NULL',
+          ResultType() => '{0}',
           _ => throw StateError('emit: brak wartości domyślnej dla `$name`'),
         };
         buf.writeln('$pad${_cDecl(ty, name)} = $zero;');
@@ -209,7 +366,21 @@ void _emitStmt(
 
     case AssignStmt(:final target, :final value, :final pos):
       _line(buf, pos.line, sourcePath);
-      buf.writeln('$pad${_emitExpr(target)} = ${_emitExpr(value)};');
+      if (value is OrExpr || value is PropagateExpr) {
+        _emitValueAssignment(
+          buf,
+          target: _emitExpr(target),
+          targetType: target.resolvedType!,
+          value: value,
+          sourcePath: sourcePath,
+          indent: indent,
+          bareReturnAsZero: bareReturnAsZero,
+          returnCType: returnCType,
+          state: state,
+        );
+      } else {
+        buf.writeln('$pad${_emitExpr(target)} = ${_emitExpr(value)};');
+      }
 
     case CallStmt(
         :final callee,
@@ -342,8 +513,43 @@ void _emitStmt(
         );
         buf.writeln(bareReturnAsZero ? '${pad}return 0;' : '${pad}return;');
       } else {
+        if (value is PropagateExpr) {
+          final propagated = _emitPropagate(
+            buf,
+            result: value.result,
+            target: null,
+            sourcePath: sourcePath,
+            indent: indent,
+            bareReturnAsZero: bareReturnAsZero,
+            returnCType: returnCType,
+            state: state,
+          );
+          final resultType = value.result.resolvedType! as ResultType;
+          final temp = state.nextReturnTemp();
+          buf.writeln(
+            '$pad$returnCType $temp = (${_cType(resultType)}){ '
+            '.is_err = false, .u.ok = $propagated.u.ok };',
+          );
+          _emitExitCleanups(
+            buf,
+            state.deferStack,
+            sourcePath,
+            indent: indent,
+            bareReturnAsZero: bareReturnAsZero,
+            returnCType: returnCType,
+            state: state,
+          );
+          buf.writeln('${pad}return $temp;');
+          return;
+        }
         final temp = state.nextReturnTemp();
-        buf.writeln('$pad$returnCType $temp = ${_emitExpr(value)};');
+        final valueType = value.resolvedType;
+        final returnValue = valueType is ResultType
+            ? _emitExpr(value)
+            : returnCType.startsWith('klin_res_')
+                ? '($returnCType){ .is_err = false, .u.ok = ${_emitExpr(value)} }'
+                : _emitExpr(value);
+        buf.writeln('$pad$returnCType $temp = $returnValue;');
         _emitExitCleanups(
           buf,
           state.deferStack,
@@ -611,6 +817,15 @@ String _emitExprRaw(Expr expr) {
     BinaryExpr(:final left, :final op, :final right) =>
       '(${_emitExpr(left)} $op ${_emitExpr(right)})',
     GroupExpr(:final inner) => '(${_emitExpr(inner)})',
+    ErrorExpr(:final code, :final resolvedType) => () {
+        if (resolvedType is! ResultType) {
+          throw StateError('emit: `error` bez typu wyniku');
+        }
+        return '(${_cType(resolvedType)}){ .is_err = true, .u.err = ${_emitExpr(code)} }';
+      }(),
+    PropagateExpr() ||
+    OrExpr() =>
+      throw StateError('emit: wynik `!` lub `or` wymaga kontekstu instrukcji'),
   };
 }
 
