@@ -1,0 +1,7 @@
+fn identity(value: i32): i32 {
+  return value
+}
+
+fn main() {
+  printf("%d\n", identity(true))
+}

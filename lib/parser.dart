@@ -11,8 +11,10 @@ final class ParseError implements Exception {
   String toString() => '${pos.line}:${pos.col}: $message';
 }
 
-/// Gramatyka 003:
-///   program := "fn" "main" "(" ")" block
+/// Gramatyka 004:
+///   program := func+ eof
+///   func    := "fn" ident "(" params? ")" (":" ident)? block
+///   params  := ident ":" ident ("," ident ":" ident)*
 ///   block   := "{" stmt* "}"
 ///   stmt    := let | assign | call | if | while | for | return | break
 ///            | continue | block
@@ -28,7 +30,8 @@ final class ParseError implements Exception {
 ///   term    := factor (("+" | "-") factor)*
 ///   factor  := unary (("*" | "/" | "%") unary)*
 ///   unary   := ("-" | "!") unary | primary
-///   primary := INT | FLOAT | STRING | true | false | ident | "(" expr ")"
+///   primary := INT | FLOAT | STRING | true | false | ident ["(" args? ")"]
+///            | "(" expr ")"
 final class Parser {
   final List<Token> _tokens;
   int _i = 0;
@@ -36,16 +39,53 @@ final class Parser {
   Parser(this._tokens);
 
   Program parse() {
-    final fn = _expect(TokenKind.fn, 'oczekiwano `fn`');
-    final name = _expect(TokenKind.ident, 'oczekiwano `main`');
-    if (name.lexeme != 'main') {
-      throw ParseError('oczekiwano `main`, dostano `${name.lexeme}`', name.pos);
+    final funcs = <FuncDecl>[];
+    while (!_check(TokenKind.eof)) {
+      funcs.add(_func());
     }
-    _expect(TokenKind.lParen, 'oczekiwano `(`');
-    _expect(TokenKind.rParen, 'oczekiwano `)`');
-    final body = _block();
+    if (funcs.isEmpty) {
+      throw ParseError('oczekiwano deklarację funkcji', _current.pos);
+    }
     _expect(TokenKind.eof, 'oczekiwano koniec pliku');
-    return Program(body, fn.pos);
+    return Program(funcs, funcs.first.pos);
+  }
+
+  FuncDecl _func() {
+    final fn = _expect(TokenKind.fn, 'oczekiwano `fn`');
+    final name = _expect(TokenKind.ident, 'oczekiwano nazwę funkcji');
+    _rejectCKeyword(name, 'nazwą funkcji');
+    _expect(TokenKind.lParen, 'oczekiwano `(`');
+    final params = <Param>[];
+    if (!_check(TokenKind.rParen)) {
+      do {
+        final paramName = _expect(TokenKind.ident, 'oczekiwano nazwę parametru');
+        _rejectCKeyword(paramName, 'nazwą parametru');
+        _expect(TokenKind.colon, 'oczekiwano `:` po nazwie parametru');
+        final type = _expect(TokenKind.ident, 'oczekiwano nazwę typu parametru');
+        params.add(
+          Param(name: paramName.lexeme, typeName: type.lexeme, pos: paramName.pos),
+        );
+        if (!_check(TokenKind.comma)) break;
+        _advance();
+      } while (true);
+    }
+    _expect(TokenKind.rParen, 'oczekiwano `)`');
+
+    String? returnTypeName;
+    if (_check(TokenKind.colon)) {
+      _advance();
+      returnTypeName = _expect(
+        TokenKind.ident,
+        'oczekiwano nazwę typu zwracanego',
+      ).lexeme;
+    }
+    return FuncDecl(
+      name: name.lexeme,
+      params: params,
+      returnTypeName: returnTypeName,
+      body: _block(),
+      pos: fn.pos,
+    );
   }
 
   Block _block() {
@@ -189,18 +229,22 @@ final class Parser {
     final tok = _expect(TokenKind.return_, 'oczekiwano `return`');
     Expr? value;
     // Bez średników: nie pożeraj następnej instrukcji (`return` + `puts(...)`
-    // albo `x = ...` w kolejnej linii).
-    if (_looksLikeReturnValue()) {
+    // albo `x = ...` w kolejnej linii). `return fib(n)` w tej samej linii OK.
+    if (_looksLikeReturnValue(tok.pos)) {
       value = _expr();
     }
     return ReturnStmt(value: value, pos: tok.pos);
   }
 
-  bool _looksLikeReturnValue() {
+  bool _looksLikeReturnValue(SourcePos returnPos) {
     if (!_canStartExpr(_current.kind)) return false;
     if (_check(TokenKind.ident) && _i + 1 < _tokens.length) {
       final next = _tokens[_i + 1].kind;
-      if (next == TokenKind.lParen || next == TokenKind.equal) {
+      if (next == TokenKind.equal) {
+        return false;
+      }
+      // Wywołanie zaczynające się w następnej linii → osobny stmt, nie wartość.
+      if (next == TokenKind.lParen && _current.pos.line > returnPos.line) {
         return false;
       }
     }
@@ -251,13 +295,16 @@ final class Parser {
 
   CallStmt _callStmt() {
     final callee = _expect(TokenKind.ident, 'oczekiwano nazwę funkcji');
-    // Z3: nie emitować słów kluczowych C jako callee — gcc nie powinien krzyczeć.
-    if (_cKeywords.contains(callee.lexeme)) {
-      throw ParseError(
-        '`${callee.lexeme}` jest słowem kluczowym C i nie może być nazwą wywołania',
-        callee.pos,
-      );
-    }
+    _rejectCKeyword(callee, 'nazwą wywołania');
+    final args = _argList();
+    return CallStmt(
+      callee: callee.lexeme,
+      args: args,
+      pos: callee.pos,
+    );
+  }
+
+  List<Expr> _argList() {
     _expect(TokenKind.lParen, 'oczekiwano `(`');
     final args = <Expr>[];
     if (!_check(TokenKind.rParen)) {
@@ -268,11 +315,7 @@ final class Parser {
       }
     }
     _expect(TokenKind.rParen, 'oczekiwano `)`');
-    return CallStmt(
-      callee: callee.lexeme,
-      args: args,
-      pos: callee.pos,
-    );
+    return args;
   }
 
   Expr _expr() => _equality();
@@ -351,6 +394,10 @@ final class Parser {
         return BoolLit(false, t.pos);
       case TokenKind.ident:
         _advance();
+        if (_check(TokenKind.lParen)) {
+          _rejectCKeyword(t, 'nazwą wywołania');
+          return CallExpr(callee: t.lexeme, args: _argList(), pos: t.pos);
+        }
         return NameExpr(t.lexeme, t.pos);
       case TokenKind.lParen:
         final open = _advance();
@@ -379,6 +426,15 @@ final class Parser {
     }
     _i++;
     return t;
+  }
+
+  void _rejectCKeyword(Token token, String role) {
+    if (_cKeywords.contains(token.lexeme)) {
+      throw ParseError(
+        '`${token.lexeme}` jest słowem kluczowym C i nie może być $role',
+        token.pos,
+      );
+    }
   }
 
   /// Słowa kluczowe C — nie mogą trafić do emisji jako identyfikatory wywołań.

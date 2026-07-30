@@ -97,6 +97,19 @@ final class PrimType extends KlinType {
   int get hashCode => kind.hashCode;
 }
 
+final class VoidType extends KlinType {
+  const VoidType();
+
+  @override
+  String get displayName => 'void';
+
+  @override
+  bool operator ==(Object other) => other is VoidType;
+
+  @override
+  int get hashCode => 0;
+}
+
 /// Literał całkowity bez przypisanego jeszcze typu konkretnego.
 final class UntypedInt extends KlinType {
   const UntypedInt();

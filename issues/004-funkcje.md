@@ -1,6 +1,6 @@
 # 004 — Funkcje
 
-**Status:** ⬜ do zrobienia
+**Status:** ✅ ukończone
 **Zależy od:** 003
 
 ## Zakres
@@ -19,6 +19,6 @@ To pierwszy moment, gdy generowany C przestaje być odbiciem źródła.
 
 ## Kryterium ukończenia
 
-- [ ] funkcja wywołana przed swoją definicją w pliku działa
-- [ ] rekurencja (fibonacci)
-- [ ] błąd przy złej liczbie/typie argumentów
+- [x] funkcja wywołana przed swoją definicją w pliku działa
+- [x] rekurencja (fibonacci)
+- [x] błąd przy złej liczbie/typie argumentów

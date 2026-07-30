@@ -9,8 +9,8 @@ komponenty istnieją. Inaczej się w tym tonie.
 | [001](001-pusty-przelot.md) | **Pusty przelot: hello world** | ✅ | 000 |
 | [002](002-tablica-symboli-checker.md) | Tablica symboli i type checker | ✅ | 001 |
 | [003](003-przeplyw-sterowania.md) | Przepływ sterowania | ✅ | 002 |
-| [004](004-funkcje.md) | Funkcje | 🔜 | 003 |
-| [005](005-struktury-metody.md) | Struktury i metody | ⬜ | 004 |
+| [004](004-funkcje.md) | Funkcje | ✅ | 003 |
+| [005](005-struktury-metody.md) | Struktury i metody | 🔜 | 004 |
 | [006](006-moduly.md) | Moduły | ⬜ | 005 |
 | [007](007-wskazniki-tablice-slice.md) | Wskaźniki, tablice, slice'y | ⬜ | 006 |
 | [008](008-defer.md) | `defer` | ⬜ | 007 |
@@ -29,6 +29,10 @@ wypluwa plik z definicjami rejestrów. Wejście → wyjście, koniec.
 | # | Zadanie | Status | Zależy od |
 |---|---|---|---|
 | [012](012-stdlib-io.md) | Opcjonalny moduł I/O (`println`) | 💭 | 006 |
+| [016](016-string-interpolation.md) | Interpolowane napisy | 💭 | 012? |
+| [017](017-collection-methods.md) | Metody kolekcji (`map`/`filter`/…) | 💭 | 007 |
+| [018](018-generators-yield.md) | Generatory / `yield` | 💭 | 004+ |
+| [019](019-default-int-types.md) | Domyślne typy (`int` / literały) | 💭 | 002 |
 
 ---
 
