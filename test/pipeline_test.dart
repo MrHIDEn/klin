@@ -60,6 +60,22 @@ void main() {
     expect(proc.exitCode, isNot(0));
     expect(proc.stderr.toString(), contains('3:'));
   });
+
+  test('błąd: wywołanie słowa kluczowego C łapie frontend, nie gcc', () {
+    final source = File('test/c_keyword_call.kl').readAsStringSync();
+    expect(
+      () => Parser(Lexer(source).tokenize()).parse(),
+      throwsA(
+        predicate((e) {
+          if (e is! ParseError) return false;
+          final msg = e.toString();
+          return msg.contains('2:') &&
+              msg.contains('słowem kluczowym C') &&
+              msg.contains('return');
+        }),
+      ),
+    );
+  });
 }
 
 Future<({int exitCode, String stdout, String stderr})> _compileAndRun(
