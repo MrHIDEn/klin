@@ -434,7 +434,7 @@ fn main() {
     expect(c, contains('int32_t buf[4] = { 10, 20, 30, 40 };'));
     expect(c, contains('(klin_slice_i32){ buf, 4 }'));
     expect(c, contains('xs.ptr[i]'));
-    expect(c, contains('volatile uint32_t *p'));
+    expect(c, contains('volatile uint32_t * p'));
     expect(c, contains('(volatile uint32_t *)(uintptr_t)'));
   });
 
