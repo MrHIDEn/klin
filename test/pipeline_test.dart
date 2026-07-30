@@ -219,6 +219,55 @@ void main() {
     );
   });
 
+  test('błąd: niekwalifikowane wywołanie fn z innego modułu nie jest FFI', () {
+    final dir = Directory.systemTemp.createTempSync('klin_mod_bare_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    File('${dir.path}/lib.kl').writeAsStringSync('''
+module lib
+fn secret(): i32 { return 1 }
+''');
+    File('${dir.path}/app.kl').writeAsStringSync('''
+module app
+import lib
+fn main() {
+  secret()
+}
+''');
+    final program = loadProject('${dir.path}/app.kl');
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) =>
+              e is CheckError &&
+              e.toString().contains('jest w module') &&
+              e.toString().contains('lib.secret'),
+        ),
+      ),
+    );
+  });
+
+  test('import alias mapuje na deklarację module w pliku', () {
+    final dir = Directory.systemTemp.createTempSync('klin_mod_alias_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    File('${dir.path}/file_a.kl').writeAsStringSync('''
+module real
+pub fn answer(): i32 { return 42 }
+''');
+    File('${dir.path}/app.kl').writeAsStringSync('''
+module app
+import file_a
+fn main() {
+  printf("%d\\n", file_a.answer())
+}
+''');
+    final program = loadProject('${dir.path}/app.kl');
+    Checker().check(program);
+    final c = emitC(program, '${dir.path}/app.kl');
+    expect(c, contains('real_answer'));
+    expect(c, isNot(contains('file_a_answer')));
+  });
+
   test('błąd: metoda mutująca na niemutowalnej zmiennej', () {
     final source = File('test/bad_mut_method.kl').readAsStringSync();
     final program = Parser(Lexer(source).tokenize()).parse();

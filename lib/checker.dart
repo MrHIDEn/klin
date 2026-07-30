@@ -84,7 +84,7 @@ final class Checker {
   final Map<String, StructDecl> _structs = {};
   final Map<String, _FuncSignature> _methods = {};
   final List<FuncDecl> _allFunctions = [];
-  Map<String, Set<String>> _imports = {};
+  Map<String, Map<String, String>> _importAliases = {};
   KlinType _currentReturn = const VoidType();
   String _currentFunction = '';
   String _currentModule = '';
@@ -96,7 +96,7 @@ final class Checker {
     _allFunctions
       ..clear()
       ..addAll(program.funcs);
-    _imports = program.imports;
+    _importAliases = program.importAliases;
     _registerStructs(program);
     _registerFunctions(program);
     final main = program.funcs
@@ -224,27 +224,39 @@ final class Checker {
   KlinType _resolveType(String name, SourcePos pos) {
     if (name == 'void') return const VoidType();
     final parts = name.split('.');
-    final module = parts.length == 2 ? parts.first : _currentModule;
+    final qualifier = parts.length == 2 ? parts.first : null;
     final typeName = parts.length == 2 ? parts.last : name;
-    if (parts.length > 2)
+    if (parts.length > 2) {
       throw CheckError('niepoprawna nazwa typu `$name`', pos);
-    if (module != _currentModule && !_isImported(module)) {
-      throw CheckError('moduł `$module` nie jest zaimportowany', pos);
     }
+    final module = qualifier == null
+        ? _currentModule
+        : _resolveModuleQualifier(qualifier, pos);
     final struct = _structs[_key(module, typeName)];
     if (struct != null) {
       if (module != _currentModule && !struct.isPub) {
-        throw CheckError('struktura `$module.$typeName` jest prywatna', pos);
+        final shown = qualifier ?? module;
+        throw CheckError('struktura `$shown.$typeName` jest prywatna', pos);
       }
       return StructType(module, struct.name);
+    }
+    if (qualifier != null) {
+      throw CheckError('nieznana struktura `$qualifier.$typeName`', pos);
     }
     return _resolvePrimType(name, pos);
   }
 
   String _key(String module, String name) => '$module.$name';
 
-  bool _isImported(String module) =>
-      _imports[_currentModule]?.contains(module) ?? false;
+  /// Alias z `import X` → faktyczna nazwa modułu pliku.
+  String _resolveModuleQualifier(String qualifier, SourcePos pos) {
+    if (qualifier == _currentModule) return qualifier;
+    final actual = _importAliases[_currentModule]?[qualifier];
+    if (actual == null) {
+      throw CheckError('moduł `$qualifier` nie jest zaimportowany', pos);
+    }
+    return actual;
+  }
 
   PrimType _resolvePrimType(String name, SourcePos pos) {
     final kind = PrimKind.tryParse(name);
@@ -467,14 +479,26 @@ final class Checker {
         pos,
       );
     }
-    final module = moduleName ?? _currentModule;
-    if (moduleName != null && !_isImported(module)) {
-      throw CheckError('moduł `$module` nie jest zaimportowany', pos);
+    final String module;
+    if (moduleName != null) {
+      module = _resolveModuleQualifier(moduleName, pos);
+    } else {
+      module = _currentModule;
     }
     final signature = _functions[_key(module, callee)];
     if (signature == null) {
       if (moduleName != null) {
-        throw CheckError('nieznana funkcja `$module.$callee`', pos);
+        throw CheckError('nieznana funkcja `$moduleName.$callee`', pos);
+      }
+      final elsewhere = _allFunctions
+          .where((func) => func.receiver == null && func.name == callee)
+          .toList();
+      if (elsewhere.isNotEmpty) {
+        final mod = elsewhere.first.moduleName;
+        throw CheckError(
+          'funkcja `$callee` jest w module `$mod` — użyj `$mod.$callee`',
+          pos,
+        );
       }
       // FFI do C (np. puts/printf) — nie znamy sygnatury.
       for (final arg in args) {
@@ -484,7 +508,8 @@ final class Checker {
     }
     final decl = _functionDecl(module, callee);
     if (module != _currentModule && !decl.isPub) {
-      throw CheckError('funkcja `$module.$callee` jest prywatna', pos);
+      final shown = moduleName ?? module;
+      throw CheckError('funkcja `$shown.$callee` jest prywatna', pos);
     }
     if (args.length != signature.paramTypes.length) {
       throw CheckError(
@@ -672,16 +697,19 @@ final class Checker {
         :final pos
       ) =>
         () {
-          final module = moduleName ?? _currentModule;
-          if (moduleName != null && !_isImported(module)) {
-            throw CheckError('moduł `$module` nie jest zaimportowany', pos);
-          }
+          final module = moduleName == null
+              ? _currentModule
+              : _resolveModuleQualifier(moduleName, pos);
           final struct = _structs[_key(module, typeName)];
-          if (struct == null)
-            throw CheckError('nieznana struktura `$typeName`', pos);
+          if (struct == null) {
+            final shown =
+                moduleName == null ? typeName : '$moduleName.$typeName';
+            throw CheckError('nieznana struktura `$shown`', pos);
+          }
           if (module != _currentModule && !struct.isPub) {
+            final shown = moduleName ?? module;
             throw CheckError(
-                'struktura `$module.$typeName` jest prywatna', pos);
+                'struktura `$shown.$typeName` jest prywatna', pos);
           }
           if (namedFields != null) {
             if (namedFields.length != struct.fields.length) {

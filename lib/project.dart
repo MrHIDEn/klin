@@ -9,15 +9,16 @@ import 'token.dart';
 Program loadProject(String entryPath) {
   final structs = <StructDecl>[];
   final funcs = <FuncDecl>[];
-  final imports = <String, Set<String>>{};
+  final importAliases = <String, Map<String, String>>{};
   final loading = <String>{};
-  final loaded = <String>{};
+  final loaded = <String, String>{}; // path → moduleName
   SourcePos? firstPos;
 
-  void load(String path) {
+  String load(String path) {
     final file = File(path).absolute;
     final normalized = file.path;
-    if (loaded.contains(normalized)) return;
+    final existing = loaded[normalized];
+    if (existing != null) return existing;
     if (!loading.add(normalized)) {
       throw ParseError('cykliczny import `$normalized`', const SourcePos(1, 1));
     }
@@ -28,7 +29,6 @@ Program loadProject(String entryPath) {
     final unit = Parser(Lexer(file.readAsStringSync()).tokenize()).parseUnit();
     final moduleName = unit.declaredName ?? _fileStem(file.path);
     firstPos ??= unit.pos;
-    imports[moduleName] = unit.imports.toSet();
     for (final struct in unit.structs) {
       struct.moduleName = moduleName;
       struct.sourcePath = file.path;
@@ -39,16 +39,26 @@ Program loadProject(String entryPath) {
       func.sourcePath = file.path;
       funcs.add(func);
     }
+    final aliases = <String, String>{};
     for (final importName in unit.imports) {
-      load('${file.parent.path}${Platform.pathSeparator}$importName.kl');
+      final childModule = load(
+        '${file.parent.path}${Platform.pathSeparator}$importName.kl',
+      );
+      aliases[importName] = childModule;
     }
+    importAliases[moduleName] = aliases;
     loading.remove(normalized);
-    loaded.add(normalized);
+    loaded[normalized] = moduleName;
+    return moduleName;
   }
 
   load(entryPath);
-  return Program(structs, funcs, firstPos ?? const SourcePos(1, 1),
-      imports: imports);
+  return Program(
+    structs,
+    funcs,
+    firstPos ?? const SourcePos(1, 1),
+    importAliases: importAliases,
+  );
 }
 
 String _fileStem(String path) {

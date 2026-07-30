@@ -6,9 +6,15 @@ final class Program {
   final List<StructDecl> structs;
   final List<FuncDecl> funcs;
   final SourcePos pos;
-  final Map<String, Set<String>> imports;
+  /// Per moduł: alias z `import X` → faktyczna nazwa `module` załadowanego pliku.
+  final Map<String, Map<String, String>> importAliases;
 
-  const Program(this.structs, this.funcs, this.pos, {this.imports = const {}});
+  const Program(
+    this.structs,
+    this.funcs,
+    this.pos, {
+    this.importAliases = const {},
+  });
 }
 
 /// Jedna jednostka źródłowa przed połączeniem jej przez loader projektu.

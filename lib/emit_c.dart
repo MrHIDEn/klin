@@ -62,8 +62,12 @@ String _functionHeader(FuncDecl func) {
   final name = func.name == 'main'
       ? 'main'
       : func.receiver == null
-          ? '${func.moduleName}_${func.name}'
-          : '${func.moduleName}_${_receiverTypeName(func.receiver!)}_${func.name}';
+          ? _freeCName(func.moduleName, func.name)
+          : _methodCName(
+              func.moduleName,
+              _receiverTypeName(func.receiver!),
+              func.name,
+            );
   final staticPrefix = !func.isPub && func.name != 'main' ? 'static ' : '';
   return '$staticPrefix${_cType(returnType)} $name(${params.isEmpty ? 'void' : params.join(', ')})';
 }
@@ -358,6 +362,12 @@ String _emitExpr(Expr expr) {
 
 String _structCName(String module, String name) =>
     module.isEmpty ? name : '${module}_$name';
+
+String _freeCName(String module, String name) =>
+    module.isEmpty ? name : '${module}_$name';
+
+String _methodCName(String module, String type, String method) =>
+    module.isEmpty ? '${type}_$method' : '${module}_${type}_$method';
 
 void _line(StringBuffer buf, int line, String path) {
   buf.writeln('#line $line "${_escapeC(path)}"');
