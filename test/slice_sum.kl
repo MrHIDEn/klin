@@ -1,0 +1,19 @@
+fn sum(xs: []i32): i32 {
+    let mut i: i32 = 0
+    let mut acc: i32 = 0
+    while i < xs.len {
+        acc = acc + xs[i]
+        i = i + 1
+    }
+    return acc
+}
+
+fn main() {
+    let mut buf: [4]i32 = [10, 20, 30, 40]
+    printf("%d\n", sum(buf[:]))
+
+    let mut reg: u32 = 0
+    let mut p: *mut volatile u32 = cast(*mut volatile u32, &reg)
+    *p = 1
+    printf("%d\n", reg)
+}

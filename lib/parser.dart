@@ -196,12 +196,16 @@ final class Parser {
     }
     if (_check(TokenKind.lBrace)) return BlockStmt(_block());
 
-    if (_check(TokenKind.ident)) {
+    if (_canStartExpr(_current.kind)) {
       final expr = _expr();
       if (_check(TokenKind.equal)) {
-        if (expr is! NameExpr && expr is! FieldExpr) {
+        if (expr is! NameExpr &&
+            expr is! FieldExpr &&
+            expr is! IndexExpr &&
+            !(expr is UnaryExpr && expr.op == '*')) {
           throw ParseError(
-              'lewa strona przypisania musi być zmienną lub polem', expr.pos);
+              'lewa strona przypisania musi być miejscem zapisywalnym',
+              expr.pos);
         }
         _advance();
         return AssignStmt(target: expr, value: _expr(), pos: expr.pos);
@@ -347,8 +351,12 @@ final class Parser {
         TokenKind.false_ ||
         TokenKind.ident ||
         TokenKind.lParen ||
+        TokenKind.lBracket ||
         TokenKind.minus ||
-        TokenKind.bang =>
+        TokenKind.bang ||
+        TokenKind.star ||
+        TokenKind.ampersand ||
+        TokenKind.cast =>
           true,
         _ => false,
       };
@@ -431,9 +439,10 @@ final class Parser {
 
   Expr _termMul() {
     var left = _unary();
-    while (_check(TokenKind.star) ||
-        _check(TokenKind.slash) ||
-        _check(TokenKind.percent)) {
+    while ((_check(TokenKind.star) ||
+            _check(TokenKind.slash) ||
+            _check(TokenKind.percent)) &&
+        _current.pos.line == left.pos.line) {
       final op = _advance();
       final right = _unary();
       left = BinaryExpr(left, op.lexeme, right, op.pos);
@@ -442,7 +451,10 @@ final class Parser {
   }
 
   Expr _unary() {
-    if (_check(TokenKind.minus) || _check(TokenKind.bang)) {
+    if (_check(TokenKind.minus) ||
+        _check(TokenKind.bang) ||
+        _check(TokenKind.star) ||
+        _check(TokenKind.ampersand)) {
       final op = _advance();
       final operand = _unary();
       return UnaryExpr(op.lexeme, operand, op.pos);
@@ -505,6 +517,28 @@ final class Parser {
           expr = NameExpr(t.lexeme, t.pos);
         }
         break;
+      case TokenKind.lBracket:
+        _advance();
+        final elements = <Expr>[];
+        if (!_check(TokenKind.rBracket)) {
+          elements.add(_expr());
+          while (_check(TokenKind.comma)) {
+            _advance();
+            elements.add(_expr());
+          }
+        }
+        _expect(TokenKind.rBracket, 'oczekiwano `]` po literałe tablicy');
+        expr = ArrayLitExpr(elements: elements, pos: t.pos);
+        break;
+      case TokenKind.cast:
+        _advance();
+        _expect(TokenKind.lParen, 'oczekiwano `(` po `cast`');
+        final typeName = _typeName();
+        _expect(TokenKind.comma, 'oczekiwano `,` po typie castowania');
+        final value = _expr();
+        _expect(TokenKind.rParen, 'oczekiwano `)` po castowaniu');
+        expr = CastExpr(typeName: typeName, expr: value, pos: t.pos);
+        break;
       case TokenKind.lParen:
         final open = _advance();
         final inner = _expr();
@@ -514,7 +548,20 @@ final class Parser {
       default:
         throw ParseError('oczekiwano wyrażenie', t.pos);
     }
-    while (_check(TokenKind.dot)) {
+    while (_check(TokenKind.dot) || _check(TokenKind.lBracket)) {
+      if (_check(TokenKind.lBracket)) {
+        final bracket = _advance();
+        if (_check(TokenKind.colon)) {
+          _advance();
+          _expect(TokenKind.rBracket, 'oczekiwano `]` po `:`');
+          expr = SliceFromExpr(array: expr, pos: bracket.pos);
+        } else {
+          final index = _expr();
+          _expect(TokenKind.rBracket, 'oczekiwano `]` po indeksie');
+          expr = IndexExpr(object: expr, index: index, pos: bracket.pos);
+        }
+        continue;
+      }
       _advance();
       final member =
           _expect(TokenKind.ident, 'oczekiwano nazwę pola lub metody');
@@ -581,6 +628,30 @@ final class Parser {
   }
 
   String _typeName() {
+    if (_check(TokenKind.star)) {
+      _advance();
+      var result = '*';
+      if (_check(TokenKind.mut)) {
+        _advance();
+        result += 'mut ';
+      }
+      if (_check(TokenKind.volatile)) {
+        _advance();
+        result += 'volatile ';
+      }
+      return '$result${_typeName()}';
+    }
+    if (_check(TokenKind.lBracket)) {
+      _advance();
+      if (_check(TokenKind.rBracket)) {
+        _advance();
+        return '[]${_typeName()}';
+      }
+      final length =
+          _expect(TokenKind.intLit, 'oczekiwano długość tablicy w `[...]`');
+      _expect(TokenKind.rBracket, 'oczekiwano `]` po długości tablicy');
+      return '[${length.lexeme}]${_typeName()}';
+    }
     final first = _expect(TokenKind.ident, 'oczekiwano nazwę typu');
     if (!_check(TokenKind.dot)) return first.lexeme;
     _advance();

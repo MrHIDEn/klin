@@ -12,8 +12,8 @@ komponenty istnieją. Inaczej się w tym tonie.
 | [004](004-funkcje.md) | Funkcje | ✅ | 003 |
 | [005](005-struktury-metody.md) | Struktury i metody | ✅ | 004 |
 | [006](006-moduly.md) | Moduły | ✅ | 005 |
-| [007](007-wskazniki-tablice-slice.md) | Wskaźniki, tablice, slice'y | 🔜 | 006 |
-| [008](008-defer.md) | `defer` | ⬜ | 007 |
+| [007](007-wskazniki-tablice-slice.md) | Wskaźniki, tablice, slice'y | ✅ | 006 |
+| [008](008-defer.md) | `defer` | 🔜 | 007 |
 | [009](009-bledy.md) | Błędy jako wartości | ⬜ | 008 |
 | [010](010-bare-metal.md) | **Bare metal: LED na STM32** | ⬜ | 009 |
 | [011](011-svd.md) | Generator SVD | ⬜ | 010* |
@@ -36,6 +36,8 @@ wypluwa plik z definicjami rejestrów. Wejście → wyjście, koniec.
 | [020](020-biblioteki-klin.md) | Własne biblioteki Klina | 💭 | 006 |
 | [021](021-biblioteki-c.md) | Biblioteki C (FFI / link) | 💭 | 006? |
 | [022](022-biblioteki-asm.md) | Biblioteki / jednostki ASM | 💭 | 010? |
+| [023](023-examples.md) | Katalog `examples/` (demo) | 💭 | 001+ |
+| [024](024-rtos.md) | RTOS (FreeRTOS / Zephyr / …) | 💭 | 010+ |
 
 ---
 

@@ -129,6 +129,60 @@ final class StructType extends KlinType {
   int get hashCode => Object.hash(moduleName, name);
 }
 
+final class PtrType extends KlinType {
+  final KlinType pointee;
+  final bool isMut;
+  final bool isVolatile;
+
+  const PtrType(this.pointee, {this.isMut = false, this.isVolatile = false});
+
+  @override
+  String get displayName =>
+      '*${isMut ? 'mut ' : ''}${isVolatile ? 'volatile ' : ''}${pointee.displayName}';
+
+  @override
+  bool operator ==(Object other) =>
+      other is PtrType &&
+      other.pointee == pointee &&
+      other.isMut == isMut &&
+      other.isVolatile == isVolatile;
+
+  @override
+  int get hashCode => Object.hash(pointee, isMut, isVolatile);
+}
+
+final class ArrayType extends KlinType {
+  final KlinType elem;
+  final int len;
+
+  const ArrayType(this.elem, this.len);
+
+  @override
+  String get displayName => '[$len]${elem.displayName}';
+
+  @override
+  bool operator ==(Object other) =>
+      other is ArrayType && other.elem == elem && other.len == len;
+
+  @override
+  int get hashCode => Object.hash(elem, len);
+}
+
+final class SliceType extends KlinType {
+  final PrimType elem;
+
+  const SliceType(this.elem);
+
+  @override
+  String get displayName => '[]${elem.displayName}';
+
+  @override
+  bool operator ==(Object other) => other is SliceType && other.elem == elem;
+
+  @override
+  int get hashCode => elem.hashCode;
+}
+
 /// Literał całkowity bez przypisanego jeszcze typu konkretnego.
 final class UntypedInt extends KlinType {
   const UntypedInt();

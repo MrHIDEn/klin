@@ -18,6 +18,8 @@ enum TokenKind {
   import,
   let,
   mut,
+  cast,
+  volatile,
   true_,
   false_,
   if_,
@@ -41,6 +43,7 @@ enum TokenKind {
   star,
   slash,
   percent,
+  ampersand,
   colon,
   equal,
   equalEqual,
@@ -59,6 +62,8 @@ enum TokenKind {
   rParen,
   lBrace,
   rBrace,
+  lBracket,
+  rBracket,
   eof,
 }
 
