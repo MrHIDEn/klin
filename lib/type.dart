@@ -124,3 +124,17 @@ final class UntypedFloat extends KlinType {
   @override
   int get hashCode => 2;
 }
+
+/// Literał napisu C (tylko jako argument FFI — bez pełnego typu `str` w języku).
+final class StrType extends KlinType {
+  const StrType();
+
+  @override
+  String get displayName => 'string';
+
+  @override
+  bool operator ==(Object other) => other is StrType;
+
+  @override
+  int get hashCode => 3;
+}

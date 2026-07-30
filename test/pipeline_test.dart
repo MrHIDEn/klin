@@ -88,7 +88,7 @@ void main() {
           final msg = e.toString();
           return msg.contains('2:') &&
               msg.contains('słowem kluczowym C') &&
-              msg.contains('return');
+              msg.contains('typedef');
         }),
       ),
     );
@@ -149,6 +149,52 @@ void main() {
     final err = proc.stderr.toString();
     expect(err, contains('3:'));
     expect(err, contains('niemutowalnej zmiennej'));
+  });
+
+  test('złoty: fizzbuzz.kl', () async {
+    final result = await _compileAndRun('test/fizzbuzz.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    final expected = await File('test/fizzbuzz.out').readAsString();
+    expect(result.stdout, expected);
+  });
+
+  test('złoty: break_continue.kl — while + for C', () async {
+    final result = await _compileAndRun('test/break_continue.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    final expected = await File('test/break_continue.out').readAsString();
+    expect(result.stdout, expected);
+  });
+
+  test('błąd: break poza pętlą', () {
+    final source = File('test/break_outside.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) {
+          if (e is! CheckError) return false;
+          final msg = e.toString();
+          return msg.contains('2:') && msg.contains('break') && msg.contains('pętlą');
+        }),
+      ),
+    );
+  });
+
+  test('błąd: warunek if nie-bool', () {
+    final source = File('test/bad_cond.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) {
+          if (e is! CheckError) return false;
+          final msg = e.toString();
+          return msg.contains('2:') &&
+              msg.contains('bool') &&
+              msg.contains('untyped int');
+        }),
+      ),
+    );
   });
 }
 

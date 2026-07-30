@@ -11,17 +11,24 @@ final class ParseError implements Exception {
   String toString() => '${pos.line}:${pos.col}: $message';
 }
 
-/// Gramatyka 002:
+/// Gramatyka 003:
 ///   program := "fn" "main" "(" ")" block
 ///   block   := "{" stmt* "}"
-///   stmt    := let_stmt | assign_stmt | call_stmt | block
-///   let_stmt := "let" "mut"? ident (":" ident)? ("=" expr)?
-///   assign_stmt := ident "=" expr
-///   call_stmt := ident "(" string ")"
-///   expr := term (("+" | "-") term)*
-///   term := unary (("*" | "/") unary)*
-///   unary := "-" unary | primary
-///   primary := INT | FLOAT | true | false | ident | "(" expr ")"
+///   stmt    := let | assign | call | if | while | for | return | break
+///            | continue | block
+///   if      := "if" expr block ("else" (if | block))?
+///   while   := "while" expr block
+///   for     := "for" ident "in" expr "..<" expr block
+///            | "for" [ident "=" expr] ";" [expr] ";" [ident "=" expr] block
+///   return  := "return" expr?
+///   call    := ident "(" (expr ("," expr)*)? ")"
+///   expr    := equality
+///   equality   := comparison (("==" | "!=") comparison)*
+///   comparison := term (("<" | "<=" | ">" | ">=") term)*
+///   term    := factor (("+" | "-") factor)*
+///   factor  := unary (("*" | "/" | "%") unary)*
+///   unary   := ("-" | "!") unary | primary
+///   primary := INT | FLOAT | STRING | true | false | ident | "(" expr ")"
 final class Parser {
   final List<Token> _tokens;
   int _i = 0;
@@ -53,6 +60,18 @@ final class Parser {
 
   Stmt _stmt() {
     if (_check(TokenKind.let)) return _letStmt();
+    if (_check(TokenKind.if_)) return _ifStmt();
+    if (_check(TokenKind.while_)) return _whileStmt();
+    if (_check(TokenKind.for_)) return _forStmt();
+    if (_check(TokenKind.return_)) return _returnStmt();
+    if (_check(TokenKind.break_)) {
+      final t = _advance();
+      return BreakStmt(t.pos);
+    }
+    if (_check(TokenKind.continue_)) {
+      final t = _advance();
+      return ContinueStmt(t.pos);
+    }
     if (_check(TokenKind.lBrace)) return BlockStmt(_block());
 
     if (_check(TokenKind.ident)) {
@@ -74,6 +93,133 @@ final class Parser {
 
     throw ParseError('oczekiwano instrukcję', _current.pos);
   }
+
+  IfStmt _ifStmt() {
+    final ifTok = _expect(TokenKind.if_, 'oczekiwano `if`');
+    final cond = _expr();
+    final thenBlock = _block();
+    Stmt? elseBranch;
+    if (_check(TokenKind.else_)) {
+      _advance();
+      if (_check(TokenKind.if_)) {
+        elseBranch = _ifStmt();
+      } else {
+        elseBranch = BlockStmt(_block());
+      }
+    }
+    return IfStmt(
+      cond: cond,
+      thenBlock: thenBlock,
+      elseBranch: elseBranch,
+      pos: ifTok.pos,
+    );
+  }
+
+  WhileStmt _whileStmt() {
+    final tok = _expect(TokenKind.while_, 'oczekiwano `while`');
+    final cond = _expr();
+    final body = _block();
+    return WhileStmt(cond: cond, body: body, pos: tok.pos);
+  }
+
+  Stmt _forStmt() {
+    final forTok = _expect(TokenKind.for_, 'oczekiwano `for`');
+
+    // for i in start..<end { ... }
+    // for i = 0; i < n; i = i + 1 { ... }
+    // for ; cond; { ... }  /  for ;; { ... }
+    if (_check(TokenKind.ident)) {
+      final name = _current;
+      if (_i + 1 < _tokens.length && _tokens[_i + 1].kind == TokenKind.in_) {
+        _advance(); // name
+        _advance(); // in
+        final start = _expr();
+        _expect(TokenKind.dotDotLess, 'oczekiwano `..<`');
+        final end = _expr();
+        final body = _block();
+        return ForRangeStmt(
+          name: name.lexeme,
+          start: start,
+          endExclusive: end,
+          body: body,
+          pos: forTok.pos,
+        );
+      }
+    }
+
+    // C-style
+    String? initName;
+    Expr? initExpr;
+    if (!_check(TokenKind.semicolon)) {
+      final name = _expect(TokenKind.ident, 'oczekiwano nazwę zmiennej pętli');
+      _expect(TokenKind.equal, 'oczekiwano `=`');
+      initName = name.lexeme;
+      initExpr = _expr();
+    }
+    _expect(TokenKind.semicolon, 'oczekiwano `;`');
+
+    Expr? cond;
+    if (!_check(TokenKind.semicolon)) {
+      cond = _expr();
+    }
+    _expect(TokenKind.semicolon, 'oczekiwano `;`');
+
+    String? postName;
+    Expr? postExpr;
+    if (!_check(TokenKind.lBrace)) {
+      final name = _expect(TokenKind.ident, 'oczekiwano nazwę w post-wyrażeniu');
+      _expect(TokenKind.equal, 'oczekiwano `=`');
+      postName = name.lexeme;
+      postExpr = _expr();
+    }
+
+    final body = _block();
+    return ForCStmt(
+      initName: initName,
+      initExpr: initExpr,
+      cond: cond,
+      postName: postName,
+      postExpr: postExpr,
+      body: body,
+      pos: forTok.pos,
+    );
+  }
+
+  ReturnStmt _returnStmt() {
+    final tok = _expect(TokenKind.return_, 'oczekiwano `return`');
+    Expr? value;
+    // return bez wartości gdy zaraz } lub kolejna instrukcja-keyword / eof
+    if (!_check(TokenKind.rBrace) &&
+        !_check(TokenKind.eof) &&
+        !_check(TokenKind.let) &&
+        !_check(TokenKind.if_) &&
+        !_check(TokenKind.while_) &&
+        !_check(TokenKind.for_) &&
+        !_check(TokenKind.return_) &&
+        !_check(TokenKind.break_) &&
+        !_check(TokenKind.continue_) &&
+        !_check(TokenKind.else_)) {
+      // Heurystyka: jeśli następny token może zacząć wyrażenie — parsuj.
+      if (_canStartExpr(_current.kind)) {
+        value = _expr();
+      }
+    }
+    return ReturnStmt(value: value, pos: tok.pos);
+  }
+
+  static bool _canStartExpr(TokenKind kind) => switch (kind) {
+        TokenKind.intLit ||
+        TokenKind.floatLit ||
+        TokenKind.string ||
+        TokenKind.true_ ||
+        TokenKind.false_ ||
+        TokenKind.ident ||
+        TokenKind.lParen ||
+        TokenKind.minus ||
+        TokenKind.bang =>
+          true,
+        _ => false,
+      };
 
   LetStmt _letStmt() {
     final letTok = _expect(TokenKind.let, 'oczekiwano `let`');
@@ -113,16 +259,46 @@ final class Parser {
       );
     }
     _expect(TokenKind.lParen, 'oczekiwano `(`');
-    final arg = _expect(TokenKind.string, 'oczekiwano napis');
+    final args = <Expr>[];
+    if (!_check(TokenKind.rParen)) {
+      args.add(_expr());
+      while (_check(TokenKind.comma)) {
+        _advance();
+        args.add(_expr());
+      }
+    }
     _expect(TokenKind.rParen, 'oczekiwano `)`');
     return CallStmt(
       callee: callee.lexeme,
-      argument: arg.lexeme,
+      args: args,
       pos: callee.pos,
     );
   }
 
-  Expr _expr() => _termAdd();
+  Expr _expr() => _equality();
+
+  Expr _equality() {
+    var left = _comparison();
+    while (_check(TokenKind.equalEqual) || _check(TokenKind.bangEqual)) {
+      final op = _advance();
+      final right = _comparison();
+      left = BinaryExpr(left, op.lexeme, right, op.pos);
+    }
+    return left;
+  }
+
+  Expr _comparison() {
+    var left = _termAdd();
+    while (_check(TokenKind.less) ||
+        _check(TokenKind.lessEqual) ||
+        _check(TokenKind.greater) ||
+        _check(TokenKind.greaterEqual)) {
+      final op = _advance();
+      final right = _termAdd();
+      left = BinaryExpr(left, op.lexeme, right, op.pos);
+    }
+    return left;
+  }
 
   Expr _termAdd() {
     var left = _termMul();
@@ -136,7 +312,9 @@ final class Parser {
 
   Expr _termMul() {
     var left = _unary();
-    while (_check(TokenKind.star) || _check(TokenKind.slash)) {
+    while (_check(TokenKind.star) ||
+        _check(TokenKind.slash) ||
+        _check(TokenKind.percent)) {
       final op = _advance();
       final right = _unary();
       left = BinaryExpr(left, op.lexeme, right, op.pos);
@@ -145,7 +323,7 @@ final class Parser {
   }
 
   Expr _unary() {
-    if (_check(TokenKind.minus)) {
+    if (_check(TokenKind.minus) || _check(TokenKind.bang)) {
       final op = _advance();
       final operand = _unary();
       return UnaryExpr(op.lexeme, operand, op.pos);
@@ -162,6 +340,9 @@ final class Parser {
       case TokenKind.floatLit:
         _advance();
         return FloatLit(t.lexeme, t.pos);
+      case TokenKind.string:
+        _advance();
+        return StringLit(t.lexeme, t.pos);
       case TokenKind.true_:
         _advance();
         return BoolLit(true, t.pos);
