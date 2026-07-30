@@ -230,6 +230,13 @@ final class Checker {
   }
 
   KlinType _resolveType(String name, SourcePos pos) {
+    if (name.startsWith('!')) {
+      final ok = _resolveType(name.substring(1), pos);
+      if (ok is VoidType || ok is ArrayType || ok is ResultType) {
+        throw CheckError('niepoprawny typ wyniku `$name`', pos);
+      }
+      return ResultType(ok);
+    }
     if (name.startsWith('*')) {
       var rest = name.substring(1);
       var isMut = false;
@@ -380,11 +387,23 @@ final class Checker {
         _materialize(value, targetType);
 
       case CallStmt(:final moduleName, :final callee, :final args, :final pos):
-        stmt.resolvedCallee =
-            _checkCall(callee, args, pos, moduleName: moduleName).cName;
+        final call = _checkCall(callee, args, pos, moduleName: moduleName);
+        if (call.type is ResultType) {
+          throw CheckError(
+            'wynik `${call.type.displayName}` funkcji `$callee` musi być obsłużony przez `!` lub `or`',
+            pos,
+          );
+        }
+        stmt.resolvedCallee = call.cName;
 
       case MethodCallStmt(:final call):
-        _checkMethodCall(call);
+        final type = _checkMethodCall(call);
+        if (type is ResultType) {
+          throw CheckError(
+            'wynik `${type.displayName}` metody `${call.name}` musi być obsłużony przez `!` lub `or`',
+            call.pos,
+          );
+        }
 
       case IfStmt(:final cond, :final thenBlock, :final elseBranch):
         _expectBoolCond(cond);
@@ -534,6 +553,15 @@ final class Checker {
       );
     }
     final valueType = _inferExpr(value);
+    if (_currentReturn case ResultType(:final ok)) {
+      if (valueType == _currentReturn) {
+        _materialize(value, _currentReturn);
+      } else {
+        _expectAssignable(ok, valueType, value.pos);
+        _materialize(value, ok);
+      }
+      return;
+    }
     _expectAssignable(_currentReturn, valueType, value.pos);
     _materialize(value, _currentReturn);
   }
@@ -932,6 +960,57 @@ final class Checker {
           }
           return call.type;
         }(),
+      ErrorExpr(:final code, :final pos) => () {
+          final current = _currentReturn;
+          if (current is! ResultType) {
+            throw CheckError(
+                '`error(...)` wymaga funkcji zwracającej `!T`', pos);
+          }
+          final codeType = _inferExpr(code);
+          _expectAssignable(const PrimType(PrimKind.i32), codeType, code.pos);
+          _materialize(code, const PrimType(PrimKind.i32));
+          return current;
+        }(),
+      PropagateExpr(:final result, :final pos) => () {
+          final resultType = _inferExpr(result);
+          if (resultType is! ResultType) {
+            throw CheckError(
+                'operator postfiksowy `!` wymaga wartości `!T`', pos);
+          }
+          if (_currentReturn is! ResultType) {
+            throw CheckError(
+              'operator postfiksowy `!` wymaga funkcji zwracającej `!T`',
+              pos,
+            );
+          }
+          return resultType.ok;
+        }(),
+      OrExpr(:final result, :final fallback, :final pos) => () {
+          final resultType = _inferExpr(result);
+          if (resultType is! ResultType) {
+            throw CheckError('lewa strona `or` musi mieć typ `!T`', pos);
+          }
+          _scope = _Scope(_scope);
+          try {
+            _scope.define(
+              _Symbol(
+                name: 'err',
+                type: const PrimType(PrimKind.i32),
+                isMut: false,
+                pos: fallback.pos,
+              ),
+            );
+            for (final stmt in fallback.stmts) {
+              _checkStmt(stmt);
+            }
+            final fallbackType = _inferExpr(fallback.value);
+            _expectAssignable(resultType.ok, fallbackType, fallback.value.pos);
+            _materialize(fallback.value, resultType.ok);
+          } finally {
+            _scope = _scope.parent!;
+          }
+          return resultType.ok;
+        }(),
       UnaryExpr(:final op, :final operand, :final pos) => () {
           if (op == '&') {
             if (!_isAddressablePlace(operand)) {
@@ -990,7 +1069,8 @@ final class Checker {
         type is StructType ||
         type is PtrType ||
         type is ArrayType ||
-        type is SliceType) expr.resolvedType = type;
+        type is SliceType ||
+        type is ResultType) expr.resolvedType = type;
     return type;
   }
 
@@ -1135,6 +1215,8 @@ final class Checker {
         _materialize(right, type);
       case GroupExpr(:final inner):
         _materialize(inner, type);
+      case PropagateExpr() || OrExpr() || ErrorExpr():
+        break;
       case IntLit() ||
             FloatLit() ||
             BoolLit() ||
@@ -1202,6 +1284,7 @@ final class Checker {
       PtrType() => type,
       ArrayType() => type,
       SliceType() => type,
+      ResultType() => type,
       VoidType() => throw CheckError(
           'nie można użyć wartości void w tym kontekście',
           pos,

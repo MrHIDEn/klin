@@ -31,6 +31,8 @@ enum TokenKind {
   break_,
   continue_,
   defer_,
+  or_,
+  error_,
 
   // literały i nazwy
   ident,

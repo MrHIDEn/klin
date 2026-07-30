@@ -1,0 +1,17 @@
+fn level3(x: i32): !i32 {
+    if x < 0 { return error(1) }
+    return x
+}
+
+fn level2(x: i32): !i32 { return level3(x)! }
+fn level1(x: i32): !i32 { return level2(x)! }
+
+fn main() {
+    let a = level1(7) or { 0 }
+    printf("%d\n", a)
+    let b = level1(-1) or {
+        printf("err=%d\n", err)
+        99
+    }
+    printf("%d\n", b)
+}

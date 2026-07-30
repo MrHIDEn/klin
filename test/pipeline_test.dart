@@ -26,6 +26,91 @@ void main() {
     expect(result.stdout, expected);
   });
 
+  test('złoty: !T propaguje błędy i or je obsługuje', () async {
+    final result = await _compileAndRun('test/result_chain.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/result_chain.out').readAsString());
+
+    final source = File('test/result_chain.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/result_chain.kl');
+    expect(c, contains('} klin_res_i32;'));
+    expect(c, contains('.is_err = true'));
+    expect(c, contains('.u.ok ='));
+  });
+
+  test('błąd: nieobsłużony wynik !T', () {
+    const source = '''
+fn fallible(): !i32 { return error(1) }
+fn main() {
+  fallible()
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) => e is CheckError && e.toString().contains('musi być obsłużony'),
+        ),
+      ),
+    );
+  });
+
+  test('propagacja uruchamia defer przed zwrotem błędu', () async {
+    const source = '''
+fn fail(): !i32 { return error(7) }
+fn wrap(): !i32 {
+  defer puts("cleanup")
+  return fail()!
+}
+fn main() {
+  let value = wrap() or { err }
+  printf("%d\\n", value)
+}
+''';
+    final file = File('${tmp.path}/defer_propagate.kl');
+    await file.writeAsString(source);
+    final result = await _compileAndRun(file.path, tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, 'cleanup\n7\n');
+  });
+
+  test('or i propagate działają jako argument wywołania', () async {
+    const source = '''
+fn fail(): !i32 { return error(3) }
+fn ok(): !i32 { return 8 }
+fn main() {
+  printf("%d\\n", ok() or { 0 })
+  printf("%d\\n", fail() or { err })
+}
+''';
+    final file = File('${tmp.path}/result_nested.kl');
+    await file.writeAsString(source);
+    final result = await _compileAndRun(file.path, tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, '8\n3\n');
+  });
+
+  test('różne !*T emitują osobne typedefy wyniku', () {
+    const source = '''
+fn a(): !*i32 { return error(1) }
+fn b(): !*f64 { return error(2) }
+fn main() {
+  let x = a() or { cast(*i32, 0) }
+  let y = b() or { cast(*f64, 0) }
+  printf("%p %p\\n", x, y)
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'ptr_results.kl');
+    expect(c, contains('} klin_res_ptr_i32;'));
+    expect(c, contains('} klin_res_ptr_f64;'));
+    expect(c, isNot(contains('} klin_res_ptr;')));
+  });
+
   test('złoty: emitowany C jest czytelny i zawiera #line', () {
     final source = File('test/hello.kl').readAsStringSync();
     final program = Parser(Lexer(source).tokenize()).parse();

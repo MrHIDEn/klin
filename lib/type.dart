@@ -183,6 +183,22 @@ final class SliceType extends KlinType {
   int get hashCode => elem.hashCode;
 }
 
+/// Wynik operacji, której błąd jest zawsze kodem `i32`.
+final class ResultType extends KlinType {
+  final KlinType ok;
+
+  const ResultType(this.ok);
+
+  @override
+  String get displayName => '!${ok.displayName}';
+
+  @override
+  bool operator ==(Object other) => other is ResultType && other.ok == ok;
+
+  @override
+  int get hashCode => Object.hash('result', ok);
+}
+
 /// Literał całkowity bez przypisanego jeszcze typu konkretnego.
 final class UntypedInt extends KlinType {
   const UntypedInt();

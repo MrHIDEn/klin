@@ -199,31 +199,34 @@ final class Parser {
 
     if (_canStartExpr(_current.kind)) {
       final expr = _expr();
-      if (_check(TokenKind.equal)) {
-        if (expr is! NameExpr &&
-            expr is! FieldExpr &&
-            expr is! IndexExpr &&
-            !(expr is UnaryExpr && expr.op == '*')) {
-          throw ParseError(
-              'lewa strona przypisania musi być miejscem zapisywalnym',
-              expr.pos);
-        }
-        _advance();
-        return AssignStmt(target: expr, value: _expr(), pos: expr.pos);
-      }
-      if (expr is CallExpr) {
-        return CallStmt(
-          moduleName: expr.moduleName,
-          callee: expr.callee,
-          args: expr.args,
-          pos: expr.pos,
-        );
-      }
-      if (expr is MethodCallExpr) return MethodCallStmt(expr);
-      throw ParseError('oczekiwano przypisania `=` lub wywołania', expr.pos);
+      return _stmtFromExpr(expr);
     }
 
     throw ParseError('oczekiwano instrukcję', _current.pos);
+  }
+
+  Stmt _stmtFromExpr(Expr expr) {
+    if (_check(TokenKind.equal)) {
+      if (expr is! NameExpr &&
+          expr is! FieldExpr &&
+          expr is! IndexExpr &&
+          !(expr is UnaryExpr && expr.op == '*')) {
+        throw ParseError(
+            'lewa strona przypisania musi być miejscem zapisywalnym', expr.pos);
+      }
+      _advance();
+      return AssignStmt(target: expr, value: _expr(), pos: expr.pos);
+    }
+    if (expr is CallExpr) {
+      return CallStmt(
+        moduleName: expr.moduleName,
+        callee: expr.callee,
+        args: expr.args,
+        pos: expr.pos,
+      );
+    }
+    if (expr is MethodCallExpr) return MethodCallStmt(expr);
+    throw ParseError('oczekiwano przypisania `=` lub wywołania', expr.pos);
   }
 
   IfStmt _ifStmt() {
@@ -362,7 +365,8 @@ final class Parser {
         TokenKind.bang ||
         TokenKind.star ||
         TokenKind.ampersand ||
-        TokenKind.cast =>
+        TokenKind.cast ||
+        TokenKind.error_ =>
           true,
         _ => false,
       };
@@ -408,7 +412,32 @@ final class Parser {
     return args;
   }
 
-  Expr _expr() => _equality();
+  Expr _expr() {
+    var result = _equality();
+    while (_check(TokenKind.or_)) {
+      final op = _advance();
+      result = OrExpr(result, _orBlock(), op.pos);
+    }
+    return result;
+  }
+
+  OrBlock _orBlock() {
+    final open = _expect(TokenKind.lBrace, 'oczekiwano `{` po `or`');
+    final stmts = <Stmt>[];
+    while (!_check(TokenKind.rBrace) && !_check(TokenKind.eof)) {
+      if (_canStartExpr(_current.kind)) {
+        final expr = _expr();
+        if (_check(TokenKind.rBrace)) {
+          _advance();
+          return OrBlock(stmts, expr, open.pos);
+        }
+        stmts.add(_stmtFromExpr(expr));
+      } else {
+        stmts.add(_stmt());
+      }
+    }
+    throw ParseError('blok `or` wymaga końcowego wyrażenia', _current.pos);
+  }
 
   Expr _equality() {
     var left = _comparison();
@@ -465,7 +494,16 @@ final class Parser {
       final operand = _unary();
       return UnaryExpr(op.lexeme, operand, op.pos);
     }
-    return _primary();
+    return _postfix();
+  }
+
+  Expr _postfix() {
+    var expr = _primary();
+    while (_check(TokenKind.bang)) {
+      final bang = _advance();
+      expr = PropagateExpr(expr, bang.pos);
+    }
+    return expr;
   }
 
   Expr _primary() {
@@ -491,6 +529,13 @@ final class Parser {
       case TokenKind.false_:
         _advance();
         expr = BoolLit(false, t.pos);
+        break;
+      case TokenKind.error_:
+        _advance();
+        _expect(TokenKind.lParen, 'oczekiwano `(` po `error`');
+        final code = _expr();
+        _expect(TokenKind.rParen, 'oczekiwano `)` po kodzie błędu');
+        expr = ErrorExpr(code, t.pos);
         break;
       case TokenKind.ident:
         _advance();
@@ -634,6 +679,10 @@ final class Parser {
   }
 
   String _typeName() {
+    if (_check(TokenKind.bang)) {
+      _advance();
+      return '!${_typeName()}';
+    }
     if (_check(TokenKind.star)) {
       _advance();
       var result = '*';
