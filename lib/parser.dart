@@ -188,23 +188,23 @@ final class Parser {
   ReturnStmt _returnStmt() {
     final tok = _expect(TokenKind.return_, 'oczekiwano `return`');
     Expr? value;
-    // return bez wartości gdy zaraz } lub kolejna instrukcja-keyword / eof
-    if (!_check(TokenKind.rBrace) &&
-        !_check(TokenKind.eof) &&
-        !_check(TokenKind.let) &&
-        !_check(TokenKind.if_) &&
-        !_check(TokenKind.while_) &&
-        !_check(TokenKind.for_) &&
-        !_check(TokenKind.return_) &&
-        !_check(TokenKind.break_) &&
-        !_check(TokenKind.continue_) &&
-        !_check(TokenKind.else_)) {
-      // Heurystyka: jeśli następny token może zacząć wyrażenie — parsuj.
-      if (_canStartExpr(_current.kind)) {
-        value = _expr();
-      }
+    // Bez średników: nie pożeraj następnej instrukcji (`return` + `puts(...)`
+    // albo `x = ...` w kolejnej linii).
+    if (_looksLikeReturnValue()) {
+      value = _expr();
     }
     return ReturnStmt(value: value, pos: tok.pos);
+  }
+
+  bool _looksLikeReturnValue() {
+    if (!_canStartExpr(_current.kind)) return false;
+    if (_check(TokenKind.ident) && _i + 1 < _tokens.length) {
+      final next = _tokens[_i + 1].kind;
+      if (next == TokenKind.lParen || next == TokenKind.equal) {
+        return false;
+      }
+    }
+    return true;
   }
 
   static bool _canStartExpr(TokenKind kind) => switch (kind) {
