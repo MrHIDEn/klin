@@ -12,6 +12,8 @@ final class SourcePos {
 enum TokenKind {
   // słowa kluczowe
   fn,
+  struct,
+  pub,
   let,
   mut,
   true_,
@@ -46,6 +48,7 @@ enum TokenKind {
   lessEqual,
   greater,
   greaterEqual,
+  dot,
   dotDotLess, // ..<
   semicolon,
   comma,

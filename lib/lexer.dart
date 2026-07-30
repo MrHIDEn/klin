@@ -116,7 +116,8 @@ final class Lexer {
           _advance();
           return Token(TokenKind.dotDotLess, '..<', start);
         }
-        throw LexError('nieoczekiwany znak `.`', start);
+        _advance();
+        return Token(TokenKind.dot, '.', start);
       default:
         throw LexError('nieoczekiwany znak `$c`', start);
     }
@@ -130,6 +131,8 @@ final class Lexer {
     final lexeme = buf.toString();
     return switch (lexeme) {
       'fn' => Token(TokenKind.fn, lexeme, start),
+      'struct' => Token(TokenKind.struct, lexeme, start),
+      'pub' => Token(TokenKind.pub, lexeme, start),
       'let' => Token(TokenKind.let, lexeme, start),
       'mut' => Token(TokenKind.mut, lexeme, start),
       'true' => Token(TokenKind.true_, lexeme, start),

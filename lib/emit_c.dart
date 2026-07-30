@@ -1,6 +1,8 @@
 import 'ast.dart';
 import 'type.dart';
 
+String? _mutReceiverName;
+
 /// Emisja AST → jeden czytelny plik .c z dyrektywami `#line`.
 String emitC(Program program, String sourcePath) {
   final buf = StringBuffer();
@@ -9,6 +11,16 @@ String emitC(Program program, String sourcePath) {
   buf.writeln('#include <stddef.h>');
   buf.writeln('#include <stdbool.h>');
   buf.writeln();
+  for (final struct in program.structs) {
+    buf.writeln('typedef struct {');
+    for (final field in struct.fields) {
+      final type = field.resolvedType;
+      if (type == null) throw StateError('emit: brak typu pola `${field.name}`');
+      buf.writeln('    ${_cType(type)} ${field.name};');
+    }
+    buf.writeln('} ${struct.name};');
+    buf.writeln();
+  }
   for (final func in program.funcs) {
     buf.writeln('${_functionHeader(func)};');
   }
@@ -16,6 +28,7 @@ String emitC(Program program, String sourcePath) {
   for (final func in program.funcs) {
     _line(buf, func.pos.line, sourcePath);
     buf.writeln('${_functionHeader(func)} {');
+    _mutReceiverName = func.receiver?.isMut == true ? func.receiver!.name : null;
     _emitBlock(
       buf,
       func.body,
@@ -27,6 +40,7 @@ String emitC(Program program, String sourcePath) {
     buf.writeln('}');
     buf.writeln();
   }
+  _mutReceiverName = null;
   return buf.toString();
 }
 
@@ -36,20 +50,26 @@ String _functionHeader(FuncDecl func) {
   if (returnType == null) {
     throw StateError('emit: brak typu zwracanego funkcji `${func.name}`');
   }
-  final params = func.params.map((param) {
+  final params = <String>[
+    if (func.receiver case final receiver?)
+      '${_cType(receiver.resolvedType!)}${receiver.isMut ? ' *' : ' '}${receiver.name}',
+    ...func.params.map((param) {
     final type = param.resolvedType;
     if (type == null) {
       throw StateError('emit: brak typu parametru `${param.name}`');
     }
     return '${_cType(type)} ${param.name}';
-  }).join(', ');
-  return '${_cType(returnType)} ${func.name}(${params.isEmpty ? 'void' : params})';
+  }),
+  ];
+  final name = func.receiver == null ? func.name : '${func.receiver!.typeName}_${func.name}';
+  return '${_cType(returnType)} $name(${params.isEmpty ? 'void' : params.join(', ')})';
 }
 
 String _cType(KlinType type) => switch (type) {
   PrimType(:final kind) => kind.cType,
   VoidType() => 'void',
   StrType() => 'const char*',
+  StructType(:final name) => name,
   _ => throw StateError('emit: typ `${type.displayName}` nie ma typu C'),
 };
 
@@ -85,7 +105,7 @@ void _emitStmt(
     case LetStmt(:final name, :final init, :final pos, :final resolvedType):
       _line(buf, pos.line, sourcePath);
       final ty = resolvedType;
-      if (ty == null || (ty is! PrimType && ty is! StrType)) {
+      if (ty == null || (ty is! PrimType && ty is! StrType && ty is! StructType)) {
         throw StateError('emit: brak typu dla `$name` — uruchom checker');
       }
       if (init != null) {
@@ -97,14 +117,18 @@ void _emitStmt(
         buf.writeln('$pad${ty.kind.cType} $name = ${ty.kind.cZero};');
       }
 
-    case AssignStmt(:final name, :final value, :final pos):
+    case AssignStmt(:final target, :final value, :final pos):
       _line(buf, pos.line, sourcePath);
-      buf.writeln('$pad$name = ${_emitExpr(value)};');
+      buf.writeln('$pad${_emitExpr(target)} = ${_emitExpr(value)};');
 
     case CallStmt(:final callee, :final args, :final pos):
       _line(buf, pos.line, sourcePath);
       final argList = args.map(_emitExpr).join(', ');
       buf.writeln('$pad$callee($argList);');
+
+    case MethodCallStmt(:final call):
+      _line(buf, call.pos.line, sourcePath);
+      buf.writeln('$pad${_emitExpr(call)};');
 
     case IfStmt(:final cond, :final thenBlock, :final elseBranch, :final pos):
       _line(buf, pos.line, sourcePath);
@@ -280,6 +304,23 @@ String _emitExpr(Expr expr) {
     BoolLit(:final value) => value ? 'true' : 'false',
     StringLit(:final value) => '"${_escapeC(value)}"',
     NameExpr(:final name) => name,
+    FieldExpr(:final object, :final name) =>
+      object is NameExpr && object.name == _mutReceiverName
+          ? '${_emitExpr(object)}->$name'
+          : '${_emitExpr(object)}.$name',
+    MethodCallExpr(
+      :final receiver,
+      :final args,
+      :final mangledName,
+      :final receiverByRef,
+    ) =>
+      '${mangledName ?? (throw StateError('emit: metoda bez manglingu'))}'
+      '(${receiverByRef ? '&' : ''}${_emitExpr(receiver)}'
+      '${args.isEmpty ? '' : ', ${args.map(_emitExpr).join(', ')}'})',
+    StructLitExpr(:final typeName, :final namedFields, :final positionalFields) =>
+      namedFields != null
+          ? '($typeName){ ${namedFields.entries.map((entry) => '.${entry.key} = ${_emitExpr(entry.value)}').join(', ')} }'
+          : '($typeName){ ${positionalFields!.map(_emitExpr).join(', ')} }',
     CallExpr(:final callee, :final args) =>
       '$callee(${args.map(_emitExpr).join(', ')})',
     UnaryExpr(:final op, :final operand) => '$op(${_emitExpr(operand)})',
