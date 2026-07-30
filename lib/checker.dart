@@ -80,6 +80,7 @@ final class _CheckedCall {
 final class Checker {
   _Scope _scope = _Scope(null);
   int _loopDepth = 0;
+  int _deferDepth = 0;
   final Map<String, _FuncSignature> _functions = {};
   final Map<String, StructDecl> _structs = {};
   final Map<String, _FuncSignature> _methods = {};
@@ -117,6 +118,7 @@ final class Checker {
     for (final func in program.funcs) {
       _scope = _Scope(null);
       _loopDepth = 0;
+      _deferDepth = 0;
       _currentFunction = func.name;
       _currentModule = func.moduleName;
       _currentReturn = func.resolvedReturnType!;
@@ -476,6 +478,17 @@ final class Checker {
       case ContinueStmt(:final pos):
         if (_loopDepth == 0) {
           throw CheckError('`continue` poza pętlą', pos);
+        }
+
+      case DeferStmt(:final body, :final pos):
+        if (_deferDepth > 0) {
+          throw CheckError('`defer` wewnątrz `defer`', pos);
+        }
+        _deferDepth++;
+        try {
+          _checkStmt(body);
+        } finally {
+          _deferDepth--;
         }
 
       case BlockStmt(:final block):

@@ -30,6 +30,7 @@ enum TokenKind {
   return_,
   break_,
   continue_,
+  defer_,
 
   // literały i nazwy
   ident,

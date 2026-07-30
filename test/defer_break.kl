@@ -1,0 +1,12 @@
+fn main() {
+  defer puts("outer")
+  let mut i: i32 = 0
+  while i < 3 {
+    defer puts("inner")
+    if i == 1 {
+      break
+    }
+    i = i + 1
+  }
+  puts("done")
+}

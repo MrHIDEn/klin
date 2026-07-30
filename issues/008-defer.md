@@ -1,6 +1,6 @@
 # 008 — defer
 
-**Status:** ⬜ do zrobienia
+**Status:** ✅ ukończone
 **Zależy od:** 007
 
 ## Zakres
@@ -20,7 +20,7 @@ Konflikt z wczesnymi wyjściami to główne źródło błędów w implementacji.
 
 ## Kryterium ukończenia
 
-- [ ] `defer` przed `return` w środku pętli
-- [ ] `defer` przed `break`
-- [ ] dwa `defer` w jednym zakresie — kolejność odwrotna
-- [ ] testy złote na wszystkie trzy
+- [x] `defer` przed `return` w środku pętli
+- [x] `defer` przed `break`
+- [x] dwa `defer` w jednym zakresie — kolejność odwrotna
+- [x] testy złote na wszystkie trzy

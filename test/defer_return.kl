@@ -1,0 +1,16 @@
+fn foo(): i32 {
+  defer puts("a")
+  let mut i: i32 = 0
+  while i < 5 {
+    defer puts("b")
+    if i == 2 {
+      return 7
+    }
+    i = i + 1
+  }
+  return 0
+}
+
+fn main() {
+  printf("%d\n", foo())
+}

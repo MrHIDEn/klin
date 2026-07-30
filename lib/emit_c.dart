@@ -52,6 +52,9 @@ String emitC(Program program, String sourcePath) {
       func.sourcePath ?? sourcePath,
       indent: 1,
       bareReturnAsZero: func.name == 'main',
+      returnCType:
+          func.name == 'main' ? 'int' : _cType(func.resolvedReturnType!),
+      state: _EmitState(),
     );
     if (func.name == 'main') buf.writeln('    return 0;');
     buf.writeln('}');
@@ -120,14 +123,39 @@ void _collectSliceTypes(KlinType? type, Set<PrimType> output) {
   if (type case ArrayType(:final elem)) _collectSliceTypes(elem, output);
 }
 
+final class _DeferFrame {
+  final List<Stmt> defers;
+  final bool isLoopBody;
+
+  const _DeferFrame(this.defers, {this.isLoopBody = false});
+}
+
+final class _EmitState {
+  final List<_DeferFrame> deferStack = [];
+  int _returnTemp = 0;
+
+  String nextReturnTemp() => 'klin_ret_${_returnTemp++}';
+}
+
 void _emitBlock(
   StringBuffer buf,
   Block block,
   String sourcePath, {
   required int indent,
   required bool bareReturnAsZero,
+  required String returnCType,
+  required _EmitState state,
+  bool isLoopBody = false,
 }) {
   final pad = '    ' * indent;
+  final frame = _DeferFrame(
+    [
+      for (final stmt in block.stmts)
+        if (stmt case DeferStmt(:final body)) body,
+    ],
+    isLoopBody: isLoopBody,
+  );
+  state.deferStack.add(frame);
   for (final stmt in block.stmts) {
     _emitStmt(
       buf,
@@ -136,8 +164,20 @@ void _emitBlock(
       indent: indent,
       pad: pad,
       bareReturnAsZero: bareReturnAsZero,
+      returnCType: returnCType,
+      state: state,
     );
   }
+  _emitFrameCleanups(
+    buf,
+    frame,
+    sourcePath,
+    indent: indent,
+    bareReturnAsZero: bareReturnAsZero,
+    returnCType: returnCType,
+    state: state,
+  );
+  state.deferStack.removeLast();
 }
 
 void _emitStmt(
@@ -147,6 +187,8 @@ void _emitStmt(
   required int indent,
   required String pad,
   required bool bareReturnAsZero,
+  required String returnCType,
+  required _EmitState state,
 }) {
   switch (stmt) {
     case LetStmt(:final name, :final init, :final pos, :final resolvedType):
@@ -197,6 +239,8 @@ void _emitStmt(
         sourcePath,
         indent: indent + 1,
         bareReturnAsZero: bareReturnAsZero,
+        returnCType: returnCType,
+        state: state,
       );
       _emitElse(
         buf,
@@ -205,6 +249,8 @@ void _emitStmt(
         indent: indent,
         pad: pad,
         bareReturnAsZero: bareReturnAsZero,
+        returnCType: returnCType,
+        state: state,
       );
 
     case WhileStmt(:final cond, :final body, :final pos):
@@ -216,6 +262,9 @@ void _emitStmt(
         sourcePath,
         indent: indent + 1,
         bareReturnAsZero: bareReturnAsZero,
+        returnCType: returnCType,
+        state: state,
+        isLoopBody: true,
       );
       buf.writeln('$pad}');
 
@@ -242,6 +291,9 @@ void _emitStmt(
         sourcePath,
         indent: indent + 1,
         bareReturnAsZero: bareReturnAsZero,
+        returnCType: returnCType,
+        state: state,
+        isLoopBody: true,
       );
       buf.writeln('$pad}');
 
@@ -275,24 +327,67 @@ void _emitStmt(
         sourcePath,
         indent: indent + 1,
         bareReturnAsZero: bareReturnAsZero,
+        returnCType: returnCType,
+        state: state,
+        isLoopBody: true,
       );
       buf.writeln('$pad}');
 
     case ReturnStmt(:final value, :final pos):
       _line(buf, pos.line, sourcePath);
       if (value == null) {
+        _emitExitCleanups(
+          buf,
+          state.deferStack,
+          sourcePath,
+          indent: indent,
+          bareReturnAsZero: bareReturnAsZero,
+          returnCType: returnCType,
+          state: state,
+        );
         buf.writeln(bareReturnAsZero ? '${pad}return 0;' : '${pad}return;');
       } else {
-        buf.writeln('${pad}return ${_emitExpr(value)};');
+        final temp = state.nextReturnTemp();
+        buf.writeln('$pad$returnCType $temp = ${_emitExpr(value)};');
+        _emitExitCleanups(
+          buf,
+          state.deferStack,
+          sourcePath,
+          indent: indent,
+          bareReturnAsZero: bareReturnAsZero,
+          returnCType: returnCType,
+          state: state,
+        );
+        buf.writeln('${pad}return $temp;');
       }
 
     case BreakStmt(:final pos):
       _line(buf, pos.line, sourcePath);
+      _emitLoopExitCleanups(
+        buf,
+        state,
+        sourcePath,
+        indent: indent,
+        bareReturnAsZero: bareReturnAsZero,
+        returnCType: returnCType,
+      );
       buf.writeln('${pad}break;');
 
     case ContinueStmt(:final pos):
       _line(buf, pos.line, sourcePath);
+      _emitLoopExitCleanups(
+        buf,
+        state,
+        sourcePath,
+        indent: indent,
+        bareReturnAsZero: bareReturnAsZero,
+        returnCType: returnCType,
+      );
       buf.writeln('${pad}continue;');
+
+    case DeferStmt():
+      // Ciało jest emitowane przez epilog bieżącego bloku.
+      break;
 
     case BlockStmt(:final block):
       _line(buf, block.pos.line, sourcePath);
@@ -303,9 +398,81 @@ void _emitStmt(
         sourcePath,
         indent: indent + 1,
         bareReturnAsZero: bareReturnAsZero,
+        returnCType: returnCType,
+        state: state,
       );
       buf.writeln('$pad}');
   }
+}
+
+void _emitFrameCleanups(
+  StringBuffer buf,
+  _DeferFrame frame,
+  String sourcePath, {
+  required int indent,
+  required bool bareReturnAsZero,
+  required String returnCType,
+  required _EmitState state,
+}) {
+  final pad = '    ' * indent;
+  for (final body in frame.defers.reversed) {
+    _emitStmt(
+      buf,
+      body,
+      sourcePath,
+      indent: indent,
+      pad: pad,
+      bareReturnAsZero: bareReturnAsZero,
+      returnCType: returnCType,
+      state: state,
+    );
+  }
+}
+
+void _emitExitCleanups(
+  StringBuffer buf,
+  Iterable<_DeferFrame> frames,
+  String sourcePath, {
+  required int indent,
+  required bool bareReturnAsZero,
+  required String returnCType,
+  required _EmitState state,
+}) {
+  for (final frame in frames.toList().reversed) {
+    _emitFrameCleanups(
+      buf,
+      frame,
+      sourcePath,
+      indent: indent,
+      bareReturnAsZero: bareReturnAsZero,
+      returnCType: returnCType,
+      state: state,
+    );
+  }
+}
+
+void _emitLoopExitCleanups(
+  StringBuffer buf,
+  _EmitState state,
+  String sourcePath, {
+  required int indent,
+  required bool bareReturnAsZero,
+  required String returnCType,
+}) {
+  final frames = <_DeferFrame>[];
+  for (final frame in state.deferStack.reversed) {
+    frames.add(frame);
+    if (frame.isLoopBody) break;
+  }
+  _emitExitCleanups(
+    buf,
+    frames.reversed,
+    sourcePath,
+    indent: indent,
+    bareReturnAsZero: bareReturnAsZero,
+    returnCType: returnCType,
+    state: state,
+  );
 }
 
 void _emitElse(
@@ -315,6 +482,8 @@ void _emitElse(
   required int indent,
   required String pad,
   required bool bareReturnAsZero,
+  required String returnCType,
+  required _EmitState state,
 }) {
   if (elseBranch == null) {
     buf.writeln('$pad}');
@@ -329,6 +498,8 @@ void _emitElse(
       sourcePath,
       indent: indent + 1,
       bareReturnAsZero: bareReturnAsZero,
+      returnCType: returnCType,
+      state: state,
     );
     _emitElse(
       buf,
@@ -337,6 +508,8 @@ void _emitElse(
       indent: indent,
       pad: pad,
       bareReturnAsZero: bareReturnAsZero,
+      returnCType: returnCType,
+      state: state,
     );
     return;
   }
@@ -348,6 +521,8 @@ void _emitElse(
       sourcePath,
       indent: indent + 1,
       bareReturnAsZero: bareReturnAsZero,
+      returnCType: returnCType,
+      state: state,
     );
     buf.writeln('$pad}');
     return;
@@ -371,7 +546,8 @@ String _emitExpr(Expr expr) {
     if (elem is! PrimType) {
       throw StateError('emit: konwersja tablicy→slice wymaga prymitywu');
     }
-    return '(${_sliceCName(elem)}){ $raw, ${from.len} }';  }
+    return '(${_sliceCName(elem)}){ $raw, ${from.len} }';
+  }
   return raw;
 }
 
