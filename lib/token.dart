@@ -10,9 +10,27 @@ final class SourcePos {
 }
 
 enum TokenKind {
+  // słowa kluczowe
   fn,
+  let,
+  mut,
+  true_,
+  false_,
+
+  // literały i nazwy
   ident,
+  intLit,
+  floatLit,
   string,
+
+  // operatory i znaki
+  plus,
+  minus,
+  star,
+  slash,
+  colon,
+  equal,
+
   lParen,
   rParen,
   lBrace,
