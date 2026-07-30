@@ -1,0 +1,13 @@
+name: klin
+description: Kompilator języka Klin do C.
+version: 0.1.0
+repository: https://github.com/mrhiden/klin
+
+environment:
+  sdk: ^3.5.0
+
+executables:
+  klin: klin
+
+dev_dependencies:
+  test: ^1.25.0

@@ -1,6 +1,6 @@
 # 001 — Pusty przelot: hello world przez cały rurociąg
 
-**Status:** 🔜 następny
+**Status:** ✅ ukończone
 **Szacunek:** kilka wieczorów
 **Zależy od:** 000
 
@@ -62,10 +62,10 @@ lib/emit_c.dart
 
 Nie "kompiluje się", tylko:
 
-- [ ] `dart run bin/klin.dart hello.kl` wypisuje `hello` w terminalu
-- [ ] obok leży czytelny `out/hello.c`
-- [ ] test poprawnego pliku
-- [ ] **test pliku z błędem składni dający sensowny komunikat z numerem linii**
+- [x] `dart run bin/klin.dart hello.kl` wypisuje `hello` w terminalu
+- [x] obok leży czytelny `out/hello.c`
+- [x] test poprawnego pliku
+- [x] **test pliku z błędem składni dający sensowny komunikat z numerem linii**
 
 Ten ostatni jest ważniejszy, niż się wydaje: jeśli lekser od pierwszego
 dnia nosi pozycję (linia, kolumna), wszystko potem działa. Jeśli nie —
