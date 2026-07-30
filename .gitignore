@@ -25,6 +25,9 @@ doc/api/
 # Wyjście kompilatora Klin — wyłącznie do out/
 /out/
 
+# Cache go-task (checksumy sources/generates)
+.task/
+
 # Narzędzia / IDE / system
 .idea/
 *.iml
