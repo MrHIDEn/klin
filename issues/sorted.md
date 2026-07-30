@@ -6,8 +6,8 @@ komponenty istnieją. Inaczej się w tym tonie.
 | # | Zadanie | Status | Zależy od |
 |---|---|---|---|
 | [000](000-decyzje-fundamentalne.md) | Trzy decyzje fundamentalne | ✅ | — |
-| [001](001-pusty-przelot.md) | **Pusty przelot: hello world** | 🔜 | 000 |
-| [002](002-tablica-symboli-checker.md) | Tablica symboli i type checker | ⬜ | 001 |
+| [001](001-pusty-przelot.md) | **Pusty przelot: hello world** | ✅ | 000 |
+| [002](002-tablica-symboli-checker.md) | Tablica symboli i type checker | 🔜 | 001 |
 | [003](003-przeplyw-sterowania.md) | Przepływ sterowania | ⬜ | 002 |
 | [004](004-funkcje.md) | Funkcje | ⬜ | 003 |
 | [005](005-struktury-metody.md) | Struktury i metody | ⬜ | 004 |
