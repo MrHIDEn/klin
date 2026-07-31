@@ -5,7 +5,7 @@ import 'lexer.dart';
 import 'parser.dart';
 import 'token.dart';
 
-/// Ładuje plik wejściowy oraz wszystkie jego przechodnie importy.
+/// Loads an entry file and all of its transitive imports.
 Program loadProject(String entryPath) {
   final structs = <StructDecl>[];
   final funcs = <FuncDecl>[];
@@ -20,11 +20,10 @@ Program loadProject(String entryPath) {
     final existing = loaded[normalized];
     if (existing != null) return existing;
     if (!loading.add(normalized)) {
-      throw ParseError('cykliczny import `$normalized`', const SourcePos(1, 1));
+      throw ParseError('cyclic import `$normalized`', const SourcePos(1, 1));
     }
     if (!file.existsSync()) {
-      throw FileSystemException(
-          'nie znaleziono importowanego pliku', normalized);
+      throw FileSystemException('imported file not found', normalized);
     }
     final unit = Parser(Lexer(file.readAsStringSync()).tokenize()).parseUnit();
     final moduleName = unit.declaredName ?? _fileStem(file.path);

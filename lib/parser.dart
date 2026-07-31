@@ -11,7 +11,7 @@ final class ParseError implements Exception {
   String toString() => '${pos.line}:${pos.col}: $message';
 }
 
-/// Gramatyka 004:
+/// Grammar 004:
 ///   program := func+ eof
 ///   func    := "fn" ident "(" params? ")" (":" ident)? block
 ///   params  := ident ":" ident ("," ident ":" ident)*
@@ -51,12 +51,11 @@ final class Parser {
     final imports = <String>[];
     if (_check(TokenKind.module)) {
       _advance();
-      declaredName = _expect(TokenKind.ident, 'oczekiwano nazwę modułu').lexeme;
+      declaredName = _expect(TokenKind.ident, 'expected module name').lexeme;
     }
     while (_check(TokenKind.import)) {
       _advance();
-      final name =
-          _expect(TokenKind.ident, 'oczekiwano nazwę importowanego modułu');
+      final name = _expect(TokenKind.ident, 'expected imported module name');
       imports.add(name.lexeme);
       _importedModules.add(name.lexeme);
     }
@@ -73,13 +72,13 @@ final class Parser {
         funcs.add(_func(isPub, attrs));
       } else {
         throw ParseError(
-            'oczekiwano deklarację struktury lub funkcji', _current.pos);
+            'expected struct or function declaration', _current.pos);
       }
     }
     if (funcs.isEmpty && structs.isEmpty) {
-      throw ParseError('oczekiwano deklarację', _current.pos);
+      throw ParseError('expected declaration', _current.pos);
     }
-    _expect(TokenKind.eof, 'oczekiwano koniec pliku');
+    _expect(TokenKind.eof, 'expected end of file');
     final pos = structs.isNotEmpty
         ? structs.first.pos
         : funcs.isNotEmpty
@@ -98,34 +97,34 @@ final class Parser {
     final attrs = <Attr>[];
     while (_check(TokenKind.atSign)) {
       _advance();
-      _expect(TokenKind.lBracket, 'oczekiwano `[` po `@`');
+      _expect(TokenKind.lBracket, 'expected `[` after `@`');
       do {
-        final name = _expect(TokenKind.ident, 'oczekiwano nazwę atrybutu');
+        final name = _expect(TokenKind.ident, 'expected attribute name');
         String? arg;
         if (_check(TokenKind.lParen)) {
           _advance();
-          arg = _expect(TokenKind.string, 'oczekiwano napis atrybutu').lexeme;
-          _expect(TokenKind.rParen, 'oczekiwano `)` po napisie atrybutu');
+          arg = _expect(TokenKind.string, 'expected attribute string').lexeme;
+          _expect(TokenKind.rParen, 'expected `)` after attribute string');
         }
         attrs.add(Attr(name.lexeme, arg, name.pos));
         if (!_check(TokenKind.comma)) break;
         _advance();
       } while (true);
-      _expect(TokenKind.rBracket, 'oczekiwano `]` po atrybutach');
+      _expect(TokenKind.rBracket, 'expected `]` after attributes');
     }
     return attrs;
   }
 
   StructDecl _struct(bool isPub, List<Attr> attrs) {
     final keyword = _expect(TokenKind.struct, 'oczekiwano `struct`');
-    final name = _expect(TokenKind.ident, 'oczekiwano nazwę struktury');
-    _rejectCKeyword(name, 'nazwą struktury');
+    final name = _expect(TokenKind.ident, 'expected struct name');
+    _rejectCKeyword(name, 'a struct name');
     _expect(TokenKind.lBrace, 'oczekiwano `{`');
     final fields = <FieldDecl>[];
     while (!_check(TokenKind.rBrace) && !_check(TokenKind.eof)) {
-      final field = _expect(TokenKind.ident, 'oczekiwano nazwę pola');
-      _rejectCKeyword(field, 'nazwą pola');
-      _expect(TokenKind.colon, 'oczekiwano `:` po nazwie pola');
+      final field = _expect(TokenKind.ident, 'expected field name');
+      _rejectCKeyword(field, 'a field name');
+      _expect(TokenKind.colon, 'expected `:` after field name');
       fields.add(
           FieldDecl(name: field.lexeme, typeName: _typeName(), pos: field.pos));
     }
@@ -149,12 +148,11 @@ final class Parser {
         _advance();
         isMut = true;
       }
-      final receiverName =
-          _expect(TokenKind.ident, 'oczekiwano nazwę receivera');
-      _rejectCKeyword(receiverName, 'nazwą receivera');
-      _expect(TokenKind.colon, 'oczekiwano `:` po receiverze');
+      final receiverName = _expect(TokenKind.ident, 'expected receiver name');
+      _rejectCKeyword(receiverName, 'a receiver name');
+      _expect(TokenKind.colon, 'expected `:` after receiver');
       final receiverType = _typeName();
-      _expect(TokenKind.rParen, 'oczekiwano `)` po receiverze');
+      _expect(TokenKind.rParen, 'expected `)` after receiver');
       receiver = Receiver(
         name: receiverName.lexeme,
         typeName: receiverType,
@@ -162,16 +160,15 @@ final class Parser {
         pos: receiverName.pos,
       );
     }
-    final name = _expect(TokenKind.ident, 'oczekiwano nazwę funkcji');
-    _rejectCKeyword(name, 'nazwą funkcji');
+    final name = _expect(TokenKind.ident, 'expected function name');
+    _rejectCKeyword(name, 'a function name');
     _expect(TokenKind.lParen, 'oczekiwano `(`');
     final params = <Param>[];
     if (!_check(TokenKind.rParen)) {
       do {
-        final paramName =
-            _expect(TokenKind.ident, 'oczekiwano nazwę parametru');
-        _rejectCKeyword(paramName, 'nazwą parametru');
-        _expect(TokenKind.colon, 'oczekiwano `:` po nazwie parametru');
+        final paramName = _expect(TokenKind.ident, 'expected parameter name');
+        _rejectCKeyword(paramName, 'a parameter name');
+        _expect(TokenKind.colon, 'expected `:` after parameter name');
         final type = _typeName();
         params.add(
           Param(name: paramName.lexeme, typeName: type, pos: paramName.pos),
@@ -232,7 +229,7 @@ final class Parser {
       return _stmtFromExpr(expr);
     }
 
-    throw ParseError('oczekiwano instrukcję', _current.pos);
+    throw ParseError('expected statement', _current.pos);
   }
 
   AsmStmt _asmStmt() {
@@ -250,7 +247,7 @@ final class Parser {
           expr is! IndexExpr &&
           !(expr is UnaryExpr && expr.op == '*')) {
         throw ParseError(
-            'lewa strona przypisania musi być miejscem zapisywalnym', expr.pos);
+            'left side of assignment must be assignable', expr.pos);
       }
       _advance();
       return AssignStmt(target: expr, value: _expr(), pos: expr.pos);
@@ -264,7 +261,7 @@ final class Parser {
       );
     }
     if (expr is MethodCallExpr) return MethodCallStmt(expr);
-    throw ParseError('oczekiwano przypisania `=` lub wywołania', expr.pos);
+    throw ParseError('expected assignment `=` or call', expr.pos);
   }
 
   IfStmt _ifStmt() {
@@ -324,7 +321,7 @@ final class Parser {
     String? initName;
     Expr? initExpr;
     if (!_check(TokenKind.semicolon)) {
-      final name = _expect(TokenKind.ident, 'oczekiwano nazwę zmiennej pętli');
+      final name = _expect(TokenKind.ident, 'expected loop variable name');
       _expect(TokenKind.equal, 'oczekiwano `=`');
       initName = name.lexeme;
       initExpr = _expr();
@@ -340,8 +337,7 @@ final class Parser {
     String? postName;
     Expr? postExpr;
     if (!_check(TokenKind.lBrace)) {
-      final name =
-          _expect(TokenKind.ident, 'oczekiwano nazwę w post-wyrażeniu');
+      final name = _expect(TokenKind.ident, 'expected name in post expression');
       _expect(TokenKind.equal, 'oczekiwano `=`');
       postName = name.lexeme;
       postExpr = _expr();
@@ -362,8 +358,8 @@ final class Parser {
   ReturnStmt _returnStmt() {
     final tok = _expect(TokenKind.return_, 'oczekiwano `return`');
     Expr? value;
-    // Bez średników: nie pożeraj następnej instrukcji (`return` + `puts(...)`
-    // albo `x = ...` w kolejnej linii). `return fib(n)` w tej samej linii OK.
+    // Without semicolons, do not consume the following statement (`return` plus
+    // `puts(...)` or `x = ...` on the next line). `return fib(n)` on one line is valid.
     if (_looksLikeReturnValue(tok.pos)) {
       value = _expr();
     }
@@ -382,7 +378,7 @@ final class Parser {
       if (next == TokenKind.equal) {
         return false;
       }
-      // Wywołanie zaczynające się w następnej linii → osobny stmt, nie wartość.
+      // A call starting on the next line is a separate statement, not a value.
       if (next == TokenKind.lParen && _current.pos.line > returnPos.line) {
         return false;
       }
@@ -416,7 +412,7 @@ final class Parser {
       _advance();
       isMut = true;
     }
-    final name = _expect(TokenKind.ident, 'oczekiwano nazwę zmiennej');
+    final name = _expect(TokenKind.ident, 'expected variable name');
     String? typeName;
     if (_check(TokenKind.colon)) {
       _advance();
@@ -474,7 +470,7 @@ final class Parser {
         stmts.add(_stmt());
       }
     }
-    throw ParseError('blok `or` wymaga końcowego wyrażenia', _current.pos);
+    throw ParseError('`or` block requires a final expression', _current.pos);
   }
 
   Expr _equality() {
@@ -572,7 +568,7 @@ final class Parser {
         _advance();
         _expect(TokenKind.lParen, 'oczekiwano `(` po `error`');
         final code = _expr();
-        _expect(TokenKind.rParen, 'oczekiwano `)` po kodzie błędu');
+        _expect(TokenKind.rParen, 'expected `)` after error code');
         expr = ErrorExpr(code, t.pos);
         break;
       case TokenKind.ident:
@@ -583,7 +579,7 @@ final class Parser {
             _importedModules.contains(t.lexeme)) {
           _advance();
           final member =
-              _expect(TokenKind.ident, 'oczekiwano nazwę symbolu modułu');
+              _expect(TokenKind.ident, 'expected module symbol name');
           if (_check(TokenKind.lParen)) {
             expr = CallExpr(
               moduleName: t.lexeme,
@@ -594,11 +590,10 @@ final class Parser {
           } else if (_check(TokenKind.lBrace)) {
             expr = _structLit(member, moduleName: t.lexeme);
           } else {
-            throw ParseError(
-                'oczekiwano wywołania lub literału struktury', member.pos);
+            throw ParseError('expected call or struct literal', member.pos);
           }
         } else if (_check(TokenKind.lParen)) {
-          _rejectCKeyword(t, 'nazwą wywołania');
+          _rejectCKeyword(t, 'a call name');
           expr = CallExpr(callee: t.lexeme, args: _argList(), pos: t.pos);
         } else if (_check(TokenKind.lBrace)) {
           expr = _structLit(t);
@@ -616,7 +611,7 @@ final class Parser {
             elements.add(_expr());
           }
         }
-        _expect(TokenKind.rBracket, 'oczekiwano `]` po literałe tablicy');
+        _expect(TokenKind.rBracket, 'expected `]` after array literal');
         expr = ArrayLitExpr(elements: elements, pos: t.pos);
         break;
       case TokenKind.cast:
@@ -635,7 +630,7 @@ final class Parser {
         expr = GroupExpr(inner, open.pos);
         break;
       default:
-        throw ParseError('oczekiwano wyrażenie', t.pos);
+        throw ParseError('expected expression', t.pos);
     }
     while (_check(TokenKind.dot) || _check(TokenKind.lBracket)) {
       if (_check(TokenKind.lBracket)) {
@@ -652,8 +647,7 @@ final class Parser {
         continue;
       }
       _advance();
-      final member =
-          _expect(TokenKind.ident, 'oczekiwano nazwę pola lub metody');
+      final member = _expect(TokenKind.ident, 'expected field name lub metody');
       if (_check(TokenKind.lParen)) {
         expr = MethodCallExpr(
           receiver: expr,
@@ -685,10 +679,10 @@ final class Parser {
     if (isNamed) {
       final fields = <String, Expr>{};
       do {
-        final name = _expect(TokenKind.ident, 'oczekiwano nazwę pola');
-        _expect(TokenKind.colon, 'oczekiwano `:` po nazwie pola');
+        final name = _expect(TokenKind.ident, 'expected field name');
+        _expect(TokenKind.colon, 'expected `:` after field name');
         if (fields.containsKey(name.lexeme)) {
-          throw ParseError('powtórzone pole `${name.lexeme}`', name.pos);
+          throw ParseError('duplicate field `${name.lexeme}`', name.pos);
         }
         fields[name.lexeme] = _expr();
         if (!_check(TokenKind.comma)) break;
@@ -741,14 +735,14 @@ final class Parser {
         return '[]${_typeName()}';
       }
       final length =
-          _expect(TokenKind.intLit, 'oczekiwano długość tablicy w `[...]`');
-      _expect(TokenKind.rBracket, 'oczekiwano `]` po długości tablicy');
+          _expect(TokenKind.intLit, 'expected array length in `[...]`');
+      _expect(TokenKind.rBracket, 'expected `]` after array length');
       return '[${length.lexeme}]${_typeName()}';
     }
-    final first = _expect(TokenKind.ident, 'oczekiwano nazwę typu');
+    final first = _expect(TokenKind.ident, 'expected type name');
     if (!_check(TokenKind.dot)) return first.lexeme;
     _advance();
-    final second = _expect(TokenKind.ident, 'oczekiwano nazwę typu po `.`');
+    final second = _expect(TokenKind.ident, 'expected type name po `.`');
     return '${first.lexeme}.${second.lexeme}';
   }
 
@@ -774,13 +768,13 @@ final class Parser {
   void _rejectCKeyword(Token token, String role) {
     if (_cKeywords.contains(token.lexeme)) {
       throw ParseError(
-        '`${token.lexeme}` jest słowem kluczowym C i nie może być $role',
+        '`${token.lexeme}` is a C keyword and cannot be $role',
         token.pos,
       );
     }
   }
 
-  /// Słowa kluczowe C — nie mogą trafić do emisji jako identyfikatory wywołań.
+  /// C keywords cannot be emitted as call identifiers.
   static const _cKeywords = {
     'auto',
     'break',

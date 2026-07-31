@@ -1,5 +1,5 @@
 name: klin
-description: Kompilator języka Klin do C.
+description: Klin language compiler targeting C.
 version: 0.1.0
 repository: https://github.com/mrhiden/klin
 

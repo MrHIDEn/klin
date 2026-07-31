@@ -6,7 +6,7 @@ void main(List<String> args) {
   final options = _parseArgs(args);
   if (options == null) {
     stderr.writeln(
-      'użycie: svd2klin --svd <plik.svd> --out-h <plik.h> --out-kl <plik.kl> '
+      'usage: svd2klin --svd <file.svd> --out-h <file.h> --out-kl <file.kl> '
       '[--peripherals RCC,GPIOA,STK|ALL]',
     );
     exitCode = 2;

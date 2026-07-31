@@ -1,20 +1,25 @@
 # Klin
 
-Język systemowy kompilowany do C. Backend: jeden czytelny plik .c,
-potem gcc/clang/tcc. Kompilator w Darcie.
+A systems language compiled to C. The backend produces one readable `.c` file,
+then uses gcc, clang, or tcc. The compiler is written in Dart.
 
-Kontekst projektu: @note/00-idea.md
-Decyzje projektowe:  @note/01-decyzje.md
-Architektura i zasady: @note/02-architektura.md
-Roadmapa: @issues/sorted.md
+The project context, decisions, architecture, and roadmap are Polish design
+documents:
 
-## Zasady, które obowiązują zawsze
+- Context: @note/00-idea.md
+- Design decisions: @note/01-decyzje.md
+- Architecture and rules: @note/02-architektura.md
+- Roadmap: @issues/sorted.md
 
-- Zasada nadrzędna: żadnej ukrytej alokacji, żadnego ukrytego przepływu
-  sterowania, żadnego ukrytego kosztu. Jeśli cecha nie znika w emisji do C,
-  prawdopodobnie ją łamie.
-- Parser ręczny, zejście rekurencyjne. Nie proponuj generatorów parserów.
-- Każdy token nosi pozycję (linia, kolumna). Emisja zawiera #line.
-- Wszystkie błędy łapie frontend — gcc nigdy nie powinien krzyczeć na
-  wygenerowany kod.
-- Nie rozszerzaj zakresu bieżącego kroku z issues/sorted.md.
+## Rules that always apply
+
+- Primary rule: no hidden allocation, no hidden control flow, and no hidden
+  cost. If a feature does not disappear in C emission, it likely violates this
+  rule.
+- Use a hand-written recursive-descent parser. Do not propose parser
+  generators.
+- Every token carries a source position (line and column). Emission includes
+  `#line`.
+- The frontend catches every error; gcc must never report an error in generated
+  code.
+- Do not expand the scope of the current step in `issues/sorted.md`.

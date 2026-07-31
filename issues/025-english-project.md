@@ -1,6 +1,6 @@
 # 025 — English project (except pl-PL)
 
-**Status:** 💭 do rozważenia
+**Status:** ✅
 **Zależy od:** —
 
 ## Cel
@@ -18,11 +18,11 @@ rozwali linków — poza zakresem 025 albo osobny mikro-krok.
 
 ## Na angielski
 
-- komunikaty frontendu / CLI (`lib/*`, `bin/*`, `svd2klin`)
-- testy: asercje na treść błędów, opisy `test(...)`, komentarze w `test/`
-- `README.md`, opis w `pubspec.yaml`, help CLI
-- `CLAUDE.md` / reguły agenta: EN + linki do pl-PL `note/` / `issues/`
-- komentarze w kodzie kompilatora (docelowo całość EN; przy edycji pliku — EN)
+- [x] komunikaty frontendu / CLI (`lib/*`, `bin/*`, `svd2klin`)
+- [x] testy: asercje na treść błędów, opisy `test(...)`, komentarze w `test/`
+- [x] `README.md`, opis w `pubspec.yaml`, help CLI
+- [x] `CLAUDE.md` / reguły agenta: EN + linki do pl-PL `note/` / `issues/`
+- [x] komentarze w kodzie kompilatora (docelowo całość EN; przy edycji pliku — EN)
 
 ## Kryterium
 

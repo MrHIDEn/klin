@@ -7,20 +7,20 @@ import 'package:klin/lexer.dart';
 import 'package:klin/parser.dart';
 import 'package:klin/project.dart';
 
-/// CLI: argv → czytaj → lex → parse → check → emit → opcjonalnie cc → run
+/// CLI: argv → read → lex → parse → check → emit → optionally cc → run
 ///
-/// Użycie: dart run bin/klin.dart [--cc gcc|clang|tcc] [--emit-c] <plik.kl>
+/// Usage: dart run bin/klin.dart [--cc gcc|clang|tcc] [--emit-c] <file.kl>
 Future<void> main(List<String> args) async {
   final opts = _parseArgs(args);
   if (opts == null) {
-    stderr.writeln('użycie: klin [--cc gcc|clang|tcc] [--emit-c] <plik.kl>');
+    stderr.writeln('usage: klin [--cc gcc|clang|tcc] [--emit-c] <file.kl>');
     exit(2);
   }
 
   final sourcePath = opts.sourcePath;
   final file = File(sourcePath);
   if (!await file.exists()) {
-    stderr.writeln('klin: nie znaleziono pliku `$sourcePath`');
+    stderr.writeln('klin: file not found `$sourcePath`');
     exit(1);
   }
 
@@ -60,8 +60,8 @@ Future<void> main(List<String> args) async {
 
   final compile = await Process.run(opts.cc, [cPath, '-o', binPath]);
   if (compile.exitCode != 0) {
-    // Z3: gcc nie powinien krzyczeć — jeśli krzyczy, to bug frontendu.
-    stderr.writeln('klin: błąd kompilatora C (${opts.cc}):');
+    // Z3: gcc should not report errors; if it does, the frontend is at fault.
+    stderr.writeln('klin: C compiler error (${opts.cc}):');
     stderr.write(compile.stderr);
     stderr.write(compile.stdout);
     exit(1);

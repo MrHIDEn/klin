@@ -1,4 +1,4 @@
-/// Typy prymitywne Klina i mapowanie na C.
+/// Klin primitive types and their C mappings.
 enum PrimKind {
   i8,
   i16,
@@ -183,7 +183,7 @@ final class SliceType extends KlinType {
   int get hashCode => elem.hashCode;
 }
 
-/// Wynik operacji, której błąd jest zawsze kodem `i32`.
+/// Result of an operation whose error is always an `i32` code.
 final class ResultType extends KlinType {
   final KlinType ok;
 
@@ -199,7 +199,7 @@ final class ResultType extends KlinType {
   int get hashCode => Object.hash('result', ok);
 }
 
-/// Literał całkowity bez przypisanego jeszcze typu konkretnego.
+/// Integer literal without an assigned concrete type yet.
 final class UntypedInt extends KlinType {
   const UntypedInt();
 
@@ -213,7 +213,7 @@ final class UntypedInt extends KlinType {
   int get hashCode => 1;
 }
 
-/// Literał zmiennoprzecinkowy bez przypisanego jeszcze typu konkretnego.
+/// Floating-point literal without an assigned concrete type yet.
 final class UntypedFloat extends KlinType {
   const UntypedFloat();
 
@@ -227,7 +227,7 @@ final class UntypedFloat extends KlinType {
   int get hashCode => 2;
 }
 
-/// Literał napisu C (tylko jako argument FFI — bez pełnego typu `str` w języku).
+/// C string literal (only as an FFI argument; there is no full `str` type yet).
 final class StrType extends KlinType {
   const StrType();
 
