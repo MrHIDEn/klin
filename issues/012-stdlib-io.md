@@ -19,18 +19,20 @@ Opcjonalny moduł `stdlib/io.kl`, importowany jawnie — nie w builtinach:
 import io
 
 fn main() {
-    io.println("hello")
+    io.print("hello")
+    io.println(" world")
 }
 ```
 
 - Nazwa: `io` (nie `vstd`).
-- Emisja: `@[cimport, codename("puts")]` — zero narzutu względem `puts`.
+- `println` → `@[cimport, codename("puts")]` (z newline, zero narzutu).
+- `print` → cienki wrapper `printf("%s", …)` (bez newline).
 - Typ `str` = `const char*` (parametry FFI / stdlib; literały napisów).
 - Na bare-metalu po prostu nie importujesz.
 - Szukanie: sibling → `$KLIN_STDLIB` → `<repo>/stdlib/`.
 
 ## Kryterium ukończenia
 
-- [x] `import io` + `io.println(...)` działa w teście złotym
-- [x] emisja woła `puts` (nie osobną funkcję-wrapper z `bl`)
+- [x] `import io` + `io.print` / `io.println` w teście złotym
+- [x] `println` emituje `puts` (nie `io_println(`)
 - [x] `puts` w rdzeniu nadal działa bez importu (cienkie FFI jak w 001)

@@ -11,7 +11,7 @@ dart run bin/klin.dart examples/hello.kl
 ```
 
 Optional host I/O lives in [`stdlib/`](stdlib/) (e.g. `import io` →
-`io.println`). Bare-metal programs simply omit that import.
+`io.print` / `io.println`). Bare-metal programs simply omit that import.
 
 Pass `--emit-c` to write the generated C source without compiling or running
 it:

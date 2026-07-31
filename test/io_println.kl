@@ -1,5 +1,6 @@
 import io
 
 fn main() {
-    io.println("hello from io")
+    io.print("hello")
+    io.println(" from io")
 }

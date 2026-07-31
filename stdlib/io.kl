@@ -3,3 +3,8 @@ module io
 
 @[cinclude("<stdio.h>"), cimport, codename("puts")]
 pub fn println(msg: str): i32
+
+/// No trailing newline (`printf("%s", …)`).
+pub fn print(msg: str) {
+    printf("%s", msg)
+}
