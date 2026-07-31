@@ -1,4 +1,5 @@
-CC ?= arm-none-eabi-gcc
+# := so a host CC from the environment (e.g. Homebrew/clang) does not win
+CC := arm-none-eabi-gcc
 CFLAGS := -mcpu=cortex-m4 -mthumb -ffreestanding -Os -ffunction-sections -fdata-sections
 LDFLAGS := -T linker.ld -Wl,--gc-sections -nostdlib
 KLIN := ../../bin/klin.dart
