@@ -17,11 +17,15 @@ Odrzucone:
 
 ```
 pub fn parse(a: *Allocator, src: []u8): !Doc {
-    let buf = a.alloc(u8, src.len)   // widać, że alokuje
+    let buf = a.alloc(u8, src.len)   // szkic — MVP: alloc_bytes / alloc_i32
     defer a.free(buf)
     ...
 }
 ```
+
+MVP host: [`stdlib/mem`](../stdlib/mem.kl) (`heap`, `alloc_bytes`, `alloc_i32`) —
+[note/14-allocator.md](14-allocator.md), issue [055](../issues/055-allocator.md).
+Bez argumentu typu w wywołaniu (`a.alloc(u8, n)`) w MVP.
 
 Tryby do rozważenia później (wzorzec z V, ale bez autofree):
 ręczny (domyślny) / arena / opcjonalnie oznaczanie pojedynczych funkcji.

@@ -102,6 +102,9 @@ String emitC(Program program, String sourcePath) {
     buf.writeln('} ${_resultCName(type.ok)};');
     buf.writeln();
   }
+  if (_programNeedsMemHost(program)) {
+    _emitMemHostHelpers(buf, program);
+  }
   for (final func in program.funcs) {
     // `@[cheader]` + `@[cimport]`: prototype lives in a C header (`cinclude`).
     if (func.attrs.any((a) => a.name == 'cheader')) continue;
@@ -373,6 +376,91 @@ bool _programNeedsTrimFrac(Program program) {
     if (func.body != null && _blockNeedsTrimFrac(func.body!)) return true;
   }
   return false;
+}
+
+bool _programNeedsMemHost(Program program) {
+  for (final func in program.funcs) {
+    for (final attr in func.attrs) {
+      if (attr.name == 'codename' &&
+          attr.arg != null &&
+          attr.arg!.startsWith('klin_mem_')) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+Set<String> _memHostCodename(Program program) {
+  final names = <String>{};
+  for (final func in program.funcs) {
+    for (final attr in func.attrs) {
+      if (attr.name == 'codename' &&
+          attr.arg != null &&
+          attr.arg!.startsWith('klin_mem_')) {
+        names.add(attr.arg!);
+      }
+    }
+  }
+  return names;
+}
+
+void _emitMemHostHelpers(StringBuffer buf, Program program) {
+  final names = _memHostCodename(program);
+  buf.writeln('#include <stdlib.h>');
+  buf.writeln();
+  for (final name in names) {
+    if (name == 'klin_mem_alloc_u8') {
+      final res = _resultCName(const SliceType(PrimType(PrimKind.u8)));
+      final slice = _sliceCName(const PrimType(PrimKind.u8));
+      buf.writeln('$res klin_mem_alloc_u8(int32_t n) {');
+      buf.writeln('    $res r;');
+      buf.writeln('    if (n < 0) { r.is_err = true; r.u.err = 1; return r; }');
+      buf.writeln('    if (n == 0) {');
+      buf.writeln('        r.is_err = false;');
+      buf.writeln('        r.u.ok = ($slice){ NULL, 0 };');
+      buf.writeln('        return r;');
+      buf.writeln('    }');
+      buf.writeln('    void *p = malloc((size_t)n);');
+      buf.writeln('    if (p == NULL) { r.is_err = true; r.u.err = 2; return r; }');
+      buf.writeln('    r.is_err = false;');
+      buf.writeln('    r.u.ok = ($slice){ (uint8_t *)p, (size_t)n };');
+      buf.writeln('    return r;');
+      buf.writeln('}');
+      buf.writeln();
+    } else if (name == 'klin_mem_free_u8') {
+      final slice = _sliceCName(const PrimType(PrimKind.u8));
+      buf.writeln('void klin_mem_free_u8($slice buf) {');
+      buf.writeln('    free(buf.ptr);');
+      buf.writeln('}');
+      buf.writeln();
+    } else if (name == 'klin_mem_alloc_i32') {
+      final res = _resultCName(const SliceType(PrimType(PrimKind.i32)));
+      final slice = _sliceCName(const PrimType(PrimKind.i32));
+      buf.writeln('$res klin_mem_alloc_i32(int32_t n) {');
+      buf.writeln('    $res r;');
+      buf.writeln('    if (n < 0) { r.is_err = true; r.u.err = 1; return r; }');
+      buf.writeln('    if (n == 0) {');
+      buf.writeln('        r.is_err = false;');
+      buf.writeln('        r.u.ok = ($slice){ NULL, 0 };');
+      buf.writeln('        return r;');
+      buf.writeln('    }');
+      buf.writeln(
+          '    void *p = malloc((size_t)n * sizeof(int32_t));');
+      buf.writeln('    if (p == NULL) { r.is_err = true; r.u.err = 2; return r; }');
+      buf.writeln('    r.is_err = false;');
+      buf.writeln('    r.u.ok = ($slice){ (int32_t *)p, (size_t)n };');
+      buf.writeln('    return r;');
+      buf.writeln('}');
+      buf.writeln();
+    } else if (name == 'klin_mem_free_i32') {
+      final slice = _sliceCName(const PrimType(PrimKind.i32));
+      buf.writeln('void klin_mem_free_i32($slice buf) {');
+      buf.writeln('    free(buf.ptr);');
+      buf.writeln('}');
+      buf.writeln();
+    }
+  }
 }
 
 bool _programNeedsTimeHost(Program program) {

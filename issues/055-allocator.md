@@ -1,35 +1,46 @@
 # 055 — `Allocator` (jawny alokator)
 
-**Status:** 💭 do rozważenia
+**Status:** ✅ ukończone
 **Zależy od:** [007](007-wskazniki-tablice-slice.md), [008](008-defer.md); D1 w [note/01-decyzje.md](../note/01-decyzje.md)
 
 ## Kontekst
 
 Model pamięci (D1): ręczny + `defer` + **alokator jako jawny argument**
-(Zig/Odin). Dziś w kodzie nie ma typu `Allocator` — tylko szkic w notatkach
-i fazę 4 w [017](017-collection-methods.md) (`map_alloc` / `filter_alloc`).
+(Zig/Odin). Bez typu `Allocator` stdlib nie może oferować `*_alloc` bez
+ukrytego `malloc`.
 
-Bez tego stdlib nie może oferować `*_alloc` bez ukrytego `malloc`.
+## MVP (zrobione)
 
-## Propozycja (MVP)
+Moduł [`stdlib/mem.kl`](../stdlib/mem.kl) — host heap (libc):
 
 ```klin
-// szkic — dokładne API do ustalenia przy implementacji
-let buf = a.alloc(u8, n)!
-defer a.free(buf)
+import mem
+
+fn main() {
+    let mut a = mem.heap()
+    let mut scratch: [1]u8
+    let mut buf = a.alloc_bytes(16) or { scratch[:] }
+    defer a.free_bytes(buf)
+    // typed: mem.alloc_i32(&a, n) / mem.free_i32(&a, xs)
+}
 ```
 
-- Typ / interfejs `Allocator` (lub cienki struct + metody) widoczny w sygnaturach
-- Host MVP: libc `malloc` / `free` (opcjonalny moduł — nie na bare-metal bez libc)
-- Później: arena (`deinit` jednym `defer`)
-- Zero ukrytej alokacji w języku: alokacja tylko przez jawne `a.alloc` / `*_alloc`
+- `Allocator` + `heap()`; metody `alloc_bytes` / `free_bytes`; wolne `alloc_u8` /
+  `alloc_i32` (+ `free_*`)
+- Emisja: `klin_mem_*` → `malloc` / `free` tylko przy `import mem`
+- `n < 0` / OOM → `!T`; `n == 0` → pusty slice bez `malloc`
+- Docs: [note/14-allocator.md](../note/14-allocator.md); golden `test/mem_alloc.kl`;
+  example `examples/mem_heap.kl`
 
-Follow-up po MVP: [017](017-collection-methods.md) warstwa 2 — `slice.map_alloc_*`
-/ `filter_alloc_*` z `*Allocator`.
+**Bez** `a.alloc(u8, n)` w gramatyce (brak argumentu typu — D3/`$fn` później).
+
+## Follow-up
+
+- Arena / `deinit`, vtable wielu alokatorów
+- [017](017-collection-methods.md) warstwa 2 — `slice.map_alloc_*` / `filter_alloc_*`
 
 ## Czego nie robić
 
 - GC, autofree, RAII / `using`
 - Ukrytego `malloc` w emisji „dla wygody”
 - Wymuszania alokatora na freestanding (import opcjonalny)
-- Łączenia z pełnym 017 `*_alloc` w jednym PR, jeśli sam `Allocator` wystarczy jako osobny krok

@@ -49,6 +49,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [045](045-cexport.md) | Eksport Klin → C (`@[cexport]`) | ✅ | 021 |
 | [046](046-emit-h.md) | `--emit-h` (nagłówek C z `@[cexport]`) | ✅ | 045 |
 | [047](047-directory-modules.md) | Katalog = jeden moduł (jak Go/V) | ✅ | 006, 020 |
+| [055](055-allocator.md) | `Allocator` (jawny alokator, D1) — `stdlib/mem` | ✅ | 007, 008 |
 
 ---
 
@@ -76,7 +77,6 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [052](052-klinstruct.md) | `klinstruct` — pack/unpack jak cstruct (niski priorytet) | 💭 | 007, 020/047 |
 | [053](053-device-board-assets.md) | `$device` + Go-like fetch SVD (IOC/board) | 💭 | 027, 049? |
 | [054](054-embedded-project-layout.md) | Wygląd / układ projektu embedded | 💭 | 023, 010 |
-| [055](055-allocator.md) | `Allocator` (jawny alokator, D1) | 💭 | 007, 008 |
 
 ---
 

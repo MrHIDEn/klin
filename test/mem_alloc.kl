@@ -1,0 +1,41 @@
+import mem
+import io
+
+fn main() {
+    let mut a = mem.heap()
+    let mut scratch: [1]u8
+
+    let mut buf = a.alloc_bytes(4) or {
+        io.println("alloc_bytes_fail")
+        scratch[:]
+    }
+    defer a.free_bytes(buf)
+    buf[0] = 10
+    buf[1] = 20
+    buf[2] = 30
+    buf[3] = 40
+    printf("bytes=%d\n", buf[0] + buf[1] + buf[2] + buf[3])
+
+    let mut empty = a.alloc_bytes(0) or {
+        io.println("empty_fail")
+        scratch[:]
+    }
+    defer a.free_bytes(empty)
+    printf("empty_len=%d\n", empty.len)
+
+    let _neg = a.alloc_bytes(0 - 1) or {
+        printf("neg_err=%d\n", err)
+        scratch[:]
+    }
+
+    let mut zi: [1]i32
+    let mut xs = mem.alloc_i32(&a, 3) or {
+        io.println("alloc_i32_fail")
+        zi[:]
+    }
+    defer mem.free_i32(&a, xs)
+    xs[0] = 1
+    xs[1] = 2
+    xs[2] = 3
+    printf("i32=%d\n", xs[0] + xs[1] + xs[2])
+}

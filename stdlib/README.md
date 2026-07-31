@@ -19,6 +19,7 @@ User libraries / directory packages: [note/11-biblioteki-klin.md](../note/11-bib
 | [`io`](io.kl) | Host `print` / `println` (thin libc wrappers) |
 | [`testing`](testing.kl) | `assert` / `assert_eq_i32` for `klin test` |
 | [`time`](time.kl) | Wall / monotonic clocks, `Duration`, format, UTC calendar `add_*` |
+| [`mem`](mem.kl) | Explicit host heap `Allocator` (`malloc`/`free`) |
 
 ## `io`
 
@@ -68,3 +69,21 @@ fn main() {
 `now()` = wall, `mono()` = monotonic. RTC / CPU cycles are separate APIs.
 Calendar: `add_days` / `add_months` / `add_years` / `add_date` (UTC, `!Instant`).
 Do **not** import on freestanding targets without libc `time`.
+
+## `mem`
+
+Explicit heap allocator ([note/14-allocator.md](../note/14-allocator.md), D1):
+
+```klin
+import mem
+
+fn main() {
+    let mut a = mem.heap()
+    let mut scratch: [1]u8
+    let mut buf = a.alloc_bytes(16) or { scratch[:] }
+    defer a.free_bytes(buf)
+}
+```
+
+`alloc_bytes` / `alloc_i32` (and `free_*`) call libc only when this module is
+imported. Do **not** import on freestanding targets without a heap.
