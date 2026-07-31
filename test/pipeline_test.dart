@@ -1212,6 +1212,31 @@ fn test_value() {
     expect(proc.stdout, await File('test/hello.out').readAsString());
   });
 
+  test('klin --version and -v print package version', () async {
+    for (final flag in ['--version', '-v']) {
+      final proc = await Process.run('dart', ['run', 'bin/klin.dart', flag]);
+      expect(proc.exitCode, 0, reason: '$flag: ${proc.stderr}');
+      expect(proc.stdout.toString().trim(), 'klin 0.1.0');
+    }
+  });
+
+  test('klin --help and -h print usage on stdout', () async {
+    for (final flag in ['--help', '-h']) {
+      final proc = await Process.run('dart', ['run', 'bin/klin.dart', flag]);
+      expect(proc.exitCode, 0, reason: '$flag: ${proc.stderr}');
+      expect(proc.stdout.toString(), contains('usage:'));
+      expect(proc.stdout.toString(), contains('--version'));
+      expect(proc.stderr.toString(), isEmpty);
+    }
+  });
+
+  test('klin with no args prints help on stdout', () async {
+    final proc = await Process.run('dart', ['run', 'bin/klin.dart']);
+    expect(proc.exitCode, 0, reason: proc.stderr.toString());
+    expect(proc.stdout.toString(), contains('usage:'));
+    expect(proc.stderr.toString(), isEmpty);
+  });
+
   test('klin run without a file prints usage', () async {
     final proc = await Process.run(
       'dart',
