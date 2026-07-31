@@ -31,5 +31,6 @@ Wejście: `dart run bin/klin.dart <subcommand|plik.kl> …`
 | `-L <dir>` / `-Ldir` | Szukaj libów C w `dir` |
 
 Ścieżki Klin (`lib/`, `-I`, `$KLIN_PATH`): [11-biblioteki-klin.md](11-biblioteki-klin.md).
+Moduły (`module` / `import` / `pub`): [12-moduly.md](12-moduly.md).
 Szczegóły fmt: [05-fmt.md](05-fmt.md). Makra / SVD: [04-makra.md](04-makra.md).
 FFI (import `@[cimport]`/`@[link]` i export `@[cexport]`): [09-ffi-c.md](09-ffi-c.md).

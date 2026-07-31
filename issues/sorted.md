@@ -71,6 +71,9 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [046](046-emit-h.md) | `--emit-h` (nagłówek C z `@[cexport]`) | 💭 | 045 |
 | [048](048-import-aliases.md) | Aliasy importów (+ string lokalny) | 💭 | 006, 047 |
 | [049](049-remote-imports.md) | Importy zdalne (GitHub / path jak Go) | 💭 | 048, 020, 047 |
+| [050](050-sqlite-wrapper.md) | Opakowanie SQLite (FFI, niski priorytet) | 💭 | 021 |
+| [051](051-json-wrapper.md) | Opakowanie JSON + ścieżki `$…` (niski priorytet) | 💭 | 021, 026? |
+| [052](052-klinstruct.md) | `klinstruct` — pack/unpack jak cstruct (niski priorytet) | 💭 | 007, 020/047 |
 
 ---
 

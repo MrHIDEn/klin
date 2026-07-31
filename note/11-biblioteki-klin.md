@@ -1,7 +1,8 @@
 # Biblioteki Klina (issues 020 / 047)
 
 Wielokrotnego użytku `.kl` bez kopiowania źródeł — ścieżki search dla
-`import name` (moduły z [006](../issues/006-moduly.md)). Bez menedżera pakietów.
+`import name`. Semantyka `module` / `pub`: [12-moduly.md](12-moduly.md)
+([006](../issues/006-moduly.md)). Bez menedżera pakietów.
 
 ## Resolucja `import name`
 
@@ -46,11 +47,12 @@ dart run bin/klin.dart run examples/pkg_geom/app.kl
 examples/pkg_geom/
   app.kl
   geom/
-    vec.kl    # module geom — pub struct Vec2
-    len.kl    # module geom — private sq + pub len_sq
+    vec.kl        # module geom — pub struct Vec2
+    len.kl        # module geom — private sq + pub len_sq
+    len_test.kl   # pomijany przy run
 ```
 
-Emisja nadal **jeden** `.c`.
+Emisja nadal **jeden** `.c`. Moduły: [12-moduly.md](12-moduly.md).
 
 ## Poza zakresem
 

@@ -17,7 +17,8 @@ Go/V: pakiet = katalog, wiele plików w jednej przestrzeni nazw.
 - `*_test.kl` w katalogu pakietu: **pomijane** przy ładowaniu (jak Go `_test.go`)
 - search jak 020 (sibling / `lib/` / `-I` / `KLIN_PATH` / stdlib)
 - jeden `.c`; przykład [`examples/pkg_geom/`](../examples/pkg_geom/)
-- nota: [`note/11-biblioteki-klin.md`](../note/11-biblioteki-klin.md)
+- nota search: [`note/11-biblioteki-klin.md`](../note/11-biblioteki-klin.md);
+  moduły: [`note/12-moduly.md`](../note/12-moduly.md)
 
 ## Poza zakresem
 
