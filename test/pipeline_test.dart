@@ -252,6 +252,18 @@ fn main() {
     expect(c, isNot(contains('malloc')));
   });
 
+  test('golden: stdlib slice ops layer 0+1 (issue 017 phase 3)', () async {
+    final result = await _compileAndRun('test/slice_ops.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/slice_ops.out').readAsString());
+
+    final program = loadProject('test/slice_ops.kl');
+    Checker().check(program);
+    final c = emitC(program, 'test/slice_ops.kl');
+    expect(c, contains('slice_map_into_i32'));
+    expect(c, isNot(contains('malloc')));
+  });
+
   test('nested fn types emit typedefs leaves-first', () {
     final file = File('${Directory.systemTemp.path}/klin_nested_fn.kl');
     file.writeAsStringSync(r'''

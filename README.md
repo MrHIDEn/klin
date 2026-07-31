@@ -31,7 +31,8 @@ dart run bin/klin.dart --emit-pp examples/point_macro.kl
 CLI summary (PL): [note/06-cli.md](note/06-cli.md).
 
 Optional host I/O and clocks: [`stdlib/`](stdlib/) (`import io`, `import testing`,
-`import time` — see [note/08-time.md](note/08-time.md)).
+`import time` — see [note/08-time.md](note/08-time.md); `import slice` —
+collection helpers, [issues/017-collection-methods.md](issues/017-collection-methods.md)).
 Klin libraries (`lib/`, `-I`, `$KLIN_PATH`; directory packages):
 [note/11-biblioteki-klin.md](note/11-biblioteki-klin.md),
 [`examples/klin_lib/`](examples/klin_lib/), [`examples/pkg_geom/`](examples/pkg_geom/).
