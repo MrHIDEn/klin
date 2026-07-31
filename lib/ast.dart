@@ -417,6 +417,9 @@ final class NameExpr extends Expr {
   /// Filled by the checker: a mut receiver is emitted as a pointer (`->`).
   bool isPtrReceiver = false;
 
+  /// Top-level function used as a value (fn-pointer decay); C symbol to emit.
+  String? resolvedFnCName;
+
   NameExpr(this.name, this.pos);
 }
 
@@ -481,6 +484,9 @@ final class CallExpr extends Expr {
   final List<Expr> args;
   final SourcePos pos;
   String? resolvedCallee;
+
+  /// Call through a fn-pointer variable (not a known top-level function).
+  bool isFnPtrCall = false;
 
   CallExpr({
     this.moduleName,

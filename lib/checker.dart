@@ -327,6 +327,9 @@ final class Checker {
       }
       return ResultType(ok);
     }
+    if (name.startsWith('fn(')) {
+      return _resolveFnType(name, pos);
+    }
     if (name.startsWith('*')) {
       var rest = name.substring(1);
       var isMut = false;
@@ -391,6 +394,104 @@ final class Checker {
       throw CheckError('unknown struct `$qualifier.$typeName`', pos);
     }
     return _resolvePrimType(name, pos);
+  }
+
+  /// Parses encoded `fn(T1,T2):Ret` from [_typeName].
+  KlinType _resolveFnType(String name, SourcePos pos) {
+    if (!name.startsWith('fn(')) {
+      throw CheckError('invalid function type `$name`', pos);
+    }
+    var i = 3;
+    final params = <KlinType>[];
+    if (i >= name.length) {
+      throw CheckError('invalid function type `$name`', pos);
+    }
+    if (name[i] != ')') {
+      while (true) {
+        final (param, next) = _splitTypePrefix(name, i, pos);
+        params.add(_resolveType(param, pos));
+        i = next;
+        if (i >= name.length) {
+          throw CheckError('invalid function type `$name`', pos);
+        }
+        if (name[i] == ')') break;
+        if (name[i] != ',') {
+          throw CheckError('invalid function type `$name`', pos);
+        }
+        i++;
+      }
+    }
+    i++; // ')'
+    KlinType ret = const VoidType();
+    if (i < name.length) {
+      if (name[i] != ':') {
+        throw CheckError('invalid function type `$name`', pos);
+      }
+      ret = _resolveType(name.substring(i + 1), pos);
+    }
+    if (ret is ArrayType || ret is ResultType) {
+      throw CheckError(
+        'function type cannot return `${ret.displayName}`',
+        pos,
+      );
+    }
+    return FnType(params, ret);
+  }
+
+  /// Reads one type spelling from [s] at [start]; returns (typeString, indexAfter).
+  (String, int) _splitTypePrefix(String s, int start, SourcePos pos) {
+    if (start >= s.length) {
+      throw CheckError('invalid type list', pos);
+    }
+    if (s.startsWith('fn(', start)) {
+      var i = start + 3;
+      var depth = 1;
+      while (i < s.length && depth > 0) {
+        final c = s[i];
+        if (c == '(') {
+          depth++;
+        } else if (c == ')') {
+          depth--;
+        }
+        i++;
+      }
+      if (depth != 0) throw CheckError('invalid function type', pos);
+      if (i < s.length && s[i] == ':') {
+        i++;
+        final (_, afterRet) = _splitTypePrefix(s, i, pos);
+        return (s.substring(start, afterRet), afterRet);
+      }
+      return (s.substring(start, i), i);
+    }
+    if (s.startsWith('!', start)) {
+      final (inner, after) = _splitTypePrefix(s, start + 1, pos);
+      return ('!$inner', after);
+    }
+    if (s.startsWith('*', start)) {
+      var i = start + 1;
+      if (s.startsWith('mut ', i)) i += 4;
+      if (s.startsWith('volatile ', i)) i += 9;
+      final (inner, after) = _splitTypePrefix(s, i, pos);
+      return (s.substring(start, after), after);
+    }
+    if (s.startsWith('[]', start)) {
+      final (inner, after) = _splitTypePrefix(s, start + 2, pos);
+      return ('[]$inner', after);
+    }
+    if (s.startsWith('[', start)) {
+      final close = s.indexOf(']', start);
+      if (close < 0) throw CheckError('invalid array type', pos);
+      final (inner, after) = _splitTypePrefix(s, close + 1, pos);
+      return (s.substring(start, after), after);
+    }
+    var i = start;
+    while (i < s.length) {
+      final c = s[i];
+      if (c == ',' || c == ')') break;
+      i++;
+    }
+    if (i == start) throw CheckError('invalid type list', pos);
+    return (s.substring(start, i), i);
   }
 
   String _key(String module, String name) => '$module.$name';
@@ -888,6 +989,10 @@ final class Checker {
   }) {
     final local = _scope.lookup(callee);
     if (local != null && moduleName == null) {
+      final fnType = local.type;
+      if (fnType is FnType) {
+        return _checkFnTypeCall(fnType, callee, args, pos);
+      }
       throw CheckError(
         '`$callee` is not a function (it is a `${local.type.displayName}` variable)',
         pos,
@@ -948,6 +1053,41 @@ final class Checker {
       _materialize(arg, expected);
     }
     return _CheckedCall(signature.returnType, _cNameForFunction(decl));
+  }
+
+  _CheckedCall _checkFnTypeCall(
+    FnType fnType,
+    String callee,
+    List<Expr> args,
+    SourcePos pos,
+  ) {
+    if (args.length != fnType.params.length) {
+      throw CheckError(
+        'function `$callee` expects ${fnType.params.length} arguments, '
+        'got ${args.length}',
+        pos,
+      );
+    }
+    for (var i = 0; i < args.length; i++) {
+      final arg = args[i];
+      final expected = fnType.params[i];
+      final actual = _inferExpr(arg);
+      _expectAssignable(expected, actual, arg.pos);
+      _materialize(arg, expected);
+    }
+    return _CheckedCall(fnType.ret, null);
+  }
+
+  /// Top-level free function as an `fn(...)` value (C decay).
+  ({FnType type, String cName})? _fnTypeForName(String name, SourcePos pos) {
+    final signature = _functions[_key(_currentModule, name)];
+    if (signature == null) return null;
+    final decl = _functionDecl(_currentModule, name);
+    if (decl.receiver != null) return null;
+    return (
+      type: FnType(signature.paramTypes, signature.returnType),
+      cName: _cNameForFunction(decl),
+    );
   }
 
   FuncDecl _functionDecl(String module, String name) =>
@@ -1125,12 +1265,17 @@ final class Checker {
         ),
       NameExpr nameExpr => () {
           final sym = _scope.lookup(nameExpr.name);
-          if (sym == null) {
-            throw CheckError(
-                'nieznana zmienna `${nameExpr.name}`', nameExpr.pos);
+          if (sym != null) {
+            nameExpr.isPtrReceiver = sym.isPtrReceiver;
+            return sym.type;
           }
-          nameExpr.isPtrReceiver = sym.isPtrReceiver;
-          return sym.type;
+          final fnType = _fnTypeForName(nameExpr.name, nameExpr.pos);
+          if (fnType != null) {
+            nameExpr.resolvedFnCName = fnType.cName;
+            return fnType.type;
+          }
+          throw CheckError(
+              'nieznana zmienna `${nameExpr.name}`', nameExpr.pos);
         }(),
       FieldExpr(:final object, :final name, :final pos) => () {
           final objectType = _inferExpr(object);
@@ -1612,6 +1757,9 @@ final class Checker {
         (!target.isMut || source.isMut)) {
       return true;
     }
+    if (target is FnType && source is FnType && target == source) {
+      return true;
+    }
     return false;
   }
 
@@ -1624,6 +1772,7 @@ final class Checker {
       PtrType() => type,
       ArrayType() => type,
       SliceType() => type,
+      FnType() => type,
       ResultType() => type,
       VoidType() => throw CheckError(
           'cannot use a void value in this context',

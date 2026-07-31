@@ -240,6 +240,18 @@ fn main() {
     expect(c, isNot(contains('malloc')));
   });
 
+  test('golden: function pointers without capture (issue 017 phase 2)', () async {
+    final result = await _compileAndRun('test/fn_ptr.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/fn_ptr.out').readAsString());
+
+    final program = loadProject('test/fn_ptr.kl');
+    Checker().check(program);
+    final c = emitC(program, 'test/fn_ptr.kl');
+    expect(c, contains('(*'));
+    expect(c, isNot(contains('malloc')));
+  });
+
   test('time.parse_iso failure uses or branch', () async {
     final file = File('${tmp.path}/time_bad_parse.kl');
     await file.writeAsString(r'''

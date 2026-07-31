@@ -187,6 +187,37 @@ final class SliceType extends KlinType {
   int get hashCode => elem.hashCode;
 }
 
+/// Function pointer without capture (C function pointer).
+final class FnType extends KlinType {
+  final List<KlinType> params;
+  final KlinType ret;
+
+  const FnType(this.params, this.ret);
+
+  @override
+  String get displayName {
+    final ps = params.map((p) => p.displayName).join(', ');
+    return 'fn($ps): ${ret.displayName}';
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is FnType &&
+      other.ret == ret &&
+      _listEq(other.params, params);
+
+  static bool _listEq(List<KlinType> a, List<KlinType> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode => Object.hash(ret, Object.hashAll(params));
+}
+
 /// Result of an operation whose error is always an `i32` code.
 final class ResultType extends KlinType {
   final KlinType ok;

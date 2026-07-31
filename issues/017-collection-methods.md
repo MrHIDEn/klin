@@ -94,24 +94,29 @@ Nie osobny ticket. Wymaga typu `Allocator` (dziś tylko D1 w
 
 ## Fazy
 
-1. **Docs (ta iteracja)** — ten plik: zamknięty projekt API.
-2. **Fn-pointer** — typy wskaźników na funkcje bez capture.
+1. **Docs** — ten plik: zamknięty projekt API. ✅
+2. **Fn-pointer** — typy `fn(...): T` bez capture. ✅
 3. **stdlib `slice` warstwa 0+1** — odczyty + `*_into`.
 4. **`Allocator`** + warstwa 2 `*_alloc`.
 
-## Non-goals
+## Fn-pointer (faza 2)
 
-- Kopiowanie JS 1:1 (`map` zawsze nowa tablica z GC).
-- `using` / RAII / autofree wyniku.
-- Domknięcia (D7), generyki w rdzeniu (034), generatory (018) — nie
-  wymagane na MVP.
-- Metody na `[]T` przed decyzją o receiverze slice.
+Składnia typu: `fn(i32): bool`. Top-level `fn` jako wartość (decay jak C);
+parametr / lokalna zmienna typu `fn(...)`; wywołanie `pred(x)`.
+
+Golden: `test/fn_ptr.kl`. Example: `examples/fn_ptr.kl`.
+Emisja: wskaźnik C — zero heap, bez domknięć (D7).
 
 ## Kryteria ukończenia
 
 ### Faza docs
 
 - [x] Projekt API / nazwy / ownership / fazy spisane w tym issue
+
+### Faza fn-pointer
+
+- [x] Typ `fn(...): T` + przekazanie / wywołanie
+- [x] Golden + example
 
 ### Faza warstwa 0+1 (później)
 

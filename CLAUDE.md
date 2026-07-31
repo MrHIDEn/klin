@@ -23,3 +23,4 @@ documents:
 - The frontend catches every error; gcc must never report an error in generated
   code.
 - Do not expand the scope of the current step in `issues/sorted.md`.
+- Feature workflow (always): sync/`checkout` from `origin/main` → new branch → implement (code + tests) → update docs (`note/`, `issues/`, README/stdlib README as needed) and `examples/` → push + PR → skill `rcfix` (Bugbot, fixes, scoreboard). Never commit on `main`/`develop`.
