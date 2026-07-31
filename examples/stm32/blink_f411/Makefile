@@ -15,11 +15,15 @@ all: blink.elf
 $(REGS_H) $(REGS_KL): $(SVD) $(wildcard ../../../lib/svd/*.dart) ../../../bin/svd2klin.dart
 	dart run ../../../bin/svd2klin.dart --svd $(SVD) --out-h $(REGS_H) --out-kl $(REGS_KL) --peripherals RCC,GPIOA,STK
 
-# @[link] paths land in out/blink.link (issue 022); do not hardcode startup.s here.
+# @[link] paths land in out/blink.link (issue 022); recipe reads that file.
+# Prerequisites also include those paths when the file already exists (rebuild
+# after editing startup.s without touching blink.kl).
+LINK_OBJS := $(shell test -f out/blink.link && cat out/blink.link)
+
 out/blink.c out/blink.link: blink.kl $(REGS_KL) $(REGS_H) $(KLIN_SRCS)
 	dart run $(KLIN) --emit-c blink.kl
 
-blink.elf: linker.ld out/blink.c out/blink.link $(REGS_H)
+blink.elf: linker.ld out/blink.c out/blink.link $(REGS_H) $(LINK_OBJS)
 	$(CC) $(CFLAGS) -I. $(LDFLAGS) $$(cat out/blink.link) out/blink.c -o $@
 
 ref: startup.s linker.ld blink_ref.c $(REGS_H)
