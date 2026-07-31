@@ -62,8 +62,15 @@ fn add(a: i32, b: i32): i32 {
 - `@[codename]` **bez** `cexport` — nadal OK (ISR / startup), np. `@[codename("SysTick_Handler")]`
 - Nie łączyć `cexport` z `cimport`; nie stosować `cexport` na `main`
 
-C woła wyeksportowaną funkcję po `codename`. Przykład:
-[`examples/cexport_add/`](../examples/cexport_add/).
+C woła wyeksportowaną funkcję po `codename`. Prototypy:
+
+```sh
+klin --emit-h lib.kl                 # → out/lib.h
+klin --emit-c --emit-h lib.kl        # .c + .h
+```
+
+Przykład: [`examples/cexport_add/`](../examples/cexport_add/). Issue:
+[046](../issues/046-emit-h.md).
 
 ## Porównanie
 
