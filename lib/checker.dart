@@ -167,8 +167,14 @@ final class Checker {
         _ => throw StateError('unknown declaration'),
       };
       for (final attr in attrs) {
-        if (!{'codename', 'cimport', 'cinclude', 'link', 'cheader'}
-            .contains(attr.name)) {
+        if (!{
+          'codename',
+          'cimport',
+          'cexport',
+          'cinclude',
+          'link',
+          'cheader',
+        }.contains(attr.name)) {
           throw CheckError('unknown attribute `${attr.name}`', attr.pos);
         }
         final needsArg = attr.name == 'codename' ||
@@ -178,7 +184,9 @@ final class Checker {
           throw CheckError(
               'attribute `${attr.name}` requires a string', attr.pos);
         }
-        if ((attr.name == 'cimport' || attr.name == 'cheader') &&
+        if ((attr.name == 'cimport' ||
+                attr.name == 'cheader' ||
+                attr.name == 'cexport') &&
             attr.arg != null) {
           throw CheckError(
               '`${attr.name}` attribute does not accept an argument', attr.pos);
@@ -193,13 +201,36 @@ final class Checker {
       if (decl is StructDecl && _hasAttr(attrs, 'cheader')) {
         throw CheckError('`cheader` is allowed only on functions', decl.pos);
       }
+      if (decl is StructDecl && _hasAttr(attrs, 'cexport')) {
+        throw CheckError('`cexport` is allowed only on functions', decl.pos);
+      }
       if (decl is FuncDecl) {
         final imported = _hasAttr(attrs, 'cimport');
+        final exported = _hasAttr(attrs, 'cexport');
         final fromHeader = _hasAttr(attrs, 'cheader');
+        final hasCodename = _hasAttr(attrs, 'codename');
         if (fromHeader && !imported) {
           throw CheckError(
               '`cheader` requires `cimport` (declaration comes from a C header)',
               decl.pos);
+        }
+        if (imported && exported) {
+          throw CheckError(
+              'cannot combine `cimport` and `cexport`', decl.pos);
+        }
+        if (exported && decl.name == 'main') {
+          throw CheckError(
+              '`cexport` cannot be applied to `main` '
+              '(entry point is always emitted as C `main`)',
+              decl.pos);
+        }
+        if (exported && !hasCodename) {
+          throw CheckError(
+              '`cexport` requires `codename("…")` (stable C symbol name)',
+              decl.pos);
+        }
+        if (exported && decl.body == null) {
+          throw CheckError('`cexport` function requires a body', decl.pos);
         }
         if (imported && decl.body != null) {
           throw CheckError('`cimport` function cannot have a body', decl.pos);

@@ -1,8 +1,15 @@
-# FFI C — deklaracje i link (issue 021)
+# FFI C — import i export (issues 021 / 045)
 
 Interop z C to **jawne deklaracje** w Klinie, nie parser nagłówków.
 
-## Deklaracja
+| Kierunek | Atrybuty | Example |
+|---|---|---|
+| **Import** C→Klin | `@[cimport]`, `@[cheader]`, `@[cinclude]`, `@[link]`, CLI `-l`/`-L` | [`examples/ffi_add/`](../examples/ffi_add/) |
+| **Export** Klin→C | `@[cexport, codename("…")]`; sam `codename` = ISR | [`examples/cexport_add/`](../examples/cexport_add/), blink STM32 |
+
+Issues: [021](../issues/021-biblioteki-c.md) (import/link), [045](../issues/045-cexport.md) (export).
+
+## Import (C → Klin)
 
 ```klin
 @[cinclude("<math.h>")]
@@ -16,12 +23,12 @@ fn sqrt(x: f64): f64
 - `@[codename("…")]` — symbol C (inaczej mangling Klina)
 - `@[cinclude("…")]` — `#include` w wyemitowanym `.c` (cudzysłów lub `<…>`)
 
-## Host builtins
+### Host builtins
 
 Bez deklaracji dozwolone są tylko **`puts`** i **`printf`** (varargs / historyczne
 hello-world). Każda inna funkcja C wymaga `@[cimport]`.
 
-## Link
+### Link
 
 ```klin
 @[link("libadd.a")]          // ścieżka względem pliku .kl
@@ -38,6 +45,32 @@ klin run -L/opt/lib -lfoo main.kl
 lista `@[link]` trafia też do `out/<base>.link` (Makefile bare-metal).
 
 Przykład: [`examples/ffi_add/`](../examples/ffi_add/).
+
+## Export (Klin → C)
+
+```klin
+@[cexport, codename("klin_add")]
+fn add(a: i32, b: i32): i32 {
+    return a + b
+}
+```
+
+- `@[cexport]` — `fn` **z ciałem**; globalny symbol w emisji C (nie `static`)
+- `@[codename("…")]` — **wymagane** razem z `cexport` (stabilna nazwa dla C)
+- `@[codename]` **bez** `cexport` — nadal OK (ISR / startup), np. `@[codename("SysTick_Handler")]`
+- Nie łączyć `cexport` z `cimport`; nie stosować `cexport` na `main`
+
+C woła wyeksportowaną funkcję po `codename`. Przykład:
+[`examples/cexport_add/`](../examples/cexport_add/).
+
+## Porównanie
+
+| | Import | Export |
+|---|---|---|
+| Marker | `@[cimport]` | `@[cexport]` |
+| Ciało w Klinie | nie | tak |
+| Nazwa C | zwykle `@[codename]` | **wymagany** `@[codename]` |
+| Typowy use | libc / `.a` / HAL | biblioteka Klin, ISR |
 
 ## Kontrakt
 

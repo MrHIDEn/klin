@@ -44,6 +44,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [038](038-time-api.md) | Ergonomia API `time` (`until` / `abs` / `as_s`) | ✅ | 037 |
 | [039](039-time-calendar.md) | Kalendarzowe `add_days` / miesiące / lata | ✅ | 037 |
 | [021](021-biblioteki-c.md) | Biblioteki C (FFI / link) | ✅ | 006, 010 |
+| [045](045-cexport.md) | Eksport Klin → C (`@[cexport]`) | ✅ | 021 |
 ---
 
 ## Backlog — do rozważenia

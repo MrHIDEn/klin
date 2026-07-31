@@ -29,8 +29,9 @@ CLI summary (PL): [note/06-cli.md](note/06-cli.md).
 
 Optional host I/O and clocks: [`stdlib/`](stdlib/) (`import io`, `import testing`,
 `import time` — see [note/08-time.md](note/08-time.md)).
-C FFI (`@[cimport]` / `@[link]`): [note/09-ffi-c.md](note/09-ffi-c.md),
-example [`examples/ffi_add/`](examples/ffi_add/).
+C FFI — import (`@[cimport]` / `@[link]`) **and** export (`@[cexport]`):
+[note/09-ffi-c.md](note/09-ffi-c.md), examples
+[`ffi_add/`](examples/ffi_add/) and [`cexport_add/`](examples/cexport_add/).
 Bare-metal programs omit host stdlib imports. STM32 demos:
 [`examples/stm32/`](examples/stm32/) — see [`examples/README.md`](examples/README.md).
 
