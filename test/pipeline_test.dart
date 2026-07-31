@@ -180,6 +180,22 @@ fn main() {
     );
   });
 
+  test('golden: stdlib io.print / io.println', () async {
+    final result = await _compileAndRun('test/io_println.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/io_println.out').readAsString());
+
+    final program = loadProject('test/io_println.kl');
+    Checker().check(program);
+    final c = emitC(program, 'test/io_println.kl');
+    expect(c, contains('#include <stdio.h>'));
+    expect(c, contains('int32_t puts(const char* msg);'));
+    expect(c, contains('puts(" from io");'));
+    expect(c, contains('io_print("hello");'));
+    expect(c, contains('printf("%s", msg);'));
+    expect(c, isNot(contains('io_println(')));
+  });
+
   test('syntax error: message includes line number', () async {
     final source = await File('test/bad_syntax.kl').readAsString();
     expect(

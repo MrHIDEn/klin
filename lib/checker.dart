@@ -327,6 +327,7 @@ final class Checker {
       return ArrayType(_resolveType(name.substring(close + 1), pos), len);
     }
     if (name == 'void') return const VoidType();
+    if (name == 'str') return const StrType();
     final parts = name.split('.');
     final qualifier = parts.length == 2 ? parts.first : null;
     final typeName = parts.length == 2 ? parts.last : name;

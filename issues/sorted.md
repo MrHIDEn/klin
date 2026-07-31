@@ -28,7 +28,7 @@ wypluwa plik z definicjami rejestrów. Wejście → wyjście, koniec.
 
 | # | Zadanie | Status | Zależy od |
 |---|---|---|---|
-| [012](012-stdlib-io.md) | Opcjonalny moduł I/O (`println`) | 💭 | 006 |
+| [012](012-stdlib-io.md) | Opcjonalny moduł I/O (`println`) | ✅ | 006 |
 | [016](016-string-interpolation.md) | Interpolowane napisy | 💭 | 012? |
 | [017](017-collection-methods.md) | Metody kolekcji (`map`/`filter`/…) | 💭 | 007 |
 | [018](018-generators-yield.md) | Generatory / `yield` | 💭 | 004+ |
@@ -45,6 +45,7 @@ wypluwa plik z definicjami rejestrów. Wejście → wyjście, koniec.
 | [029](029-async-event-loop.md) | Event loop / async·await | 💭 | 018?, 028? |
 | [030](030-isr-decorators.md) | Przerwania przez dekoratory | 💭 | 010 |
 | [031](031-biblioteki-hal.md) | Biblioteki HAL (Cube / LL) | 💭 | 010, 021 |
+| [032](032-klin-run.md) | CLI: `klin run <plik.kl>` | 💭 | 001 |
 
 ---
 

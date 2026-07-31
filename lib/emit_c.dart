@@ -105,7 +105,10 @@ Set<String> _collectCIncludes(Program program) {
       _ => const <Attr>[],
     };
     for (final attr in attrs) {
-      if (attr.name == 'cinclude') includes.add('"${attr.arg!}"');
+      if (attr.name == 'cinclude') {
+        final arg = attr.arg!;
+        includes.add(arg.startsWith('<') ? arg : '"$arg"');
+      }
     }
   }
   if (program.funcs.any(_callsStdio)) includes.add('<stdio.h>');
@@ -115,9 +118,13 @@ Set<String> _collectCIncludes(Program program) {
 bool _callsStdio(FuncDecl func) =>
     func.body?.stmts.any(_stmtCallsStdio) ?? false;
 
+bool _isStdioName(String? name) => name == 'puts' || name == 'printf';
+
 bool _stmtCallsStdio(Stmt stmt) => switch (stmt) {
-      CallStmt(:final callee, :final args) =>
-        callee == 'puts' || callee == 'printf' || args.any(_exprCallsStdio),
+      CallStmt(:final callee, :final args, :final resolvedCallee) =>
+        _isStdioName(callee) ||
+            _isStdioName(resolvedCallee) ||
+            args.any(_exprCallsStdio),
       MethodCallStmt(:final call) => _exprCallsStdio(call),
       LetStmt(:final init) => init != null && _exprCallsStdio(init),
       AssignStmt(:final target, :final value) =>
@@ -144,8 +151,10 @@ bool _stmtCallsStdio(Stmt stmt) => switch (stmt) {
     };
 
 bool _exprCallsStdio(Expr expr) => switch (expr) {
-      CallExpr(:final callee, :final args) =>
-        callee == 'puts' || callee == 'printf' || args.any(_exprCallsStdio),
+      CallExpr(:final callee, :final args, :final resolvedCallee) =>
+        _isStdioName(callee) ||
+            _isStdioName(resolvedCallee) ||
+            args.any(_exprCallsStdio),
       MethodCallExpr(:final receiver, :final args) =>
         _exprCallsStdio(receiver) || args.any(_exprCallsStdio),
       FieldExpr(:final object) => _exprCallsStdio(object),

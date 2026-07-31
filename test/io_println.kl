@@ -1,0 +1,6 @@
+import io
+
+fn main() {
+    io.print("hello")
+    io.println(" from io")
+}

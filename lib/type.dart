@@ -231,12 +231,12 @@ final class UntypedFloat extends KlinType {
   int get hashCode => 2;
 }
 
-/// C string literal (only as an FFI argument; there is no full `str` type yet).
+/// C string (`const char*`). Literals and `str` parameters for thin FFI / stdlib.
 final class StrType extends KlinType {
   const StrType();
 
   @override
-  String get displayName => 'string';
+  String get displayName => 'str';
 
   @override
   bool operator ==(Object other) => other is StrType;
