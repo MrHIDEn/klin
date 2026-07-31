@@ -1047,6 +1047,53 @@ fn main() {
     );
   });
 
+  test('re-import of a file already in a loaded package is a no-op (issue 047)',
+      () {
+    final dir = Directory.systemTemp.createTempSync('klin_pkg_reimport_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    Directory('${dir.path}/geom').createSync();
+    File('${dir.path}/geom/a.kl').writeAsStringSync('''
+module geom
+import b
+pub fn one(): i32 { return b.two() }
+''');
+    File('${dir.path}/geom/b.kl').writeAsStringSync('''
+module geom
+pub fn two(): i32 { return 2 }
+''');
+    // Mistaken same-package import by file name would resolve to b.kl;
+    // must not duplicate geom_two.
+    File('${dir.path}/app.kl').writeAsStringSync('''
+module app
+import geom
+fn main() {
+  printf("%d\\n", geom.one())
+}
+''');
+    final program = loadProject('${dir.path}/app.kl');
+    Checker().check(program); // would fail on duplicate `two` if re-parsed
+    final c = emitC(program, '${dir.path}/app.kl');
+    expect(c, contains('geom_one'));
+    expect(c, contains('geom_two'));
+  });
+
+  test('broken same-module sibling fails loudly (issue 047)', () {
+    final dir = Directory.systemTemp.createTempSync('klin_pkg_bad_sib_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    File('${dir.path}/app.kl').writeAsStringSync('''
+module app
+fn main() {}
+''');
+    File('${dir.path}/other.kl').writeAsStringSync('''
+module app
+fn broken( {
+''');
+    expect(
+      () => loadProject('${dir.path}/app.kl'),
+      throwsA(isA<ParseError>()),
+    );
+  });
+
   test('error: mutating method on immutable variable', () {
     final source = File('test/bad_mut_method.kl').readAsStringSync();
     final program = Parser(Lexer(source).tokenize()).parse();

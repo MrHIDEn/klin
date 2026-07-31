@@ -22,6 +22,7 @@ Program loadProject(
   final importAliases = <String, Map<String, String>>{};
   final loading = <String>{};
   final loaded = <String, String>{}; // packageKey → moduleName
+  final fileModule = <String, String>{}; // abs file path → moduleName
   SourcePos? firstPos;
 
   String loadPackageFiles(
@@ -34,6 +35,29 @@ Program loadProject(
     if (absFiles.isEmpty) {
       throw FileSystemException('imported package has no .kl files', '');
     }
+
+    // Already loaded as part of a larger (or identical) package — do not
+    // re-parse / re-register declarations (issue 047 / Bugbot).
+    if (absFiles.every(fileModule.containsKey)) {
+      final module = fileModule[absFiles.first]!;
+      for (final path in absFiles) {
+        if (fileModule[path] != module) {
+          throw ParseError(
+            'file `$path` already loaded as module `${fileModule[path]}`',
+            const SourcePos(1, 1),
+          );
+        }
+      }
+      return module;
+    }
+    if (absFiles.any(fileModule.containsKey)) {
+      final conflict = absFiles.firstWhere(fileModule.containsKey);
+      throw ParseError(
+        'file `$conflict` already loaded as part of another package',
+        const SourcePos(1, 1),
+      );
+    }
+
     final packageKey = absFiles.join('\x1e');
     final existing = loaded[packageKey];
     if (existing != null) return existing;
@@ -84,6 +108,13 @@ Program loadProject(
       }
     }
 
+    // Mark files loaded before resolving imports so same-package
+    // `import otherfile` does not re-register declarations.
+    for (final path in absFiles) {
+      fileModule[path] = moduleName;
+    }
+    loaded[packageKey] = moduleName;
+
     final aliases = importAliases.putIfAbsent(moduleName, () => {});
     final pendingImports = <String>{};
     for (final u in units) {
@@ -110,7 +141,6 @@ Program loadProject(
     }
 
     loading.remove(packageKey);
-    loaded[packageKey] = moduleName;
     return moduleName;
   }
 
@@ -122,17 +152,23 @@ Program loadProject(
   final entryModule = entryUnit.declaredName ?? _fileStem(entryAbs);
   final entryDir = File(entryAbs).parent.path;
   final siblingFiles = <String>[entryAbs];
+  final moduleDecl = RegExp('(?:^|\\n)\\s*module\\s+$entryModule\\b');
   for (final path in _packageKlFiles(entryDir)) {
     if (path == entryAbs) continue;
+    final raw = File(path).readAsStringSync();
+    final looksLikeSibling = _fileStem(path) == entryModule ||
+        moduleDecl.hasMatch(raw);
     try {
-      final expanded = preprocess(File(path).readAsStringSync(), path: path);
+      final expanded = preprocess(raw, path: path);
       final unit = Parser(Lexer(expanded).tokenize()).parseUnit();
       final name = unit.declaredName ?? _fileStem(path);
       if (name == entryModule) siblingFiles.add(path);
     } on PreprocessError {
-      // Skip unreadable fixtures / non-package files next to the entry.
+      if (looksLikeSibling) rethrow;
     } on LexError {
+      if (looksLikeSibling) rethrow;
     } on ParseError {
+      if (looksLikeSibling) rethrow;
     }
   }
   loadPackageFiles(siblingFiles);
