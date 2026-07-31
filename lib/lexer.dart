@@ -83,6 +83,10 @@ final class Lexer {
         return Token(TokenKind.atSign, '@', start);
       case ':':
         _advance();
+        if (!_atEnd && _peek == '=') {
+          _advance();
+          return Token(TokenKind.colonEqual, ':=', start);
+        }
         return Token(TokenKind.colon, ':', start);
       case ';':
         _advance();

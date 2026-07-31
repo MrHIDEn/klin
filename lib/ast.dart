@@ -165,12 +165,16 @@ final class AsmStmt extends Stmt {
 }
 
 /// let [mut] name [: type] [= expr]
+/// or short decl: name := expr  (≡ let mut name = expr)
 final class LetStmt extends Stmt {
   final bool isMut;
   final String name;
   final String? typeName;
   final Expr? init;
   final SourcePos pos;
+
+  /// True when written as `name := expr` (sugar for `let mut`).
+  final bool shortDecl;
 
   /// Filled by the checker.
   KlinType? resolvedType;
@@ -181,6 +185,7 @@ final class LetStmt extends Stmt {
     required this.typeName,
     required this.init,
     required this.pos,
+    this.shortDecl = false,
   });
 }
 
@@ -270,9 +275,9 @@ final class ForRangeStmt extends Stmt {
   });
 }
 
-/// for [name = init]; [cond]; [post] block
+/// for [name = init | name := init]; [cond]; [post] block
 ///
-/// Init introduces mutable variable `name` (like `:=` in V).
+/// Init introduces mutable variable `name` (`=` or `:=`).
 /// Post is an optional `name = expr` assignment.
 final class ForCStmt extends Stmt {
   final String? initName;

@@ -24,7 +24,7 @@ pub fn parse(a: *Allocator, src: []u8): !Doc {
 ```
 
 MVP host: [`stdlib/mem`](../stdlib/mem.kl) (`heap`, `alloc_bytes`, `alloc_i32`) —
-[note/14-allocator.md](14-allocator.md), issue [055](../issues/055-allocator.md).
+[note/14-allocator.md](14-allocator.md), issue [057](../issues/057-allocator.md).
 
 **Nie obiecywać** `a.alloc(u8, n)` dopóki nie ma argumentu typu w wywołaniu
 (generyki [034](../issues/034-typy-generyczne.md) / cukier D3). Dziś: `alloc_bytes`

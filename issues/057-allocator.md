@@ -1,4 +1,4 @@
-# 055 — `Allocator` (jawny alokator)
+# 057 — `Allocator` (jawny alokator)
 
 **Status:** ✅ ukończone
 **Zależy od:** [007](007-wskazniki-tablice-slice.md), [008](008-defer.md); D1 w [note/01-decyzje.md](../note/01-decyzje.md)

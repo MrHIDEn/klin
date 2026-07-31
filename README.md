@@ -66,6 +66,12 @@ Type `fn(T…): Ret` — top-level function as a value (C function pointer, no
 capture). See [note/13-fn-ptr.md](note/13-fn-ptr.md),
 [`examples/fn_ptr.kl`](examples/fn_ptr.kl).
 
+### Short declaration (`:=`)
+
+`name := expr` is sugar for `let mut name = expr`. See
+[note/14-short-decl.md](note/14-short-decl.md),
+[`examples/short_decl.kl`](examples/short_decl.kl).
+
 ## Test
 
 ```sh

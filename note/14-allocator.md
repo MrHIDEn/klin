@@ -34,7 +34,7 @@ fn main() {
   program importuje `mem` / woła te symbole
 - Freestanding: **nie** `import mem`
 
-Issue: [055](../issues/055-allocator.md). Example: [`examples/mem_heap.kl`](../examples/mem_heap.kl).
+Issue: [057](../issues/057-allocator.md). Example: [`examples/mem_heap.kl`](../examples/mem_heap.kl).
 
 ## Nie obiecywać w MVP / później
 
@@ -49,12 +49,12 @@ Dziś zamiast tego:
 - typowane: jawne `mem.alloc_i32` / `free_i32` (i `u8`) — ewentualnie
   rozszerzenie przez `$fn` jak w planie `slice`, nie przez składnię `alloc(T, n)`
 
-**Później (osobne kroki, nie w 055):**
+**Później (osobne kroki, nie w 057):**
 
 | Temat | Gdzie |
 |---|---|
 | `a.alloc(T, n)` / cukier albo generyki | 034 / D3 |
-| Arena + `deinit` (jeden `defer`) | follow-up po 055 |
+| Arena + `deinit` (jeden `defer`) | follow-up po 057 |
 | Vtable wielu alokatorów | follow-up (dziś wystarczy heap + pusty struct) |
 | `slice.map_alloc_*` / `filter_alloc_*` | [017](../issues/017-collection-methods.md) warstwa 2 |
 | GC / autofree / ukryty `malloc` w rdzeniu | **nigdy** (zasada nadrzędna) |

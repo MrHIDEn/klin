@@ -1,7 +1,7 @@
 # 017 — Metody kolekcji (`map` / `filter` / …)
 
 **Status:** 💭 do rozważenia (projekt API zamknięty; kod nie)
-**Zależy od:** 007 (slice ✅); implementacja: wskaźniki na funkcje; warstwa 2: `Allocator` ([055](055-allocator.md) ✅)
+**Zależy od:** 007 (slice ✅); implementacja: wskaźniki na funkcje; warstwa 2: `Allocator` ([057](057-allocator.md) ✅)
 
 ## Kontekst
 
@@ -82,7 +82,7 @@ zapisu API.
 Poza MVP: `flatMap`, `groupBy`, lazy iteratory (018), sort z
 comparator-domknięciem.
 
-## Warstwa 2 (`*_alloc`) — po [055](055-allocator.md) ✅
+## Warstwa 2 (`*_alloc`) — po [057](057-allocator.md) ✅
 
 Typ `Allocator` jest w [`stdlib/mem`](../stdlib/mem.kl)
 ([note/14-allocator.md](../note/14-allocator.md)). Warstwa 2 `*_alloc` nadal
@@ -98,7 +98,7 @@ otwarta.
 1. **Docs** — ten plik: zamknięty projekt API. ✅
 2. **Fn-pointer** — typy `fn(...): T` bez capture. ✅
 3. **stdlib `slice` warstwa 0+1** — odczyty + `*_into`.
-4. **`Allocator`** ([055](055-allocator.md) ✅) + warstwa 2 `*_alloc` (otwarte).
+4. **`Allocator`** ([057](057-allocator.md) ✅) + warstwa 2 `*_alloc` (otwarte).
 
 ## Fn-pointer (faza 2)
 
