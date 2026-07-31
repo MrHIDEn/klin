@@ -63,13 +63,13 @@ SvdEmitResult emitSvd(
           firstImport = false;
         }
         klin
-          ..writeln('@[cimport, codename("${prefix}_write")]')
+          ..writeln('@[cimport, cheader, codename("${prefix}_write")]')
           ..writeln('pub fn ${prefix}_write(v: u32)')
-          ..writeln('@[cimport, codename("${prefix}_set")]')
+          ..writeln('@[cimport, cheader, codename("${prefix}_set")]')
           ..writeln('pub fn ${prefix}_set(v: u32)');
         if (field.bitWidth == 1 && !writeOnly) {
           klin
-            ..writeln('@[cimport, codename("${prefix}_toggle")]')
+            ..writeln('@[cimport, cheader, codename("${prefix}_toggle")]')
             ..writeln('pub fn ${prefix}_toggle()');
         }
         if (field.enums.isNotEmpty) {

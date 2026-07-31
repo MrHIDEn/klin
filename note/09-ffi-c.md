@@ -10,7 +10,9 @@ Interop z C to **jawne deklaracje** w Klinie, nie parser nagłówków.
 fn sqrt(x: f64): f64
 ```
 
-- `@[cimport]` — funkcja bez ciała; frontend sprawdza arity i typy
+- `@[cimport]` — funkcja bez ciała; frontend sprawdza arity i typy; emituje prototyp C
+- `@[cheader]` — z `cimport`: deklaracja jest w nagłówku (`cinclude`); **bez** prototypu w `.c`
+  (potrzebne dla `static inline` z SVD / HAL)
 - `@[codename("…")]` — symbol C (inaczej mangling Klina)
 - `@[cinclude("…")]` — `#include` w wyemitowanym `.c` (cudzysłów lub `<…>`)
 

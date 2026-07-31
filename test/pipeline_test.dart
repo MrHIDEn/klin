@@ -522,7 +522,10 @@ fn main() {
       path: klPath,
     );
     expect(expanded, contains('@[cinclude("tiny_regs.h")]'));
-    expect(expanded, contains('@[cimport, codename("GPIOA_ODR_ODR5_toggle")]'));
+    expect(
+      expanded,
+      contains('@[cimport, cheader, codename("GPIOA_ODR_ODR5_toggle")]'),
+    );
     expect(expanded, contains('RCC_AHB1ENR_GPIOAEN_set(1)'));
     expect(expanded, contains('GPIOA_MODER_MODER5_write(1)'));
     expect(expanded, contains('GPIOA_ODR_ODR5_toggle()'));
@@ -1295,6 +1298,7 @@ fn main() {}
             Attr('link', 'libadd.a', pos),
             Attr('link', '-lm', pos),
           ],
+          sourcePath: '${tmp.path}/main.kl',
         ),
       ],
       pos,
@@ -1311,10 +1315,56 @@ fn main() {}
     );
     expect(args.first, 'out/x.c');
     expect(args, contains('$dir/libadd.a'));
-    expect(args, contains('-lm'));
-    expect(args, contains('-L/opt/lib'));
-    expect(args, contains('-lm')); // from cliLibs too (duplicate ok)
+    final lOpt = args.indexOf('-L/opt/lib');
+    final lm = args.indexOf('-lm');
+    expect(lOpt, greaterThan(0));
+    expect(lm, greaterThan(lOpt));
+    expect(args.where((a) => a == '-lm').length, 2);
     expect(args.sublist(args.length - 2), ['-o', 'out/x']);
+  });
+
+  test('buildCcArgs puts CLI -L before @[link("-l…")]', () {
+    const pos = SourcePos(1, 1);
+    final program = Program(
+      [],
+      [
+        FuncDecl(
+          name: 'main',
+          receiver: null,
+          params: const [],
+          returnTypeName: null,
+          body: Block(const [], pos),
+          pos: pos,
+          attrs: [Attr('link', '-lfoo', pos)],
+        ),
+      ],
+      pos,
+    );
+    final args = buildCcArgs(
+      cPath: 'a.c',
+      binPath: 'a',
+      program: program,
+      sourceDir: tmp.path,
+      cliLibDirs: const ['/libs'],
+    );
+    expect(args.indexOf('-L/libs'), lessThan(args.indexOf('-lfoo')));
+  });
+
+  test('cheader cimport skips C prototype emission', () {
+    const source = '''
+@[cinclude("regs.h")]
+@[cimport, cheader, codename("pin_toggle")]
+fn pin_toggle()
+fn main() {
+  pin_toggle()
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'hdr.kl');
+    expect(c, contains('#include "regs.h"'));
+    expect(c, isNot(contains('void pin_toggle(void);')));
+    expect(c, contains('pin_toggle();'));
   });
 
   test('klin run links @[cimport] against a static archive (issue 021)', () async {

@@ -81,6 +81,8 @@ String emitC(Program program, String sourcePath) {
     buf.writeln();
   }
   for (final func in program.funcs) {
+    // `@[cheader]` + `@[cimport]`: prototype lives in a C header (`cinclude`).
+    if (func.attrs.any((a) => a.name == 'cheader')) continue;
     buf.writeln('${_functionHeader(func)};');
   }
   buf.writeln();
@@ -104,16 +106,6 @@ String emitC(Program program, String sourcePath) {
   }
   return buf.toString();
 }
-
-List<String> collectLinkAttrs(Program program) => [
-      for (final decl in [...program.structs, ...program.funcs])
-        for (final attr in switch (decl) {
-          StructDecl(:final attrs) => attrs,
-          FuncDecl(:final attrs) => attrs,
-          _ => const <Attr>[],
-        })
-          if (attr.name == 'link' && attr.arg != null) attr.arg!,
-    ];
 
 Set<String> _collectCIncludes(Program program) {
   final includes = <String>{};

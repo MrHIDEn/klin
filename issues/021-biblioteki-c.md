@@ -6,6 +6,8 @@
 ## Zakres MVP
 
 - jawne `@[cimport]` z typami (arity + typy argumentów/zwrotu)
+- `@[cheader]` + `@[cimport]` — deklaracja z nagłówka C (bez prototypu w emisji;
+  SVD accessors)
 - `@[cinclude]` → `#include` w emisji (bez parsera nagłówków C)
 - `@[link("…")]` przekazywane do host `cc` przy `klin run` / `klin test`
   - string zaczynający się od `-` → flaga as-is (`-lm`, `-L…`)
