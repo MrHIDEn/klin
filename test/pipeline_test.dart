@@ -508,6 +508,25 @@ fn main() {
     final c = emitC(program, 'test/slice_ops.kl');
     expect(c, contains('slice_map_into_i32'));
     expect(c, isNot(contains('malloc')));
+    expect(c, isNot(contains('klin_mem_')));
+  });
+
+  test('golden: stdlib slice_alloc map/filter (issue 017 phase 4)', () async {
+    final result = await _compileAndRun('test/slice_alloc_ops.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(
+      result.stdout,
+      await File('test/slice_alloc_ops.out').readAsString(),
+    );
+
+    final program = loadProject('test/slice_alloc_ops.kl');
+    Checker().check(program);
+    final c = emitC(program, 'test/slice_alloc_ops.kl');
+    expect(c, contains('slice_alloc_map_alloc_i32'));
+    expect(c, contains('slice_alloc_filter_alloc_i32'));
+    expect(c, contains('klin_mem_alloc_i32'));
+    expect(c, contains('malloc'));
+    expect(c, contains('#include <stdlib.h>'));
   });
 
   test('nested fn types emit typedefs leaves-first', () {

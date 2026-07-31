@@ -1,7 +1,10 @@
 # 017 — Metody kolekcji (`map` / `filter` / …)
 
-**Status:** ✅ (warstwa 0+1; `*_alloc` później)
+**Status:** ✅
 **Zależy od:** 007 (slice ✅); fn-pointer (faza 2 ✅); warstwa 2: `Allocator` ([057](057-allocator.md) ✅)
+
+Note: [16-slice.md](../note/16-slice.md) · fn-ptr: [13-fn-ptr.md](../note/13-fn-ptr.md) ·
+alokator: [14-allocator.md](../note/14-allocator.md)
 
 ## Kontekst
 
@@ -21,13 +24,14 @@ stronie callera — API nigdy nie rejestruje zwolnienia ani autofree.
 let n = slice.filter_into_i32(xs, dst, pred) or { 0 }
 let y = slice.reduce_i32(xs, 0, add)
 
-// OK później — widać koszt
-let out = slice.map_alloc(a, xs, f)!
-defer a.free(out)
+// OK — widać koszt (osobny moduł, żeby `import slice` nie ciągnął heap)
+let mut out = slice_alloc.map_alloc_i32(&a, xs, f) or { mem.empty_i32() }
+defer mem.free_i32(&a, out)
 ```
 
 Bez generyków w gramatyce: `each_i32` / `map_into_u8` (instancje w
-[`stdlib/slice.kl`](../stdlib/slice.kl)).
+[`stdlib/slice.kl`](../stdlib/slice.kl)); `map_alloc_i32` w
+[`stdlib/slice_alloc.kl`](../stdlib/slice_alloc.kl).
 
 ### Nazewnictwo
 
@@ -39,11 +43,21 @@ Bez generyków w gramatyce: `each_i32` / `map_into_u8` (instancje w
 
 ### Forma wywołania (nie metody na `[]T`)
 
-API jako **wolne funkcje** w module `slice`:
+Warstwa 0+1 — moduł `slice` (bez `mem` / bez `malloc` w emisji):
 
 ```
 import slice
 slice.map_into_i32(xs, dst, f)
+```
+
+Warstwa 2 — osobny moduł `slice_alloc` (importuje `mem` + `slice`). Emit nie
+usuwa nieużywanych `pub`, więc trzymanie `*_alloc` w `slice.kl` pociągnęłoby
+heap przy każdym `import slice` (freestanding / zasada nadrzędna).
+
+```
+import mem
+import slice_alloc
+slice_alloc.map_alloc_i32(&a, xs, f)
 ```
 
 ### Ownership — bez `using` (C#)
@@ -51,7 +65,7 @@ slice.map_into_i32(xs, dst, f)
 | Wariant | Co powstaje | Kto zwalnia |
 |---|---|---|
 | `*_into(dst, …)` | nic nowego — zapis do bufora callera | nikt (caller ma `dst`) |
-| `*_alloc(a, …)` | **nowy** bufor | caller: `defer a.free(out)` |
+| `*_alloc(a, …)` | **nowy** bufor | caller: `defer mem.free_i32(&a, out)` |
 
 ### Callback
 
@@ -74,26 +88,30 @@ elementów współdzielona z callerem — jak Go).
 Poza MVP: `flatMap`, `groupBy`, lazy iteratory (018), sort z
 comparator-domknięciem.
 
-## Warstwa 2 (`*_alloc`) — po [057](057-allocator.md) ✅
+## Warstwa 2 (`*_alloc`) — ✅
 
-Typ `Allocator` jest w [`stdlib/mem`](../stdlib/mem.kl)
-([note/14-allocator.md](../note/14-allocator.md)). Warstwa 2 `*_alloc` nadal
-otwarta.
+Typ `Allocator`: [`stdlib/mem`](../stdlib/mem.kl)
+([note/14-allocator.md](../note/14-allocator.md)).
 
-- API: `map_alloc(a, xs, f)`, `filter_alloc(a, xs, pred)`
-- `filter_alloc`: dwa przebiegi albo alokacja na `xs.len` elementów i
-  zwrócenie slice z `len = n` (bez pola `cap` w typie slice — 007)
-- Caller: `defer a.free_bytes(out)` / `mem.free_i32` albo później `defer arena.deinit()`
+Moduł [`stdlib/slice_alloc.kl`](../stdlib/slice_alloc.kl):
+
+- `map_alloc_i32` / `map_alloc_u8(a, xs, f): ![]T` — `alloc(xs.len)` + mapowanie
+- `filter_alloc_i32` / `filter_alloc_u8(a, xs, pred): ![]T` — dwa przebiegi
+  (`count` → `alloc(n)` → kopiowanie)
+- Alokator: `*mut mem.Allocator`; błędy `mem.alloc_*` przez `!` / `or`
+- Caller: `defer mem.free_i32(&a, out)` (API nie rejestruje `defer`)
 
 ## Fazy
 
 1. **Docs** — projekt API. ✅
 2. **Fn-pointer** — `fn(...): T`. ✅
 3. **stdlib `slice` warstwa 0+1** — ✅ ([`stdlib/slice.kl`](../stdlib/slice.kl))
-4. **`Allocator`** ([057](057-allocator.md) ✅) + warstwa 2 `*_alloc` — otwarte
+4. **`Allocator`** ([057](057-allocator.md) ✅) + warstwa 2 `*_alloc` — ✅
+   ([`stdlib/slice_alloc.kl`](../stdlib/slice_alloc.kl))
 
-Golden: `test/fn_ptr.kl`, `test/slice_ops.kl`.  
-Examples: `examples/fn_ptr.kl`, `examples/slice_ops.kl`.
+Golden: `test/fn_ptr.kl`, `test/slice_ops.kl`, `test/slice_alloc_ops.kl`.  
+Examples: `examples/fn_ptr.kl`, `examples/slice_ops.kl`,
+`examples/slice_alloc_demo.kl`.
 
 `map_into_*` / `filter_into_*` zwracają `!i32` (Klin nie ma `!void`): sukces
 `0` / liczba elementów; błąd długości bufora → `error(1)`.
@@ -104,6 +122,7 @@ Examples: `examples/fn_ptr.kl`, `examples/slice_ops.kl`.
 - `using` / RAII / autofree wyniku.
 - Domknięcia (D7), generyki w rdzeniu (034), generatory (018).
 - Metody na `[]T` przed decyzją o receiverze slice.
+- DCE nieużywanych `pub` w emit (dlatego osobny moduł `slice_alloc`).
 
 ## Kryteria ukończenia
 
@@ -122,7 +141,7 @@ Examples: `examples/fn_ptr.kl`, `examples/slice_ops.kl`.
 - [x] Testy złote
 - [x] Brak `malloc` w emisji (pętla jak ręczny C)
 
-### Faza warstwa 2 (później)
+### Faza warstwa 2
 
-- [ ] `map_alloc` / `filter_alloc` + dokumentacja `defer a.free`
-- [ ] Testy złote z jawnym `Allocator`
+- [x] `map_alloc` / `filter_alloc` w `slice_alloc` + dokumentacja `defer mem.free_*`
+- [x] Testy złote z jawnym `Allocator`

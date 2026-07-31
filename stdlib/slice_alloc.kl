@@ -1,0 +1,39 @@
+/// Allocating slice helpers (issue 017 layer 2).
+/// Caller passes an explicit Allocator and frees with `mem.free_*` + `defer`.
+/// Import only when needed — zero-alloc `import slice` stays heap-free.
+module slice_alloc
+
+import mem
+import slice
+
+$fn slice_alloc_ops(T: type) {
+  /// Allocates `xs.len` elements, maps with [f]. Caller: `defer mem.free_$T(&a, out)`.
+  pub fn map_alloc_$T(a: *mut mem.Allocator, xs: []$T, f: fn($T): $T): ![]$T {
+    let mut out = mem.alloc_$T(a, xs.len)!
+    let mut i: i32 = 0
+    while i < xs.len {
+      out[i] = f(xs[i])
+      i = i + 1
+    }
+    return out
+  }
+
+  /// Two-pass: count matches, alloc exact `n`, copy. Caller: `defer mem.free_$T(&a, out)`.
+  pub fn filter_alloc_$T(a: *mut mem.Allocator, xs: []$T, pred: fn($T): bool): ![]$T {
+    let n = slice.count_$T(xs, pred)
+    let mut out = mem.alloc_$T(a, n)!
+    let mut w: i32 = 0
+    let mut i: i32 = 0
+    while i < xs.len {
+      if pred(xs[i]) {
+        out[w] = xs[i]
+        w = w + 1
+      }
+      i = i + 1
+    }
+    return out
+  }
+}
+
+$slice_alloc_ops(i32)
+$slice_alloc_ops(u8)

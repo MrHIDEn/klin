@@ -31,9 +31,10 @@ dart run bin/klin.dart --emit-pp examples/point_macro.kl
 CLI summary (PL): [note/06-cli.md](note/06-cli.md).
 
 Optional host I/O, clocks, heap, and slice helpers: [`stdlib/`](stdlib/)
-(`import io`, `import testing`, `import time`, `import mem`, `import slice` —
-see [note/08-time.md](note/08-time.md), [note/14-allocator.md](note/14-allocator.md),
-[issues/017-collection-methods.md](issues/017-collection-methods.md)).
+(`import io`, `import testing`, `import time`, `import mem`, `import slice`,
+`import slice_alloc` — see [note/08-time.md](note/08-time.md),
+[note/14-allocator.md](note/14-allocator.md),
+[note/16-slice.md](note/16-slice.md)).
 Klin libraries (`lib/`, `-I`, `$KLIN_PATH`; directory packages):
 [note/11-biblioteki-klin.md](note/11-biblioteki-klin.md),
 [`examples/klin_lib/`](examples/klin_lib/), [`examples/pkg_geom/`](examples/pkg_geom/).
@@ -66,6 +67,15 @@ example: [`examples/interp.kl`](examples/interp.kl).
 Type `fn(T…): Ret` — top-level function as a value (C function pointer, no
 capture). See [note/13-fn-ptr.md](note/13-fn-ptr.md),
 [`examples/fn_ptr.kl`](examples/fn_ptr.kl).
+
+### Slice helpers
+
+Zero-alloc `import slice` (`map_into_*`, `filter_into_*`, `reduce_*`, …) and
+heap `import slice_alloc` (`map_alloc_*` / `filter_alloc_*` + explicit
+`Allocator` / `defer free`). Separate modules so freestanding code never pulls
+`malloc`. See [note/16-slice.md](note/16-slice.md),
+[`examples/slice_ops.kl`](examples/slice_ops.kl),
+[`examples/slice_alloc_demo.kl`](examples/slice_alloc_demo.kl).
 
 ### `match`
 

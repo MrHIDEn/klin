@@ -36,6 +36,14 @@ fn main() {
 
 Issue: [057](../issues/057-allocator.md). Example: [`examples/mem_heap.kl`](../examples/mem_heap.kl).
 
+## Konsumenci stdlib
+
+| Moduł | Uwagi |
+|---|---|
+| [`slice_alloc`](../stdlib/slice_alloc.kl) | `map_alloc_*` / `filter_alloc_*` — [017](../issues/017-collection-methods.md), [note/16-slice.md](16-slice.md) |
+
+Caller zawsze: `defer mem.free_i32(&a, out)` (lub `free_u8` / `free_bytes`).
+
 ## Nie obiecywać w MVP / później
 
 Szkic D1 `a.alloc(u8, n)` wymaga **argumentu typu** w wywołaniu metody.
@@ -47,7 +55,8 @@ Dziś zamiast tego:
 
 - bajty: `a.alloc_bytes(n)` / `a.free_bytes`
 - typowane: jawne `mem.alloc_i32` / `free_i32` (i `u8`) — ewentualnie
-  rozszerzenie przez `$fn` jak w planie `slice`, nie przez składnię `alloc(T, n)`
+  rozszerzenie przez `$fn` jak w `slice` / `slice_alloc`, nie przez składnię
+  `alloc(T, n)`
 
 **Później (osobne kroki, nie w 057):**
 
@@ -56,5 +65,4 @@ Dziś zamiast tego:
 | `a.alloc(T, n)` / cukier albo generyki | 034 / D3 |
 | Arena + `deinit` (jeden `defer`) | follow-up po 057 |
 | Vtable wielu alokatorów | follow-up (dziś wystarczy heap + pusty struct) |
-| `slice.map_alloc_*` / `filter_alloc_*` | [017](../issues/017-collection-methods.md) warstwa 2 |
 | GC / autofree / ukryty `malloc` w rdzeniu | **nigdy** (zasada nadrzędna) |

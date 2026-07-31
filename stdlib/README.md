@@ -21,6 +21,7 @@ User libraries / directory packages: [note/11-biblioteki-klin.md](../note/11-bib
 | [`time`](time.kl) | Wall / monotonic clocks, `Duration`, format, UTC calendar `add_*` |
 | [`mem`](mem.kl) | Explicit host heap `Allocator` (`malloc`/`free`) |
 | [`slice`](slice.kl) | Zero-alloc `each` / `map_into` / `filter_into` / … (fn-ptr; `$fn` per `T`) |
+| [`slice_alloc`](slice_alloc.kl) | `map_alloc_*` / `filter_alloc_*` with explicit `Allocator` (pulls `mem`) |
 
 ## `io`
 
@@ -92,7 +93,8 @@ Do **not** import on freestanding targets without a heap.
 ## `slice`
 
 Zero-alloc helpers via fn-pointers ([issue 017](../issues/017-collection-methods.md),
-[note/13-fn-ptr.md](../note/13-fn-ptr.md)). Names are monomorphized (`_i32`, `_u8`):
+[note/16-slice.md](../note/16-slice.md), [note/13-fn-ptr.md](../note/13-fn-ptr.md)).
+Names are monomorphized (`_i32`, `_u8`):
 
 ```klin
 import slice
@@ -105,3 +107,29 @@ fn main() {
     let _ = slice.map_into_i32(xs[:], ys[:], times2) or { 0 }
 }
 ```
+
+Does **not** import `mem` — freestanding-safe. For heap results use `slice_alloc`.
+
+## `slice_alloc`
+
+Allocating helpers ([issue 017](../issues/017-collection-methods.md) layer 2,
+[note/16-slice.md](../note/16-slice.md)). Separate from `slice` so zero-alloc
+code stays free of `malloc`. Caller frees:
+
+```klin
+import mem
+import slice_alloc
+
+fn times2(x: i32): i32 { return x + x }
+
+fn main() {
+    let mut a = mem.heap()
+    let xs: [3]i32 = [1, 2, 3]
+    let mut out = slice_alloc.map_alloc_i32(&a, xs[:], times2) or {
+        mem.empty_i32()
+    }
+    defer mem.free_i32(&a, out)
+}
+```
+
+Do **not** import on freestanding targets without a heap.

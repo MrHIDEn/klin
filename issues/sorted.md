@@ -32,7 +32,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [012](012-stdlib-io.md) | Opcjonalny moduł I/O (`io.print` / `println`) | ✅ | 006 |
 | [014](014-match.md) | `match` (domyślny break, `1,2,3` / `4..=10`, stmt+expr) | ✅ | 003 |
 | [016](016-string-interpolation.md) | Interpolowane napisy | ✅ | 012 |
-| [017](017-collection-methods.md) | Metody kolekcji (`slice` 0+1; `*_alloc` później) | ✅ | 007 |
+| [017](017-collection-methods.md) | Metody kolekcji (`slice` + `slice_alloc`) | ✅ | 007, 057 |
 | [019](019-default-int-types.md) | Domyślne typy (`int` / `float` → `i32` / `f64`) | ✅ | 002 |
 | [020](020-biblioteki-klin.md) | Własne biblioteki Klina (`lib/` / `-I` / `KLIN_PATH`) | ✅ | 006 |
 | [021](021-biblioteki-c.md) | Biblioteki C (FFI / link) | ✅ | 006, 010 |

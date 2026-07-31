@@ -35,11 +35,15 @@ fn main() {
 typu w wywołaniu; D3/`$fn`, ewentualnie [034](034-typy-generyczne.md) później).
 Szczegóły: [note/14-allocator.md](../note/14-allocator.md) § „Nie obiecywać”.
 
+## Zrobione poza 057 (konsumenci)
+
+- [017](017-collection-methods.md) warstwa 2 — [`slice_alloc`](../stdlib/slice_alloc.kl)
+  (`map_alloc_*` / `filter_alloc_*`); note: [16-slice.md](../note/16-slice.md)
+
 ## Follow-up (później)
 
 - `a.alloc(T, n)` — cukier / generyki (034), nie w tym issue
 - Arena / `deinit`, vtable wielu alokatorów
-- [017](017-collection-methods.md) warstwa 2 — `slice.map_alloc_*` / `filter_alloc_*`
 
 ## Czego nie robić
 

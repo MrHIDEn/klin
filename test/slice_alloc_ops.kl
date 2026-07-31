@@ -1,0 +1,29 @@
+import mem
+import slice_alloc
+
+fn times2(x: i32): i32 {
+    return x * 2
+}
+
+fn is_pos(x: i32): bool {
+    return x > 0
+}
+
+fn main() {
+    let mut a = mem.heap()
+    let xs: [4]i32 = [1, 0 - 2, 3, 0]
+
+    let mut mapped = slice_alloc.map_alloc_i32(&a, xs[:], times2) or {
+        printf("map_fail\n")
+        mem.empty_i32()
+    }
+    defer mem.free_i32(&a, mapped)
+    printf("map=%d,%d,%d,%d\n", mapped[0], mapped[1], mapped[2], mapped[3])
+
+    let mut filtered = slice_alloc.filter_alloc_i32(&a, xs[:], is_pos) or {
+        printf("filter_fail\n")
+        mem.empty_i32()
+    }
+    defer mem.free_i32(&a, filtered)
+    printf("n=%d f0=%d f1=%d\n", filtered.len, filtered[0], filtered[1])
+}
