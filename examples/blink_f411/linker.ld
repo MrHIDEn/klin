@@ -21,13 +21,14 @@ SECTIONS
     *(.rodata*)
   } > FLASH
 
-  _sidata = LOADADDR(.data);
-  .data : AT > FLASH
+  .data :
   {
     _sdata = .;
     *(.data*)
     _edata = .;
-  } > RAM
+  } > RAM AT> FLASH
+
+  _sidata = LOADADDR(.data);
 
   .bss (NOLOAD) :
   {
