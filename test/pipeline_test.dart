@@ -1445,6 +1445,36 @@ fn main() {}
     expect(h, contains('#endif /* KLIN_LIB_H */'));
   });
 
+  test('emitH closes nested struct deps regardless of decl order (issue 046)', () {
+    // Signature only mentions Outer; Inner is two levels down. One pass over
+    // program.structs (decl order Inner → Mid → Outer) used to miss Inner.
+    const source = '''
+struct Inner {
+  x: i32
+}
+struct Mid {
+  inner: Inner
+}
+struct Outer {
+  mid: Mid
+}
+@[cexport, codename("klin_take_outer")]
+fn take_outer(o: Outer): i32 {
+  return o.mid.inner.x
+}
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final h = emitH(program, 'nest.kl');
+    expect(h, contains('Inner'));
+    expect(h, contains('Mid'));
+    expect(h, contains('Outer'));
+    expect(h.indexOf('Inner'), lessThan(h.indexOf('Mid')));
+    expect(h.indexOf('Mid'), lessThan(h.indexOf('Outer')));
+    expect(h, contains('klin_take_outer'));
+  });
+
   test('C caller can #include emitH header (issue 046)', () async {
     final kl = File('${tmp.path}/lib_add_h.kl');
     await kl.writeAsString('''

@@ -140,12 +140,20 @@ String emitH(Program program, String sourcePath) {
       collectSig(receiver.resolvedType);
     }
   }
-  for (final struct in program.structs) {
-    final key = '${struct.moduleName}.${struct.name}';
-    if (!structKeys.contains(key)) continue;
-    for (final field in struct.fields) {
-      collectSig(field.resolvedType);
+
+  // Fixed-point: nested struct fields may add keys (and their deps) later.
+  var growing = true;
+  while (growing) {
+    final before = structKeys.length + sliceTypes.length + resultTypes.length;
+    for (final struct in program.structs) {
+      final key = '${struct.moduleName}.${struct.name}';
+      if (!structKeys.contains(key)) continue;
+      for (final field in struct.fields) {
+        collectSig(field.resolvedType);
+      }
     }
+    growing =
+        structKeys.length + sliceTypes.length + resultTypes.length > before;
   }
 
   for (final type in sliceTypes) {
@@ -154,20 +162,55 @@ String emitH(Program program, String sourcePath) {
   }
   if (sliceTypes.isNotEmpty) buf.writeln();
 
-  for (final struct in program.structs) {
-    final key = '${struct.moduleName}.${struct.name}';
-    if (!structKeys.contains(key)) continue;
-    _line(buf, struct.pos.line, struct.sourcePath ?? sourcePath);
-    buf.writeln('typedef struct {');
-    for (final field in struct.fields) {
-      final type = field.resolvedType;
-      if (type == null) {
-        throw StateError('emit: missing type for field `${field.name}`');
+  // Emit structs so field dependencies appear before dependents.
+  final emittedStructs = <String>{};
+  while (emittedStructs.length < structKeys.length) {
+    var progress = false;
+    for (final struct in program.structs) {
+      final key = '${struct.moduleName}.${struct.name}';
+      if (!structKeys.contains(key) || emittedStructs.contains(key)) continue;
+      final fieldDeps = <String>{};
+      for (final field in struct.fields) {
+        _collectStructKeys(field.resolvedType, fieldDeps);
       }
-      buf.writeln('    ${_cDecl(type, field.name)};');
+      if (!fieldDeps
+          .every((dep) => !structKeys.contains(dep) || emittedStructs.contains(dep))) {
+        continue;
+      }
+      _line(buf, struct.pos.line, struct.sourcePath ?? sourcePath);
+      buf.writeln('typedef struct {');
+      for (final field in struct.fields) {
+        final type = field.resolvedType;
+        if (type == null) {
+          throw StateError('emit: missing type for field `${field.name}`');
+        }
+        buf.writeln('    ${_cDecl(type, field.name)};');
+      }
+      buf.writeln('} ${_structCName(struct.moduleName, struct.name)};');
+      buf.writeln();
+      emittedStructs.add(key);
+      progress = true;
     }
-    buf.writeln('} ${_structCName(struct.moduleName, struct.name)};');
-    buf.writeln();
+    if (!progress) {
+      // Cycle or unresolved dep — fall back to declaration order (like emitC).
+      for (final struct in program.structs) {
+        final key = '${struct.moduleName}.${struct.name}';
+        if (!structKeys.contains(key) || emittedStructs.contains(key)) continue;
+        _line(buf, struct.pos.line, struct.sourcePath ?? sourcePath);
+        buf.writeln('typedef struct {');
+        for (final field in struct.fields) {
+          final type = field.resolvedType;
+          if (type == null) {
+            throw StateError('emit: missing type for field `${field.name}`');
+          }
+          buf.writeln('    ${_cDecl(type, field.name)};');
+        }
+        buf.writeln('} ${_structCName(struct.moduleName, struct.name)};');
+        buf.writeln();
+        emittedStructs.add(key);
+      }
+      break;
+    }
   }
 
   for (final type in resultTypes) {
