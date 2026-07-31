@@ -1,0 +1,6 @@
+module geom
+
+// Skipped when loading package geom/ (*_test.kl). Not part of klin run app.kl.
+fn would_break_if_loaded(): i32 {
+    return 999
+}

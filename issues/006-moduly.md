@@ -26,6 +26,11 @@ C23 nadal nie ma modułów; C++ dostał je dopiero w C++20.
 `pub` jawne, a nie eksport przez wielkość litery jak w Go — jawne bije
 ukryte w konwencji nazewniczej.
 
+## Nota
+
+[`note/12-moduly.md`](../note/12-moduly.md). Przykłady: [`examples/modules/`](../examples/modules/),
+katalog-pakiet: [`examples/pkg_geom/`](../examples/pkg_geom/).
+
 ## Kryterium ukończenia
 
 - [x] projekt z 3 modułów kompiluje się do jednego `.c`

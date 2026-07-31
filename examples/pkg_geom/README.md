@@ -1,8 +1,20 @@
 # Directory package = one module (issue 047)
 
-`import geom` loads the **directory** `geom/` (both `.kl` files share
+`import geom` loads the **directory** `geom/` (both production `.kl` files share
 `module geom`). Private `sq` in `len.kl` is visible to `len_sq` in the same
 package; only `pub` symbols are usable from `app.kl`.
+
+`geom/len_test.kl` matches `*_test.kl` and is **skipped** when loading the
+package (like Go `_test.go`) — it does not affect `klin run app.kl`.
+
+```text
+examples/pkg_geom/
+  app.kl
+  geom/
+    vec.kl
+    len.kl
+    len_test.kl   # omitted from package load
+```
 
 ```sh
 cd examples/pkg_geom
@@ -10,4 +22,5 @@ dart run ../../bin/klin.dart run app.kl
 # → 25
 ```
 
-Details: [note/11-biblioteki-klin.md](../../note/11-biblioteki-klin.md).
+Search paths: [note/11-biblioteki-klin.md](../../note/11-biblioteki-klin.md).
+Modules / `pub`: [note/12-moduly.md](../../note/12-moduly.md).
