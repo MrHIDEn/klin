@@ -1,11 +1,11 @@
 $fn point(name: name, T: type) {
-struct $name {
-  x: $T
-  y: $T
-}
-fn (p: $name) len_sq(): $T {
-  return p.x * p.x + p.y * p.y
-}
+  struct $name {
+    x: $T
+    y: $T
+  }
+  fn (p: $name) len_sq(): $T {
+    return p.x * p.x + p.y * p.y
+  }
 }
 
 $point(Vec2i, i32)

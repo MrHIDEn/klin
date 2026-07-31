@@ -1,17 +1,18 @@
-@[cinclude("stm32f411_regs.h")]
+$peripherals_from_svd("../../../third_party/svd/stm32f411.svd", "RCC,GPIOA,STK")
+
 @[codename("SysTick_Handler")]
 fn systick_handler() {
-  GPIOA_ODR_ODR5_toggle()
+  GPIOA.ODR.ODR5.toggle()
 }
 
 fn main() {
-  RCC_AHB1ENR_GPIOAEN_set(1)
-  GPIOA_MODER_MODER5_write(1) // Output
-  STK_RVR_RELOAD_write(7_999_999)
-  STK_CVR_CURRENT_write(0)
-  STK_CSR_ENABLE_set(1)
-  STK_CSR_TICKINT_set(1)
-  STK_CSR_CLKSOURCE_set(1)
+  RCC.AHB1ENR.GPIOAEN.set(1)
+  GPIOA.MODER.MODER5.write(.Output)
+  STK.RVR.RELOAD.write(7_999_999)
+  STK.CVR.CURRENT.write(0)
+  STK.CSR.ENABLE.set(1)
+  STK.CSR.TICKINT.set(1)
+  STK.CSR.CLKSOURCE.set(1)
   while true {
     asm("wfi")
   }

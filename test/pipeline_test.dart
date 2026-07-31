@@ -249,6 +249,48 @@ $note(i32)
     expect(expanded, contains('fn f(): i32'));
   });
 
+  test(r'$peripherals_from_svd rewrites fluent MMIO (issue 027)', () {
+    final dir = Directory('${tmp.path}/svd_fluent')..createSync();
+    File('${dir.path}/tiny.svd').writeAsStringSync('''
+<device><peripherals>
+  <peripheral><name>RCC</name><baseAddress>0x40023800</baseAddress><registers>
+    <register><name>AHB1ENR</name><addressOffset>0x30</addressOffset><fields>
+      <field><name>GPIOAEN</name><bitOffset>0</bitOffset><bitWidth>1</bitWidth></field>
+    </fields></register>
+  </registers></peripheral>
+  <peripheral><name>GPIOA</name><baseAddress>0x40020000</baseAddress><registers>
+    <register><name>MODER</name><addressOffset>0</addressOffset><fields>
+      <field><name>MODER5</name><bitOffset>10</bitOffset><bitWidth>2</bitWidth>
+        <enumeratedValues><enumeratedValue><name>Output</name><value>1</value></enumeratedValue></enumeratedValues>
+      </field>
+    </fields></register>
+    <register><name>ODR</name><addressOffset>0x14</addressOffset><fields>
+      <field><name>ODR5</name><bitOffset>5</bitOffset><bitWidth>1</bitWidth></field>
+    </fields></register>
+  </registers></peripheral>
+</peripherals></device>
+''');
+    final klPath = '${dir.path}/blinky.kl';
+    File(klPath).writeAsStringSync(r'''
+$peripherals_from_svd("tiny.svd", "RCC,GPIOA")
+fn main() {
+  RCC.AHB1ENR.GPIOAEN.set(1)
+  GPIOA.MODER.MODER5.write(.Output)
+  GPIOA.ODR.ODR5.toggle()
+}
+''');
+    final expanded = preprocess(
+      File(klPath).readAsStringSync(),
+      path: klPath,
+    );
+    expect(expanded, contains('@[cinclude("tiny_regs.h")]'));
+    expect(expanded, contains('RCC_AHB1ENR_GPIOAEN_set(1)'));
+    expect(expanded, contains('GPIOA_MODER_MODER5_write(1)'));
+    expect(expanded, contains('GPIOA_ODR_ODR5_toggle()'));
+    expect(expanded, isNot(contains('RCC.AHB1ENR')));
+    expect(File('${dir.path}/tiny_regs.h').existsSync(), isTrue);
+  });
+
   test('--emit-pp writes expanded Klin source', () async {
     final proc = await Process.run(
       'dart',
@@ -942,7 +984,13 @@ fn main() {}
       workingDirectory: example,
     );
     expect(objdump.exitCode, 0, reason: objdump.stderr.toString());
-    expect(objdump.stdout.toString(), contains('<SysTick_Handler>'));
+    final disasm = objdump.stdout.toString();
+    expect(disasm, contains('<SysTick_Handler>'));
+    // Fluent API must lower to static inline MMIO — no bl to accessors (027).
+    final accessorBl = RegExp(
+      r'bl\s+[0-9a-f]+\s+<(?:RCC_|GPIOA_|STK_)[^>]+>',
+    );
+    expect(accessorBl.hasMatch(disasm), isFalse, reason: disasm);
   });
 }
 

@@ -9,6 +9,18 @@ final class SourcePos {
   String toString() => '$line:$col';
 }
 
+/// Error from `$fn` / `$peripherals_from_svd` expansion (before lex).
+final class PreprocessError implements Exception {
+  final String message;
+  final SourcePos pos;
+  final String path;
+
+  const PreprocessError(this.message, this.pos, {this.path = '<input>'});
+
+  @override
+  String toString() => '$path:${pos.line}:${pos.col}: $message';
+}
+
 enum TokenKind {
   // keywords
   fn,
