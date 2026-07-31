@@ -39,7 +39,7 @@ Szczegóły: [note/14-allocator.md](../note/14-allocator.md) § „Nie obiecywa�
 
 - `a.alloc(T, n)` — cukier / generyki (034), nie w tym issue
 - Arena / `deinit`, vtable wielu alokatorów
-- [017](017-collection-methods.md) warstwa 2 — `slice.map_alloc_*` / `filter_alloc_*`
+- [017](017-collection-methods.md) warstwa 2 — `slice_alloc.map_alloc_*` / `filter_alloc_*` ✅
 
 ## Czego nie robić
 

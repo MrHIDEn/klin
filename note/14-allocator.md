@@ -56,5 +56,5 @@ Dziś zamiast tego:
 | `a.alloc(T, n)` / cukier albo generyki | 034 / D3 |
 | Arena + `deinit` (jeden `defer`) | follow-up po 057 |
 | Vtable wielu alokatorów | follow-up (dziś wystarczy heap + pusty struct) |
-| `slice.map_alloc_*` / `filter_alloc_*` | [017](../issues/017-collection-methods.md) warstwa 2 |
+| `slice_alloc.map_alloc_*` / `filter_alloc_*` | [017](../issues/017-collection-methods.md) warstwa 2 ✅ |
 | GC / autofree / ukryty `malloc` w rdzeniu | **nigdy** (zasada nadrzędna) |
