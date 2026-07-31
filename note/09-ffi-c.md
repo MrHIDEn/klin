@@ -43,8 +43,10 @@ klin run -L/opt/lib -lfoo main.kl
 
 `@[link]` + `-l` / `-L` trafiają do argv `gcc`/`clang`/`tcc`. Przy `--emit-c`
 lista `@[link]` trafia też do `out/<base>.link` (Makefile bare-metal).
+Ścieżki obejmują też jednostki ASM (`.s` / `.S`) — [note/10-asm.md](10-asm.md),
+[`examples/asm_add/`](../examples/asm_add/).
 
-Przykład: [`examples/ffi_add/`](../examples/ffi_add/).
+Przykład C: [`examples/ffi_add/`](../examples/ffi_add/).
 
 ## Export (Klin → C)
 
@@ -76,4 +78,4 @@ C woła wyeksportowaną funkcję po `codename`. Przykład:
 
 FFI **nie** ukrywa alokacji ani ownership — to umowa użytkownika z kodem C.
 Bare-metal: ta sama ścieżka deklaracji; inne liby (HAL → [031](../issues/031-biblioteki-hal.md)).
-Jednostki `.s` → [022](../issues/022-biblioteki-asm.md).
+Jednostki `.s` → [note/10-asm.md](10-asm.md) / [022](../issues/022-biblioteki-asm.md).

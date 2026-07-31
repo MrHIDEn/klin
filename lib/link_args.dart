@@ -39,8 +39,9 @@ List<LinkAttrRef> collectLinkAttrRefs(Program program, String fallbackDir) {
 /// Builds `cc` argv: `[cPath, objects…, -L…, -l…, -o, binPath]`.
 ///
 /// `@[link]` strings that start with `-L` / `-l` / other `-` are linker flags.
-/// Otherwise they are object/archive paths resolved relative to the declaring
-/// `.kl` file's directory. CLI `-L` dirs are emitted before any `-l` flags.
+/// Otherwise they are object/archive/assembly paths (`.a` / `.o` / `.so` /
+/// `.s` / `.S`) resolved relative to the declaring `.kl` file's directory.
+/// CLI `-L` dirs are emitted before any `-l` flags.
 List<String> buildCcArgs({
   required String cPath,
   required String binPath,

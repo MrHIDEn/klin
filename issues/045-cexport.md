@@ -30,7 +30,7 @@ Nota: [`note/09-ffi-c.md`](../note/09-ffi-c.md) (import **i** export).
 
 ## Poza zakresem
 
-- [ ] `--emit-h` (nagłówek C z prototypami)
+- [ ] `--emit-h` (nagłówek C z prototypami) → [046](046-emit-h.md)
 - [ ] automatyczne `.a` / `.so`
 - [ ] `cexport` na metodach / typach
 - [ ] rpath / `LD_LIBRARY_PATH`

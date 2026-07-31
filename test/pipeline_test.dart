@@ -1511,6 +1511,42 @@ fn main() {
     expect(result.stdout, '5\n');
   });
 
+  test('klin run links @[cimport] against an ASM unit (issue 022)', () async {
+    final asm = File('${tmp.path}/add.S');
+    await asm.writeAsString(r'''
+#if defined(__APPLE__)
+#  define ASM_ADD_SYM _asm_add
+#else
+#  define ASM_ADD_SYM asm_add
+#endif
+.globl ASM_ADD_SYM
+ASM_ADD_SYM:
+#if defined(__aarch64__) || defined(__arm64__)
+        add     w0, w0, w1
+        ret
+#elif defined(__x86_64__)
+        movl    %edi, %eax
+        addl    %esi, %eax
+        ret
+#else
+#  error unsupported arch
+#endif
+''');
+    final kl = File('${tmp.path}/use_asm.kl');
+    await kl.writeAsString('''
+@[link("add.S")]
+@[cimport, codename("asm_add")]
+fn asm_add(a: i32, b: i32): i32
+
+fn main() {
+  printf("%d\\n", asm_add(2, 3))
+}
+''');
+    final result = await _compileAndRun(kl.path, tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, '5\n');
+  });
+
   test('klin run -l/-L links a named library (issue 021)', () async {
     final addC = File('${tmp.path}/mylib.c');
     await addC.writeAsString('''

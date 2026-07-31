@@ -11,7 +11,8 @@
 - `@[cinclude]` → `#include` w emisji (bez parsera nagłówków C)
 - `@[link("…")]` przekazywane do host `cc` przy `klin run` / `klin test`
   - string zaczynający się od `-` → flaga as-is (`-lm`, `-L…`)
-  - inaczej → ścieżka `.a` / `.o` / `.so` względem katalogu `.kl`
+  - inaczej → ścieżka `.a` / `.o` / `.so` / `.s` / `.S` względem katalogu `.kl`
+    (ASM → [022](022-biblioteki-asm.md))
 - CLI: `-l <name>`, `-L <dir>` (także sklejone `-lm`, `-L/path`)
 - nieznane wywołania = błąd checkera, **oprócz** host builtins `puts` / `printf`
 - przykład: [`examples/ffi_add/`](../examples/ffi_add/)
@@ -25,7 +26,8 @@ HAL (STM32Cube / LL) → [031](031-biblioteki-hal.md).
 ## Poza zakresem / później
 
 - [ ] Pełny parser nagłówków C
-- [ ] Biblioteki Klina (020) / jednostki ASM (022) — osobne issue
+- [ ] Biblioteki Klina (020) — osobne issue
+- [x] Jednostki ASM (`.s` via `@[link]`) → [022](022-biblioteki-asm.md)
 - [ ] Manifest projektu (JSON/toml) zamiast attrs + CLI
 - [x] `cexport` → [045](045-cexport.md)
 - [ ] rpath / `LD_LIBRARY_PATH`

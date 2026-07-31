@@ -1,0 +1,7 @@
+@[link("add.S")]
+@[cimport, codename("asm_add")]
+fn asm_add(a: i32, b: i32): i32
+
+fn main() {
+    printf("%d\n", asm_add(2, 3))
+}
