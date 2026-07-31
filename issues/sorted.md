@@ -60,6 +60,12 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [030](030-isr-decorators.md) | Przerwania przez dekoratory | 💭 | 010 |
 | [031](031-biblioteki-hal.md) | Biblioteki HAL (Cube / LL) | 💭 | 010, 021 |
 | [034](034-typy-generyczne.md) | Typy generyczne w języku (vs D3/`$fn`) | 💭 | 026 |
+| [039](039-time-calendar.md) | Kalendarzowe `add_days` / miesiące / lata | 💭 | 037 |
+| [040](040-time-zones.md) | Strefy IANA + DST | 💭 | 037 |
+| [041](041-time-locale-relative.md) | Locale dat + relative strings | 💭 | 037 |
+| [042](042-time-format-luxon.md) | Dialekt formatu `yyyy-MM-dd` w `time` | 💭 | 037 |
+| [043](043-rtc.md) | RTC → `Instant` (osobny moduł) | 💭 | 010, 031? |
+| [044](044-cpu-cycles.md) | Cykle CPU / SysTick → `Duration` | 💭 | 010 |
 
 ---
 

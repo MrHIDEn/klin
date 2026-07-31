@@ -16,4 +16,5 @@ Golden: `test/time_basic.kl`. Docs: [note/08-time.md](../note/08-time.md).
 
 ## Poza zakresem
 
-Luxon-like z 037 (IANA, locale, kalendarzowe miesiące, `${t:…}`, RTC/CPU).
+Luxon-like / hardware — osobne issue: [039](039-time-calendar.md)–[044](044-cpu-cycles.md)
+(lista w [037](037-datetime-format.md)). Cukier `${t:…}` nie planowany.

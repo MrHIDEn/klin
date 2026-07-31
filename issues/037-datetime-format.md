@@ -26,15 +26,17 @@ t.toRelative()
 time.now() ukrywający RTC / CYCCNT
 ```
 
-- [ ] IANA timezones + DST
-- [ ] Locale (nazwy dni/miesięcy)
-- [ ] Relative strings (`toRelative` / „2 days ago”)
-- [ ] Kalendarzowe `add_days` / `add_months` / `add_years`
-- [ ] Typ `Interval` a la Luxon (MVP: dwa `Instant` + `between`)
-- [ ] Cukier interpolacji `${t:…}` — format tylko przez API `time`
-- [ ] RTC MCU / chip jako `time.now()` (zamiast: `rtc.read() → Instant`)
-- [ ] Cykle CPU w module `time` (zamiast: osobne + jawne `freq_hz`)
-- [ ] Tokeny Luxon (`yyyy-MM-dd`) jako dialekt w `time.format` (nie w slotach 016)
+Follow-upy (osobne issue):
+
+- [ ] [039](039-time-calendar.md) — kalendarzowe `add_days` / `add_months` / `add_years`; ewentualnie `Interval`
+- [ ] [040](040-time-zones.md) — IANA timezones + DST
+- [ ] [041](041-time-locale-relative.md) — locale (nazwy dni/miesięcy) + relative strings
+- [ ] [042](042-time-format-luxon.md) — tokeny Luxon (`yyyy-MM-dd`) tylko w `time.format` / `parse`
+- [ ] [043](043-rtc.md) — `rtc.read() → Instant` (nie `time.now()`)
+- [ ] [044](044-cpu-cycles.md) — cykle CPU / SysTick → `Duration` (osobny moduł, jawne `freq_hz`)
+
+**Nie planowane** (bez osobnego issue): cukier interpolacji `${t:…}` / `${t:yyyy-MM-dd}` —
+format tylko przez API `time` (016 zostaje printf/maski).
 
 ## Powiązanie z 016
 
