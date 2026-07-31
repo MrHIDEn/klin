@@ -1,0 +1,12 @@
+import slice
+
+fn times2(x: i32): i32 {
+    return x + x
+}
+
+fn main() {
+    let xs: [3]i32 = [1, 2, 3]
+    let mut ys: [3]i32 = [0, 0, 0]
+    let _ = slice.map_into_i32(xs[:], ys[:], times2) or { 0 }
+    printf("%d %d %d\n", ys[0], ys[1], ys[2])
+}

@@ -1206,6 +1206,11 @@ final class Checker {
       return pointer.pointee;
     }
     if (place is IndexExpr) {
+      final objectType = _inferExpr(place.object);
+      // Slice header is a value; element storage is shared with the caller (Go-like).
+      if (objectType is SliceType) {
+        return _inferExpr(place);
+      }
       final type = _inferExpr(place);
       _requireMutableArrayPlace(place.object, pos);
       return type;

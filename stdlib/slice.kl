@@ -1,0 +1,96 @@
+/// Zero-alloc slice helpers (issue 017 layer 0+1).
+/// Monomorphized via `$fn` — use `each_i32`, `map_into_u8`, …
+module slice
+
+$fn slice_ops(T: type) {
+  pub fn each_$T(xs: []$T, f: fn($T): void) {
+    let mut i: i32 = 0
+    while i < xs.len {
+      f(xs[i])
+      i = i + 1
+    }
+  }
+
+  /// Index of first element matching [pred], or `-1`.
+  pub fn index_of_$T(xs: []$T, pred: fn($T): bool): i32 {
+    let mut i: i32 = 0
+    while i < xs.len {
+      if pred(xs[i]) {
+        return i
+      }
+      i = i + 1
+    }
+    return 0 - 1
+  }
+
+  pub fn any_$T(xs: []$T, pred: fn($T): bool): bool {
+    return index_of_$T(xs, pred) >= 0
+  }
+
+  pub fn all_$T(xs: []$T, pred: fn($T): bool): bool {
+    let mut i: i32 = 0
+    while i < xs.len {
+      if pred(xs[i]) {
+      } else {
+        return false
+      }
+      i = i + 1
+    }
+    return true
+  }
+
+  pub fn count_$T(xs: []$T, pred: fn($T): bool): i32 {
+    let mut n: i32 = 0
+    let mut i: i32 = 0
+    while i < xs.len {
+      if pred(xs[i]) {
+        n = n + 1
+      }
+      i = i + 1
+    }
+    return n
+  }
+
+  pub fn reduce_$T(xs: []$T, init: $T, f: fn($T, $T): $T): $T {
+    let mut acc: $T = init
+    let mut i: i32 = 0
+    while i < xs.len {
+      acc = f(acc, xs[i])
+      i = i + 1
+    }
+    return acc
+  }
+
+  /// Requires `dst.len == xs.len`. Returns `0` on success.
+  pub fn map_into_$T(xs: []$T, dst: []$T, f: fn($T): $T): !i32 {
+    if dst.len != xs.len {
+      return error(1)
+    }
+    let mut i: i32 = 0
+    while i < xs.len {
+      dst[i] = f(xs[i])
+      i = i + 1
+    }
+    return 0
+  }
+
+  /// Requires `dst.len >= xs.len`. Returns number of elements written.
+  pub fn filter_into_$T(xs: []$T, dst: []$T, pred: fn($T): bool): !i32 {
+    if dst.len < xs.len {
+      return error(1)
+    }
+    let mut n: i32 = 0
+    let mut i: i32 = 0
+    while i < xs.len {
+      if pred(xs[i]) {
+        dst[n] = xs[i]
+        n = n + 1
+      }
+      i = i + 1
+    }
+    return n
+  }
+}
+
+$slice_ops(i32)
+$slice_ops(u8)

@@ -1,0 +1,35 @@
+import slice
+
+fn times2(x: i32): i32 {
+    return x * 2
+}
+
+fn is_pos(x: i32): bool {
+    return x > 0
+}
+
+fn add(a: i32, b: i32): i32 {
+    return a + b
+}
+
+fn main() {
+    let xs: [4]i32 = [1, 0 - 2, 3, 0]
+    let mut out: [4]i32 = [0, 0, 0, 0]
+    let _ = slice.map_into_i32(xs[:], out[:], times2) or {
+        printf("map_fail\n")
+        0
+    }
+    printf("map=%d,%d,%d,%d\n", out[0], out[1], out[2], out[3])
+
+    let mut filt: [4]i32 = [0, 0, 0, 0]
+    let n = slice.filter_into_i32(xs[:], filt[:], is_pos) or {
+        printf("filter_fail\n")
+        0
+    }
+    printf("n=%d f0=%d f1=%d\n", n, filt[0], filt[1])
+
+    printf("idx=%d\n", slice.index_of_i32(xs[:], is_pos))
+    printf("any=%d\n", slice.any_i32(xs[:], is_pos))
+    printf("count=%d\n", slice.count_i32(xs[:], is_pos))
+    printf("sum=%d\n", slice.reduce_i32(xs[:], 0, add))
+}

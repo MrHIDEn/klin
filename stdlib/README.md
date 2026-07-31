@@ -20,6 +20,7 @@ User libraries / directory packages: [note/11-biblioteki-klin.md](../note/11-bib
 | [`testing`](testing.kl) | `assert` / `assert_eq_i32` for `klin test` |
 | [`time`](time.kl) | Wall / monotonic clocks, `Duration`, format, UTC calendar `add_*` |
 | [`mem`](mem.kl) | Explicit host heap `Allocator` (`malloc`/`free`) |
+| [`slice`](slice.kl) | Zero-alloc `each` / `map_into` / `filter_into` / … (fn-ptr; `$fn` per `T`) |
 
 ## `io`
 
@@ -87,3 +88,20 @@ fn main() {
 `alloc_bytes` / `alloc_i32` (and `free_*`) call libc only when this module is
 imported. Use `empty_u8` / `empty_i32` in `or` fallbacks (safe with `free_*`).
 Do **not** import on freestanding targets without a heap.
+
+## `slice`
+
+Zero-alloc helpers via fn-pointers ([issue 017](../issues/017-collection-methods.md),
+[note/13-fn-ptr.md](../note/13-fn-ptr.md)). Names are monomorphized (`_i32`, `_u8`):
+
+```klin
+import slice
+
+fn times2(x: i32): i32 { return x + x }
+
+fn main() {
+    let xs: [3]i32 = [1, 2, 3]
+    let mut ys: [3]i32 = [0, 0, 0]
+    let _ = slice.map_into_i32(xs[:], ys[:], times2) or { 0 }
+}
+```
