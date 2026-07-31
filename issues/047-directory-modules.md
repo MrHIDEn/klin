@@ -24,3 +24,5 @@ Go/V: pakiet = katalog, wiele plików w jednej przestrzeni nazw.
 - nested `geom/vec/`, `import a.b`
 - menedżer pakietów / manifest wersji
 - `*_test.kl` jako osobny pakiet testowy w katalogu (osobny krok)
+- aliasy importów / `import "…"` → [048](048-import-aliases.md)
+- importy zdalne (GitHub) → [049](049-remote-imports.md)

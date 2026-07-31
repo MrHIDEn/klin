@@ -55,4 +55,6 @@ Emisja nadal **jeden** `.c`.
 ## Poza zakresem
 
 Manifest / wersje / rejestr, nested `import a/b`, osobne `.a` z lib Klin.
+Aliasy / string: [048](../issues/048-import-aliases.md). Remote GitHub:
+[049](../issues/049-remote-imports.md).
 FFI C: [09-ffi-c.md](09-ffi-c.md). CLI: [06-cli.md](06-cli.md).
