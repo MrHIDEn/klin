@@ -25,7 +25,8 @@ are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), n
 | `time_demo.kl` | `stdlib/time` — Instant / Duration / format ([note/08-time.md](../note/08-time.md)) |
 | `ffi_add/` | Host C `.a` via `@[cimport]` + `@[link]` ([note/09-ffi-c.md](../note/09-ffi-c.md)) |
 | `cexport_add/` | Klin → C via `@[cexport, codename]` ([note/09-ffi-c.md](../note/09-ffi-c.md)) |
+| `asm_add/` | Host `.S` via `@[link]` + `@[cimport]` ([note/10-asm.md](../note/10-asm.md)) |
 | `modules/` | `module` / `import` (`app.kl` entry) |
-| `stm32/blink_f411/` | Nucleo-F411RE LED — `$peripherals_from_svd` + fluent MMIO (`arm-none-eabi-gcc`) |
+| `stm32/blink_f411/` | Nucleo-F411RE LED — `$peripherals_from_svd` + `@[link("startup.s")]` → `out/*.link` |
 
 Bare-metal boards go under `stm32/<name>/`.

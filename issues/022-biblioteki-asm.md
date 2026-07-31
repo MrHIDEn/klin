@@ -1,26 +1,19 @@
 # 022 — Biblioteki / jednostki ASM
 
-**Status:** 💭 do rozważenia
-**Zależy od:** 010 (bare metal) lub wcześniejsze potrzeby hosta; 006?
+**Status:** ✅ zrobione
+**Zależy od:** [021](021-biblioteki-c.md) (`@[link]` / `cimport` / `codename`)
 
-## Kontekst
+## Zakres MVP
 
-Na bare-metalu startup, wektory przerwań i krytyczne fragmenty często
-zostają w surowym `.s` obok kodu (już założone w architekturze — nie
-opakowywać). Pytanie na później: jak Klin **wiąże** i **deklaruje**
-symbole z ASM (i odwrotnie: jak ASM woła zmanglowane symbole Klin).
+- `.s` / `.S` jako ścieżki w `@[link("…")]` (reuse 021; bez nowego atrybutu)
+- symbole: Klin→ASM = `@[codename]` / `@[cexport]`; ASM→Klin = `@[cimport, codename]`
+- host: `klin run` + test + [`examples/asm_add/`](../examples/asm_add/)
+- bare-metal: blink `@[link("startup.s")]`; Makefile czyta `out/*.link`
+  (bez przenoszenia `-T linker.ld` do Klina)
+- nota: [`note/10-asm.md`](../note/10-asm.md)
 
-## Propozycja (później)
+## Czego nie robimy
 
-- dołączanie `.s` / `.S` do buildu (CLI / manifest), bez translacji przez Klin
-- deklaracje zewnętrzne zgodne z manglingiem (`@[codename(...)]` z D4)
-- dokumentacja konwencji wywołań / rejestrów per target
-
-Nie generować ASM z Klina „dla wygody”, jeśli wystarczy link z plikiem
-użytkownika.
-
-## Czego nie robić teraz
-
-- Nie pisać assemblera ani DSL-a ASM wewnątrz `.kl`.
-- Nie blokować 010 na pełnym modelu bibliotek ASM — surowy `.s` obok
-  wystarczy na LED.
+- DSL / assembler wewnątrz `.kl`
+- ABI per target / mangling bez `codename`
+- CLI tylko pod ASM

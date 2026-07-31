@@ -45,6 +45,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [039](039-time-calendar.md) | Kalendarzowe `add_days` / miesiące / lata | ✅ | 037 |
 | [021](021-biblioteki-c.md) | Biblioteki C (FFI / link) | ✅ | 006, 010 |
 | [045](045-cexport.md) | Eksport Klin → C (`@[cexport]`) | ✅ | 021 |
+| [022](022-biblioteki-asm.md) | Jednostki ASM (`.s` via `@[link]`) | ✅ | 021 |
 ---
 
 ## Backlog — do rozważenia
@@ -54,7 +55,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [017](017-collection-methods.md) | Metody kolekcji (`map`/`filter`/…) — projekt API / fazy | 💭 | 007 |
 | [018](018-generators-yield.md) | Generatory / `yield` | 💭 | 004+ |
 | [020](020-biblioteki-klin.md) | Własne biblioteki Klina | 💭 | 006 |
-| [022](022-biblioteki-asm.md) | Biblioteki / jednostki ASM | 💭 | 010? |
+| [046](046-emit-h.md) | `--emit-h` (nagłówek C z `@[cexport]`) | 💭 | 045 |
 | [024](024-rtos.md) | RTOS (FreeRTOS / Zephyr / …) | 💭 | 010+ |
 | [028](028-freertos.md) | Ładna współpraca z FreeRTOS | 💭 | 024, 010, 021 |
 | [029](029-async-event-loop.md) | Event loop / async·await | 💭 | 018?, 028? |
