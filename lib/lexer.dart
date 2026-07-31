@@ -220,6 +220,9 @@ final class Lexer {
             buf.write('\\');
           case '"':
             buf.write('"');
+          case '\$':
+            // Literal `$` in an interpolated string (see [kInterpEscapedDollar]).
+            buf.write('\u{E000}');
           default:
             throw LexError('nieznana sekwencja ucieczki `\\$esc`', start);
         }

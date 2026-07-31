@@ -38,6 +38,8 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [032](032-klin-run.md) | CLI: `klin run <plik.kl>` | ✅ | 001 |
 | [033](033-gofmt-style.md) | Formatowanie w stylu Go (`klin fmt`) | ✅ | 005+ |
 | [035](035-klin-test.md) | `klin test` (jak `go test`, kod Klina) | ✅ | 032 |
+| [036](036-docs-catchup.md) | Docs catch-up (CLI / stdlib / cechy ✅) | ✅ | 026–035 |
+| [016](016-string-interpolation.md) | Interpolowane napisy | ✅ | 012 |
 
 ---
 
@@ -45,7 +47,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 
 | # | Zadanie | Status | Zależy od |
 |---|---|---|---|
-| [016](016-string-interpolation.md) | Interpolowane napisy | 💭 | 012? |
+| [037](037-datetime-format.md) | Formatowanie daty/czasu (`strftime`-like) | 💭 | 016 |
 | [017](017-collection-methods.md) | Metody kolekcji (`map`/`filter`/…) | 💭 | 007 |
 | [018](018-generators-yield.md) | Generatory / `yield` | 💭 | 004+ |
 | [020](020-biblioteki-klin.md) | Własne biblioteki Klina | 💭 | 006 |

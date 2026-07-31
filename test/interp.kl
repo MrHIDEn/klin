@@ -1,0 +1,19 @@
+import io
+
+fn main() {
+    let name: str = "adc"
+    let n = 42
+    let price = 1.5
+    let approx = 1.2
+    let tag: str = "abcdefghij"
+
+    puts("hi $name")
+    printf("n=${n:%d} hex=${n:%08x}\n")
+    io.println("n=$n")
+    io.println("price=${price:0.00}")
+    io.println("approx=${approx:0.###}")
+    io.println("tag=${tag:s8}")
+    io.println("hex=${n:hex}")
+    puts("bucks=\$USD")
+    puts("done 100%")
+}

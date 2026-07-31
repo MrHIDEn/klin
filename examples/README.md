@@ -21,6 +21,7 @@ are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), n
 | `point_macro.kl` | Same via `$fn` ([note/04-makra.md](../note/04-makra.md)) |
 | `slice_sum.kl` | Arrays / slices |
 | `add_test.kl` | Sample `klin test` (`import testing`) |
+| `interp.kl` | String interpolation → `printf` ([note/07-interpolacja.md](../note/07-interpolacja.md)) |
 | `modules/` | `module` / `import` (`app.kl` entry) |
 | `stm32/blink_f411/` | Nucleo-F411RE LED — `$peripherals_from_svd` + fluent MMIO (`arm-none-eabi-gcc`) |
 

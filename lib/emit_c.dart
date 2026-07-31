@@ -29,6 +29,22 @@ String emitC(Program program, String sourcePath) {
         'typedef struct { ${type.kind.cType} *ptr; size_t len; } $name;');
   }
   if (sliceTypes.isNotEmpty) buf.writeln();
+  if (_programNeedsTrimFrac(program)) {
+    buf.writeln('#include <stdio.h>');
+    buf.writeln('#include <string.h>');
+    buf.writeln(
+        'static void klin_fmt_trim_frac(char *buf, size_t n, double v, int max_frac) {');
+    buf.writeln('    snprintf(buf, n, "%.*f", max_frac, v);');
+    buf.writeln('    size_t len = strlen(buf);');
+    buf.writeln('    while (len > 0 && buf[len - 1] == \'0\') {');
+    buf.writeln('        buf[--len] = \'\\0\';');
+    buf.writeln('    }');
+    buf.writeln('    if (len > 0 && buf[len - 1] == \'.\') {');
+    buf.writeln('        buf[--len] = \'\\0\';');
+    buf.writeln('    }');
+    buf.writeln('}');
+    buf.writeln();
+  }
   for (final struct in program.structs) {
     _line(buf, struct.pos.line, struct.sourcePath ?? sourcePath);
     buf.writeln('typedef struct {');
@@ -154,7 +170,9 @@ bool _exprCallsStdio(Expr expr) => switch (expr) {
       CallExpr(:final callee, :final args, :final resolvedCallee) =>
         _isStdioName(callee) ||
             _isStdioName(resolvedCallee) ||
-            args.any(_exprCallsStdio),
+            args.any(_exprCallsStdio) ||
+            (args.length == 1 && args[0] is InterpolatedStringExpr),
+      InterpolatedStringExpr() => true,
       MethodCallExpr(:final receiver, :final args) =>
         _exprCallsStdio(receiver) || args.any(_exprCallsStdio),
       FieldExpr(:final object) => _exprCallsStdio(object),
@@ -177,6 +195,120 @@ bool _exprCallsStdio(Expr expr) => switch (expr) {
             positionalFields!.any(_exprCallsStdio),
       _ => false,
     };
+
+bool _programNeedsTrimFrac(Program program) {
+  for (final func in program.funcs) {
+    if (func.body != null && _blockNeedsTrimFrac(func.body!)) return true;
+  }
+  return false;
+}
+
+bool _blockNeedsTrimFrac(Block block) {
+  for (final stmt in block.stmts) {
+    if (_stmtNeedsTrimFrac(stmt)) return true;
+  }
+  return false;
+}
+
+bool _stmtNeedsTrimFrac(Stmt stmt) => switch (stmt) {
+      CallStmt(:final args) => args.any(_exprNeedsTrimFrac),
+      LetStmt(:final init) => init != null && _exprNeedsTrimFrac(init),
+      AssignStmt(:final value) => _exprNeedsTrimFrac(value),
+      ReturnStmt(:final value) => value != null && _exprNeedsTrimFrac(value),
+      IfStmt(:final thenBlock, :final elseBranch, :final cond) =>
+        _exprNeedsTrimFrac(cond) ||
+            _blockNeedsTrimFrac(thenBlock) ||
+            (elseBranch != null && _stmtNeedsTrimFrac(elseBranch)),
+      WhileStmt(:final body, :final cond) =>
+        _exprNeedsTrimFrac(cond) || _blockNeedsTrimFrac(body),
+      ForRangeStmt(:final body) => _blockNeedsTrimFrac(body),
+      ForCStmt(:final body) => _blockNeedsTrimFrac(body),
+      BlockStmt(:final block) => _blockNeedsTrimFrac(block),
+      DeferStmt(:final body) => _stmtNeedsTrimFrac(body),
+      MethodCallStmt(:final call) => _exprNeedsTrimFrac(call),
+      _ => false,
+    };
+
+bool _exprNeedsTrimFrac(Expr expr) => switch (expr) {
+      InterpolatedStringExpr(:final parts) => parts.any(
+          (p) => p is InterpSlot && p.trimFrac,
+        ),
+      CallExpr(:final args) => args.any(_exprNeedsTrimFrac),
+      BinaryExpr(:final left, :final right) =>
+        _exprNeedsTrimFrac(left) || _exprNeedsTrimFrac(right),
+      UnaryExpr(:final operand) => _exprNeedsTrimFrac(operand),
+      GroupExpr(:final inner) => _exprNeedsTrimFrac(inner),
+      MethodCallExpr(:final receiver, :final args) =>
+        _exprNeedsTrimFrac(receiver) || args.any(_exprNeedsTrimFrac),
+      _ => false,
+    };
+
+void _emitInterpPrintf(
+  StringBuffer buf,
+  InterpolatedStringExpr interp, {
+  required int indent,
+  required _ExprCtx ctx,
+  required _EmitState state,
+}) {
+  final pad = '    ' * indent;
+  final prepared = _prepareInterpPrintf(interp, ctx, state, pad, buf);
+  final args = prepared.argExprs.isEmpty
+      ? ''
+      : ', ${prepared.argExprs.join(', ')}';
+  buf.writeln('${pad}printf("${prepared.fmt}"$args);');
+}
+
+String _emitInterpPrintfExpr(InterpolatedStringExpr interp, _ExprCtx ctx) {
+  // Expression context: declare temps into ctx.buf, return printf(...) as expr.
+  final pad = '    ' * ctx.indent;
+  final prepared =
+      _prepareInterpPrintf(interp, ctx, ctx.state, pad, ctx.buf);
+  final args = prepared.argExprs.isEmpty
+      ? ''
+      : ', ${prepared.argExprs.join(', ')}';
+  return 'printf("${prepared.fmt}"$args)';
+}
+
+({String fmt, List<String> argExprs}) _prepareInterpPrintf(
+  InterpolatedStringExpr interp,
+  _ExprCtx ctx,
+  _EmitState state,
+  String pad,
+  StringBuffer buf,
+) {
+  final fmt = StringBuffer();
+  final argExprs = <String>[];
+  for (final part in interp.parts) {
+    switch (part) {
+      case InterpText(:final text):
+        // `%` in literal text must be `%%` inside a printf format string.
+        fmt.write(_escapeC(text).replaceAll('%', '%%'));
+      case InterpSlot(
+          :final expr,
+          :final printfSpec,
+          :final trimFrac,
+          :final trimFracDigits
+        ):
+        if (trimFrac) {
+          final name = state.nextInterpBuf();
+          buf.writeln('${pad}char $name[64];');
+          buf.writeln(
+            '${pad}klin_fmt_trim_frac($name, sizeof($name), '
+            '(double)(${_emitExpr(expr, ctx)}), $trimFracDigits);',
+          );
+          fmt.write('%s');
+          argExprs.add(name);
+        } else {
+          fmt.write(printfSpec ?? '%s');
+          argExprs.add(_emitExpr(expr, ctx));
+        }
+    }
+  }
+  if (interp.appendNewline) {
+    fmt.write('\\n');
+  }
+  return (fmt: fmt.toString(), argExprs: argExprs);
+}
 
 String _functionHeader(FuncDecl func) {
   if (func.name == 'main') return 'int main(void)';
@@ -287,9 +419,11 @@ final class _EmitState {
   final List<_DeferFrame> deferStack = [];
   int _returnTemp = 0;
   int _valueTemp = 0;
+  int _interpTemp = 0;
 
   String nextReturnTemp() => 'klin_ret_${_returnTemp++}';
   String nextValueTemp() => 'klin_val_${_valueTemp++}';
+  String nextInterpBuf() => '_klin_i${_interpTemp++}';
 }
 
 final class _ExprCtx {
@@ -523,8 +657,18 @@ void _emitStmt(
         :final resolvedCallee
       ):
       _line(buf, pos.line, sourcePath);
-      final argList = args.map((arg) => _emitExpr(arg, ctx)).join(', ');
-      buf.writeln('$pad${resolvedCallee ?? callee}($argList);');
+      if (args.length == 1 && args[0] is InterpolatedStringExpr) {
+        _emitInterpPrintf(
+          buf,
+          args[0] as InterpolatedStringExpr,
+          indent: indent,
+          ctx: ctx,
+          state: state,
+        );
+      } else {
+        final argList = args.map((arg) => _emitExpr(arg, ctx)).join(', ');
+        buf.writeln('$pad${resolvedCallee ?? callee}($argList);');
+      }
 
     case MethodCallStmt(:final call):
       _line(buf, call.pos.line, sourcePath);
@@ -924,7 +1068,12 @@ String _emitExprRaw(Expr expr, _ExprCtx ctx) {
           ? '(${_cType(resolvedType ?? (throw StateError('emit: literal without type `$typeName`')))}){ ${namedFields.entries.map((entry) => '.${entry.key} = ${_emitExpr(entry.value, ctx)}').join(', ')} }'
           : '(${_cType(resolvedType ?? (throw StateError('emit: literal without type `$typeName`')))}){ ${positionalFields!.map((field) => _emitExpr(field, ctx)).join(', ')} }',
     CallExpr(:final callee, :final args, :final resolvedCallee) =>
-      '${resolvedCallee ?? callee}(${args.map((arg) => _emitExpr(arg, ctx)).join(', ')})',
+      args.length == 1 && args[0] is InterpolatedStringExpr
+          ? _emitInterpPrintfExpr(args[0] as InterpolatedStringExpr, ctx)
+          : '${resolvedCallee ?? callee}(${args.map((arg) => _emitExpr(arg, ctx)).join(', ')})',
+    InterpolatedStringExpr() => throw StateError(
+        'emit: interpolated string must be lowered via printf sink',
+      ),
     UnaryExpr(:final op, :final operand) => '$op(${_emitExpr(operand, ctx)})',
     IndexExpr(:final object, :final index) => object.resolvedType is SliceType
         ? '${_emitExpr(object, ctx)}.ptr[${_emitExpr(index, ctx)}]'

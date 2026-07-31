@@ -373,6 +373,43 @@ final class StringLit extends Expr {
   StringLit(this.value, this.pos);
 }
 
+/// Literal `$` in interpolated strings (lexer escape `\$`).
+const String kInterpEscapedDollar = '\u{E000}';
+
+sealed class InterpPart {}
+
+final class InterpText extends InterpPart {
+  final String text;
+  InterpText(this.text);
+}
+
+final class InterpSlot extends InterpPart {
+  final Expr expr;
+
+  /// Raw format after `:`, or `null` for a default from the slot type.
+  final String? formatRaw;
+
+  /// Filled by the checker: printf specifier (e.g. `%d`), unused when [trimFrac].
+  String? printfSpec;
+
+  /// `0.###` style — emit via `klin_fmt_trim_frac` + `%s`.
+  bool trimFrac = false;
+  int trimFracDigits = 0;
+
+  InterpSlot(this.expr, this.formatRaw);
+}
+
+/// `"hi $name"` / `"${n:%d}"` — print-only in MVP (sink → `printf`).
+final class InterpolatedStringExpr extends Expr {
+  final List<InterpPart> parts;
+  final SourcePos pos;
+
+  /// When true, emit appends `\n` (from `puts` / `io.println`).
+  bool appendNewline = false;
+
+  InterpolatedStringExpr(this.parts, this.pos);
+}
+
 final class NameExpr extends Expr {
   final String name;
   final SourcePos pos;
