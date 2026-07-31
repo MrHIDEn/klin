@@ -92,6 +92,16 @@ only; lowers to an `if`/`else if` chain with the subject in one temp, so
 [note/14-short-decl.md](note/14-short-decl.md),
 [`examples/short_decl.kl`](examples/short_decl.kl).
 
+### Destructuring
+
+`let { x, y } = p` and `let mut { x, y } = p` bind struct fields by name in one
+statement. A subset of fields is allowed and order is irrelevant; the source is
+evaluated once and each binding lowers to a plain field read (`.field`), so it
+disappears in C. No tuples; rename (`{ x: px }`), bare `{ … } = p` reassignment,
+and array patterns are not part of this phase. See
+[issues/056-destructuring.md](issues/056-destructuring.md),
+[`examples/destructure.kl`](examples/destructure.kl).
+
 ## Test
 
 ```sh

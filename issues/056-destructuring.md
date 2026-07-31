@@ -1,6 +1,6 @@
 # 056 — Dekonstrukcja (`{}` / `[]` / multi-assign)
 
-**Status:** 💭 do rozważenia
+**Status:** 🔨 w toku — faza A ✅ (dekonstrukcja struktur w `let`)
 **Zależy od:** [005](005-struktury-metody.md) (struct lit/pola ✅); mile [007](007-wskazniki-tablice-slice.md) (tablice stałej długości)
 
 > **Nie mylić z destruktorami RAII.** D6 ([note/01-decyzje.md](../note/01-decyzje.md)):
@@ -93,18 +93,26 @@ jawny indeks / slice — nie cukier `[x]=`.
 
 ## Fazy (gdy otworzyć implementację)
 
-| Faza | Co | Zależy |
-|---|---|---|
-| A | `let { a, b } = s` / `{ a, b } = s` | 005 |
-| B | `a, b = b, a` (multi-assign, bez multi-return) | parser + checker tmp |
-| C | `let [a, b] = xs` dla `[N]T`, `N` znane | 007 |
-| D | rename `{ x: px }`, `_` w tablicach | po A/C |
+| Faza | Co | Zależy | Status |
+|---|---|---|---|
+| A | `let { a, b } = s` (deklaracja) | 005 | ✅ |
+| A′ | bare `{ a, b } = s` (reassign; wymaga lookaheadu) | 005 | ⏳ |
+| B | `a, b = b, a` (multi-assign, bez multi-return) | parser + checker tmp | ⏳ |
+| C | `let [a, b] = xs` dla `[N]T`, `N` znane | 007 | ⏳ |
+| D | rename `{ x: px }`, `_` w tablicach | po A/C | ⏳ |
+
+**Faza A (zrobione):** `let { … } = expr` i `let mut { … } = expr` dla struktur —
+podzbiór pól, kolejność nieistotna, źródło liczone raz (kopia do tymczasowej gdy
+nie jest nazwą), lowerowanie do `.field`. Przykład
+[`examples/destructure.kl`](../examples/destructure.kl), testy w
+[`test/destruct_struct.kl`](../test/destruct_struct.kl) +
+`test/pipeline_test.dart`.
 
 ## Kryterium „issue zamknięte jako decyzja”
 
-Nie trzeba od razu kodować. Wystarczy:
-
-- [ ] potwierdzenie: **bez tupli**
-- [ ] wybór fazy A jako pierwszej (struct `{}`)
-- [ ] decyzja: multi-assign B przed czy po tablicach C
-- [ ] krótka notatka w `note/` po decyzji (albo aktualizacja D7)
+- [x] potwierdzenie: **bez tupli**
+- [x] wybór fazy A jako pierwszej (struct `{}`)
+- [x] decyzja: multi-assign B **po** tablicach jest OK; kolejność B/C otwarta,
+  ale faza A (struct) idzie pierwsza i jest już zaimplementowana
+- [x] dla tablic (faza C): jawne `_`, **nie** dziury w stylu JS `[,,a,b]`
+  (spójność z Go/V, czytelność; zero-cost identyczny, więc decyduje ergonomia)
