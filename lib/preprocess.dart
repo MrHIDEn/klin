@@ -1,6 +1,11 @@
+import 'svd/fluent.dart';
+import 'svd/model.dart';
 import 'token.dart';
 
-/// Compile-time `$fn` macros (decision D3). Runs before lex/parse of Klin.
+export 'token.dart' show PreprocessError;
+
+/// Compile-time `$fn` macros (decision D3) and built-in `$peripherals_from_svd`.
+/// Runs before lex/parse of Klin.
 ///
 /// ```
 /// $fn point(name: name, T: type) {
@@ -9,16 +14,6 @@ import 'token.dart';
 /// }
 /// $point(Vec2i, i32)
 /// ```
-final class PreprocessError implements Exception {
-  final String message;
-  final SourcePos pos;
-  final String path;
-
-  const PreprocessError(this.message, this.pos, {this.path = '<input>'});
-
-  @override
-  String toString() => '$path:${pos.line}:${pos.col}: $message';
-}
 
 final class _MacroParam {
   final String name;
@@ -62,6 +57,7 @@ final class _PpScanner {
   String expand() {
     final macros = <String, _MacroDef>{};
     final out = StringBuffer();
+    SvdDevice? svdDevice;
 
     while (!_atEnd) {
       if (_startsWithFn()) {
@@ -81,6 +77,28 @@ final class _PpScanner {
         final name = _readIdent();
         _skipSpace();
         if (!_atEnd && _peek == '(') {
+          if (name == 'peripherals_from_svd') {
+            if (svdDevice != null) {
+              _err('duplicate `\$peripherals_from_svd`', start);
+            }
+            final args = _parseArgList();
+            if (args.isEmpty || args.length > 2) {
+              _err(
+                '`\$peripherals_from_svd` expects 1 or 2 arguments '
+                '(svd path[, peripherals])',
+                start,
+              );
+            }
+            final expansion = expandPeripheralsFromSvd(
+              svdArg: args[0],
+              peripheralsArg: args.length > 1 ? args[1] : null,
+              sourcePath: path,
+              callPos: start,
+            );
+            svdDevice = expansion.device;
+            out.write(expansion.cincludeSnippet);
+            continue;
+          }
           final def = macros[name];
           if (def == null) {
             _err('unknown macro `\$$name`', start);
@@ -105,7 +123,9 @@ final class _PpScanner {
       out.write(_advance());
     }
 
-    return out.toString();
+    final text = out.toString();
+    if (svdDevice == null) return text;
+    return rewriteSvdFluent(text, svdDevice, path: path);
   }
 
   bool _startsWithFn() {

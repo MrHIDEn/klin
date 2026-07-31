@@ -25,8 +25,10 @@ it:
 dart run bin/klin.dart --emit-c examples/hello.kl
 ```
 
-`$fn` macros expand before parsing. Inspect the result with `--emit-pp`
-(`out/<file>.pp.kl`).
+`$fn` macros and `$peripherals_from_svd(...)` expand before parsing.
+Inspect the result with `--emit-pp` (`out/<file>.pp.kl`). Fluent register
+access (`RCC.AHB1ENR.GPIOAEN.set(1)`) lowers to the same zero-cost
+`static inline` accessors as `svd2klin`.
 
 ## Test
 
