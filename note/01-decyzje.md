@@ -25,7 +25,11 @@ pub fn parse(a: *Allocator, src: []u8): !Doc {
 
 MVP host: [`stdlib/mem`](../stdlib/mem.kl) (`heap`, `alloc_bytes`, `alloc_i32`) —
 [note/14-allocator.md](14-allocator.md), issue [055](../issues/055-allocator.md).
-Bez argumentu typu w wywołaniu (`a.alloc(u8, n)`) w MVP.
+
+**Nie obiecywać** `a.alloc(u8, n)` dopóki nie ma argumentu typu w wywołaniu
+(generyki [034](../issues/034-typy-generyczne.md) / cukier D3). Dziś: `alloc_bytes`
++ jawne `alloc_i32` / `alloc_u8`. Arena, vtable, `map_alloc` — później
+(patrz note/14 § „Nie obiecywać / później”).
 
 Tryby do rozważenia później (wzorzec z V, ale bez autofree):
 ręczny (domyślny) / arena / opcjonalnie oznaczanie pojedynczych funkcji.

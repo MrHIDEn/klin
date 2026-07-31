@@ -34,8 +34,27 @@ fn main() {
   program importuje `mem` / woła te symbole
 - Freestanding: **nie** `import mem`
 
-Nie ma w MVP: `a.alloc(u8, n)` (argument typu w wywołaniu), aren, vtable wielu
-alokatorów, `slice.map_alloc_*` ([017](../issues/017-collection-methods.md)
-warstwa 2).
-
 Issue: [055](../issues/055-allocator.md). Example: [`examples/mem_heap.kl`](../examples/mem_heap.kl).
+
+## Nie obiecywać w MVP / później
+
+Szkic D1 `a.alloc(u8, n)` wymaga **argumentu typu** w wywołaniu metody.
+Klin tego nie ma w gramatyce (D3 = `$fn` / monomorfizacja, nie generyki —
+[034](../issues/034-typy-generyczne.md)). **Nie obiecywać** `a.alloc(u8, n)`
+jako API publiczne dopóki nie będzie cukru albo generyków.
+
+Dziś zamiast tego:
+
+- bajty: `a.alloc_bytes(n)` / `a.free_bytes`
+- typowane: jawne `mem.alloc_i32` / `free_i32` (i `u8`) — ewentualnie
+  rozszerzenie przez `$fn` jak w planie `slice`, nie przez składnię `alloc(T, n)`
+
+**Później (osobne kroki, nie w 055):**
+
+| Temat | Gdzie |
+|---|---|
+| `a.alloc(T, n)` / cukier albo generyki | 034 / D3 |
+| Arena + `deinit` (jeden `defer`) | follow-up po 055 |
+| Vtable wielu alokatorów | follow-up (dziś wystarczy heap + pusty struct) |
+| `slice.map_alloc_*` / `filter_alloc_*` | [017](../issues/017-collection-methods.md) warstwa 2 |
+| GC / autofree / ukryty `malloc` w rdzeniu | **nigdy** (zasada nadrzędna) |

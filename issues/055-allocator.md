@@ -31,10 +31,13 @@ fn main() {
 - Docs: [note/14-allocator.md](../note/14-allocator.md); golden `test/mem_alloc.kl`;
   example `examples/mem_heap.kl`
 
-**Bez** `a.alloc(u8, n)` w gramatyce (brak argumentu typu — D3/`$fn` później).
+**Bez** `a.alloc(u8, n)` w gramatyce — **nie obiecywać** w MVP (brak argumentu
+typu w wywołaniu; D3/`$fn`, ewentualnie [034](034-typy-generyczne.md) później).
+Szczegóły: [note/14-allocator.md](../note/14-allocator.md) § „Nie obiecywać”.
 
-## Follow-up
+## Follow-up (później)
 
+- `a.alloc(T, n)` — cukier / generyki (034), nie w tym issue
 - Arena / `deinit`, vtable wielu alokatorów
 - [017](017-collection-methods.md) warstwa 2 — `slice.map_alloc_*` / `filter_alloc_*`
 
