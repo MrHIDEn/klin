@@ -142,6 +142,44 @@ fn main() {
     expect(c, contains('y = (y + 1);'));
   });
 
+  test('golden: int/float aliases emit fixed-width C types', () async {
+    final result = await _compileAndRun('test/int_float_aliases.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(
+      result.stdout,
+      await File('test/int_float_aliases.out').readAsString(),
+    );
+
+    final source = File('test/int_float_aliases.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/int_float_aliases.kl');
+    expect(c, contains('int32_t add(int32_t a, int32_t b)'));
+    expect(c, contains('int32_t x = 40;'));
+    expect(c, contains('double y = 1.5;'));
+    expect(c, isNot(contains(' int ')));
+    expect(c, isNot(contains(' float ')));
+  });
+
+  test('error: C keyword cannot be a variable name', () {
+    const source = '''
+fn main() {
+  let int = 1
+}
+''';
+    expect(
+      () => Parser(Lexer(source).tokenize()).parse(),
+      throwsA(
+        predicate(
+          (e) =>
+              e is ParseError &&
+              e.toString().contains('a C keyword') &&
+              e.toString().contains('variable name'),
+        ),
+      ),
+    );
+  });
+
   test('syntax error: message includes line number', () async {
     final source = await File('test/bad_syntax.kl').readAsString();
     expect(

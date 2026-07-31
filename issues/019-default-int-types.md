@@ -1,27 +1,29 @@
 # 019 — Domyślne typy (`int` / literały)
 
-**Status:** 💭 do rozważenia
-**Zależy od:** 002 (już: untyped int → domyślnie `i32`, float → `f64`)
+**Status:** ✅ ukończone
+**Zależy od:** 002 (już: untyped int → domyślnie `i32`, float → `f64`); 010 (bare metal)
 
 ## Kontekst
 
-Dziś literał `42` bez kontekstu staje się **`i32`**, `1.0` → **`f64`**. Nie ma aliasów `int` / `float` w składni użytkownika — tylko jawne `i8`…`i64` itd.
+Literał `42` bez kontekstu staje się **`i32`**, `1.0` → **`f64`**.
+V ma `int` (= platformowy / domyślny całkowity). C ma `int` o niejednoznacznym
+rozmiarze — na bare-metal to pułapka.
 
-V ma `int` (= platformowy / domyślny całkowity). C ma `int` o niejednoznacznym rozmiarze — na bare-metal to pułapka.
+## Decyzja: B — aliasy o stałym rozmiarze
 
-## Propozycja (później)
+| Nazwa | Znaczy | Emisja C |
+|---|---|---|
+| `int` | `i32` | `int32_t` |
+| `float` | `f64` | `double` |
 
-Do decyzji, czy w ogóle:
+- Literały bez kontekstu bez zmian: int → `i32`, float → `f64`.
+- **Nie** ma C-owego „`int` zależy od ABI”.
+- `isize` / `usize` zostają osobno (szerokość wskaźnika).
+- `int` / `float` nie mogą być nazwami zmiennych / funkcji (słowa kluczowe C)
+  — łapie frontend.
 
-| Opcja | Semantyka |
-|---|---|
-| A. Zostawić jak jest | Tylko `i32`/`i64`/…; literał → `i32` |
-| B. Alias `int` = `i32` (lub `isize`) | Cukier nazw, stały rozmiar w docs |
-| C. `int` = `isize` (szerokość wskaźnika) | Jak „native int”; gorsze na małych MCU |
+## Kryterium ukończenia
 
-Nie wprowadzać C-owego „`int` zależy od ABI” bez adnotacji platformy.
-
-## Czego nie robić teraz
-
-- Nie dodawać `int` obok `i32` przed decyzją bare-metal (010).
-- Nie zmieniać domyślnego literału z `i32` bez testów złotych i emisji.
+- [x] `int` / `float` w adnotacjach typów i sygnaturach
+- [x] emisja zawsze `int32_t` / `double` (nie C `int` / `float`)
+- [x] test złoty + frontend odrzuca `let int = …`

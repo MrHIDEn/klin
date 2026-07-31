@@ -413,6 +413,7 @@ final class Parser {
       isMut = true;
     }
     final name = _expect(TokenKind.ident, 'expected variable name');
+    _rejectCKeyword(name, 'a variable name');
     String? typeName;
     if (_check(TokenKind.colon)) {
       _advance();

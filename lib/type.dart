@@ -58,17 +58,21 @@ enum PrimKind {
 
   bool get isFloat => this == PrimKind.f32 || this == PrimKind.f64;
 
+  /// Parses a primitive type name.
+  ///
+  /// `int` and `float` are fixed-size aliases (`i32` / `f64`), matching
+  /// untyped literal defaults — never C's ABI-dependent `int`/`float`.
   static PrimKind? tryParse(String name) => switch (name) {
         'i8' => PrimKind.i8,
         'i16' => PrimKind.i16,
-        'i32' => PrimKind.i32,
+        'i32' || 'int' => PrimKind.i32,
         'i64' => PrimKind.i64,
         'u8' => PrimKind.u8,
         'u16' => PrimKind.u16,
         'u32' => PrimKind.u32,
         'u64' => PrimKind.u64,
         'f32' => PrimKind.f32,
-        'f64' => PrimKind.f64,
+        'f64' || 'float' => PrimKind.f64,
         'bool' => PrimKind.bool_,
         'usize' => PrimKind.usize,
         'isize' => PrimKind.isize,
