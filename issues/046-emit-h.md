@@ -1,21 +1,29 @@
 # 046 — Nagłówek C z eksportów (`--emit-h`)
 
-**Status:** 💭 do rozważenia
+**Status:** ✅ zrobione
 **Zależy od:** [045](045-cexport.md)
 
 ## Kontekst
 
-Po `@[cexport, codename]` C woła symbole Klin, ale prototypy trzeba pisać
-ręcznie w `.h`. Flaga `--emit-h` mogłaby emitować nagłówek z deklaracjami
-dla wyeksportowanych funkcji.
+Po `@[cexport, codename]` C woła symbole Klin; `--emit-h` generuje nagłówek
+z prototypami, żeby nie pisać ich ręcznie.
 
-## Szkic (później)
+## API
 
-- `klin --emit-h foo.kl` → `out/foo.h` (prototypy C z typami Klina)
-- spójność z `--emit-c` / `#line` / `codename`
-- nie zastępuje pełnego pack `.a` / `.so`
+```sh
+klin --emit-h foo.kl              # → out/foo.h
+klin --emit-c --emit-h foo.kl     # → out/foo.c + out/foo.h
+```
 
-## Poza zakresem teraz
+- tylko funkcje z `@[cexport]` (nazwa = `codename`)
+- typy Klina → C jak w emisji `.c` (`stdint.h` itd.)
+- `#line` przy prototypach; include guard `KLIN_<BASE>_H`
+- nie zastępuje pack `.a` / `.so`
 
-Implementacja — tylko placeholder w roadmapie. Szczegóły przy realizacji 045
-„poza zakresem”.
+Przykład: [`examples/cexport_add/`](../examples/cexport_add/).
+Nota: [`note/09-ffi-c.md`](../note/09-ffi-c.md), CLI: [`note/06-cli.md`](../note/06-cli.md).
+
+## Poza zakresem
+
+- automatyczne `.a` / `.so`
+- `cexport` na metodach / typach (nadal poza 045)

@@ -24,6 +24,7 @@ Wejście: `dart run bin/klin.dart <subcommand|plik.kl> …`
 | Flaga | Sens |
 |---|---|
 | `--emit-c` | Zapisz wygenerowany `.c` (domyślnie `out/`), bez kompilacji / run |
+| `--emit-h` | Zapisz nagłówek C z prototypami `@[cexport]` (`out/<base>.h`) |
 | `--emit-pp` | Zapisz wynik preprocessora (`.pp.kl`), bez dalszych etapów |
 | `--cc <gcc\|clang\|tcc>` | Host C compiler (domyślnie `gcc`) |
 | `-I <dir>` / `-Idir` | Szukaj źródeł Klin (`import` → `name.kl`) w `dir` |

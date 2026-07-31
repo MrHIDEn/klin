@@ -1427,6 +1427,97 @@ int main(void) {
     expect(run.stdout, '5\n');
   });
 
+  test('emitH writes prototypes for cexport (issue 046)', () {
+    const source = '''
+@[cexport, codename("klin_add")]
+fn add(a: i32, b: i32): i32 {
+  return a + b
+}
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final h = emitH(program, 'lib.kl');
+    expect(h, contains('#ifndef KLIN_LIB_H'));
+    expect(h, contains('#include <stdint.h>'));
+    expect(h, contains('int32_t klin_add(int32_t a, int32_t b);'));
+    expect(h, isNot(contains('main')));
+    expect(h, contains('#endif /* KLIN_LIB_H */'));
+  });
+
+  test('emitH closes nested struct deps regardless of decl order (issue 046)', () {
+    // Signature only mentions Outer; Inner is two levels down. One pass over
+    // program.structs (decl order Inner → Mid → Outer) used to miss Inner.
+    const source = '''
+struct Inner {
+  x: i32
+}
+struct Mid {
+  inner: Inner
+}
+struct Outer {
+  mid: Mid
+}
+@[cexport, codename("klin_take_outer")]
+fn take_outer(o: Outer): i32 {
+  return o.mid.inner.x
+}
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final h = emitH(program, 'nest.kl');
+    expect(h, contains('Inner'));
+    expect(h, contains('Mid'));
+    expect(h, contains('Outer'));
+    expect(h.indexOf('Inner'), lessThan(h.indexOf('Mid')));
+    expect(h.indexOf('Mid'), lessThan(h.indexOf('Outer')));
+    expect(h, contains('klin_take_outer'));
+  });
+
+  test('C caller can #include emitH header (issue 046)', () async {
+    final kl = File('${tmp.path}/lib_add_h.kl');
+    await kl.writeAsString('''
+@[cexport, codename("klin_add")]
+fn add(a: i32, b: i32): i32 {
+  return a + b
+}
+fn main() {}
+''');
+    final program = loadProject(kl.path);
+    Checker().check(program);
+    var cSource = emitC(program, kl.path);
+    cSource =
+        cSource.replaceAll('int main(void)', 'static int klin_lib_main(void)');
+    final cPath = '${tmp.path}/lib_add_h.c';
+    final hPath = '${tmp.path}/lib_add_h.h';
+    await File(cPath).writeAsString(cSource);
+    await File(hPath).writeAsString(emitH(program, kl.path));
+
+    final caller = File('${tmp.path}/caller_h.c');
+    await caller.writeAsString('''
+#include <stdio.h>
+#include "lib_add_h.h"
+int main(void) {
+  printf("%d\\n", (int)klin_add(2, 3));
+  return 0;
+}
+''');
+    final bin = '${tmp.path}/cexport_h_bin';
+    final compile = await Process.run('gcc', [
+      caller.path,
+      cPath,
+      '-I',
+      tmp.path,
+      '-o',
+      bin,
+    ]);
+    expect(compile.exitCode, 0, reason: '${compile.stderr}${compile.stdout}');
+    final run = await Process.run(bin, []);
+    expect(run.exitCode, 0, reason: run.stderr);
+    expect(run.stdout, '5\n');
+  });
+
   test('cimport emits a declaration and checks its signature', () {
     const source = '''
 @[cimport, codename("pin_set")]
@@ -1640,6 +1731,51 @@ fn main() {}
     expect(proc.exitCode, 0, reason: proc.stderr.toString());
     expect(await cFile.exists(), isTrue);
     expect(await linkFile.readAsString(), 'driver.a\n');
+  });
+
+  test('--emit-h writes header without compiling or running', () async {
+    final source = File('${tmp.path}/emit_h_only.kl');
+    await source.writeAsString('''
+@[cexport, codename("klin_add")]
+fn add(a: i32, b: i32): i32 { return a + b }
+fn main() {}
+''');
+    final proc = await Process.run(
+      'dart',
+      ['run', 'bin/klin.dart', '--emit-h', source.path],
+    );
+    final hFile = File('out/emit_h_only.h');
+    final cFile = File('out/emit_h_only.c');
+    addTearDown(() async {
+      if (await hFile.exists()) await hFile.delete();
+      if (await cFile.exists()) await cFile.delete();
+    });
+    expect(proc.exitCode, 0, reason: proc.stderr.toString());
+    expect(await hFile.exists(), isTrue);
+    expect(await cFile.exists(), isFalse);
+    expect(await hFile.readAsString(), contains('int32_t klin_add'));
+  });
+
+  test('--emit-c --emit-h writes both artifacts', () async {
+    final source = File('${tmp.path}/emit_both.kl');
+    await source.writeAsString('''
+@[cexport, codename("klin_add")]
+fn add(a: i32, b: i32): i32 { return a + b }
+fn main() {}
+''');
+    final proc = await Process.run(
+      'dart',
+      ['run', 'bin/klin.dart', '--emit-c', '--emit-h', source.path],
+    );
+    final hFile = File('out/emit_both.h');
+    final cFile = File('out/emit_both.c');
+    addTearDown(() async {
+      if (await hFile.exists()) await hFile.delete();
+      if (await cFile.exists()) await cFile.delete();
+    });
+    expect(proc.exitCode, 0, reason: proc.stderr.toString());
+    expect(await hFile.exists(), isTrue);
+    expect(await cFile.exists(), isTrue);
   });
 
   test('buildCcArgs resolves @[link] paths and CLI -l/-L', () {

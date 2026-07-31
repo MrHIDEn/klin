@@ -20,7 +20,7 @@ import 'package:klin/version.dart';
 ///   klin run [--cc …] [-I dir] [-l lib] [-L dir] <file.kl>
 ///   klin fmt [-w] <file.kl…>
 ///   klin test [--cc …] [-I dir] [-l lib] [-L dir] [path…]
-///   klin [--cc …] [-I dir] [-l lib] [-L dir] [--emit-c|--emit-pp] <file.kl>
+///   klin [--cc …] [-I dir] [-l lib] [-L dir] [--emit-c] [--emit-h] [--emit-pp] <file.kl>
 Future<void> main(List<String> args) async {
   if (args.isEmpty) {
     stdout.write(_usageText());
@@ -94,16 +94,26 @@ Future<void> main(List<String> args) async {
   }
 
   final cPath = 'out/$base.c';
+  final hPath = 'out/$base.h';
   final binPath = 'out/$base';
   final sourceDir = File(sourcePath).absolute.parent.path;
 
-  final cSource = emitC(program, sourcePath);
-  await File(cPath).writeAsString(cSource);
-  if (opts.emitC) {
-    final links = collectLinkAttrs(program);
-    if (links.isNotEmpty) {
-      await File('out/$base.link').writeAsString('${links.join('\n')}\n');
+  if (opts.emitH) {
+    await File(hPath).writeAsString(emitH(program, sourcePath));
+  }
+
+  if (opts.emitC || !opts.emitH) {
+    final cSource = emitC(program, sourcePath);
+    await File(cPath).writeAsString(cSource);
+    if (opts.emitC) {
+      final links = collectLinkAttrs(program);
+      if (links.isNotEmpty) {
+        await File('out/$base.link').writeAsString('${links.join('\n')}\n');
+      }
     }
+  }
+
+  if (opts.emitC || opts.emitH) {
     return;
   }
 
@@ -301,6 +311,7 @@ final class _Opts {
   final String sourcePath;
   final String cc;
   final bool emitC;
+  final bool emitH;
   final bool emitPp;
   final List<String> klinPathDirs;
   final List<String> libs;
@@ -310,6 +321,7 @@ final class _Opts {
     this.sourcePath,
     this.cc,
     this.emitC,
+    this.emitH,
     this.emitPp,
     this.klinPathDirs,
     this.libs,
@@ -323,6 +335,7 @@ const _commands = {'run'};
 _Opts? _parseArgs(List<String> args) {
   String cc = 'gcc';
   var emitC = false;
+  var emitH = false;
   var emitPp = false;
   final klinPathDirs = <String>[];
   final libs = <String>[];
@@ -336,6 +349,8 @@ _Opts? _parseArgs(List<String> args) {
       cc = args[++i];
     } else if (a == '--emit-c') {
       emitC = true;
+    } else if (a == '--emit-h') {
+      emitH = true;
     } else if (a == '--emit-pp') {
       emitPp = true;
     } else if (a == '-I') {
@@ -364,10 +379,10 @@ _Opts? _parseArgs(List<String> args) {
     }
   }
   if (source == null) return null;
-  if (emitC && emitPp) return null;
-  // `run` means compile+execute; `--emit-c` / `--emit-pp` skip execution.
+  if (emitPp && (emitC || emitH)) return null;
+  // `run` means compile+execute; `--emit-*` skip execution.
   if (command != null && command != 'run') return null;
-  return _Opts(source, cc, emitC, emitPp, klinPathDirs, libs, libDirs);
+  return _Opts(source, cc, emitC, emitH, emitPp, klinPathDirs, libs, libDirs);
 }
 
 String _testUsage() =>
@@ -380,7 +395,7 @@ String _usageText() =>
     '       klin fmt [-w] <file.kl…>\n'
     '       klin test [--cc gcc|clang|tcc] [-I dir] [-l lib] [-L dir] [path…]\n'
     '       klin [--cc gcc|clang|tcc] [-I dir] [-l lib] [-L dir] '
-    '[--emit-c|--emit-pp] <file.kl>\n';
+    '[--emit-c] [--emit-h] [--emit-pp] <file.kl>\n';
 
 String _basenameWithoutExt(String path) {
   final name = path.split(Platform.pathSeparator).last;
