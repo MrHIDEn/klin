@@ -58,7 +58,7 @@ fn add(a: i32, b: i32): i32 {
 - `@[cexport]` — `fn` **z ciałem**; globalny symbol w emisji C (nie `static`)
 - `@[codename("…")]` — **wymagane** razem z `cexport` (stabilna nazwa dla C)
 - `@[codename]` **bez** `cexport` — nadal OK (ISR / startup), np. `@[codename("SysTick_Handler")]`
-- Nie łączyć `cexport` z `cimport`
+- Nie łączyć `cexport` z `cimport`; nie stosować `cexport` na `main`
 
 C woła wyeksportowaną funkcję po `codename`. Przykład:
 [`examples/cexport_add/`](../examples/cexport_add/).

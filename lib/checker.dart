@@ -218,6 +218,12 @@ final class Checker {
           throw CheckError(
               'cannot combine `cimport` and `cexport`', decl.pos);
         }
+        if (exported && decl.name == 'main') {
+          throw CheckError(
+              '`cexport` cannot be applied to `main` '
+              '(entry point is always emitted as C `main`)',
+              decl.pos);
+        }
         if (exported && !hasCodename) {
           throw CheckError(
               '`cexport` requires `codename("…")` (stable C symbol name)',

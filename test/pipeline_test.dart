@@ -1130,6 +1130,20 @@ fn main() {}
     );
   });
 
+  test('cexport on main is a checker error', () {
+    const source = '''
+@[cexport, codename("not_really_main")]
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate(
+        (e) => e is CheckError && e.toString().contains('main'),
+      )),
+    );
+  });
+
   test('C caller can link against cexport symbol (issue 045)', () async {
     final kl = File('${tmp.path}/lib_add.kl');
     await kl.writeAsString('''
