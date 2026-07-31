@@ -30,3 +30,4 @@ Resolucja ścieżek jak 020/047 (`lib/`, `-I`, `KLIN_PATH`, plik lub katalog).
 
 - fetch z GitHub / remote → [049](049-remote-imports.md)
 - menedżer pakietów / lockfile
+- artefakty SVD/IOC (`import "*.svd"`) → [053](053-device-board-assets.md)

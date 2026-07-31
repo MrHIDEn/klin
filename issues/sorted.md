@@ -70,10 +70,12 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [043](043-rtc.md) | RTC → `Instant` (osobny moduł) | 💭 | 010, 031? |
 | [044](044-cpu-cycles.md) | Cykle CPU / SysTick → `Duration` | 💭 | 010 |
 | [048](048-import-aliases.md) | Aliasy importów (+ string lokalny) | 💭 | 006, 047 |
-| [049](049-remote-imports.md) | Importy zdalne (GitHub / path jak Go) | 💭 | 048, 020, 047 |
+| [049](049-remote-imports.md) | Importy zdalne + `klin get` / `update` | 💭 | 048, 020, 047 |
 | [050](050-sqlite-wrapper.md) | Opakowanie SQLite (FFI, niski priorytet) | 💭 | 021 |
 | [051](051-json-wrapper.md) | Opakowanie JSON + ścieżki `$…` (niski priorytet) | 💭 | 021, 026? |
 | [052](052-klinstruct.md) | `klinstruct` — pack/unpack jak cstruct (niski priorytet) | 💭 | 007, 020/047 |
+| [053](053-device-board-assets.md) | `$device` + Go-like fetch SVD (IOC/board) | 💭 | 027, 049? |
+| [054](054-embedded-project-layout.md) | Wygląd / układ projektu embedded | 💭 | 023, 010 |
 
 ---
 

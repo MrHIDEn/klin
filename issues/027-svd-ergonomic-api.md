@@ -32,3 +32,8 @@ jest starszy niż SVD — `klin` sam odpala ten sam codegen co `svd2klin`
 
 - [x] Blink na ładnej składni
 - [x] objdump: brak `bl` do `RCC_*` / `GPIOA_*` / `STK_*` accessorów
+
+## Potem
+
+Czysty UX + Go-like fetch SVD (`$device("github/…/….svd")`, cache, paczki
+board): [053](053-device-board-assets.md).

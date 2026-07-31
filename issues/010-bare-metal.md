@@ -33,4 +33,5 @@ Flagi: `-Os`, `-ffunction-sections -fdata-sections`, `--gc-sections`.
 
 Weryfikacja ręczna (LED na Nucleo) jest opcjonalna — poza kryterium CI.
 
-Układ katalogu: [023](023-examples.md).
+Układ katalogu: [023](023-examples.md). Czytelniejszy wygląd projektu /
+scaffold: [054](054-embedded-project-layout.md).
