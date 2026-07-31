@@ -1079,6 +1079,97 @@ fn main() {}
     expect(c, isNot(contains('static void SysTick_Handler')));
   });
 
+  test('cexport + codename emits a global C symbol (issue 045)', () {
+    const source = '''
+@[cexport, codename("klin_add")]
+fn add(a: i32, b: i32): i32 {
+  return a + b
+}
+fn main() {
+  printf("%d\\n", add(2, 3))
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'exp.kl');
+    expect(c, contains('int32_t klin_add(int32_t a, int32_t b);'));
+    expect(c, contains('int32_t klin_add(int32_t a, int32_t b) {'));
+    expect(c, isNot(contains('static int32_t klin_add')));
+  });
+
+  test('cexport without codename is a checker error', () {
+    const source = '''
+@[cexport]
+fn add(a: i32, b: i32): i32 { return a + b }
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate(
+        (e) => e is CheckError && e.toString().contains('codename'),
+      )),
+    );
+  });
+
+  test('cexport cannot combine with cimport', () {
+    const source = '''
+@[cexport, cimport, codename("x")]
+fn x()
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate(
+        (e) =>
+            e is CheckError &&
+            e.toString().contains('cimport') &&
+            e.toString().contains('cexport'),
+      )),
+    );
+  });
+
+  test('C caller can link against cexport symbol (issue 045)', () async {
+    final kl = File('${tmp.path}/lib_add.kl');
+    await kl.writeAsString('''
+@[cexport, codename("klin_add")]
+fn add(a: i32, b: i32): i32 {
+  return a + b
+}
+fn main() {}
+''');
+    final program = loadProject(kl.path);
+    Checker().check(program);
+    // Klin requires `main`; rename it so the C caller owns the entry point.
+    var cSource = emitC(program, kl.path);
+    cSource = cSource.replaceAll('int main(void)', 'static int klin_lib_main(void)');
+    final cPath = '${tmp.path}/lib_add.c';
+    await File(cPath).writeAsString(cSource);
+
+    final caller = File('${tmp.path}/caller.c');
+    await caller.writeAsString('''
+#include <stdint.h>
+#include <stdio.h>
+int32_t klin_add(int32_t a, int32_t b);
+int main(void) {
+  printf("%d\\n", (int)klin_add(2, 3));
+  return 0;
+}
+''');
+    final bin = '${tmp.path}/cexport_bin';
+    final compile = await Process.run('gcc', [
+      caller.path,
+      cPath,
+      '-o',
+      bin,
+    ]);
+    expect(compile.exitCode, 0, reason: '${compile.stderr}${compile.stdout}');
+    final run = await Process.run(bin, []);
+    expect(run.exitCode, 0, reason: run.stderr);
+    expect(run.stdout, '5\n');
+  });
+
   test('cimport emits a declaration and checks its signature', () {
     const source = '''
 @[cimport, codename("pin_set")]

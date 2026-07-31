@@ -30,4 +30,4 @@ Wejście: `dart run bin/klin.dart <subcommand|plik.kl> …`
 | `-L <dir>` / `-Ldir` | Szukaj libów w `dir` |
 
 Szczegóły fmt: [05-fmt.md](05-fmt.md). Makra / SVD: [04-makra.md](04-makra.md).
-FFI / `@[link]`: [09-ffi-c.md](09-ffi-c.md).
+FFI (import `@[cimport]`/`@[link]` i export `@[cexport]`): [09-ffi-c.md](09-ffi-c.md).
