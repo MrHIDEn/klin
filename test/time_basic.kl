@@ -1,0 +1,25 @@
+import time
+
+fn main() {
+    let t = time.unix(1704067200)
+    let mut buf: [32]u8
+    let n = time.format(buf[:], "%Y-%m-%d", t)
+    printf("%s\n", &buf[0])
+    printf("n=%d\n", n)
+
+    let a = time.unix(1000)
+    let b = a.add(time.seconds(5))
+    let span = time.between(a, b)
+    printf("span=%lld\n", span.as_sec())
+
+    let parsed = time.parse_iso("2024-01-01") or {
+        printf("parse_fail\n")
+        time.unix(0)
+    }
+    printf("parsed=%lld\n", parsed.unix_ns / 1000000000)
+
+    let t0 = time.mono()
+    let t1 = time.mono()
+    let dt = time.mono_between(t0, t1)
+    printf("mono_ok=%d\n", dt.ns >= 0)
+}

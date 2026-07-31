@@ -45,6 +45,9 @@ String emitC(Program program, String sourcePath) {
     buf.writeln('}');
     buf.writeln();
   }
+  if (_programNeedsTimeHost(program)) {
+    _emitTimeHostHelpers(buf);
+  }
   for (final struct in program.structs) {
     _line(buf, struct.pos.line, struct.sourcePath ?? sourcePath);
     buf.writeln('typedef struct {');
@@ -201,6 +204,105 @@ bool _programNeedsTrimFrac(Program program) {
     if (func.body != null && _blockNeedsTrimFrac(func.body!)) return true;
   }
   return false;
+}
+
+bool _programNeedsTimeHost(Program program) {
+  const names = {
+    'klin_time_wall_ns',
+    'klin_time_mono_ns',
+    'klin_time_format',
+    'klin_time_parse',
+    'klin_time_parse_iso',
+  };
+  for (final func in program.funcs) {
+    for (final attr in func.attrs) {
+      if (attr.name == 'codename' && attr.arg != null && names.contains(attr.arg)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+void _emitTimeHostHelpers(StringBuffer buf) {
+  buf.writeln('#include <time.h>');
+  buf.writeln('#include <stdio.h>');
+  buf.writeln('#include <string.h>');
+  buf.writeln('#include <errno.h>');
+  buf.writeln();
+  buf.writeln('int64_t klin_time_wall_ns(void) {');
+  buf.writeln('    struct timespec ts;');
+  buf.writeln('    if (clock_gettime(CLOCK_REALTIME, &ts) != 0) return 0;');
+  buf.writeln(
+      '    return (int64_t)ts.tv_sec * 1000000000LL + (int64_t)ts.tv_nsec;');
+  buf.writeln('}');
+  buf.writeln();
+  buf.writeln('int64_t klin_time_mono_ns(void) {');
+  buf.writeln('    struct timespec ts;');
+  buf.writeln('    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) return 0;');
+  buf.writeln(
+      '    return (int64_t)ts.tv_sec * 1000000000LL + (int64_t)ts.tv_nsec;');
+  buf.writeln('}');
+  buf.writeln();
+  buf.writeln(
+      'int32_t klin_time_format(uint8_t *buf, int32_t buflen, const char *fmt, int64_t unix_ns) {');
+  buf.writeln('    if (buf == NULL || buflen <= 0 || fmt == NULL) return -1;');
+  buf.writeln('    time_t sec = (time_t)(unix_ns / 1000000000LL);');
+  buf.writeln('    struct tm tm;');
+  buf.writeln('    if (gmtime_r(&sec, &tm) == NULL) return -1;');
+  buf.writeln(
+      '    size_t n = strftime((char *)buf, (size_t)buflen, fmt, &tm);');
+  buf.writeln('    if (n == 0) return -1;');
+  buf.writeln('    return (int32_t)n;');
+  buf.writeln('}');
+  buf.writeln();
+  buf.writeln(
+      'static int32_t klin_time_from_tm(int64_t *out_ns, struct tm *tm) {');
+  buf.writeln('    errno = 0;');
+  buf.writeln('    time_t sec = timegm(tm);');
+  // time_t -1 is also a valid UTC instant (1969-12-31 23:59:59); only fail on errno.
+  buf.writeln('    if (sec == (time_t)-1 && errno != 0) return 2;');
+  buf.writeln('    *out_ns = (int64_t)sec * 1000000000LL;');
+  buf.writeln('    return 0;');
+  buf.writeln('}');
+  buf.writeln();
+  buf.writeln(
+      'int32_t klin_time_parse_iso(int64_t *out_ns, const char *s) {');
+  buf.writeln('    if (out_ns == NULL || s == NULL) return 1;');
+  buf.writeln('    int y = 0, mo = 0, d = 0, h = 0, mi = 0, sec = 0;');
+  buf.writeln('    int consumed = 0;');
+  buf.writeln(
+      '    if (sscanf(s, "%d-%d-%dT%d:%d:%dZ%n", &y, &mo, &d, &h, &mi, &sec, &consumed) == 6) {');
+  buf.writeln('        if (s[consumed] != \'\\0\') return 1;');
+  buf.writeln(
+      '    } else if (sscanf(s, "%d-%d-%d%n", &y, &mo, &d, &consumed) == 3) {');
+  buf.writeln('        if (s[consumed] != \'\\0\') return 1;');
+  buf.writeln('        h = 0; mi = 0; sec = 0;');
+  buf.writeln('    } else {');
+  buf.writeln('        return 1;');
+  buf.writeln('    }');
+  buf.writeln('    if (mo < 1 || mo > 12 || d < 1 || d > 31) return 1;');
+  buf.writeln('    struct tm tm;');
+  buf.writeln('    memset(&tm, 0, sizeof(tm));');
+  buf.writeln('    tm.tm_year = y - 1900;');
+  buf.writeln('    tm.tm_mon = mo - 1;');
+  buf.writeln('    tm.tm_mday = d;');
+  buf.writeln('    tm.tm_hour = h;');
+  buf.writeln('    tm.tm_min = mi;');
+  buf.writeln('    tm.tm_sec = sec;');
+  buf.writeln('    return klin_time_from_tm(out_ns, &tm);');
+  buf.writeln('}');
+  buf.writeln();
+  buf.writeln(
+      'int32_t klin_time_parse(int64_t *out_ns, const char *fmt, const char *s) {');
+  buf.writeln('    if (out_ns == NULL || fmt == NULL || s == NULL) return 1;');
+  buf.writeln('    struct tm tm;');
+  buf.writeln('    memset(&tm, 0, sizeof(tm));');
+  buf.writeln('    const char *end = strptime(s, fmt, &tm);');
+  buf.writeln('    if (end == NULL || *end != \'\\0\') return 1;');
+  buf.writeln('    return klin_time_from_tm(out_ns, &tm);');
+  buf.writeln('}');
+  buf.writeln();
 }
 
 bool _blockNeedsTrimFrac(Block block) {

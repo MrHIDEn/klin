@@ -1,0 +1,20 @@
+/// Host `time` demo: wall Instant, Duration span, format into a stack buffer.
+/// Monotonic clock is separate (`time.mono`). See note/08-time.md.
+import time
+
+fn main() {
+    let t = time.unix(1704067200)
+    let mut buf: [40]u8
+    time.format(buf[:], "%Y-%m-%d %H:%M:%S", t)
+    printf("utc=%s\n", &buf[0])
+
+    let later = t.add(time.hours(2).add(time.minutes(30)))
+    printf("later_unix=%lld\n", later.unix_ns / 1000000000)
+
+    let span = time.between(t, later)
+    printf("span_min=%lld\n", span.as_sec() / 60)
+
+    let t0 = time.mono()
+    let t1 = time.mono()
+    printf("mono_ns_delta=%lld\n", time.mono_between(t0, t1).ns)
+}

@@ -26,7 +26,8 @@ dart run bin/klin.dart --emit-pp examples/point_macro.kl
 
 CLI summary (PL): [note/06-cli.md](note/06-cli.md).
 
-Optional host I/O: [`stdlib/`](stdlib/) (`import io`, `import testing`).
+Optional host I/O and clocks: [`stdlib/`](stdlib/) (`import io`, `import testing`,
+`import time` — see [note/08-time.md](note/08-time.md)).
 Bare-metal programs omit those imports. STM32 demos:
 [`examples/stm32/`](examples/stm32/) — see [`examples/README.md`](examples/README.md).
 

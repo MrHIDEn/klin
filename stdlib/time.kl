@@ -1,0 +1,188 @@
+/// Host wall / monotonic clocks + format/parse into a caller-owned buffer.
+/// Do not import on freestanding targets without libc time.
+/// RTC / CPU cycle counters are separate APIs (not `now()` / `mono()`).
+module time
+
+pub struct Duration {
+    ns: i64
+}
+
+/// Wall-clock UTC instant (unix nanoseconds).
+pub struct Instant {
+    unix_ns: i64
+}
+
+/// Monotonic instant — measurements only; do not `format` as a calendar date.
+pub struct MonoInstant {
+    ns: i64
+}
+
+@[cimport, codename("klin_time_wall_ns")]
+fn host_wall_ns(): i64
+
+@[cimport, codename("klin_time_mono_ns")]
+fn host_mono_ns(): i64
+
+@[cimport, codename("klin_time_format")]
+fn host_format(buf: *mut u8, buflen: i32, fmt: str, unix_ns: i64): i32
+
+@[cimport, codename("klin_time_parse_iso")]
+fn host_parse_iso(out_ns: *mut i64, s: str): i32
+
+@[cimport, codename("klin_time_parse")]
+fn host_parse(out_ns: *mut i64, fmt: str, s: str): i32
+
+pub fn nanosecond(): Duration {
+    return Duration{ ns: 1 }
+}
+
+pub fn microsecond(): Duration {
+    return Duration{ ns: 1000 }
+}
+
+pub fn millisecond(): Duration {
+    return Duration{ ns: 1000000 }
+}
+
+pub fn second(): Duration {
+    return Duration{ ns: 1000000000 }
+}
+
+pub fn minute(): Duration {
+    return Duration{ ns: 60000000000 }
+}
+
+pub fn hour(): Duration {
+    return Duration{ ns: 3600000000000 }
+}
+
+pub fn nanoseconds(n: i64): Duration {
+    return Duration{ ns: n }
+}
+
+pub fn microseconds(n: i64): Duration {
+    return Duration{ ns: n * 1000 }
+}
+
+pub fn milliseconds(n: i64): Duration {
+    return Duration{ ns: n * 1000000 }
+}
+
+pub fn seconds(n: i64): Duration {
+    return Duration{ ns: n * 1000000000 }
+}
+
+pub fn minutes(n: i64): Duration {
+    return Duration{ ns: n * 60000000000 }
+}
+
+pub fn hours(n: i64): Duration {
+    return Duration{ ns: n * 3600000000000 }
+}
+
+pub fn (d: Duration) as_ns(): i64 {
+    return d.ns
+}
+
+pub fn (d: Duration) as_us(): i64 {
+    return d.ns / 1000
+}
+
+pub fn (d: Duration) as_ms(): i64 {
+    return d.ns / 1000000
+}
+
+pub fn (d: Duration) as_sec(): i64 {
+    return d.ns / 1000000000
+}
+
+pub fn (a: Duration) add(b: Duration): Duration {
+    return Duration{ ns: a.ns + b.ns }
+}
+
+pub fn (a: Duration) sub(b: Duration): Duration {
+    return Duration{ ns: a.ns - b.ns }
+}
+
+pub fn now(): Instant {
+    return Instant{ unix_ns: host_wall_ns() }
+}
+
+pub fn mono(): MonoInstant {
+    return MonoInstant{ ns: host_mono_ns() }
+}
+
+pub fn unix(sec: i64): Instant {
+    return Instant{ unix_ns: sec * 1000000000 }
+}
+
+pub fn unix_ns(ns: i64): Instant {
+    return Instant{ unix_ns: ns }
+}
+
+pub fn between(a: Instant, b: Instant): Duration {
+    return Duration{ ns: b.unix_ns - a.unix_ns }
+}
+
+pub fn since(a: Instant): Duration {
+    return between(a, now())
+}
+
+pub fn mono_between(a: MonoInstant, b: MonoInstant): Duration {
+    return Duration{ ns: b.ns - a.ns }
+}
+
+pub fn mono_since(a: MonoInstant): Duration {
+    return mono_between(a, mono())
+}
+
+pub fn (t: Instant) add(d: Duration): Instant {
+    return Instant{ unix_ns: t.unix_ns + d.ns }
+}
+
+pub fn (t: Instant) sub(d: Duration): Instant {
+    return Instant{ unix_ns: t.unix_ns - d.ns }
+}
+
+pub fn (t: Instant) before(u: Instant): bool {
+    return t.unix_ns < u.unix_ns
+}
+
+pub fn (t: Instant) after(u: Instant): bool {
+    return t.unix_ns > u.unix_ns
+}
+
+pub fn (t: Instant) equal(u: Instant): bool {
+    return t.unix_ns == u.unix_ns
+}
+
+/// Writes a NUL-terminated UTC string into [buf] using a `strftime` pattern.
+/// Returns bytes written (excluding NUL), or -1 on error / too-small buffer.
+pub fn format(buf: []u8, fmt: str, t: Instant): i32 {
+    if buf.len <= 0 {
+        return -1
+    }
+    return host_format(cast(*mut u8, &buf[0]), buf.len, fmt, t.unix_ns)
+}
+
+pub fn (t: Instant) format(buf: []u8, fmt: str): i32 {
+    return format(buf, fmt, t)
+}
+
+pub fn parse_iso(s: str): !Instant {
+    let mut ns: i64 = 0
+    let rc = host_parse_iso(&ns, s)
+    if rc != 0 {
+        return error(rc)
+    }
+    return Instant{ unix_ns: ns }
+}
+
+pub fn parse(fmt: str, s: str): !Instant {
+    let mut ns: i64 = 0
+    let rc = host_parse(&ns, fmt, s)
+    if rc != 0 {
+        return error(rc)
+    }
+    return Instant{ unix_ns: ns }
+}
