@@ -1,7 +1,7 @@
 import 'ast.dart';
 import 'type.dart';
 
-/// Emisja AST → jeden czytelny plik .c z dyrektywami `#line`.
+/// Emits the AST as one readable .c file with `#line` directives.
 String emitC(Program program, String sourcePath) {
   final buf = StringBuffer();
   for (final include in _collectCIncludes(program)) {
@@ -35,7 +35,7 @@ String emitC(Program program, String sourcePath) {
     for (final field in struct.fields) {
       final type = field.resolvedType;
       if (type == null)
-        throw StateError('emit: brak typu pola `${field.name}`');
+        throw StateError('emit: missing type for field `${field.name}`');
       buf.writeln('    ${_cDecl(type, field.name)};');
     }
     buf.writeln('} ${_structCName(struct.moduleName, struct.name)};');
@@ -173,7 +173,7 @@ String _functionHeader(FuncDecl func) {
   if (func.name == 'main') return 'int main(void)';
   final returnType = func.resolvedReturnType;
   if (returnType == null) {
-    throw StateError('emit: brak typu zwracanego funkcji `${func.name}`');
+    throw StateError('emit: missing return type for function `${func.name}`');
   }
   final params = <String>[
     if (func.receiver case final receiver?)
@@ -181,7 +181,7 @@ String _functionHeader(FuncDecl func) {
     ...func.params.map((param) {
       final type = param.resolvedType;
       if (type == null) {
-        throw StateError('emit: brak typu parametru `${param.name}`');
+        throw StateError('emit: missing type for parameter `${param.name}`');
       }
       return _cDecl(type, param.name);
     }),
@@ -224,7 +224,7 @@ String _cType(KlinType type) => switch (type) {
       ArrayType(:final elem) => _cType(elem),
       SliceType(:final elem) => _sliceCName(elem),
       ResultType(:final ok) => _resultCName(ok),
-      _ => throw StateError('emit: typ `${type.displayName}` nie ma typu C'),
+      _ => throw StateError('emit: type `${type.displayName}` has no C type'),
     };
 
 String _cDecl(KlinType type, String name) => switch (type) {
@@ -262,11 +262,12 @@ String _typeToken(KlinType type) => switch (type) {
       ArrayType(:final elem, :final len) => 'arr${len}_${_typeToken(elem)}',
       ResultType(:final ok) => 'res_${_typeToken(ok)}',
       StrType() => 'str',
-      _ => throw StateError('emit: brak tokenu typu `${type.displayName}`'),
+      _ =>
+        throw StateError('emit: missing type token for `${type.displayName}`'),
     };
 
 final class _DeferFrame {
-  /// Ciała defer zarejestrowane w kolejności napotkania (nie z całego bloku z góry).
+  /// Defer bodies registered in encounter order, not from the whole block in advance.
   final List<Stmt> defers = [];
   final bool isLoopBody;
 
@@ -328,7 +329,7 @@ void _emitValueAssignment(
   if (value case OrExpr(:final result, :final fallback)) {
     final resultType = result.resolvedType;
     if (resultType is! ResultType) {
-      throw StateError('emit: `or` bez typu wyniku');
+      throw StateError('emit: `or` without a result type');
     }
     final temp = state.nextValueTemp();
     buf.writeln('$pad${_cType(resultType)} $temp = ${_emitExpr(result, ctx)};');
@@ -369,7 +370,7 @@ void _emitValueAssignment(
 String _emitPropagate(Expr result, _ExprCtx ctx) {
   final resultType = result.resolvedType;
   if (resultType is! ResultType) {
-    throw StateError('emit: propagacja bez typu wyniku');
+    throw StateError('emit: propagation without a result type');
   }
   final pad = '    ' * ctx.indent;
   final temp = ctx.state.nextValueTemp();
@@ -454,7 +455,7 @@ void _emitStmt(
       _line(buf, pos.line, sourcePath);
       final ty = resolvedType;
       if (ty == null) {
-        throw StateError('emit: brak typu dla `$name` — uruchom checker');
+        throw StateError('emit: missing type for `$name` — run the checker');
       }
       if (init != null) {
         if (init is OrExpr || init is PropagateExpr) {
@@ -482,7 +483,7 @@ void _emitStmt(
           StructType() => '{0}',
           StrType() => 'NULL',
           ResultType() => '{0}',
-          _ => throw StateError('emit: brak wartości domyślnej dla `$name`'),
+          _ => throw StateError('emit: missing default value for `$name`'),
         };
         buf.writeln('$pad${_cDecl(ty, name)} = $zero;');
       }
@@ -569,7 +570,7 @@ void _emitStmt(
       _line(buf, pos.line, sourcePath);
       final ty = resolvedType;
       if (ty is! PrimType) {
-        throw StateError('emit: brak typu dla zmiennej pętli `$name`');
+        throw StateError('emit: missing type for loop variable `$name`');
       }
       buf.writeln(
         '${pad}for (${ty.kind.cType} $name = ${_emitExpr(start, ctx)}; '
@@ -602,7 +603,7 @@ void _emitStmt(
         if (initName == null || initExpr == null) return '';
         final ty = resolvedInitType;
         if (ty is! PrimType) {
-          throw StateError('emit: brak typu dla init `$initName`');
+          throw StateError('emit: missing type for initializer `$initName`');
         }
         return '${ty.kind.cType} $initName = ${_emitExpr(initExpr, ctx)}';
       }();
@@ -702,9 +703,9 @@ void _emitStmt(
       buf.writeln('${pad}continue;');
 
     case DeferStmt(:final body):
-      // Rejestruj dopiero w miejscu defer — wcześniejszy exit nie widzi późniejszych.
+      // Register at the defer site: earlier exits must not see later defers.
       if (state.deferStack.isEmpty) {
-        throw StateError('emit: defer poza blokiem');
+        throw StateError('emit: `defer` outside a block');
       }
       state.deferStack.last.defers.add(body);
 
@@ -854,7 +855,7 @@ void _emitElse(
     buf.writeln('$pad}');
     return;
   }
-  throw StateError('emit: nieoczekiwany else branch ${elseBranch.runtimeType}');
+  throw StateError('emit: unexpected else branch ${elseBranch.runtimeType}');
 }
 
 bool _exprIsPtrReceiver(Expr expr) {
@@ -871,7 +872,8 @@ String _emitExpr(Expr expr, _ExprCtx ctx) {
   if (from != null) {
     final elem = from.elem;
     if (elem is! PrimType) {
-      throw StateError('emit: konwersja tablicy→slice wymaga prymitywu');
+      throw StateError(
+          'emit: array-to-slice conversion requires a primitive type');
     }
     return '(${_sliceCName(elem)}){ $raw, ${from.len} }';
   }
@@ -900,7 +902,7 @@ String _emitExprRaw(Expr expr, _ExprCtx ctx) {
       :final mangledName,
       :final receiverByRef,
     ) =>
-      '${mangledName ?? (throw StateError('emit: metoda bez manglingu'))}'
+      '${mangledName ?? (throw StateError('emit: method without mangling'))}'
           '(${receiverByRef ? '&' : ''}${_emitExpr(receiver, ctx)}'
           '${args.isEmpty ? '' : ', ${args.map((arg) => _emitExpr(arg, ctx)).join(', ')}'})',
     StructLitExpr(
@@ -910,8 +912,8 @@ String _emitExprRaw(Expr expr, _ExprCtx ctx) {
       :final positionalFields
     ) =>
       namedFields != null
-          ? '(${_cType(resolvedType ?? (throw StateError('emit: literał bez typu `$typeName`')))}){ ${namedFields.entries.map((entry) => '.${entry.key} = ${_emitExpr(entry.value, ctx)}').join(', ')} }'
-          : '(${_cType(resolvedType ?? (throw StateError('emit: literał bez typu `$typeName`')))}){ ${positionalFields!.map((field) => _emitExpr(field, ctx)).join(', ')} }',
+          ? '(${_cType(resolvedType ?? (throw StateError('emit: literal without type `$typeName`')))}){ ${namedFields.entries.map((entry) => '.${entry.key} = ${_emitExpr(entry.value, ctx)}').join(', ')} }'
+          : '(${_cType(resolvedType ?? (throw StateError('emit: literal without type `$typeName`')))}){ ${positionalFields!.map((field) => _emitExpr(field, ctx)).join(', ')} }',
     CallExpr(:final callee, :final args, :final resolvedCallee) =>
       '${resolvedCallee ?? callee}(${args.map((arg) => _emitExpr(arg, ctx)).join(', ')})',
     UnaryExpr(:final op, :final operand) => '$op(${_emitExpr(operand, ctx)})',
@@ -921,11 +923,11 @@ String _emitExprRaw(Expr expr, _ExprCtx ctx) {
     SliceFromExpr(:final array) => () {
         final type = array.resolvedType;
         if (type is! ArrayType) {
-          throw StateError('emit: `[:]` bez typu tablicy');
+          throw StateError('emit: `[:]` without an array type');
         }
         final elem = type.elem;
         if (elem is! PrimType) {
-          throw StateError('emit: slice nieprymitywnego typu');
+          throw StateError('emit: slice has a non-primitive element type');
         }
         return '(${_sliceCName(elem)}){ ${_emitExpr(array, ctx)}, ${type.len} }';
       }(),
@@ -933,7 +935,7 @@ String _emitExprRaw(Expr expr, _ExprCtx ctx) {
       '{ ${elements.map((element) => _emitExpr(element, ctx)).join(', ')} }',
     CastExpr(:final resolvedType, :final expr) => () {
         if (resolvedType is! PtrType) {
-          throw StateError('emit: cast bez typu wskaźnikowego');
+          throw StateError('emit: cast without pointer type');
         }
         return '(${_cType(resolvedType)})(uintptr_t)(${_emitExpr(expr, ctx)})';
       }(),
@@ -942,7 +944,7 @@ String _emitExprRaw(Expr expr, _ExprCtx ctx) {
     GroupExpr(:final inner) => '(${_emitExpr(inner, ctx)})',
     ErrorExpr(:final code, :final resolvedType) => () {
         if (resolvedType is! ResultType) {
-          throw StateError('emit: `error` bez typu wyniku');
+          throw StateError('emit: `error` without a result type');
         }
         return '(${_cType(resolvedType)}){ .is_err = true, .u.err = ${_emitExpr(code, ctx)} }';
       }(),
@@ -953,7 +955,7 @@ String _emitExprRaw(Expr expr, _ExprCtx ctx) {
     OrExpr(:final resolvedType) => () {
         final outType = resolvedType;
         if (outType == null) {
-          throw StateError('emit: `or` bez typu wyniku wyrażenia');
+          throw StateError('emit: `or` without an expression result type');
         }
         final out = ctx.state.nextValueTemp();
         final pad = '    ' * ctx.indent;

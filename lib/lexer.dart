@@ -131,7 +131,7 @@ final class Lexer {
         _advance();
         return Token(TokenKind.dot, '.', start);
       default:
-        throw LexError('nieoczekiwany znak `$c`', start);
+        throw LexError('unexpected character `$c`', start);
     }
   }
 
@@ -177,7 +177,7 @@ final class Lexer {
       buf.write(_advance());
       buf.write(_advance());
       if (_atEnd || !_isHexDigit(_peek)) {
-        throw LexError('oczekiwano cyfry szesnastkowej po `0x`', start);
+        throw LexError('expected hexadecimal digit after `0x`', start);
       }
       while (!_atEnd && (_isHexDigit(_peek) || _peek == '_')) {
         buf.write(_advance());
@@ -205,11 +205,11 @@ final class Lexer {
     final buf = StringBuffer();
     while (!_atEnd && _peek != '"') {
       if (_peek == '\n') {
-        throw LexError('niezakończony napis', start);
+        throw LexError('unterminated string', start);
       }
       if (_peek == '\\') {
         _advance();
-        if (_atEnd) throw LexError('niezakończony napis', start);
+        if (_atEnd) throw LexError('unterminated string', start);
         final esc = _advance();
         switch (esc) {
           case 'n':
@@ -227,7 +227,7 @@ final class Lexer {
         buf.write(_advance());
       }
     }
-    if (_atEnd) throw LexError('niezakończony napis', start);
+    if (_atEnd) throw LexError('unterminated string', start);
     _advance(); // closing "
     return Token(TokenKind.string, buf.toString(), start);
   }

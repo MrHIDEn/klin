@@ -17,6 +17,8 @@ nagłówki, `-l`, deklaracje `extern` z typami Klin.
   źródłem błędów typów użytkownika)
 - bare-metal: ta sama ścieżka, inne liby (HAL, startup)
 
+Konkretny trop HAL (STM32Cube / LL) → [031](031-biblioteki-hal.md).
+
 Test zasady nadrzędnej: FFI nie ukrywa alokacji ani ownership — to
 kontrakt użytkownika z C.
 

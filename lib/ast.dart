@@ -7,7 +7,7 @@ final class Program {
   final List<FuncDecl> funcs;
   final SourcePos pos;
 
-  /// Per moduł: alias z `import X` → faktyczna nazwa `module` załadowanego pliku.
+  /// Per module: maps an `import X` alias to the loaded file’s actual `module` name.
   final Map<String, Map<String, String>> importAliases;
 
   const Program(
@@ -18,7 +18,7 @@ final class Program {
   });
 }
 
-/// Jedna jednostka źródłowa przed połączeniem jej przez loader projektu.
+/// One source unit before the project loader combines it.
 final class ModuleUnit {
   final String? declaredName;
   final List<String> imports;
@@ -69,7 +69,7 @@ final class FieldDecl {
   final String typeName;
   final SourcePos pos;
 
-  /// Wypełniane przez checker.
+  /// Filled by the checker.
   KlinType? resolvedType;
 
   FieldDecl({
@@ -92,7 +92,7 @@ final class FuncDecl {
   String moduleName;
   String? sourcePath;
 
-  /// Wypełniane przez checker.
+  /// Filled by the checker.
   KlinType? resolvedReturnType;
 
   FuncDecl({
@@ -115,7 +115,7 @@ final class Receiver {
   final bool isMut;
   final SourcePos pos;
 
-  /// Wypełniane przez checker.
+  /// Filled by the checker.
   KlinType? resolvedType;
 
   Receiver({
@@ -132,7 +132,7 @@ final class Param {
   final String typeName;
   final SourcePos pos;
 
-  /// Wypełniane przez checker.
+  /// Filled by the checker.
   KlinType? resolvedType;
 
   Param({
@@ -168,7 +168,7 @@ final class LetStmt extends Stmt {
   final Expr? init;
   final SourcePos pos;
 
-  /// Wypełniane przez checker.
+  /// Filled by the checker.
   KlinType? resolvedType;
 
   LetStmt({
@@ -180,7 +180,7 @@ final class LetStmt extends Stmt {
   });
 }
 
-/// target = expr, gdzie target to NameExpr lub FieldExpr.
+/// target = expr, where target is NameExpr or FieldExpr.
 final class AssignStmt extends Stmt {
   final Expr target;
   final Expr value;
@@ -254,7 +254,7 @@ final class ForRangeStmt extends Stmt {
   final Block body;
   final SourcePos pos;
 
-  /// Typ zmiennej pętli — wypełniane przez checker.
+  /// Loop variable type, filled by the checker.
   KlinType? resolvedType;
 
   ForRangeStmt({
@@ -268,8 +268,8 @@ final class ForRangeStmt extends Stmt {
 
 /// for [name = init]; [cond]; [post] block
 ///
-/// Init wprowadza mutowalną zmienną `name` (jak `:=` w V).
-/// Post to opcjonalne przypisanie `name = expr`.
+/// Init introduces mutable variable `name` (like `:=` in V).
+/// Post is an optional `name = expr` assignment.
 final class ForCStmt extends Stmt {
   final String? initName;
   final Expr? initExpr;
@@ -279,7 +279,7 @@ final class ForCStmt extends Stmt {
   final Block body;
   final SourcePos pos;
 
-  /// Typ zmiennej init — wypełniane przez checker.
+  /// Initializer variable type, filled by the checker.
   KlinType? resolvedInitType;
 
   ForCStmt({
@@ -313,7 +313,7 @@ final class ContinueStmt extends Stmt {
   ContinueStmt(this.pos);
 }
 
-/// defer stmt — wykonaj `body` przy wyjściu z bieżącego bloku.
+/// defer stmt: execute `body` when leaving the current block.
 final class DeferStmt extends Stmt {
   final Stmt body;
   final SourcePos pos;
@@ -321,7 +321,7 @@ final class DeferStmt extends Stmt {
   DeferStmt({required this.body, required this.pos});
 }
 
-/// Zagnieżdżony blok — osobny zakres.
+/// Nested block: a separate scope.
 final class BlockStmt extends Stmt {
   final Block block;
 
@@ -334,10 +334,10 @@ final class BlockStmt extends Stmt {
 sealed class Expr {
   SourcePos get pos;
 
-  /// Wypełniane przez checker.
+  /// Filled by the checker.
   KlinType? resolvedType;
 
-  /// Gdy wyrażenie tablicowe jest użyte jako `[]T` — emisja owija w slice.
+  /// When an array expression is used as `[]T`, emission wraps it in a slice.
   ArrayType? arrayToSliceFrom;
 }
 
@@ -373,7 +373,7 @@ final class NameExpr extends Expr {
   final String name;
   final SourcePos pos;
 
-  /// Wypełniane przez checker: mut receiver emitowany jako wskaźnik (`->`).
+  /// Filled by the checker: a mut receiver is emitted as a pointer (`->`).
   bool isPtrReceiver = false;
 
   NameExpr(this.name, this.pos);
@@ -397,7 +397,7 @@ final class MethodCallExpr extends Expr {
   final List<Expr> args;
   final SourcePos pos;
 
-  /// Wypełniane przez checker.
+  /// Filled by the checker.
   String? mangledName;
   bool receiverByRef = false;
 
@@ -511,7 +511,7 @@ final class GroupExpr extends Expr {
   GroupExpr(this.inner, this.pos);
 }
 
-/// `error(code)` — konstrukcja błędnej gałęzi aktualnego `!T`.
+/// `error(code)`: constructs the error branch of the current `!T`.
 final class ErrorExpr extends Expr {
   final Expr code;
   final SourcePos pos;
@@ -519,7 +519,7 @@ final class ErrorExpr extends Expr {
   ErrorExpr(this.code, this.pos);
 }
 
-/// Postfiksowe `result!` — zwraca OK albo propaguje ERR z funkcji.
+/// Postfix `result!`: returns OK or propagates ERR from the function.
 final class PropagateExpr extends Expr {
   final Expr result;
   final SourcePos pos;
@@ -527,7 +527,7 @@ final class PropagateExpr extends Expr {
   PropagateExpr(this.result, this.pos);
 }
 
-/// Ciało gałęzi błędnej `or`: instrukcje i wymagana wartość końcowa.
+/// Error branch body of `or`: statements and a required final value.
 final class OrBlock {
   final List<Stmt> stmts;
   final Expr value;

@@ -38,12 +38,13 @@ wypluwa plik z definicjami rejestrów. Wejście → wyjście, koniec.
 | [022](022-biblioteki-asm.md) | Biblioteki / jednostki ASM | 💭 | 010? |
 | [023](023-examples.md) | Katalog `examples/` (demo) | 💭 | 001+ |
 | [024](024-rtos.md) | RTOS (FreeRTOS / Zephyr / …) | 💭 | 010+ |
-| [025](025-english-project.md) | English project (except pl-PL) | 💭 | — |
+| [025](025-english-project.md) | English project (except pl-PL) | ✅ | — |
 | [026](026-preprocessor.md) | Preprocessor (`$…`, D3) | 💭 | 010+ |
 | [027](027-svd-ergonomic-api.md) | Ładne API SVD | 💭 | 011, 026 |
 | [028](028-freertos.md) | Ładna współpraca z FreeRTOS | 💭 | 024, 010, 021 |
 | [029](029-async-event-loop.md) | Event loop / async·await | 💭 | 018?, 028? |
 | [030](030-isr-decorators.md) | Przerwania przez dekoratory | 💭 | 010 |
+| [031](031-biblioteki-hal.md) | Biblioteki HAL (Cube / LL) | 💭 | 010, 021 |
 
 ---
 

@@ -1,4 +1,4 @@
-/// Pozycja w źródle (1-indeksowana linia i kolumna).
+/// Source position (one-indexed line and column).
 final class SourcePos {
   final int line;
   final int col;
@@ -10,7 +10,7 @@ final class SourcePos {
 }
 
 enum TokenKind {
-  // słowa kluczowe
+  // keywords
   fn,
   struct,
   pub,
@@ -35,13 +35,13 @@ enum TokenKind {
   error_,
   asm_,
 
-  // literały i nazwy
+  // literals and names
   ident,
   intLit,
   floatLit,
   string,
 
-  // operatory i znaki
+  // operators and punctuation
   plus,
   minus,
   star,

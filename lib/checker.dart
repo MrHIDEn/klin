@@ -18,7 +18,7 @@ final class _Symbol {
   final bool isMut;
   final SourcePos pos;
 
-  /// Mut receiver metody — w C parametr wskaźnikowy (`T *`).
+  /// A mut method receiver becomes a pointer parameter (`T *`) in C.
   final bool isPtrReceiver;
 
   const _Symbol({
@@ -39,7 +39,7 @@ final class _Scope {
   void define(_Symbol symbol) {
     if (_symbols.containsKey(symbol.name)) {
       throw CheckError(
-        'ponowna deklaracja `${symbol.name}` w tym samym zakresie',
+        'redeclaration of `${symbol.name}` in the same scope',
         symbol.pos,
       );
     }
@@ -76,7 +76,7 @@ final class _CheckedCall {
   const _CheckedCall(this.type, this.cName);
 }
 
-/// Tablica symboli + sprawdzanie typów. Mutuje `resolvedType` na węzłach AST.
+/// Symbol table and type checker. Mutates `resolvedType` on AST nodes.
 final class Checker {
   _Scope _scope = _Scope(null);
   int _loopDepth = 0;
@@ -105,15 +105,15 @@ final class Checker {
         .where((func) => func.receiver == null && func.name == 'main')
         .toList();
     if (main.isEmpty) {
-      throw CheckError('brak wymaganej funkcji `main`', program.pos);
+      throw CheckError('missing required `main` function', program.pos);
     }
     if (main.length != 1) {
       throw CheckError(
-          'w projekcie może być tylko jedna funkcja `main`', main[1].pos);
+          'a project can contain only one `main` function', main[1].pos);
     }
     if (main.single.params.isNotEmpty) {
       throw CheckError(
-          'funkcja `main` nie może mieć parametrów', main.single.pos);
+          '`main` function cannot have parameters', main.single.pos);
     }
 
     for (final func in program.funcs) {
@@ -151,7 +151,7 @@ final class Checker {
           _currentReturn is! VoidType &&
           !_returnsOnAllPaths(func.body!)) {
         throw CheckError(
-          'funkcja `${func.name}` musi zwrócić wartość na wszystkich ścieżkach',
+          'function `${func.name}` must return a value on all paths',
           func.pos,
         );
       }
@@ -164,37 +164,38 @@ final class Checker {
       final attrs = switch (decl) {
         StructDecl(:final attrs) => attrs,
         FuncDecl(:final attrs) => attrs,
-        _ => throw StateError('nieznana deklaracja'),
+        _ => throw StateError('unknown declaration'),
       };
       for (final attr in attrs) {
         if (!{'codename', 'cimport', 'cinclude', 'link'}.contains(attr.name)) {
-          throw CheckError('nieznany atrybut `${attr.name}`', attr.pos);
+          throw CheckError('unknown attribute `${attr.name}`', attr.pos);
         }
         final needsArg = attr.name == 'codename' ||
             attr.name == 'cinclude' ||
             attr.name == 'link';
         if (needsArg && attr.arg == null) {
-          throw CheckError('atrybut `${attr.name}` wymaga napisu', attr.pos);
+          throw CheckError(
+              'attribute `${attr.name}` requires a string', attr.pos);
         }
         if (attr.name == 'cimport' && attr.arg != null) {
           throw CheckError(
-              'atrybut `cimport` nie przyjmuje argumentu', attr.pos);
+              '`cimport` attribute does not accept an argument', attr.pos);
         }
         if (attr.name == 'codename' && !cNames.add(attr.arg!)) {
-          throw CheckError('powtórzony codename `${attr.arg}`', attr.pos);
+          throw CheckError('duplicate codename `${attr.arg}`', attr.pos);
         }
       }
       if (decl is StructDecl && _hasAttr(attrs, 'cimport')) {
-        throw CheckError(
-            '`cimport` jest dozwolony tylko dla funkcji', decl.pos);
+        throw CheckError('`cimport` is allowed only on functions', decl.pos);
       }
       if (decl is FuncDecl) {
         final imported = _hasAttr(attrs, 'cimport');
         if (imported && decl.body != null) {
-          throw CheckError('funkcja `cimport` nie może mieć ciała', decl.pos);
+          throw CheckError('`cimport` function cannot have a body', decl.pos);
         }
         if (!imported && decl.body == null) {
-          throw CheckError('funkcja bez `cimport` wymaga ciała', decl.pos);
+          throw CheckError(
+              'function without `cimport` requires a body', decl.pos);
         }
       }
     }
@@ -211,14 +212,14 @@ final class Checker {
           : '${_resolveType(func.receiver!.typeName, func.receiver!.pos).displayName}.${func.name}';
       final collection = func.receiver == null ? _functions : _methods;
       if (collection.containsKey(key)) {
-        throw CheckError('ponowna deklaracja funkcji `${func.name}`', func.pos);
+        throw CheckError('redeclaration of function `${func.name}`', func.pos);
       }
       final params = <KlinType>[];
       final paramNames = <String>{};
       for (final param in func.params) {
         if (!paramNames.add(param.name)) {
           throw CheckError(
-            'ponowna deklaracja parametru `${param.name}`',
+            'redeclaration of parameter `${param.name}`',
             param.pos,
           );
         }
@@ -232,7 +233,7 @@ final class Checker {
       };
       if (returnType is ArrayType) {
         throw CheckError(
-          'funkcja nie może zwracać tablicy (użyj slice `[]T`)',
+          'function cannot return an array (use slice `[]T`)',
           func.pos,
         );
       }
@@ -241,7 +242,7 @@ final class Checker {
       if (receiver != null) {
         final receiverType = _resolveType(receiver.typeName, receiver.pos);
         if (receiverType is! StructType) {
-          throw CheckError('receiver metody musi być strukturą', receiver.pos);
+          throw CheckError('method receiver must be a struct', receiver.pos);
         }
         receiver.resolvedType = receiverType;
       }
@@ -260,7 +261,7 @@ final class Checker {
       final key = _key(struct.moduleName, struct.name);
       if (_structs.containsKey(key)) {
         throw CheckError(
-            'ponowna deklaracja struktury `${struct.name}`', struct.pos);
+            'redeclaration of struct `${struct.name}`', struct.pos);
       }
       _structs[key] = struct;
     }
@@ -269,7 +270,7 @@ final class Checker {
       final names = <String>{};
       for (final field in struct.fields) {
         if (!names.add(field.name)) {
-          throw CheckError('powtórzone pole `${field.name}`', field.pos);
+          throw CheckError('duplicate field `${field.name}`', field.pos);
         }
         field.resolvedType = _resolveType(field.typeName, field.pos);
       }
@@ -280,7 +281,7 @@ final class Checker {
     if (name.startsWith('!')) {
       final ok = _resolveType(name.substring(1), pos);
       if (ok is VoidType || ok is ArrayType || ok is ResultType) {
-        throw CheckError('niepoprawny typ wyniku `$name`', pos);
+        throw CheckError('invalid result type `$name`', pos);
       }
       return ResultType(ok);
     }
@@ -296,7 +297,7 @@ final class Checker {
         isVolatile = true;
         rest = rest.substring(9);
       }
-      if (rest.isEmpty) throw CheckError('brak typu wskazywanego', pos);
+      if (rest.isEmpty) throw CheckError('missing pointee type', pos);
       return PtrType(
         _resolveType(rest, pos),
         isMut: isMut,
@@ -306,13 +307,13 @@ final class Checker {
     if (name.startsWith('[]')) {
       final elem = _resolveType(name.substring(2), pos);
       if (elem is! PrimType) {
-        throw CheckError('slice wymaga typu prymitywnego elementu', pos);
+        throw CheckError('slice requires a primitive element type', pos);
       }
       return SliceType(elem);
     }
     if (name.startsWith('[')) {
       final close = name.indexOf(']');
-      if (close < 2) throw CheckError('niepoprawny typ tablicy `$name`', pos);
+      if (close < 2) throw CheckError('invalid array type `$name`', pos);
       final lenText = name.substring(1, close).replaceAll('_', '');
       final len = int.tryParse(
         lenText.startsWith('0x') || lenText.startsWith('0X')
@@ -321,7 +322,7 @@ final class Checker {
         radix: lenText.startsWith('0x') || lenText.startsWith('0X') ? 16 : 10,
       );
       if (len == null || len < 0 || close == name.length - 1) {
-        throw CheckError('niepoprawny typ tablicy `$name`', pos);
+        throw CheckError('invalid array type `$name`', pos);
       }
       return ArrayType(_resolveType(name.substring(close + 1), pos), len);
     }
@@ -330,7 +331,7 @@ final class Checker {
     final qualifier = parts.length == 2 ? parts.first : null;
     final typeName = parts.length == 2 ? parts.last : name;
     if (parts.length > 2) {
-      throw CheckError('niepoprawna nazwa typu `$name`', pos);
+      throw CheckError('invalid type name `$name`', pos);
     }
     final module = qualifier == null
         ? _currentModule
@@ -339,31 +340,31 @@ final class Checker {
     if (struct != null) {
       if (module != _currentModule && !struct.isPub) {
         final shown = qualifier ?? module;
-        throw CheckError('struktura `$shown.$typeName` jest prywatna', pos);
+        throw CheckError('struct `$shown.$typeName` is private', pos);
       }
       return StructType(module, struct.name);
     }
     if (qualifier != null) {
-      throw CheckError('nieznana struktura `$qualifier.$typeName`', pos);
+      throw CheckError('unknown struct `$qualifier.$typeName`', pos);
     }
     return _resolvePrimType(name, pos);
   }
 
   String _key(String module, String name) => '$module.$name';
 
-  /// Alias z `import X` → faktyczna nazwa modułu pliku.
+  /// Maps an `import X` alias to the file module name.
   String _resolveModuleQualifier(String qualifier, SourcePos pos) {
     if (qualifier == _currentModule) return qualifier;
     final actual = _importAliases[_currentModule]?[qualifier];
     if (actual == null) {
-      throw CheckError('moduł `$qualifier` nie jest zaimportowany', pos);
+      throw CheckError('module `$qualifier` is not imported', pos);
     }
     return actual;
   }
 
   PrimType _resolvePrimType(String name, SourcePos pos) {
     final kind = PrimKind.tryParse(name);
-    if (kind == null) throw CheckError('nieznany typ `$name`', pos);
+    if (kind == null) throw CheckError('unknown type `$name`', pos);
     return PrimType(kind);
   }
 
@@ -405,12 +406,12 @@ final class Checker {
           }
           if (resolved is ArrayType && init is! ArrayLitExpr) {
             throw CheckError(
-              'inicjalizacja tablicy wymaga literału `[...]`',
+              'array initialization requires a `[...]` literal',
               init.pos,
             );
           }
         } else if (annotated != null) {
-          // ZII — brak inicjalizatora, typ z adnotacji.
+          // No initializer: use the annotated type.
           resolved = annotated;
         } else {
           throw CheckError(
@@ -428,7 +429,7 @@ final class Checker {
         final targetType = _checkAssignableTarget(target, pos);
         if (targetType is ArrayType) {
           throw CheckError(
-            'nie można przypisać całej tablicy (użyj elementów lub slice)',
+            'cannot assign an entire array (assign elements or use a slice)',
             pos,
           );
         }
@@ -440,7 +441,7 @@ final class Checker {
         final call = _checkCall(callee, args, pos, moduleName: moduleName);
         if (call.type is ResultType) {
           throw CheckError(
-            'wynik `${call.type.displayName}` funkcji `$callee` musi być obsłużony przez `!` lub `or`',
+            'result `${call.type.displayName}` from function `$callee` must be handled with `!` or `or`',
             pos,
           );
         }
@@ -450,7 +451,7 @@ final class Checker {
         final type = _checkMethodCall(call);
         if (type is ResultType) {
           throw CheckError(
-            'wynik `${type.displayName}` metody `${call.name}` musi być obsłużony przez `!` lub `or`',
+            'result `${type.displayName}` from method `${call.name}` must be handled with `!` or `or`',
             call.pos,
           );
         }
@@ -479,7 +480,7 @@ final class Checker {
         final concrete = _defaultConcrete(unified, pos);
         if (concrete is! PrimType || !concrete.kind.isInteger) {
           throw CheckError(
-            'zakres `for` wymaga typów całkowitych, dostano `${concrete.displayName}`',
+            '`for` range requires integer types, got `${concrete.displayName}`',
             pos,
           );
         }
@@ -519,11 +520,11 @@ final class Checker {
         if (postName != null && postExpr != null) {
           final sym = _scope.lookup(postName);
           if (sym == null) {
-            throw CheckError('nieznana zmienna `$postName`', postExpr.pos);
+            throw CheckError('unknown variable `$postName`', postExpr.pos);
           }
           if (!sym.isMut) {
             throw CheckError(
-              'nie można przypisać do niemutowalnej zmiennej `$postName`',
+              'cannot assign to immutable variable `$postName`',
               postExpr.pos,
             );
           }
@@ -541,17 +542,17 @@ final class Checker {
 
       case BreakStmt(:final pos):
         if (_loopDepth == 0) {
-          throw CheckError('`break` poza pętlą', pos);
+          throw CheckError('`break` outside a loop', pos);
         }
 
       case ContinueStmt(:final pos):
         if (_loopDepth == 0) {
-          throw CheckError('`continue` poza pętlą', pos);
+          throw CheckError('`continue` outside a loop', pos);
         }
 
       case DeferStmt(:final body, :final pos):
         if (_deferDepth > 0) {
-          throw CheckError('`defer` wewnątrz `defer`', pos);
+          throw CheckError('`defer` inside `defer`', pos);
         }
         _deferDepth++;
         try {
@@ -567,12 +568,12 @@ final class Checker {
 
   void _expectBoolCond(Expr cond) {
     final t = _inferExpr(cond);
-    // Porównania już dają bool. Literał bool OK. Untyped/liczby — nie.
+    // Comparisons already yield bool. A bool literal is valid; untyped values and numbers are not.
     if (t is PrimType && t.kind == PrimKind.bool_) {
       return;
     }
     throw CheckError(
-      'warunek wymaga typu `bool`, dostano `${t.displayName}`',
+      'condition requires type `bool`, got `${t.displayName}`',
       cond.pos,
     );
   }
@@ -583,7 +584,7 @@ final class Checker {
       final type = _defaultConcrete(_inferExpr(value), value.pos);
       if (type is! PrimType || !type.kind.isInteger) {
         throw CheckError(
-          '`return` w main wymaga typu całkowitego, dostano `${type.displayName}`',
+          '`return` in main requires an integer type, got `${type.displayName}`',
           value.pos,
         );
       }
@@ -592,13 +593,13 @@ final class Checker {
     }
     if (_currentReturn is VoidType) {
       if (value != null) {
-        throw CheckError('funkcja void nie może zwracać wartości', value.pos);
+        throw CheckError('void function cannot return a value', value.pos);
       }
       return;
     }
     if (value == null) {
       throw CheckError(
-        'funkcja `${_currentFunction}` musi zwrócić `${_currentReturn.displayName}`',
+        'function `${_currentFunction}` must return `${_currentReturn.displayName}`',
         pos,
       );
     }
@@ -625,7 +626,7 @@ final class Checker {
     final local = _scope.lookup(callee);
     if (local != null && moduleName == null) {
       throw CheckError(
-        '`$callee` nie jest funkcją (to zmienna `${local.type.displayName}`)',
+        '`$callee` is not a function (it is a `${local.type.displayName}` variable)',
         pos,
       );
     }
@@ -646,11 +647,11 @@ final class Checker {
       if (elsewhere.isNotEmpty) {
         final mod = elsewhere.first.moduleName;
         throw CheckError(
-          'funkcja `$callee` jest w module `$mod` — użyj `$mod.$callee`',
+          'function `$callee` is in module `$mod` — use `$mod.$callee`',
           pos,
         );
       }
-      // FFI do C (np. puts/printf) — nie znamy sygnatury.
+      // C FFI (for example puts/printf): its signature is unknown.
       for (final arg in args) {
         _inferExpr(arg);
       }
@@ -659,12 +660,12 @@ final class Checker {
     final decl = _functionDecl(module, callee);
     if (module != _currentModule && !decl.isPub) {
       final shown = moduleName ?? module;
-      throw CheckError('funkcja `$shown.$callee` jest prywatna', pos);
+      throw CheckError('function `$shown.$callee` is private', pos);
     }
     if (args.length != signature.paramTypes.length) {
       throw CheckError(
-        'funkcja `$callee` oczekuje ${signature.paramTypes.length} argumentów, '
-        'dostano ${args.length}',
+        'function `$callee` expects ${signature.paramTypes.length} arguments, '
+        'got ${args.length}',
         pos,
       );
     }
@@ -698,37 +699,37 @@ final class Checker {
     final receiverType = _inferExpr(call.receiver);
     if (receiverType is! StructType) {
       throw CheckError(
-          'metoda wymaga struktury, dostano `${receiverType.displayName}`',
+          'method requires a struct, got `${receiverType.displayName}`',
           call.pos);
     }
     final signature = _methods['${receiverType.displayName}.${call.name}'];
     if (signature == null) {
       throw CheckError(
-          'struktura `${receiverType.name}` nie ma metody `${call.name}`',
+          'struct `${receiverType.name}` has no method `${call.name}`',
           call.pos);
     }
     if (receiverType.moduleName != _currentModule && !signature.isPub) {
       throw CheckError(
-        'metoda `${receiverType.moduleName}.${receiverType.name}.${call.name}` jest prywatna',
+        'method `${receiverType.moduleName}.${receiverType.name}.${call.name}` is private',
         call.pos,
       );
     }
     if (signature.isMutReceiver) {
       if (call.receiver is! NameExpr) {
         throw CheckError(
-            'metoda mutująca wymaga mutowalnej zmiennej', call.receiver.pos);
+            'mutating method requires a mutable variable', call.receiver.pos);
       }
       final receiver = call.receiver as NameExpr;
       final symbol = _scope.lookup(receiver.name);
       if (symbol == null || !symbol.isMut) {
         throw CheckError(
-            'nie można wywołać metody mutującej na niemutowalnej zmiennej',
+            'cannot call a mutating method on an immutable variable',
             call.receiver.pos);
       }
     }
     if (call.args.length != signature.paramTypes.length) {
       throw CheckError(
-        'metoda `${call.name}` oczekuje ${signature.paramTypes.length} argumentów, dostano ${call.args.length}',
+        'method `${call.name}` expects ${signature.paramTypes.length} arguments, got ${call.args.length}',
         call.pos,
       );
     }
@@ -749,11 +750,10 @@ final class Checker {
     if (place is NameExpr) {
       final symbol = _scope.lookup(place.name);
       if (symbol == null)
-        throw CheckError('nieznana zmienna `${place.name}`', pos);
+        throw CheckError('unknown variable `${place.name}`', pos);
       if (!symbol.isMut) {
         throw CheckError(
-            'nie można przypisać do niemutowalnej zmiennej `${place.name}`',
-            pos);
+            'cannot assign to immutable variable `${place.name}`', pos);
       }
       place.isPtrReceiver = symbol.isPtrReceiver;
       return symbol.type;
@@ -761,7 +761,7 @@ final class Checker {
     if (place is FieldExpr) {
       final objectType = _inferExpr(place.object);
       if (objectType is ArrayType || objectType is SliceType) {
-        throw CheckError('`len` jest tylko do odczytu', pos);
+        throw CheckError('`len` is read-only', pos);
       }
       _requireMutableStructPlace(place.object, pos);
       return _inferExpr(place);
@@ -769,10 +769,10 @@ final class Checker {
     if (place is UnaryExpr && place.op == '*') {
       final pointer = _inferExpr(place.operand);
       if (pointer is! PtrType) {
-        throw CheckError('dereferencja wymaga wskaźnika', pos);
+        throw CheckError('dereference requires a pointer', pos);
       }
       if (!pointer.isMut) {
-        throw CheckError('nie można pisać przez niemutowalny wskaźnik', pos);
+        throw CheckError('cannot write through an immutable pointer', pos);
       }
       return pointer.pointee;
     }
@@ -781,7 +781,7 @@ final class Checker {
       _requireMutableArrayPlace(place.object, pos);
       return type;
     }
-    throw CheckError('niepoprawny cel przypisania', pos);
+    throw CheckError('invalid assignment target', pos);
   }
 
   void _requireMutableStructPlace(Expr object, SourcePos pos) {
@@ -793,13 +793,13 @@ final class Checker {
       }
       if (!symbol.isMut) {
         throw CheckError(
-            'nie można przypisać do pola niemutowalnej zmiennej', pos);
+            'cannot assign to a field of an immutable variable', pos);
       }
       base.isPtrReceiver = symbol.isPtrReceiver;
       return;
     }
     throw CheckError(
-        'nie można przypisać do pola niemutowalnego wyrażenia', pos);
+        'cannot assign to a field of an immutable expression', pos);
   }
 
   void _requireMutableArrayPlace(Expr object, SourcePos pos) {
@@ -809,11 +809,11 @@ final class Checker {
       if (symbol == null)
         throw CheckError('nieznana zmienna `${base.name}`', pos);
       if (!symbol.isMut) {
-        throw CheckError('nie można przypisać do niemutowalnej tablicy', pos);
+        throw CheckError('cannot assign to an immutable array', pos);
       }
       return;
     }
-    throw CheckError('nie można przypisać przez niemutowalne wyrażenie', pos);
+    throw CheckError('cannot assign through an immutable expression', pos);
   }
 
   Expr _unwrapGroups(Expr expr) {
@@ -840,7 +840,7 @@ final class Checker {
         _ => false,
       };
 
-  /// Wnioskowanie bez kontekstu — może zwrócić typ untyped.
+  /// Infers without context; may return an untyped type.
   KlinType _inferExpr(Expr expr) {
     final type = switch (expr) {
       IntLit() => const UntypedInt(),
@@ -866,7 +866,7 @@ final class Checker {
           }
           if (objectType is! StructType) {
             throw CheckError(
-                'odczyt pola wymaga struktury, dostano `${objectType.displayName}`',
+                'field access requires a struct, got `${objectType.displayName}`',
                 pos);
           }
           FieldDecl? field;
@@ -880,7 +880,7 @@ final class Checker {
           }
           if (field == null) {
             throw CheckError(
-                'struktura `${objectType.name}` nie ma pola `$name`', pos);
+                'struct `${objectType.name}` has no field `$name`', pos);
           }
           return field.resolvedType!;
         }(),
@@ -888,14 +888,14 @@ final class Checker {
           final objectType = _inferExpr(object);
           final indexType = _defaultConcrete(_inferExpr(index), index.pos);
           if (indexType is! PrimType || !indexType.kind.isInteger) {
-            throw CheckError('indeks wymaga typu całkowitego', index.pos);
+            throw CheckError('index requires an integer type', index.pos);
           }
           _materialize(index, indexType);
           return switch (objectType) {
             ArrayType(:final elem) => elem,
             SliceType(:final elem) => elem,
             _ => throw CheckError(
-                'indeksowanie wymaga tablicy lub slice, dostano `${objectType.displayName}`',
+                'indexing requires an array or slice, got `${objectType.displayName}`',
                 pos,
               ),
           };
@@ -903,19 +903,20 @@ final class Checker {
       SliceFromExpr(:final array, :final pos) => () {
           if (!_isAddressablePlace(array)) {
             throw CheckError(
-              '`[:]` wymaga tablicy-l-value, nie literału ani wyrażenia chwilowego',
+              '`[:]` requires an array l-value, not a literal or temporary expression',
               pos,
             );
           }
           final arrayType = _inferExpr(array);
           if (arrayType is! ArrayType || arrayType.elem is! PrimType) {
-            throw CheckError('`[:]` wymaga tablicy typu prymitywnego', pos);
+            throw CheckError(
+                '`[:]` requires an array with a primitive element type', pos);
           }
           return SliceType(arrayType.elem as PrimType);
         }(),
       ArrayLitExpr(:final elements, :final pos) => () {
           if (elements.isEmpty) {
-            throw CheckError('nie można wywnioskować typu pustej tablicy', pos);
+            throw CheckError('cannot infer the type of an empty array', pos);
           }
           var elemType = _inferExpr(elements.first);
           for (final element in elements.skip(1)) {
@@ -930,7 +931,7 @@ final class Checker {
                 : (elemType == nextType
                     ? elemType
                     : throw CheckError(
-                        'niezgodność typów elementów tablicy: `${elemType.displayName}` i `${nextType.displayName}`',
+                        'array element type mismatch: `${elemType.displayName}` and `${nextType.displayName}`',
                         element.pos,
                       ));
           }
@@ -944,14 +945,14 @@ final class Checker {
       CastExpr(:final typeName, :final expr, :final pos) => () {
           final target = _resolveType(typeName, pos);
           if (target is! PtrType) {
-            throw CheckError('cast MVP obsługuje tylko typy wskaźnikowe', pos);
+            throw CheckError('MVP cast supports only pointer types', pos);
           }
           final source = _inferExpr(expr);
           if (source is! UntypedInt &&
               source is! PrimType &&
               source is! PtrType) {
             throw CheckError(
-                'cast wskaźnika wymaga liczby całkowitej lub wskaźnika', pos);
+                'pointer cast requires an integer or pointer', pos);
           }
           return target;
         }(),
@@ -971,21 +972,21 @@ final class Checker {
           if (struct == null) {
             final shown =
                 moduleName == null ? typeName : '$moduleName.$typeName';
-            throw CheckError('nieznana struktura `$shown`', pos);
+            throw CheckError('unknown struct `$shown`', pos);
           }
           if (module != _currentModule && !struct.isPub) {
             final shown = moduleName ?? module;
-            throw CheckError('struktura `$shown.$typeName` jest prywatna', pos);
+            throw CheckError('struct `$shown.$typeName` is private', pos);
           }
           if (namedFields != null) {
             if (namedFields.length != struct.fields.length) {
-              throw CheckError(
-                  'literał `$typeName` wymaga wszystkich pól', pos);
+              throw CheckError('literal `$typeName` requires all fields', pos);
             }
             for (final field in struct.fields) {
               final value = namedFields[field.name];
               if (value == null)
-                throw CheckError('brak pola `${field.name}` w literałe', pos);
+                throw CheckError(
+                    'missing field `${field.name}` in literal', pos);
               _expectAssignable(
                   field.resolvedType!, _inferExpr(value), value.pos);
               _materialize(value, field.resolvedType!);
@@ -994,7 +995,7 @@ final class Checker {
             final values = positionalFields!;
             if (values.length != struct.fields.length) {
               throw CheckError(
-                  'literał `$typeName` oczekuje ${struct.fields.length} pól',
+                  'literal `$typeName` expects ${struct.fields.length} fields',
                   pos);
             }
             for (var i = 0; i < values.length; i++) {
@@ -1011,7 +1012,7 @@ final class Checker {
           expr.resolvedCallee = call.cName;
           if (call.type is VoidType) {
             throw CheckError(
-              'wynik funkcji void `$callee` nie może być użyty jako wartość',
+              'result of void function `$callee` cannot be used as a value',
               pos,
             );
           }
@@ -1021,7 +1022,7 @@ final class Checker {
           final current = _currentReturn;
           if (current is! ResultType) {
             throw CheckError(
-                '`error(...)` wymaga funkcji zwracającej `!T`', pos);
+                '`error(...)` requires a function returning `!T`', pos);
           }
           final codeType = _inferExpr(code);
           _expectAssignable(const PrimType(PrimKind.i32), codeType, code.pos);
@@ -1031,12 +1032,11 @@ final class Checker {
       PropagateExpr(:final result, :final pos) => () {
           final resultType = _inferExpr(result);
           if (resultType is! ResultType) {
-            throw CheckError(
-                'operator postfiksowy `!` wymaga wartości `!T`', pos);
+            throw CheckError('postfix operator `!` requires a `!T` value', pos);
           }
           if (_currentReturn is! ResultType) {
             throw CheckError(
-              'operator postfiksowy `!` wymaga funkcji zwracającej `!T`',
+              'postfix operator `!` requires a function returning `!T`',
               pos,
             );
           }
@@ -1045,7 +1045,7 @@ final class Checker {
       OrExpr(:final result, :final fallback, :final pos) => () {
           final resultType = _inferExpr(result);
           if (resultType is! ResultType) {
-            throw CheckError('lewa strona `or` musi mieć typ `!T`', pos);
+            throw CheckError('left side of `or` must have type `!T`', pos);
           }
           _scope = _Scope(_scope);
           try {
@@ -1071,7 +1071,8 @@ final class Checker {
       UnaryExpr(:final op, :final operand, :final pos) => () {
           if (op == '&') {
             if (!_isAddressablePlace(operand)) {
-              throw CheckError('operator `&` wymaga miejsca w pamięci', pos);
+              throw CheckError(
+                  'operator `&` requires an addressable location', pos);
             }
             final pointee = _inferExpr(operand);
             return PtrType(
@@ -1082,7 +1083,7 @@ final class Checker {
           if (op == '*') {
             final pointer = _inferExpr(operand);
             if (pointer is! PtrType) {
-              throw CheckError('dereferencja wymaga wskaźnika', pos);
+              throw CheckError('dereference requires a pointer', pos);
             }
             return pointer.pointee;
           }
@@ -1090,27 +1091,27 @@ final class Checker {
             final t = _inferExpr(operand);
             if (t is! PrimType || t.kind != PrimKind.bool_) {
               throw CheckError(
-                'operator `!` wymaga typu `bool`, dostano `${t.displayName}`',
+                'operator `!` requires type `bool`, got `${t.displayName}`',
                 pos,
               );
             }
             return const PrimType(PrimKind.bool_);
           }
           if (op != '-') {
-            throw CheckError('nieznany operator unarny `$op`', pos);
+            throw CheckError('unknown unary operator `$op`', pos);
           }
           final t = _inferExpr(operand);
           final concrete = _defaultConcrete(t, operand.pos);
           if (concrete is! PrimType ||
               !(concrete.kind.isInteger || concrete.kind.isFloat)) {
             throw CheckError(
-              'operator `-` wymaga typu liczbowego, dostano `${concrete.displayName}`',
+              'operator `-` requires a numeric type, got `${concrete.displayName}`',
               pos,
             );
           }
           if (_isUnsigned(concrete.kind)) {
             throw CheckError(
-              'operator `-` nie jest dozwolony dla typu bez znaku `${concrete.displayName}`',
+              'operator `-` is not allowed for unsigned type `${concrete.displayName}`',
               pos,
             );
           }
@@ -1152,7 +1153,7 @@ final class Checker {
       return _inferComparison(left, op, right, pos);
     }
     if (!_arithOps.contains(op)) {
-      throw CheckError('nieznany operator `$op`', pos);
+      throw CheckError('unknown operator `$op`', pos);
     }
 
     final lt = _inferExpr(left);
@@ -1165,14 +1166,14 @@ final class Checker {
     if (concrete is! PrimType ||
         !(concrete.kind.isInteger || concrete.kind.isFloat)) {
       throw CheckError(
-        'operator `$op` wymaga typów liczbowych, dostano `${concrete.displayName}`',
+        'operator `$op` requires numeric types, got `${concrete.displayName}`',
         pos,
       );
     }
 
     if (op == '%' && !concrete.kind.isInteger) {
       throw CheckError(
-        'operator `%` wymaga typów całkowitych, dostano `${concrete.displayName}`',
+        'operator `%` requires integer types, got `${concrete.displayName}`',
         pos,
       );
     }
@@ -1193,7 +1194,7 @@ final class Checker {
         rt.kind == PrimKind.bool_) {
       if (op != '==' && op != '!=') {
         throw CheckError(
-          'operator `$op` nie jest dozwolony dla typu `bool`',
+          'operator `$op` is not allowed for type `bool`',
           pos,
         );
       }
@@ -1208,7 +1209,7 @@ final class Checker {
     if (concrete is! PrimType ||
         !(concrete.kind.isInteger || concrete.kind.isFloat)) {
       throw CheckError(
-        'operator `$op` wymaga typów liczbowych, dostano `${concrete.displayName}`',
+        'operator `$op` requires numeric types, got `${concrete.displayName}`',
         pos,
       );
     }
@@ -1243,16 +1244,16 @@ final class Checker {
       return lt;
     } else {
       throw CheckError(
-        'niezgodność typów: `${lt.displayName}` i `${rt.displayName}`',
+        'type mismatch: `${lt.displayName}` and `${rt.displayName}`',
         pos,
       );
     }
   }
 
-  /// Ustawia konkretny typ na wyrażeniu (i rekurencyjnie na poddrzewie
-  /// tam, gdzie były literały untyped).
+  /// Assigns a concrete type to an expression and recursively to subtrees
+  /// containing untyped literals.
   void _materialize(Expr expr, KlinType type) {
-    // `cast(T, x)` zachowuje jawny typ T — nie nadpisuj kontekstem zewnętrznym.
+    // `cast(T, x)` preserves its explicit type T; do not overwrite it from an outer context.
     if (expr is CastExpr) return;
     if (type is SliceType && expr.resolvedType is ArrayType) {
       expr.arrayToSliceFrom = expr.resolvedType as ArrayType;
@@ -1263,9 +1264,9 @@ final class Checker {
         if (op != '&' && op != '*') _materialize(operand, type);
       case BinaryExpr(:final left, :final right, :final op):
         if (_cmpOps.contains(op)) {
-          // Operandy porównania mają typ liczbowy; wynik bool jest na węźle.
-          // Przy materializacji bool z góry nie schodzimy — typ operandów
-          // został ustawiony w _inferComparison.
+          // Comparison operands have a numeric type; the node itself has bool.
+          // When materializing bool from above, do not descend: _inferComparison
+          // already assigned operand types.
           break;
         }
         _materialize(left, type);
@@ -1299,8 +1300,8 @@ final class Checker {
   void _expectAssignable(KlinType target, KlinType source, SourcePos pos) {
     if (!_isAssignable(target, source)) {
       throw CheckError(
-        'niezgodność typów: oczekiwano `${target.displayName}`, '
-        'dostano `${source.displayName}`',
+        'type mismatch: expected `${target.displayName}`, '
+        'got `${source.displayName}`',
         pos,
       );
     }
@@ -1343,11 +1344,11 @@ final class Checker {
       SliceType() => type,
       ResultType() => type,
       VoidType() => throw CheckError(
-          'nie można użyć wartości void w tym kontekście',
+          'cannot use a void value in this context',
           pos,
         ),
       StrType() => throw CheckError(
-          'nie można użyć napisu w tym kontekście',
+          'cannot use a string in this context',
           pos,
         ),
     };
