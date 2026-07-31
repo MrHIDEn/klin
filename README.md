@@ -7,8 +7,11 @@ parses and checks Klin source, then emits one readable `.c` file for
 ## Build and run
 
 ```sh
-dart run bin/klin.dart examples/hello.kl
+dart run bin/klin.dart run examples/hello.kl
 ```
+
+`run` compiles to C, invokes the host C compiler, and executes the binary.
+A bare path (`klin examples/hello.kl`) is still accepted as an alias for `run`.
 
 Optional host I/O lives in [`stdlib/`](stdlib/) (e.g. `import io` →
 `io.print` / `io.println`). Bare-metal programs simply omit that import.

@@ -9,11 +9,16 @@ import 'package:klin/project.dart';
 
 /// CLI: argv → read → lex → parse → check → emit → optionally cc → run
 ///
-/// Usage: dart run bin/klin.dart [--cc gcc|clang|tcc] [--emit-c] <file.kl>
+/// Usage:
+///   klin run [--cc gcc|clang|tcc] <file.kl>
+///   klin [--cc gcc|clang|tcc] [--emit-c] <file.kl>
 Future<void> main(List<String> args) async {
   final opts = _parseArgs(args);
   if (opts == null) {
-    stderr.writeln('usage: klin [--cc gcc|clang|tcc] [--emit-c] <file.kl>');
+    stderr.writeln(
+      'usage: klin run [--cc gcc|clang|tcc] <file.kl>\n'
+      '       klin [--cc gcc|clang|tcc] [--emit-c] <file.kl>',
+    );
     exit(2);
   }
 
@@ -81,9 +86,13 @@ final class _Opts {
   const _Opts(this.sourcePath, this.cc, this.emitC);
 }
 
+/// Recognized subcommands. Bare `<file.kl>` is an alias for `run`.
+const _commands = {'run'};
+
 _Opts? _parseArgs(List<String> args) {
   String cc = 'gcc';
   var emitC = false;
+  String? command;
   String? source;
   for (var i = 0; i < args.length; i++) {
     final a = args[i];
@@ -94,6 +103,8 @@ _Opts? _parseArgs(List<String> args) {
       emitC = true;
     } else if (a.startsWith('-')) {
       return null;
+    } else if (command == null && source == null && _commands.contains(a)) {
+      command = a;
     } else if (source == null) {
       source = a;
     } else {
@@ -101,6 +112,8 @@ _Opts? _parseArgs(List<String> args) {
     }
   }
   if (source == null) return null;
+  // `run` means compile+execute; `--emit-c` still skips execution.
+  if (command != null && command != 'run') return null;
   return _Opts(source, cc, emitC);
 }
 

@@ -781,6 +781,34 @@ fn main() {
     expect(c, isNot(contains('#include <stdio.h>')));
   });
 
+  test('klin run compiles and executes a program', () async {
+    final proc = await Process.run(
+      'dart',
+      ['run', 'bin/klin.dart', 'run', 'test/hello.kl'],
+    );
+    expect(proc.exitCode, 0, reason: proc.stderr.toString());
+    expect(proc.stdout, await File('test/hello.out').readAsString());
+  });
+
+  test('klin run without a file prints usage', () async {
+    final proc = await Process.run(
+      'dart',
+      ['run', 'bin/klin.dart', 'run'],
+    );
+    expect(proc.exitCode, isNot(0));
+    expect(proc.stderr.toString(), contains('usage:'));
+    expect(proc.stderr.toString(), contains('klin run'));
+  });
+
+  test('bare file path remains an alias for run', () async {
+    final proc = await Process.run(
+      'dart',
+      ['run', 'bin/klin.dart', 'test/hello.kl'],
+    );
+    expect(proc.exitCode, 0, reason: proc.stderr.toString());
+    expect(proc.stdout, await File('test/hello.out').readAsString());
+  });
+
   test('--emit-c writes C without compiling or running', () async {
     final source = File('${tmp.path}/emit_only.kl');
     await source.writeAsString('''
