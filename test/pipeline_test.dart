@@ -269,6 +269,46 @@ fn main() {
     );
   });
 
+  test('error: sN format requires str', () {
+    final source = r'''
+fn main() {
+    let n = 1
+    puts("${n:s8}")
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) =>
+              e is CheckError &&
+              e.toString().contains('requires `str`'),
+        ),
+      ),
+    );
+  });
+
+  test('error: fraction mask requires numeric type', () {
+    final source = r'''
+fn main() {
+    let s: str = "x"
+    puts("${s:0.00}")
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) =>
+              e is CheckError &&
+              e.toString().contains('requires a numeric type'),
+        ),
+      ),
+    );
+  });
+
   test('fmt preserves interpolation syntax', () {
     final source = r'''
 fn main() {

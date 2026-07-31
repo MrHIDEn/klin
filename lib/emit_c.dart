@@ -281,7 +281,8 @@ String _emitInterpPrintfExpr(InterpolatedStringExpr interp, _ExprCtx ctx) {
   for (final part in interp.parts) {
     switch (part) {
       case InterpText(:final text):
-        fmt.write(_escapeC(text));
+        // `%` in literal text must be `%%` inside a printf format string.
+        fmt.write(_escapeC(text).replaceAll('%', '%%'));
       case InterpSlot(
           :final expr,
           :final printfSpec,

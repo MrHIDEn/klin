@@ -713,19 +713,29 @@ final class Checker {
       return (trimFrac: false, trimFracDigits: 0, printfSpec: raw);
     }
     if (raw == 'hex') {
+      _expectInterpNumeric(type, raw, pos);
       return (trimFrac: false, trimFracDigits: 0, printfSpec: '%x');
     }
     if (raw == 'HEX') {
+      _expectInterpNumeric(type, raw, pos);
       return (trimFrac: false, trimFracDigits: 0, printfSpec: '%X');
     }
     if (raw == 'sci') {
+      _expectInterpFloaty(type, raw, pos);
       return (trimFrac: false, trimFracDigits: 0, printfSpec: '%e');
     }
     if (raw == 'SCI') {
+      _expectInterpFloaty(type, raw, pos);
       return (trimFrac: false, trimFracDigits: 0, printfSpec: '%E');
     }
     final sMatch = RegExp(r'^s(\d+)$').firstMatch(raw);
     if (sMatch != null) {
+      if (type is! StrType) {
+        throw CheckError(
+          'format `$raw` requires `str`, got `${type.displayName}`',
+          pos,
+        );
+      }
       return (
         trimFrac: false,
         trimFracDigits: 0,
@@ -734,6 +744,7 @@ final class Checker {
     }
     final fixed = RegExp(r'^0\.(0+)$').firstMatch(raw);
     if (fixed != null) {
+      _expectInterpFloaty(type, raw, pos);
       return (
         trimFrac: false,
         trimFracDigits: 0,
@@ -742,6 +753,7 @@ final class Checker {
     }
     final opt = RegExp(r'^0\.(#+)$').firstMatch(raw);
     if (opt != null) {
+      _expectInterpFloaty(type, raw, pos);
       return (
         trimFrac: true,
         trimFracDigits: opt[1]!.length,
@@ -756,10 +768,12 @@ final class Checker {
       if (type is UntypedFloat) {
         return (trimFrac: false, trimFracDigits: 0, printfSpec: '%.0f');
       }
+      _expectInterpNumeric(type, raw, pos);
       return (trimFrac: false, trimFracDigits: 0, printfSpec: '%d');
     }
     final zeros = RegExp(r'^(0+)$').firstMatch(raw);
     if (zeros != null) {
+      _expectInterpNumeric(type, raw, pos);
       return (
         trimFrac: false,
         trimFracDigits: 0,
@@ -769,6 +783,27 @@ final class Checker {
     throw CheckError(
       'unknown format `$raw` '
       '(use printf `%…`, masks `0.00` / `0.###`, `sN`, `hex`, or `sci`)',
+      pos,
+    );
+  }
+
+  void _expectInterpNumeric(KlinType type, String raw, SourcePos pos) {
+    if (type is UntypedInt) return;
+    if (type is PrimType && type.kind.isInteger) return;
+    throw CheckError(
+      'format `$raw` requires an integer type, got `${type.displayName}`',
+      pos,
+    );
+  }
+
+  void _expectInterpFloaty(KlinType type, String raw, SourcePos pos) {
+    if (type is UntypedFloat || type is UntypedInt) return;
+    if (type is PrimType &&
+        (type.kind.isFloat || type.kind.isInteger)) {
+      return;
+    }
+    throw CheckError(
+      'format `$raw` requires a numeric type, got `${type.displayName}`',
       pos,
     );
   }
