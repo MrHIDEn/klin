@@ -3,6 +3,9 @@
 **Status:** ✅
 **Zależy od:** 007 (slice ✅); fn-pointer (faza 2 ✅); warstwa 2: `Allocator` ([057](057-allocator.md) ✅)
 
+Note: [16-slice.md](../note/16-slice.md) · fn-ptr: [13-fn-ptr.md](../note/13-fn-ptr.md) ·
+alokator: [14-allocator.md](../note/14-allocator.md)
+
 ## Kontekst
 
 W JS: `arr.map(…)`, `filter`, `reduce`, `find`, `forEach`. Wygodne, ale w

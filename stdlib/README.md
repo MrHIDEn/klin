@@ -93,7 +93,8 @@ Do **not** import on freestanding targets without a heap.
 ## `slice`
 
 Zero-alloc helpers via fn-pointers ([issue 017](../issues/017-collection-methods.md),
-[note/13-fn-ptr.md](../note/13-fn-ptr.md)). Names are monomorphized (`_i32`, `_u8`):
+[note/16-slice.md](../note/16-slice.md), [note/13-fn-ptr.md](../note/13-fn-ptr.md)).
+Names are monomorphized (`_i32`, `_u8`):
 
 ```klin
 import slice
@@ -111,8 +112,9 @@ Does **not** import `mem` — freestanding-safe. For heap results use `slice_all
 
 ## `slice_alloc`
 
-Allocating helpers ([issue 017](../issues/017-collection-methods.md) layer 2).
-Separate from `slice` so zero-alloc code stays free of `malloc`. Caller frees:
+Allocating helpers ([issue 017](../issues/017-collection-methods.md) layer 2,
+[note/16-slice.md](../note/16-slice.md)). Separate from `slice` so zero-alloc
+code stays free of `malloc`. Caller frees:
 
 ```klin
 import mem

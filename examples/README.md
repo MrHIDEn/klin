@@ -21,8 +21,8 @@ are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), n
 | `point_macro.kl` | Same via `$fn` ([note/04-makra.md](../note/04-makra.md)) |
 | `slice_sum.kl` | Arrays / slices |
 | `fn_ptr.kl` | Function pointers without capture ([017](../issues/017-collection-methods.md) phase 2) |
-| `slice_ops.kl` | `stdlib/slice` map/filter/reduce ([017](../issues/017-collection-methods.md) phase 3) |
-| `slice_alloc_demo.kl` | `stdlib/slice_alloc` + explicit `Allocator` ([017](../issues/017-collection-methods.md) phase 4) |
+| `slice_ops.kl` | `stdlib/slice` map/filter/reduce ([017](../issues/017-collection-methods.md), [note/16](../note/16-slice.md)) |
+| `slice_alloc_demo.kl` | `stdlib/slice_alloc` + explicit `Allocator` ([017](../issues/017-collection-methods.md), [note/16](../note/16-slice.md)) |
 | `short_decl.kl` | `:=` sugar for `let mut` ([055](../issues/055-short-decl.md), [note/14](../note/14-short-decl.md)) |
 | `match.kl` | `match` stmt + expr, no fallthrough ([014](../issues/014-match.md), [note/15](../note/15-match.md)) |
 | `add_test.kl` | Sample `klin test` (`import testing`) |

@@ -7,7 +7,7 @@ import mem
 import slice
 
 $fn slice_alloc_ops(T: type) {
-  /// Allocates `xs.len` elements, maps with [f]. Caller: `defer mem.free_$T(a, out)`.
+  /// Allocates `xs.len` elements, maps with [f]. Caller: `defer mem.free_$T(&a, out)`.
   pub fn map_alloc_$T(a: *mut mem.Allocator, xs: []$T, f: fn($T): $T): ![]$T {
     let mut out = mem.alloc_$T(a, xs.len)!
     let mut i: i32 = 0
@@ -18,7 +18,7 @@ $fn slice_alloc_ops(T: type) {
     return out
   }
 
-  /// Two-pass: count matches, alloc exact `n`, copy. Caller frees with `mem.free_$T`.
+  /// Two-pass: count matches, alloc exact `n`, copy. Caller: `defer mem.free_$T(&a, out)`.
   pub fn filter_alloc_$T(a: *mut mem.Allocator, xs: []$T, pred: fn($T): bool): ![]$T {
     let n = slice.count_$T(xs, pred)
     let mut out = mem.alloc_$T(a, n)!
