@@ -198,6 +198,90 @@ fn main() {
     expect(c, isNot(contains('io_println(')));
   });
 
+  test('golden: string interpolation → printf (issue 016)', () async {
+    final result = await _compileAndRun('test/interp.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/interp.out').readAsString());
+
+    final program = loadProject('test/interp.kl');
+    Checker().check(program);
+    final c = emitC(program, 'test/interp.kl');
+    expect(c, contains('printf('));
+    expect(c, contains('klin_fmt_trim_frac'));
+    expect(c, isNot(contains('malloc')));
+    expect(c, contains('%.8s'));
+  });
+
+  test('error: interpolated string in let is print-only', () {
+    final source = r'''
+fn main() {
+    let b: str = "x"
+    let s = "a $b"
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) =>
+              e is CheckError && e.toString().contains('print-only'),
+        ),
+      ),
+    );
+  });
+
+  test('error: interpolated printf rejects extra args', () {
+    final source = r'''
+fn main() {
+    let n = 1
+    printf("${n:%d}", n)
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) =>
+              e is CheckError && e.toString().contains('sole argument'),
+        ),
+      ),
+    );
+  });
+
+  test('error: unknown interpolation mask n3', () {
+    final source = r'''
+fn main() {
+    let n = 1
+    puts("${n:n3}")
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) =>
+              e is CheckError && e.toString().contains('unknown format'),
+        ),
+      ),
+    );
+  });
+
+  test('fmt preserves interpolation syntax', () {
+    final source = r'''
+fn main() {
+puts("hi $name ${n:%d} ${x:0.00} ${t:s8}")
+}
+''';
+    final formatted = formatSource(source);
+    expect(formatted, contains(r'$name'));
+    expect(formatted, contains(r'${n:%d}'));
+    expect(formatted, contains(r'${x:0.00}'));
+    expect(formatted, contains(r'${t:s8}'));
+  });
+
   test(r'golden: $fn macro expands to a specialized struct (issue 026)',
       () async {
     final result = await _compileAndRun('test/point_macro.kl', tmp);

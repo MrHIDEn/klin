@@ -10,7 +10,35 @@ Search order for `import io`:
 
 | Module | Role |
 |---|---|
-| `io` | Host `print` / `println` |
-| `testing` | `assert` / `assert_eq_i32` for `klin test` |
+| [`io`](io.kl) | Host `print` / `println` (thin libc wrappers) |
+| [`testing`](testing.kl) | `assert` / `assert_eq_i32` for `klin test` |
+
+## `io`
+
+```klin
+import io
+
+io.print("no newline")
+io.println("with newline")
+```
+
+Do **not** import on bare metal (pulls `stdio`).
+
+## `testing`
+
+Used by `klin test` on `*_test.kl` files. The harness injects `main` that
+calls each `test_*` function:
+
+```klin
+import testing
+
+fn test_add() {
+    testing.assert_eq_i32(1 + 1, 2)
+}
+```
+
+```sh
+dart run bin/klin.dart test examples/
+```
 
 Bare-metal programs simply do not import these modules.

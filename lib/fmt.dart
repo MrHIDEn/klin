@@ -232,6 +232,25 @@ String _expr(Expr expr, [int indent = 0]) {
     FloatLit(:final lexeme) => lexeme,
     BoolLit(:final value) => value ? 'true' : 'false',
     StringLit(:final value) => '"${_escapeString(value)}"',
+    InterpolatedStringExpr(:final parts) => () {
+        final out = StringBuffer('"');
+        for (final part in parts) {
+          switch (part) {
+            case InterpText(:final text):
+              out.write(_escapeInterpText(text));
+            case InterpSlot(:final expr, :final formatRaw):
+              if (expr is NameExpr && formatRaw == null) {
+                out.write('\$${expr.name}');
+              } else if (formatRaw == null) {
+                out.write('\${${_expr(expr, indent)}}');
+              } else {
+                out.write('\${${_expr(expr, indent)}:$formatRaw}');
+              }
+          }
+        }
+        out.write('"');
+        return out.toString();
+      }(),
     NameExpr(:final name) => name,
     FieldExpr(:final object, :final name) => '${_expr(object, indent)}.$name',
     MethodCallExpr(:final receiver, :final name, :final args) =>
@@ -305,6 +324,36 @@ String _escapeString(String value) {
       case 0x5C: // \
         buf.write(r'\\');
       case 0x22: // "
+        buf.write(r'\"');
+      case 0x0A:
+        buf.write(r'\n');
+      case 0x0D:
+        buf.write(r'\r');
+      case 0x09:
+        buf.write(r'\t');
+      default:
+        if (unit < 0x20) {
+          buf.write('\\x${unit.toRadixString(16).padLeft(2, '0')}');
+        } else {
+          buf.writeCharCode(unit);
+        }
+    }
+  }
+  return buf.toString();
+}
+
+String _escapeInterpText(String value) {
+  final buf = StringBuffer();
+  for (final unit in value.codeUnits) {
+    if (unit == 0x24) {
+      // `$` — literal dollar inside interpolated string
+      buf.write(r'\$');
+      continue;
+    }
+    switch (unit) {
+      case 0x5C:
+        buf.write(r'\\');
+      case 0x22:
         buf.write(r'\"');
       case 0x0A:
         buf.write(r'\n');

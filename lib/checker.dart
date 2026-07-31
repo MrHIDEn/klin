@@ -439,6 +439,10 @@ final class Checker {
         _materialize(value, targetType);
 
       case CallStmt(:final moduleName, :final callee, :final args, :final pos):
+        if (_tryCheckInterpPrint(moduleName, callee, args, pos,
+            onResolved: (cName) => stmt.resolvedCallee = cName)) {
+          break;
+        }
         final call = _checkCall(callee, args, pos, moduleName: moduleName);
         if (call.type is ResultType) {
           throw CheckError(
@@ -616,6 +620,187 @@ final class Checker {
     }
     _expectAssignable(_currentReturn, valueType, value.pos);
     _materialize(value, _currentReturn);
+  }
+
+  /// If [args] is a single interpolated string to a print sink, resolve it and
+  /// rewrite the call to `printf`. Returns true when handled.
+  bool _tryCheckInterpPrint(
+    String? moduleName,
+    String callee,
+    List<Expr> args,
+    SourcePos pos, {
+    required void Function(String cName) onResolved,
+  }) {
+    final hasInterp = args.any((a) => a is InterpolatedStringExpr);
+    if (!hasInterp) return false;
+
+    if (!_isInterpPrintSink(moduleName, callee)) {
+      final bad = args.whereType<InterpolatedStringExpr>().first;
+      throw CheckError(
+        'interpolated string is print-only in MVP '
+        '(use as the sole argument to puts / printf / io.print / io.println)',
+        bad.pos,
+      );
+    }
+    if (args.length != 1 || args[0] is! InterpolatedStringExpr) {
+      throw CheckError(
+        'interpolated string must be the sole argument of `$callee` in MVP',
+        pos,
+      );
+    }
+    final interp = args[0] as InterpolatedStringExpr;
+    _resolveInterpolatedString(interp);
+    interp.appendNewline = _interpSinkNeedsNewline(moduleName, callee);
+    onResolved('printf');
+    return true;
+  }
+
+  bool _isInterpPrintSink(String? moduleName, String callee) {
+    if (callee == 'puts' || callee == 'printf') return true;
+    if (moduleName == 'io' && (callee == 'print' || callee == 'println')) {
+      return true;
+    }
+    return false;
+  }
+
+  bool _interpSinkNeedsNewline(String? moduleName, String callee) {
+    if (callee == 'puts') return true;
+    if (moduleName == 'io' && callee == 'println') return true;
+    return false;
+  }
+
+  void _resolveInterpolatedString(InterpolatedStringExpr interp) {
+    for (final part in interp.parts) {
+      if (part is! InterpSlot) continue;
+      final ty = _inferExpr(part.expr);
+      final KlinType concrete;
+      if (ty is UntypedInt || ty is UntypedFloat) {
+        concrete = _defaultConcrete(ty, part.expr.pos);
+        _materialize(part.expr, concrete);
+      } else if (ty is PrimType || ty is StrType || ty is PtrType) {
+        concrete = ty;
+      } else {
+        throw CheckError(
+          'cannot interpolate value of type `${ty.displayName}`',
+          part.expr.pos,
+        );
+      }
+      final resolved =
+          _resolveInterpFormat(part.formatRaw, concrete, part.expr.pos);
+      if (resolved.trimFrac) {
+        part.trimFrac = true;
+        part.trimFracDigits = resolved.trimFracDigits;
+        part.printfSpec = '%s';
+      } else {
+        part.trimFrac = false;
+        part.printfSpec = resolved.printfSpec;
+      }
+    }
+  }
+
+  ({bool trimFrac, int trimFracDigits, String? printfSpec}) _resolveInterpFormat(
+    String? raw,
+    KlinType type,
+    SourcePos pos,
+  ) {
+    if (raw == null || raw.isEmpty) {
+      return (trimFrac: false, trimFracDigits: 0, printfSpec: _defaultPrintf(type, pos));
+    }
+    if (raw.startsWith('%')) {
+      if (raw == '%' || raw.contains('%n')) {
+        throw CheckError('invalid printf format `$raw`', pos);
+      }
+      return (trimFrac: false, trimFracDigits: 0, printfSpec: raw);
+    }
+    if (raw == 'hex') {
+      return (trimFrac: false, trimFracDigits: 0, printfSpec: '%x');
+    }
+    if (raw == 'HEX') {
+      return (trimFrac: false, trimFracDigits: 0, printfSpec: '%X');
+    }
+    if (raw == 'sci') {
+      return (trimFrac: false, trimFracDigits: 0, printfSpec: '%e');
+    }
+    if (raw == 'SCI') {
+      return (trimFrac: false, trimFracDigits: 0, printfSpec: '%E');
+    }
+    final sMatch = RegExp(r'^s(\d+)$').firstMatch(raw);
+    if (sMatch != null) {
+      return (
+        trimFrac: false,
+        trimFracDigits: 0,
+        printfSpec: '%.${sMatch[1]}s',
+      );
+    }
+    final fixed = RegExp(r'^0\.(0+)$').firstMatch(raw);
+    if (fixed != null) {
+      return (
+        trimFrac: false,
+        trimFracDigits: 0,
+        printfSpec: '%.${fixed[1]!.length}f',
+      );
+    }
+    final opt = RegExp(r'^0\.(#+)$').firstMatch(raw);
+    if (opt != null) {
+      return (
+        trimFrac: true,
+        trimFracDigits: opt[1]!.length,
+        printfSpec: null,
+      );
+    }
+    if (raw == '0') {
+      if (type is PrimType &&
+          (type.kind == PrimKind.f32 || type.kind == PrimKind.f64)) {
+        return (trimFrac: false, trimFracDigits: 0, printfSpec: '%.0f');
+      }
+      if (type is UntypedFloat) {
+        return (trimFrac: false, trimFracDigits: 0, printfSpec: '%.0f');
+      }
+      return (trimFrac: false, trimFracDigits: 0, printfSpec: '%d');
+    }
+    final zeros = RegExp(r'^(0+)$').firstMatch(raw);
+    if (zeros != null) {
+      return (
+        trimFrac: false,
+        trimFracDigits: 0,
+        printfSpec: '%0${raw.length}d',
+      );
+    }
+    throw CheckError(
+      'unknown format `$raw` '
+      '(use printf `%…`, masks `0.00` / `0.###`, `sN`, `hex`, or `sci`)',
+      pos,
+    );
+  }
+
+  String _defaultPrintf(KlinType type, SourcePos pos) {
+    if (type is StrType) return '%s';
+    if (type is PtrType) return '%p';
+    if (type is UntypedInt) return '%d';
+    if (type is UntypedFloat) return '%g';
+    if (type is PrimType) {
+      return switch (type.kind) {
+        PrimKind.bool_ => '%d',
+        PrimKind.f32 || PrimKind.f64 => '%g',
+        PrimKind.i8 ||
+        PrimKind.i16 ||
+        PrimKind.i32 ||
+        PrimKind.isize =>
+          '%d',
+        PrimKind.i64 => '%lld',
+        PrimKind.u8 ||
+        PrimKind.u16 ||
+        PrimKind.u32 ||
+        PrimKind.usize =>
+          '%u',
+        PrimKind.u64 => '%llu',
+      };
+    }
+    throw CheckError(
+      'cannot choose a default format for `${type.displayName}` — '
+      'provide an explicit `:…` format',
+      pos,
+    );
   }
 
   _CheckedCall _checkCall(
@@ -848,6 +1033,11 @@ final class Checker {
       FloatLit() => const UntypedFloat(),
       BoolLit() => const PrimType(PrimKind.bool_),
       StringLit() => const StrType(),
+      InterpolatedStringExpr(:final pos) => throw CheckError(
+          'interpolated string is print-only in MVP '
+          '(use as the sole argument to puts / printf / io.print / io.println)',
+          pos,
+        ),
       NameExpr nameExpr => () {
           final sym = _scope.lookup(nameExpr.name);
           if (sym == null) {
@@ -1009,6 +1199,11 @@ final class Checker {
         }(),
       CallExpr(:final moduleName, :final callee, :final args, :final pos) =>
         () {
+          if (_tryCheckInterpPrint(moduleName, callee, args, pos,
+              onResolved: (cName) => expr.resolvedCallee = cName)) {
+            // printf returns i32; treat like FFI.
+            return const PrimType(PrimKind.i32);
+          }
           final call = _checkCall(callee, args, pos, moduleName: moduleName);
           expr.resolvedCallee = call.cName;
           if (call.type is VoidType) {
@@ -1280,6 +1475,7 @@ final class Checker {
             FloatLit() ||
             BoolLit() ||
             StringLit() ||
+            InterpolatedStringExpr() ||
             NameExpr() ||
             CallExpr() ||
             FieldExpr() ||

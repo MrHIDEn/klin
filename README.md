@@ -4,43 +4,47 @@ Klin is a systems programming language that compiles to C. Its Dart frontend
 parses and checks Klin source, then emits one readable `.c` file for
 `gcc`, `clang`, or `tcc`.
 
-## Build and run
+## Toolchain
 
 ```sh
 dart run bin/klin.dart run examples/hello.kl
-```
-
-`run` compiles to C, invokes the host C compiler, and executes the binary.
-A bare path (`klin examples/hello.kl`) is still accepted as an alias for `run`.
-
-Optional host I/O lives in [`stdlib/`](stdlib/) (e.g. `import io` →
-`io.print` / `io.println`). Bare-metal programs simply omit that import.
-STM32 demos live under [`examples/stm32/`](examples/stm32/) (see
-[`examples/README.md`](examples/README.md)).
-
-Pass `--emit-c` to write the generated C source without compiling or running
-it:
-
-```sh
-dart run bin/klin.dart --emit-c examples/hello.kl
-```
-
-`$fn` macros and `$peripherals_from_svd(...)` expand before parsing.
-Inspect the result with `--emit-pp` (`out/<file>.pp.kl`). Fluent register
-access (`RCC.AHB1ENR.GPIOAEN.set(1)`) lowers to the same zero-cost
-`static inline` accessors as `svd2klin`.
-
-Format sources with a Go-style canonical printer (`klin fmt`, optional `-w`):
-
-```sh
+dart run bin/klin.dart examples/hello.kl          # alias for run
 dart run bin/klin.dart fmt -w examples/hello.kl
-```
-
-Run Klin program tests (`*_test.kl`, `import testing`):
-
-```sh
 dart run bin/klin.dart test examples/
+dart run bin/klin.dart --emit-c examples/hello.kl
+dart run bin/klin.dart --emit-pp examples/point_macro.kl
 ```
+
+| Command / flag | Role |
+|---|---|
+| `run <file.kl>` | Compile to C, host `cc`, execute |
+| bare path | Same as `run` |
+| `fmt [-w]` | Go-style format ([note/05-fmt.md](note/05-fmt.md)) |
+| `test` | Run `*_test.kl` (`import testing`) |
+| `--emit-c` | Write generated `.c` only |
+| `--emit-pp` | Write preprocessor output (`.pp.kl`) |
+
+CLI summary (PL): [note/06-cli.md](note/06-cli.md).
+
+Optional host I/O: [`stdlib/`](stdlib/) (`import io`, `import testing`).
+Bare-metal programs omit those imports. STM32 demos:
+[`examples/stm32/`](examples/stm32/) — see [`examples/README.md`](examples/README.md).
+
+### Macros and SVD
+
+`$fn` macros and `$peripherals_from_svd(...)` expand before parsing
+([note/04-makra.md](note/04-makra.md)). Inspect with `--emit-pp`.
+Fluent MMIO (`RCC.AHB1ENR.GPIOAEN.set(1)`) lowers to zero-cost
+`static inline` accessors (same as `svd2klin`).
+
+### String interpolation
+
+Ordinary `"…"` strings may contain `$name` / `${expr}` / `${expr:format}`
+and lower to `printf` (no hidden allocation). Formats: native printf
+(`%d`, `%.2f`), masks (`0.00`, `0.###`), `s8` truncate, `hex` / `sci`.
+**Print-only MVP** — use as the sole argument to `puts` / `printf` /
+`io.print` / `io.println`. Details: [note/07-interpolacja.md](note/07-interpolacja.md),
+example: [`examples/interp.kl`](examples/interp.kl).
 
 ## Test
 
@@ -48,7 +52,7 @@ dart run bin/klin.dart test examples/
 dart test   # compiler / golden tests
 ```
 
-The design documents and roadmap are maintained in Polish:
+Design docs and roadmap (Polish):
 
 - [Roadmap](issues/sorted.md)
 - [Design notes](note/)

@@ -1,4 +1,5 @@
 import 'ast.dart';
+import 'lexer.dart';
 import 'token.dart';
 
 final class ParseError implements Exception {
@@ -42,6 +43,18 @@ final class Parser {
   Program parse() {
     final unit = parseUnit();
     return Program(unit.structs, unit.funcs, unit.pos);
+  }
+
+  /// Parse a single expression (used for `${…}` interpolation slots).
+  Expr parseExpression() {
+    final expr = _expr();
+    if (!_check(TokenKind.eof)) {
+      throw ParseError(
+        'unexpected token `${_current.lexeme}` in interpolation expression',
+        _current.pos,
+      );
+    }
+    return expr;
   }
 
   ModuleUnit parseUnit() {
@@ -561,7 +574,7 @@ final class Parser {
         break;
       case TokenKind.string:
         _advance();
-        expr = StringLit(t.lexeme, t.pos);
+        expr = _stringLitOrInterp(t);
         break;
       case TokenKind.true_:
         _advance();
@@ -715,6 +728,126 @@ final class Parser {
       fields: fields,
       pos: typeName.pos,
     );
+  }
+
+  Expr _stringLitOrInterp(Token t) {
+    final s = t.lexeme;
+    if (!_stringHasInterp(s)) {
+      return StringLit(s.replaceAll(kInterpEscapedDollar, '\$'), t.pos);
+    }
+    return _parseInterpolatedString(s, t.pos);
+  }
+
+  bool _stringHasInterp(String s) {
+    for (var i = 0; i < s.length; i++) {
+      if (s.codeUnitAt(i) == kInterpEscapedDollar.codeUnitAt(0)) continue;
+      if (s[i] == '\$') return true;
+    }
+    return false;
+  }
+
+  bool _isIdentStartChar(String c) {
+    final u = c.codeUnitAt(0);
+    return (u >= 65 && u <= 90) || (u >= 97 && u <= 122) || u == 95;
+  }
+
+  bool _isIdentContChar(String c) {
+    final u = c.codeUnitAt(0);
+    return _isIdentStartChar(c) || (u >= 48 && u <= 57);
+  }
+
+  InterpolatedStringExpr _parseInterpolatedString(String s, SourcePos pos) {
+    final parts = <InterpPart>[];
+    final text = StringBuffer();
+    void flushText() {
+      if (text.isNotEmpty) {
+        parts.add(InterpText(text.toString()));
+        text.clear();
+      }
+    }
+
+    var i = 0;
+    while (i < s.length) {
+      final c = s[i];
+      if (c == kInterpEscapedDollar) {
+        text.write('\$');
+        i++;
+        continue;
+      }
+      if (c == '\$') {
+        if (i + 1 < s.length && s[i + 1] == '{') {
+          flushText();
+          i += 2;
+          final contentStart = i;
+          var depth = 1;
+          var paren = 0;
+          var formatColon = -1;
+          while (i < s.length && depth > 0) {
+            final ch = s[i];
+            if (ch == '(') {
+              paren++;
+            } else if (ch == ')') {
+              if (paren > 0) paren--;
+            } else if (ch == '{') {
+              depth++;
+            } else if (ch == '}') {
+              depth--;
+              if (depth == 0) break;
+            } else if (ch == ':' &&
+                depth == 1 &&
+                paren == 0 &&
+                formatColon < 0) {
+              formatColon = i;
+            }
+            i++;
+          }
+          if (depth != 0) {
+            throw ParseError('unclosed `\${` in string', pos);
+          }
+          final exprEnd = formatColon >= 0 ? formatColon : i;
+          final exprSrc = s.substring(contentStart, exprEnd).trim();
+          if (exprSrc.isEmpty) {
+            throw ParseError('empty interpolation expression', pos);
+          }
+          String? format;
+          if (formatColon >= 0) {
+            format = s.substring(formatColon + 1, i);
+            if (format.isEmpty) {
+              throw ParseError('empty format in `\${…:}`', pos);
+            }
+          }
+          final slotExpr =
+              Parser(Lexer(exprSrc).tokenize()).parseExpression();
+          parts.add(InterpSlot(slotExpr, format));
+          i++; // skip closing }
+          continue;
+        }
+        if (i + 1 < s.length && _isIdentStartChar(s[i + 1])) {
+          flushText();
+          i++;
+          final start = i;
+          i++;
+          while (i < s.length && _isIdentContChar(s[i])) {
+            i++;
+          }
+          final name = s.substring(start, i);
+          parts.add(InterpSlot(NameExpr(name, pos), null));
+          continue;
+        }
+        throw ParseError(
+          'lonely `\$` in string — use `\\\$` for a literal dollar, '
+          'or `\$name` / `\${expr}` for interpolation',
+          pos,
+        );
+      }
+      text.write(c);
+      i++;
+    }
+    flushText();
+    if (parts.isEmpty) {
+      return InterpolatedStringExpr([InterpText('')], pos);
+    }
+    return InterpolatedStringExpr(parts, pos);
   }
 
   String _typeName() {
