@@ -34,5 +34,5 @@ $point(Vec2i, i32)
 
 ## Kryterium
 
-- [x] proste makro generuje wyspecjalizowany AST (golden `macro_point.kl`)
+- [x] proste makro generuje wyspecjalizowany AST (golden `point_macro.kl`)
 - [x] `--emit-pp` zapisuje rozwinięte źródło

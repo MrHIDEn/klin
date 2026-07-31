@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:klin/ast.dart';
 import 'package:klin/checker.dart';
 import 'package:klin/emit_c.dart';
+import 'package:klin/fmt.dart';
 import 'package:klin/lexer.dart';
 import 'package:klin/parser.dart';
 import 'package:klin/preprocess.dart';
@@ -199,20 +200,20 @@ fn main() {
 
   test(r'golden: $fn macro expands to a specialized struct (issue 026)',
       () async {
-    final result = await _compileAndRun('test/macro_point.kl', tmp);
+    final result = await _compileAndRun('test/point_macro.kl', tmp);
     expect(result.exitCode, 0, reason: result.stderr);
-    expect(result.stdout, await File('test/macro_point.out').readAsString());
+    expect(result.stdout, await File('test/point_macro.out').readAsString());
 
-    final raw = File('test/macro_point.kl').readAsStringSync();
-    final expanded = preprocess(raw, path: 'test/macro_point.kl');
+    final raw = File('test/point_macro.kl').readAsStringSync();
+    final expanded = preprocess(raw, path: 'test/point_macro.kl');
     expect(expanded, contains('struct Vec2i'));
     expect(expanded, contains('fn (p: Vec2i) len_sq(): i32'));
     expect(expanded, isNot(contains(r'$fn')));
     expect(expanded, isNot(contains(r'$point')));
 
-    final program = loadProject('test/macro_point.kl');
+    final program = loadProject('test/point_macro.kl');
     Checker().check(program);
-    final c = emitC(program, 'test/macro_point.kl');
+    final c = emitC(program, 'test/point_macro.kl');
     expect(c, contains('typedef struct'));
     expect(c, contains('Vec2i'));
     expect(c, contains('len_sq'));
@@ -230,6 +231,38 @@ fn main() {
               e.toString().contains(r'$missing'),
         ),
       ),
+    );
+  });
+
+  test('klin fmt: ugly source matches golden and is idempotent (issue 033)',
+      () async {
+    final ugly = await File('test/fmt_ugly.kl').readAsString();
+    final expected = await File('test/fmt_ugly.fmt.kl').readAsString();
+    final once = formatSource(ugly);
+    expect(once, expected);
+    expect(formatSource(once), once);
+
+    final proc = await Process.run(
+      'dart',
+      ['run', 'bin/klin.dart', 'fmt', 'test/fmt_ugly.kl'],
+    );
+    expect(proc.exitCode, 0, reason: proc.stderr.toString());
+    expect(proc.stdout, expected);
+
+    for (final path in [
+      'examples/hello.kl',
+      'examples/vec2.kl',
+      'examples/point.kl',
+      'examples/slice_sum.kl',
+      'examples/modules/app.kl',
+    ]) {
+      final src = File(path).readAsStringSync();
+      final formatted = formatSource(src);
+      expect(formatSource(formatted), formatted, reason: path);
+    }
+    expect(
+      formatSource(File('examples/slice_sum.kl').readAsStringSync()),
+      contains('[10, 20, 30, 40]'),
     );
   });
 
@@ -310,9 +343,9 @@ fn main() { GPIOA.ODR.ODR5.toggle(1) }
   test('--emit-pp writes expanded Klin source', () async {
     final proc = await Process.run(
       'dart',
-      ['run', 'bin/klin.dart', '--emit-pp', 'test/macro_point.kl'],
+      ['run', 'bin/klin.dart', '--emit-pp', 'test/point_macro.kl'],
     );
-    final pp = File('out/macro_point.pp.kl');
+    final pp = File('out/point_macro.pp.kl');
     addTearDown(() async {
       if (await pp.exists()) await pp.delete();
     });
