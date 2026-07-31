@@ -44,6 +44,7 @@ wypluwa plik z definicjami rejestrów. Wejście → wyjście, koniec.
 | [028](028-freertos.md) | Ładna współpraca z FreeRTOS | 💭 | 024, 010, 021 |
 | [029](029-async-event-loop.md) | Event loop / async·await | 💭 | 018?, 028? |
 | [030](030-isr-decorators.md) | Przerwania przez dekoratory | 💭 | 010 |
+| [031](031-biblioteki-hal.md) | Biblioteki HAL (Cube / LL) | 💭 | 010, 021 |
 
 ---
 
