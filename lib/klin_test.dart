@@ -3,6 +3,7 @@ import 'dart:io';
 import 'ast.dart';
 import 'checker.dart';
 import 'emit_c.dart';
+import 'link_args.dart';
 import 'project.dart';
 import 'token.dart';
 
@@ -66,6 +67,8 @@ Future<KlinTestFileResult> runKlinTestFile(
   String entryPath, {
   String cc = 'gcc',
   Directory? outDir,
+  List<String> cliLibs = const [],
+  List<String> cliLibDirs = const [],
 }) async {
   final absEntry = File(entryPath).absolute.path;
   final stem = _basenameWithoutExt(absEntry);
@@ -101,7 +104,16 @@ Future<KlinTestFileResult> runKlinTestFile(
   final binPath = '${dir.path}${Platform.pathSeparator}klin_test_$stem';
   await File(cPath).writeAsString(emitC(program, absEntry));
 
-  final compile = await Process.run(cc, [cPath, '-o', binPath]);
+  final sourceDir = File(absEntry).parent.path;
+  final ccArgs = buildCcArgs(
+    cPath: cPath,
+    binPath: binPath,
+    program: program,
+    sourceDir: sourceDir,
+    cliLibs: cliLibs,
+    cliLibDirs: cliLibDirs,
+  );
+  final compile = await Process.run(cc, ccArgs);
   if (compile.exitCode != 0) {
     return KlinTestFileResult(
       path: absEntry,

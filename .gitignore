@@ -28,6 +28,10 @@ examples/**/out/
 # Rejestry wygenerowane z SVD przez Makefile przykładu.
 examples/**/stm32f411_regs.h
 examples/**/stm32f411_regs.kl
+# Artefakty przykładu FFI.
+examples/ffi_add/*.o
+examples/ffi_add/*.a
+examples/ffi_add/libadd.a
 
 # Cache go-task (checksumy sources/generates)
 .task/

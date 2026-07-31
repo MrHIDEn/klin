@@ -26,5 +26,8 @@ Wejście: `dart run bin/klin.dart <subcommand|plik.kl> …`
 | `--emit-c` | Zapisz wygenerowany `.c` (domyślnie `out/`), bez kompilacji / run |
 | `--emit-pp` | Zapisz wynik preprocessora (`.pp.kl`), bez dalszych etapów |
 | `--cc <gcc\|clang\|tcc>` | Host C compiler (domyślnie `gcc`) |
+| `-l <name>` / `-lname` | Link `-lname` (jak cc) |
+| `-L <dir>` / `-Ldir` | Szukaj libów w `dir` |
 
 Szczegóły fmt: [05-fmt.md](05-fmt.md). Makra / SVD: [04-makra.md](04-makra.md).
+FFI / `@[link]`: [09-ffi-c.md](09-ffi-c.md).

@@ -167,7 +167,8 @@ final class Checker {
         _ => throw StateError('unknown declaration'),
       };
       for (final attr in attrs) {
-        if (!{'codename', 'cimport', 'cinclude', 'link'}.contains(attr.name)) {
+        if (!{'codename', 'cimport', 'cinclude', 'link', 'cheader'}
+            .contains(attr.name)) {
           throw CheckError('unknown attribute `${attr.name}`', attr.pos);
         }
         final needsArg = attr.name == 'codename' ||
@@ -177,9 +178,10 @@ final class Checker {
           throw CheckError(
               'attribute `${attr.name}` requires a string', attr.pos);
         }
-        if (attr.name == 'cimport' && attr.arg != null) {
+        if ((attr.name == 'cimport' || attr.name == 'cheader') &&
+            attr.arg != null) {
           throw CheckError(
-              '`cimport` attribute does not accept an argument', attr.pos);
+              '`${attr.name}` attribute does not accept an argument', attr.pos);
         }
         if (attr.name == 'codename' && !cNames.add(attr.arg!)) {
           throw CheckError('duplicate codename `${attr.arg}`', attr.pos);
@@ -188,8 +190,17 @@ final class Checker {
       if (decl is StructDecl && _hasAttr(attrs, 'cimport')) {
         throw CheckError('`cimport` is allowed only on functions', decl.pos);
       }
+      if (decl is StructDecl && _hasAttr(attrs, 'cheader')) {
+        throw CheckError('`cheader` is allowed only on functions', decl.pos);
+      }
       if (decl is FuncDecl) {
         final imported = _hasAttr(attrs, 'cimport');
+        final fromHeader = _hasAttr(attrs, 'cheader');
+        if (fromHeader && !imported) {
+          throw CheckError(
+              '`cheader` requires `cimport` (declaration comes from a C header)',
+              decl.pos);
+        }
         if (imported && decl.body != null) {
           throw CheckError('`cimport` function cannot have a body', decl.pos);
         }
@@ -872,11 +883,19 @@ final class Checker {
           pos,
         );
       }
-      // C FFI (for example puts/printf): its signature is unknown.
-      for (final arg in args) {
-        _inferExpr(arg);
+      // Host builtins with unknown/varargs signatures (issue 021).
+      // Everything else requires an explicit `@[cimport]` declaration.
+      if (callee == 'puts' || callee == 'printf') {
+        for (final arg in args) {
+          _inferExpr(arg);
+        }
+        return const _CheckedCall(PrimType(PrimKind.i32), null);
       }
-      return const _CheckedCall(PrimType(PrimKind.i32), null);
+      throw CheckError(
+        'unknown function `$callee` — declare it with `@[cimport]` '
+        '(or use host builtins `puts` / `printf`)',
+        pos,
+      );
     }
     final decl = _functionDecl(module, callee);
     if (module != _currentModule && !decl.isPub) {

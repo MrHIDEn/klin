@@ -1,0 +1,7 @@
+@[link("libadd.a")]
+@[cimport, codename("add")]
+fn add(a: i32, b: i32): i32
+
+fn main() {
+    printf("%d\n", add(2, 3))
+}

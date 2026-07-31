@@ -6,6 +6,7 @@ import 'package:klin/emit_c.dart';
 import 'package:klin/fmt.dart';
 import 'package:klin/klin_test.dart';
 import 'package:klin/lexer.dart';
+import 'package:klin/link_args.dart';
 import 'package:klin/parser.dart';
 import 'package:klin/preprocess.dart';
 import 'package:klin/project.dart';
@@ -16,10 +17,10 @@ import 'package:klin/version.dart';
 /// Usage:
 ///   klin --version|-v
 ///   klin --help|-h
-///   klin run [--cc gcc|clang|tcc] <file.kl>
+///   klin run [--cc …] [-l lib] [-L dir] <file.kl>
 ///   klin fmt [-w] <file.kl…>
-///   klin test [--cc gcc|clang|tcc] [path…]
-///   klin [--cc gcc|clang|tcc] [--emit-c|--emit-pp] <file.kl>
+///   klin test [--cc …] [-l lib] [-L dir] [path…]
+///   klin [--cc …] [-l lib] [-L dir] [--emit-c|--emit-pp] <file.kl>
 Future<void> main(List<String> args) async {
   if (args.isEmpty) {
     stdout.write(_usageText());
@@ -94,6 +95,7 @@ Future<void> main(List<String> args) async {
 
   final cPath = 'out/$base.c';
   final binPath = 'out/$base';
+  final sourceDir = File(sourcePath).absolute.parent.path;
 
   final cSource = emitC(program, sourcePath);
   await File(cPath).writeAsString(cSource);
@@ -105,7 +107,15 @@ Future<void> main(List<String> args) async {
     return;
   }
 
-  final compile = await Process.run(opts.cc, [cPath, '-o', binPath]);
+  final ccArgs = buildCcArgs(
+    cPath: cPath,
+    binPath: binPath,
+    program: program,
+    sourceDir: sourceDir,
+    cliLibs: opts.libs,
+    cliLibDirs: opts.libDirs,
+  );
+  final compile = await Process.run(opts.cc, ccArgs);
   if (compile.exitCode != 0) {
     // Z3: gcc should not report errors; if it does, the frontend is at fault.
     stderr.writeln('klin: C compiler error (${opts.cc}):');
@@ -172,17 +182,35 @@ Future<void> _runFmt(List<String> args) async {
 
 Future<void> _runTest(List<String> args) async {
   var cc = 'gcc';
+  final libs = <String>[];
+  final libDirs = <String>[];
   final paths = <String>[];
   for (var i = 0; i < args.length; i++) {
     final a = args[i];
     if (a == '--cc') {
       if (i + 1 >= args.length) {
-        stderr.writeln('usage: klin test [--cc gcc|clang|tcc] [path…]');
+        stderr.writeln(_testUsage());
         exit(2);
       }
       cc = args[++i];
+    } else if (a == '-l') {
+      if (i + 1 >= args.length) {
+        stderr.writeln(_testUsage());
+        exit(2);
+      }
+      libs.add(args[++i]);
+    } else if (a == '-L') {
+      if (i + 1 >= args.length) {
+        stderr.writeln(_testUsage());
+        exit(2);
+      }
+      libDirs.add(args[++i]);
+    } else if (a.startsWith('-l') && a.length > 2) {
+      libs.add(a.substring(2));
+    } else if (a.startsWith('-L') && a.length > 2) {
+      libDirs.add(a.substring(2));
     } else if (a.startsWith('-')) {
-      stderr.writeln('usage: klin test [--cc gcc|clang|tcc] [path…]');
+      stderr.writeln(_testUsage());
       exit(2);
     } else {
       paths.add(a);
@@ -214,7 +242,12 @@ Future<void> _runTest(List<String> args) async {
   for (final path in files) {
     final shown = displayPath(path);
     try {
-      final result = await runKlinTestFile(path, cc: cc);
+      final result = await runKlinTestFile(
+        path,
+        cc: cc,
+        cliLibs: libs,
+        cliLibDirs: libDirs,
+      );
       if (result.ok) {
         stdout.writeln('ok\t$shown');
       } else {
@@ -259,8 +292,17 @@ final class _Opts {
   final String cc;
   final bool emitC;
   final bool emitPp;
+  final List<String> libs;
+  final List<String> libDirs;
 
-  const _Opts(this.sourcePath, this.cc, this.emitC, this.emitPp);
+  const _Opts(
+    this.sourcePath,
+    this.cc,
+    this.emitC,
+    this.emitPp,
+    this.libs,
+    this.libDirs,
+  );
 }
 
 /// Recognized subcommands. Bare `<file.kl>` is an alias for `run`.
@@ -270,6 +312,8 @@ _Opts? _parseArgs(List<String> args) {
   String cc = 'gcc';
   var emitC = false;
   var emitPp = false;
+  final libs = <String>[];
+  final libDirs = <String>[];
   String? command;
   String? source;
   for (var i = 0; i < args.length; i++) {
@@ -281,6 +325,16 @@ _Opts? _parseArgs(List<String> args) {
       emitC = true;
     } else if (a == '--emit-pp') {
       emitPp = true;
+    } else if (a == '-l') {
+      if (i + 1 >= args.length) return null;
+      libs.add(args[++i]);
+    } else if (a == '-L') {
+      if (i + 1 >= args.length) return null;
+      libDirs.add(args[++i]);
+    } else if (a.startsWith('-l') && a.length > 2) {
+      libs.add(a.substring(2));
+    } else if (a.startsWith('-L') && a.length > 2) {
+      libDirs.add(a.substring(2));
     } else if (a.startsWith('-')) {
       return null;
     } else if (command == null && source == null && _commands.contains(a)) {
@@ -295,16 +349,20 @@ _Opts? _parseArgs(List<String> args) {
   if (emitC && emitPp) return null;
   // `run` means compile+execute; `--emit-c` / `--emit-pp` skip execution.
   if (command != null && command != 'run') return null;
-  return _Opts(source, cc, emitC, emitPp);
+  return _Opts(source, cc, emitC, emitPp, libs, libDirs);
 }
+
+String _testUsage() =>
+    'usage: klin test [--cc gcc|clang|tcc] [-l lib] [-L dir] [path…]';
 
 String _usageText() =>
     'usage: klin --version|-v\n'
     '       klin --help|-h\n'
-    '       klin run [--cc gcc|clang|tcc] <file.kl>\n'
+    '       klin run [--cc gcc|clang|tcc] [-l lib] [-L dir] <file.kl>\n'
     '       klin fmt [-w] <file.kl…>\n'
-    '       klin test [--cc gcc|clang|tcc] [path…]\n'
-    '       klin [--cc gcc|clang|tcc] [--emit-c|--emit-pp] <file.kl>\n';
+    '       klin test [--cc gcc|clang|tcc] [-l lib] [-L dir] [path…]\n'
+    '       klin [--cc gcc|clang|tcc] [-l lib] [-L dir] '
+    '[--emit-c|--emit-pp] <file.kl>\n';
 
 String _basenameWithoutExt(String path) {
   final name = path.split(Platform.pathSeparator).last;

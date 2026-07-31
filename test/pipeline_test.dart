@@ -5,6 +5,7 @@ import 'package:klin/checker.dart';
 import 'package:klin/emit_c.dart';
 import 'package:klin/fmt.dart';
 import 'package:klin/lexer.dart';
+import 'package:klin/link_args.dart';
 import 'package:klin/parser.dart';
 import 'package:klin/preprocess.dart';
 import 'package:klin/project.dart';
@@ -533,6 +534,10 @@ fn main() {
       path: klPath,
     );
     expect(expanded, contains('@[cinclude("tiny_regs.h")]'));
+    expect(
+      expanded,
+      contains('@[cimport, cheader, codename("GPIOA_ODR_ODR5_toggle")]'),
+    );
     expect(expanded, contains('RCC_AHB1ENR_GPIOAEN_set(1)'));
     expect(expanded, contains('GPIOA_MODER_MODER5_write(1)'));
     expect(expanded, contains('GPIOA_ODR_ODR5_toggle()'));
@@ -1289,6 +1294,189 @@ fn main() {}
     expect(await linkFile.readAsString(), 'driver.a\n');
   });
 
+  test('buildCcArgs resolves @[link] paths and CLI -l/-L', () {
+    const pos = SourcePos(1, 1);
+    final program = Program(
+      [],
+      [
+        FuncDecl(
+          name: 'main',
+          receiver: null,
+          params: const [],
+          returnTypeName: null,
+          body: Block(const [], pos),
+          pos: pos,
+          attrs: [
+            Attr('link', 'libadd.a', pos),
+            Attr('link', '-lm', pos),
+          ],
+          sourcePath: '${tmp.path}/main.kl',
+        ),
+      ],
+      pos,
+    );
+    final dir = tmp.path;
+    File('$dir/libadd.a').writeAsStringSync('');
+    final args = buildCcArgs(
+      cPath: 'out/x.c',
+      binPath: 'out/x',
+      program: program,
+      sourceDir: dir,
+      cliLibs: const ['m'],
+      cliLibDirs: const ['/opt/lib'],
+    );
+    expect(args.first, 'out/x.c');
+    expect(args, contains('$dir/libadd.a'));
+    final lOpt = args.indexOf('-L/opt/lib');
+    final lm = args.indexOf('-lm');
+    expect(lOpt, greaterThan(0));
+    expect(lm, greaterThan(lOpt));
+    expect(args.where((a) => a == '-lm').length, 2);
+    expect(args.sublist(args.length - 2), ['-o', 'out/x']);
+  });
+
+  test('buildCcArgs puts CLI -L before @[link("-l…")]', () {
+    const pos = SourcePos(1, 1);
+    final program = Program(
+      [],
+      [
+        FuncDecl(
+          name: 'main',
+          receiver: null,
+          params: const [],
+          returnTypeName: null,
+          body: Block(const [], pos),
+          pos: pos,
+          attrs: [Attr('link', '-lfoo', pos)],
+        ),
+      ],
+      pos,
+    );
+    final args = buildCcArgs(
+      cPath: 'a.c',
+      binPath: 'a',
+      program: program,
+      sourceDir: tmp.path,
+      cliLibDirs: const ['/libs'],
+    );
+    expect(args.indexOf('-L/libs'), lessThan(args.indexOf('-lfoo')));
+  });
+
+  test('cheader cimport skips C prototype emission', () {
+    const source = '''
+@[cinclude("regs.h")]
+@[cimport, cheader, codename("pin_toggle")]
+fn pin_toggle()
+fn main() {
+  pin_toggle()
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'hdr.kl');
+    expect(c, contains('#include "regs.h"'));
+    expect(c, isNot(contains('void pin_toggle(void);')));
+    expect(c, contains('pin_toggle();'));
+  });
+
+  test('klin run links @[cimport] against a static archive (issue 021)', () async {
+    final addC = File('${tmp.path}/add.c');
+    await addC.writeAsString('''
+int add(int a, int b) { return a + b; }
+''');
+    final obj = '${tmp.path}/add.o';
+    final archive = '${tmp.path}/libadd.a';
+    final ccObj = await Process.run('gcc', ['-c', addC.path, '-o', obj]);
+    expect(ccObj.exitCode, 0, reason: ccObj.stderr);
+    final ar = await Process.run('ar', ['rcs', archive, obj]);
+    expect(ar.exitCode, 0, reason: ar.stderr);
+
+    final kl = File('${tmp.path}/use_add.kl');
+    await kl.writeAsString('''
+@[link("libadd.a")]
+@[cimport, codename("add")]
+fn add(a: i32, b: i32): i32
+
+fn main() {
+  printf("%d\\n", add(2, 3))
+}
+''');
+    final result = await _compileAndRun(kl.path, tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, '5\n');
+  });
+
+  test('klin run -l/-L links a named library (issue 021)', () async {
+    final addC = File('${tmp.path}/mylib.c');
+    await addC.writeAsString('''
+int mylib_answer(void) { return 42; }
+''');
+    final obj = '${tmp.path}/mylib.o';
+    final archive = '${tmp.path}/libmylib.a';
+    expect(
+      (await Process.run('gcc', ['-c', addC.path, '-o', obj])).exitCode,
+      0,
+    );
+    expect((await Process.run('ar', ['rcs', archive, obj])).exitCode, 0);
+
+    final kl = File('${tmp.path}/use_mylib.kl');
+    await kl.writeAsString('''
+@[cimport, codename("mylib_answer")]
+fn answer(): i32
+
+fn main() {
+  printf("%d\\n", answer())
+}
+''');
+    final program = loadProject(kl.path);
+    Checker().check(program);
+    final cPath = '${tmp.path}/use_mylib.c';
+    final binPath = '${tmp.path}/use_mylib';
+    await File(cPath).writeAsString(emitC(program, kl.path));
+    final args = buildCcArgs(
+      cPath: cPath,
+      binPath: binPath,
+      program: program,
+      sourceDir: tmp.path,
+      cliLibs: const ['mylib'],
+      cliLibDirs: [tmp.path],
+    );
+    final compile = await Process.run('gcc', args);
+    expect(compile.exitCode, 0, reason: '${compile.stderr}${compile.stdout}');
+    final run = await Process.run(binPath, []);
+    expect(run.exitCode, 0, reason: run.stderr);
+    expect(run.stdout, '42\n');
+  });
+
+  test('error: unknown C call without cimport (issue 021)', () {
+    const source = '''
+fn main() {
+  unknown_c_fn(1)
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate(
+        (e) =>
+            e is CheckError &&
+            e.toString().contains('unknown function') &&
+            e.toString().contains('cimport'),
+      )),
+    );
+  });
+
+  test('host builtins puts/printf remain without cimport', () {
+    const source = '''
+fn main() {
+  puts("hi")
+  printf("%d\\n", 1)
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+  });
+
   test('STM32 example builds and exports SysTick_Handler', () async {
     final compiler = await Process.run(
       'sh',
@@ -1353,7 +1541,14 @@ Future<({int exitCode, String stdout, String stderr})> _compileAndRun(
   final binPath = '${tmp.path}/$base';
   await File(cPath).writeAsString(emitC(program, klPath));
 
-  final compile = await Process.run('gcc', [cPath, '-o', binPath]);
+  final sourceDir = File(klPath).absolute.parent.path;
+  final ccArgs = buildCcArgs(
+    cPath: cPath,
+    binPath: binPath,
+    program: program,
+    sourceDir: sourceDir,
+  );
+  final compile = await Process.run('gcc', ccArgs);
   if (compile.exitCode != 0) {
     return (
       exitCode: compile.exitCode,

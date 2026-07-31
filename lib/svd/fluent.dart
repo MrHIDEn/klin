@@ -5,19 +5,20 @@ import 'emit.dart';
 import 'model.dart';
 import 'parse.dart';
 
-/// Result of `$peripherals_from_svd(...)`: header on disk + device for rewrite.
+/// Result of `$peripherals_from_svd(...)`: decls + device for fluent rewrite.
 final class SvdPeripheralsExpansion {
-  final String cincludeSnippet;
+  /// Klin text to splice in (`@[cinclude]` + `@[cimport]` accessors).
+  final String klinSnippet;
   final SvdDevice device;
 
   const SvdPeripheralsExpansion({
-    required this.cincludeSnippet,
+    required this.klinSnippet,
     required this.device,
   });
 }
 
 /// Resolves SVD, writes `{stem}_regs.h` (and `.kl`) next to the Klin source,
-/// returns `@[cinclude(...)]` text plus the parsed device for fluent rewrite.
+/// returns Klin decls (`cinclude` + `cimport`) plus the device for fluent rewrite.
 SvdPeripheralsExpansion expandPeripheralsFromSvd({
   required String svdArg,
   String? peripheralsArg,
@@ -77,7 +78,7 @@ SvdPeripheralsExpansion expandPeripheralsFromSvd({
   File(klinPath).writeAsStringSync(generated.klin);
 
   return SvdPeripheralsExpansion(
-    cincludeSnippet: '@[cinclude("$includeName")]\n',
+    klinSnippet: generated.klin,
     device: device,
   );
 }
