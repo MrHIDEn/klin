@@ -29,6 +29,28 @@ String emitC(Program program, String sourcePath) {
         'typedef struct { ${type.kind.cType} *ptr; size_t len; } $name;');
   }
   if (sliceTypes.isNotEmpty) buf.writeln();
+  final fnTypes = <FnType>{};
+  for (final struct in program.structs) {
+    for (final field in struct.fields) {
+      _collectFnTypes(field.resolvedType, fnTypes);
+    }
+  }
+  for (final func in program.funcs) {
+    _collectFnTypes(func.resolvedReturnType, fnTypes);
+    for (final param in func.params) {
+      _collectFnTypes(param.resolvedType, fnTypes);
+    }
+  }
+  final orderedFnTypes = fnTypes.toList()
+    ..sort((a, b) => _fnTypeDepth(a).compareTo(_fnTypeDepth(b)));
+  for (final type in orderedFnTypes) {
+    final name = _fnTypedefName(type);
+    final ps = type.params.isEmpty
+        ? 'void'
+        : type.params.map(_cType).join(', ');
+    buf.writeln('typedef ${_cType(type.ret)} (*$name)($ps);');
+  }
+  if (orderedFnTypes.isNotEmpty) buf.writeln();
   if (_programNeedsTrimFrac(program)) {
     buf.writeln('#include <stdio.h>');
     buf.writeln('#include <string.h>');
@@ -638,13 +660,41 @@ String _cType(KlinType type) => switch (type) {
       ArrayType(:final elem) => _cType(elem),
       SliceType(:final elem) => _sliceCName(elem),
       ResultType(:final ok) => _resultCName(ok),
+      FnType(:final params, :final ret) => _fnTypedefName(FnType(params, ret)),
       _ => throw StateError('emit: type `${type.displayName}` has no C type'),
     };
 
 String _cDecl(KlinType type, String name) => switch (type) {
       ArrayType(:final elem, :final len) => '${_cType(elem)} $name[$len]',
+      FnType(:final params, :final ret) => () {
+          final ps = params.isEmpty
+              ? 'void'
+              : params.map(_cType).join(', ');
+          return '${_cType(ret)} (*$name)($ps)';
+        }(),
       _ => '${_cType(type)} $name',
     };
+
+String _fnTypedefName(FnType type) {
+  final ps = type.params.map(_typeToken).join('_');
+  final ret = _typeToken(type.ret);
+  return ps.isEmpty ? 'klin_fn_void_$ret' : 'klin_fn_${ps}__$ret';
+}
+
+int _fnTypeDepth(FnType type) {
+  var depth = 0;
+  for (final p in type.params) {
+    if (p is FnType) {
+      final d = _fnTypeDepth(p) + 1;
+      if (d > depth) depth = d;
+    }
+  }
+  if (type.ret is FnType) {
+    final d = _fnTypeDepth(type.ret as FnType) + 1;
+    if (d > depth) depth = d;
+  }
+  return depth;
+}
 
 String _sliceCName(PrimType elem) => 'klin_slice_${elem.kind.klinName}';
 
@@ -653,6 +703,25 @@ void _collectSliceTypes(KlinType? type, Set<PrimType> output) {
   if (type case PtrType(:final pointee)) _collectSliceTypes(pointee, output);
   if (type case ArrayType(:final elem)) _collectSliceTypes(elem, output);
   if (type case ResultType(:final ok)) _collectSliceTypes(ok, output);
+  if (type case FnType(:final params, :final ret)) {
+    for (final p in params) {
+      _collectSliceTypes(p, output);
+    }
+    _collectSliceTypes(ret, output);
+  }
+}
+
+void _collectFnTypes(KlinType? type, Set<FnType> output) {
+  if (type case FnType()) {
+    output.add(type);
+    for (final p in type.params) {
+      _collectFnTypes(p, output);
+    }
+    _collectFnTypes(type.ret, output);
+  }
+  if (type case PtrType(:final pointee)) _collectFnTypes(pointee, output);
+  if (type case ArrayType(:final elem)) _collectFnTypes(elem, output);
+  if (type case ResultType(:final ok)) _collectFnTypes(ok, output);
 }
 
 void _collectResultTypes(KlinType? type, Set<ResultType> output) {
@@ -662,12 +731,19 @@ void _collectResultTypes(KlinType? type, Set<ResultType> output) {
   }
   if (type case PtrType(:final pointee)) _collectResultTypes(pointee, output);
   if (type case ArrayType(:final elem)) _collectResultTypes(elem, output);
+  if (type case FnType(:final params, :final ret)) {
+    for (final p in params) {
+      _collectResultTypes(p, output);
+    }
+    _collectResultTypes(ret, output);
+  }
 }
 
 String _resultCName(KlinType ok) => 'klin_res_${_typeToken(ok)}';
 
 String _typeToken(KlinType type) => switch (type) {
       PrimType(:final kind) => kind.klinName,
+      VoidType() => 'void',
       StructType(:final moduleName, :final name) =>
         _structCName(moduleName, name),
       SliceType(:final elem) => _sliceCName(elem),
@@ -675,6 +751,8 @@ String _typeToken(KlinType type) => switch (type) {
         '${isMut ? 'mut_' : ''}${isVolatile ? 'volatile_' : ''}ptr_${_typeToken(pointee)}',
       ArrayType(:final elem, :final len) => 'arr${len}_${_typeToken(elem)}',
       ResultType(:final ok) => 'res_${_typeToken(ok)}',
+      FnType(:final params, :final ret) =>
+        'fn_${params.map(_typeToken).join('_')}_${_typeToken(ret)}',
       StrType() => 'str',
       _ =>
         throw StateError('emit: missing type token for `${type.displayName}`'),
@@ -894,6 +972,7 @@ void _emitStmt(
         final zero = switch (ty) {
           PrimType(:final kind) => kind.cZero,
           PtrType() => 'NULL',
+          FnType() => 'NULL',
           ArrayType() => '{0}',
           SliceType() => '{ NULL, 0 }',
           StructType() => '{0}',
@@ -1312,7 +1391,8 @@ String _emitExprRaw(Expr expr, _ExprCtx ctx) {
     FloatLit(:final lexeme) => lexeme.replaceAll('_', ''),
     BoolLit(:final value) => value ? 'true' : 'false',
     StringLit(:final value) => '"${_escapeC(value)}"',
-    NameExpr(:final name) => name,
+    NameExpr(:final name, :final resolvedFnCName) =>
+      resolvedFnCName ?? name,
     FieldExpr(:final object, :final name) => () {
         final objectType = object.resolvedType;
         if (name == 'len' && objectType is ArrayType) {

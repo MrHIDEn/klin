@@ -1,0 +1,22 @@
+/// Function pointers without capture (issue 017 phase 2).
+fn is_even(x: i32): bool {
+    return x % 2 == 0
+}
+
+fn any_match(xs: []i32, pred: fn(i32): bool): bool {
+    let mut i: i32 = 0
+    while i < xs.len {
+        if pred(xs[i]) {
+            return true
+        }
+        i = i + 1
+    }
+    return false
+}
+
+fn main() {
+    let nums: [3]i32 = [1, 3, 4]
+    if any_match(nums[:], is_even) {
+        printf("has_even=1\n")
+    }
+}

@@ -59,6 +59,12 @@ and lower to `printf` (no hidden allocation). Formats: native printf
 `io.print` / `io.println`. Details: [note/07-interpolacja.md](note/07-interpolacja.md),
 example: [`examples/interp.kl`](examples/interp.kl).
 
+### Function pointers
+
+Type `fn(T…): Ret` — top-level function as a value (C function pointer, no
+capture). See [note/13-fn-ptr.md](note/13-fn-ptr.md),
+[`examples/fn_ptr.kl`](examples/fn_ptr.kl).
+
 ## Test
 
 ```sh

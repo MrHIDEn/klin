@@ -855,6 +855,25 @@ final class Parser {
       _advance();
       return '!${_typeName()}';
     }
+    if (_check(TokenKind.fn)) {
+      _advance();
+      _expect(TokenKind.lParen, 'expected `(` after `fn` in function type');
+      final params = <String>[];
+      if (!_check(TokenKind.rParen)) {
+        params.add(_typeName());
+        while (_check(TokenKind.comma)) {
+          _advance();
+          params.add(_typeName());
+        }
+      }
+      _expect(TokenKind.rParen, 'expected `)` after function type parameters');
+      var ret = 'void';
+      if (_check(TokenKind.colon)) {
+        _advance();
+        ret = _typeName();
+      }
+      return 'fn(${params.join(',') }):$ret';
+    }
     if (_check(TokenKind.star)) {
       _advance();
       var result = '*';
