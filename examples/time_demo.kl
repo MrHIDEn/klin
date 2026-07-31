@@ -12,7 +12,7 @@ fn main() {
     printf("later_unix=%lld\n", later.unix_ns / 1000000000)
 
     let span = time.between(t, later)
-    printf("span_min=%lld\n", span.as_sec() / 60)
+    printf("span_min=%lld\n", span.as_s() / 60)
 
     let t0 = time.mono()
     let t1 = time.mono()
