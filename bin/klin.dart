@@ -4,6 +4,7 @@ import 'package:klin/ast.dart';
 import 'package:klin/checker.dart';
 import 'package:klin/emit_c.dart';
 import 'package:klin/fmt.dart';
+import 'package:klin/klin_test.dart';
 import 'package:klin/lexer.dart';
 import 'package:klin/parser.dart';
 import 'package:klin/preprocess.dart';
@@ -14,10 +15,15 @@ import 'package:klin/project.dart';
 /// Usage:
 ///   klin run [--cc gcc|clang|tcc] <file.kl>
 ///   klin fmt [-w] <file.kl…>
+///   klin test [--cc gcc|clang|tcc] [path…]
 ///   klin [--cc gcc|clang|tcc] [--emit-c|--emit-pp] <file.kl>
 Future<void> main(List<String> args) async {
   if (args.isNotEmpty && args.first == 'fmt') {
     await _runFmt(args.skip(1).toList());
+    return;
+  }
+  if (args.isNotEmpty && args.first == 'test') {
+    await _runTest(args.skip(1).toList());
     return;
   }
 
@@ -26,6 +32,7 @@ Future<void> main(List<String> args) async {
     stderr.writeln(
       'usage: klin run [--cc gcc|clang|tcc] <file.kl>\n'
       '       klin fmt [-w] <file.kl…>\n'
+      '       klin test [--cc gcc|clang|tcc] [path…]\n'
       '       klin [--cc gcc|clang|tcc] [--emit-c|--emit-pp] <file.kl>',
     );
     exit(2);
@@ -150,6 +157,90 @@ Future<void> _runFmt(List<String> args) async {
     }
   }
   if (failed) exit(1);
+}
+
+Future<void> _runTest(List<String> args) async {
+  var cc = 'gcc';
+  final paths = <String>[];
+  for (var i = 0; i < args.length; i++) {
+    final a = args[i];
+    if (a == '--cc') {
+      if (i + 1 >= args.length) {
+        stderr.writeln('usage: klin test [--cc gcc|clang|tcc] [path…]');
+        exit(2);
+      }
+      cc = args[++i];
+    } else if (a.startsWith('-')) {
+      stderr.writeln('usage: klin test [--cc gcc|clang|tcc] [path…]');
+      exit(2);
+    } else {
+      paths.add(a);
+    }
+  }
+
+  final List<String> files;
+  try {
+    files = discoverTestFiles(paths);
+  } on FileSystemException catch (e) {
+    stderr.writeln('klin: ${e.message}: ${e.path}');
+    exit(1);
+  }
+  if (files.isEmpty) {
+    stderr.writeln('klin test: no *_test.kl files found');
+    exit(1);
+  }
+
+  var failed = 0;
+  final cwd = Directory.current.absolute.path;
+  String displayPath(String path) {
+    final abs = File(path).absolute.path;
+    final prefix = cwd.endsWith(Platform.pathSeparator)
+        ? cwd
+        : '$cwd${Platform.pathSeparator}';
+    return abs.startsWith(prefix) ? abs.substring(prefix.length) : abs;
+  }
+
+  for (final path in files) {
+    final shown = displayPath(path);
+    try {
+      final result = await runKlinTestFile(path, cc: cc);
+      if (result.ok) {
+        stdout.writeln('ok\t$shown');
+      } else {
+        failed++;
+        stdout.writeln('FAIL\t$shown');
+        if (result.stderr.isNotEmpty) stderr.write(result.stderr);
+        if (result.stdout.isNotEmpty) stdout.write(result.stdout);
+      }
+    } on PreprocessError catch (e) {
+      failed++;
+      stdout.writeln('FAIL\t$shown');
+      stderr.writeln('$e');
+    } on LexError catch (e) {
+      failed++;
+      stdout.writeln('FAIL\t$shown');
+      stderr.writeln('$path:$e');
+    } on ParseError catch (e) {
+      failed++;
+      stdout.writeln('FAIL\t$shown');
+      stderr.writeln('$path:$e');
+    } on CheckError catch (e) {
+      failed++;
+      stdout.writeln('FAIL\t$shown');
+      stderr.writeln('$path:$e');
+    } on FileSystemException catch (e) {
+      failed++;
+      stdout.writeln('FAIL\t$shown');
+      stderr.writeln('klin: ${e.message}: ${e.path}');
+    }
+  }
+
+  if (failed == 0) {
+    stdout.writeln('PASS');
+    exit(0);
+  }
+  stdout.writeln('FAIL\t$failed/${files.length}');
+  exit(1);
 }
 
 final class _Opts {

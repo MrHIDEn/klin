@@ -36,10 +36,16 @@ Format sources with a Go-style canonical printer (`klin fmt`, optional `-w`):
 dart run bin/klin.dart fmt -w examples/hello.kl
 ```
 
+Run Klin program tests (`*_test.kl`, `import testing`):
+
+```sh
+dart run bin/klin.dart test examples/
+```
+
 ## Test
 
 ```sh
-dart test
+dart test   # compiler / golden tests
 ```
 
 The design documents and roadmap are maintained in Polish:

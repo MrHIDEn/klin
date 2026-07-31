@@ -1,0 +1,16 @@
+// Sample Klin tests for `klin test` (see issues/035).
+// Run: dart run bin/klin.dart test examples/
+
+import testing
+
+fn add(a: i32, b: i32): i32 {
+    return a + b
+}
+
+fn test_add() {
+    testing.assert_eq_i32(add(2, 3), 5)
+}
+
+fn test_add_zero() {
+    testing.assert_eq_i32(add(0, 7), 7)
+}
