@@ -5,19 +5,20 @@ import 'package:klin/checker.dart';
 import 'package:klin/emit_c.dart';
 import 'package:klin/lexer.dart';
 import 'package:klin/parser.dart';
+import 'package:klin/preprocess.dart';
 import 'package:klin/project.dart';
 
-/// CLI: argv → read → lex → parse → check → emit → optionally cc → run
+/// CLI: argv → preprocess → lex → parse → check → emit → optionally cc → run
 ///
 /// Usage:
 ///   klin run [--cc gcc|clang|tcc] <file.kl>
-///   klin [--cc gcc|clang|tcc] [--emit-c] <file.kl>
+///   klin [--cc gcc|clang|tcc] [--emit-c|--emit-pp] <file.kl>
 Future<void> main(List<String> args) async {
   final opts = _parseArgs(args);
   if (opts == null) {
     stderr.writeln(
       'usage: klin run [--cc gcc|clang|tcc] <file.kl>\n'
-      '       klin [--cc gcc|clang|tcc] [--emit-c] <file.kl>',
+      '       klin [--cc gcc|clang|tcc] [--emit-c|--emit-pp] <file.kl>',
     );
     exit(2);
   }
@@ -29,10 +30,28 @@ Future<void> main(List<String> args) async {
     exit(1);
   }
 
+  final base = _basenameWithoutExt(sourcePath);
+  final outDir = Directory('out');
+  await outDir.create(recursive: true);
+
+  if (opts.emitPp) {
+    try {
+      final expanded = preprocess(await file.readAsString(), path: sourcePath);
+      await File('out/$base.pp.kl').writeAsString(expanded);
+    } on PreprocessError catch (e) {
+      stderr.writeln('$sourcePath:$e');
+      exit(1);
+    }
+    return;
+  }
+
   final Program program;
   try {
     program = loadProject(sourcePath);
     Checker().check(program);
+  } on PreprocessError catch (e) {
+    stderr.writeln('$sourcePath:$e');
+    exit(1);
   } on LexError catch (e) {
     stderr.writeln('$sourcePath:$e');
     exit(1);
@@ -47,9 +66,6 @@ Future<void> main(List<String> args) async {
     exit(1);
   }
 
-  final base = _basenameWithoutExt(sourcePath);
-  final outDir = Directory('out');
-  await outDir.create(recursive: true);
   final cPath = 'out/$base.c';
   final binPath = 'out/$base';
 
@@ -82,8 +98,9 @@ final class _Opts {
   final String sourcePath;
   final String cc;
   final bool emitC;
+  final bool emitPp;
 
-  const _Opts(this.sourcePath, this.cc, this.emitC);
+  const _Opts(this.sourcePath, this.cc, this.emitC, this.emitPp);
 }
 
 /// Recognized subcommands. Bare `<file.kl>` is an alias for `run`.
@@ -92,6 +109,7 @@ const _commands = {'run'};
 _Opts? _parseArgs(List<String> args) {
   String cc = 'gcc';
   var emitC = false;
+  var emitPp = false;
   String? command;
   String? source;
   for (var i = 0; i < args.length; i++) {
@@ -101,6 +119,8 @@ _Opts? _parseArgs(List<String> args) {
       cc = args[++i];
     } else if (a == '--emit-c') {
       emitC = true;
+    } else if (a == '--emit-pp') {
+      emitPp = true;
     } else if (a.startsWith('-')) {
       return null;
     } else if (command == null && source == null && _commands.contains(a)) {
@@ -112,9 +132,10 @@ _Opts? _parseArgs(List<String> args) {
     }
   }
   if (source == null) return null;
-  // `run` means compile+execute; `--emit-c` still skips execution.
+  if (emitC && emitPp) return null;
+  // `run` means compile+execute; `--emit-c` / `--emit-pp` skip execution.
   if (command != null && command != 'run') return null;
-  return _Opts(source, cc, emitC);
+  return _Opts(source, cc, emitC, emitPp);
 }
 
 String _basenameWithoutExt(String path) {

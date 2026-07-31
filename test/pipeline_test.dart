@@ -5,6 +5,7 @@ import 'package:klin/checker.dart';
 import 'package:klin/emit_c.dart';
 import 'package:klin/lexer.dart';
 import 'package:klin/parser.dart';
+import 'package:klin/preprocess.dart';
 import 'package:klin/project.dart';
 import 'package:klin/token.dart';
 import 'package:test/test.dart';
@@ -194,6 +195,57 @@ fn main() {
     expect(c, contains('io_print("hello");'));
     expect(c, contains('printf("%s", msg);'));
     expect(c, isNot(contains('io_println(')));
+  });
+
+  test(r'golden: $fn macro expands to a specialized struct (issue 026)',
+      () async {
+    final result = await _compileAndRun('test/macro_point.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/macro_point.out').readAsString());
+
+    final raw = File('test/macro_point.kl').readAsStringSync();
+    final expanded = preprocess(raw, path: 'test/macro_point.kl');
+    expect(expanded, contains('struct Vec2i'));
+    expect(expanded, contains('fn (p: Vec2i) len_sq(): i32'));
+    expect(expanded, isNot(contains(r'$fn')));
+    expect(expanded, isNot(contains(r'$point')));
+
+    final program = loadProject('test/macro_point.kl');
+    Checker().check(program);
+    final c = emitC(program, 'test/macro_point.kl');
+    expect(c, contains('typedef struct'));
+    expect(c, contains('Vec2i'));
+    expect(c, contains('len_sq'));
+  });
+
+  test('error: unknown macro reports call site', () {
+    expect(
+      () => preprocess(r'$missing(i32)', path: 't.kl'),
+      throwsA(
+        predicate(
+          (e) =>
+              e is PreprocessError &&
+              e.toString().contains('unknown macro') &&
+              e.toString().contains(r'$missing'),
+        ),
+      ),
+    );
+  });
+
+  test('--emit-pp writes expanded Klin source', () async {
+    final proc = await Process.run(
+      'dart',
+      ['run', 'bin/klin.dart', '--emit-pp', 'test/macro_point.kl'],
+    );
+    final pp = File('out/macro_point.pp.kl');
+    addTearDown(() async {
+      if (await pp.exists()) await pp.delete();
+    });
+    expect(proc.exitCode, 0, reason: proc.stderr.toString());
+    expect(await pp.exists(), isTrue);
+    final text = await pp.readAsString();
+    expect(text, contains('struct Vec2i'));
+    expect(text, isNot(contains(r'$point')));
   });
 
   test('syntax error: message includes line number', () async {
