@@ -62,6 +62,7 @@ enum TokenKind {
   ampersand,
   atSign,
   colon,
+  colonEqual, // :=
   equal,
   equalEqual,
   bang,

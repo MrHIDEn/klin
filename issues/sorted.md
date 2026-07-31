@@ -49,6 +49,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [045](045-cexport.md) | Eksport Klin → C (`@[cexport]`) | ✅ | 021 |
 | [046](046-emit-h.md) | `--emit-h` (nagłówek C z `@[cexport]`) | ✅ | 045 |
 | [047](047-directory-modules.md) | Katalog = jeden moduł (jak Go/V) | ✅ | 006, 020 |
+| [055](055-short-decl.md) | Skrót `:=` (= `let mut`) | ✅ | 002 |
 
 ---
 

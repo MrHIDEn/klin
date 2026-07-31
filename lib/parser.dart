@@ -17,12 +17,13 @@ final class ParseError implements Exception {
 ///   func    := "fn" ident "(" params? ")" (":" ident)? block
 ///   params  := ident ":" ident ("," ident ":" ident)*
 ///   block   := "{" stmt* "}"
-///   stmt    := let | assign | call | if | while | for | return | break
-///            | continue | defer | block
+///   stmt    := let | shortLet | assign | call | if | while | for | return
+///            | break | continue | defer | block
+///   shortLet := ident ":=" expr
 ///   if      := "if" expr block ("else" (if | block))?
 ///   while   := "while" expr block
 ///   for     := "for" ident "in" expr "..<" expr block
-///            | "for" [ident "=" expr] ";" [expr] ";" [ident "=" expr] block
+///            | "for" [ident ("=" | ":=") expr] ";" [expr] ";" [ident "=" expr] block
 ///   return  := "return" expr?
 ///   call    := ident "(" (expr ("," expr)*)? ")"
 ///   expr    := equality
@@ -243,6 +244,13 @@ final class Parser {
     }
     if (_check(TokenKind.lBrace)) return BlockStmt(_block());
 
+    // name := expr  ≡  let mut name = expr
+    if (_check(TokenKind.ident) &&
+        _i + 1 < _tokens.length &&
+        _tokens[_i + 1].kind == TokenKind.colonEqual) {
+      return _shortLetStmt();
+    }
+
     if (_canStartExpr(_current.kind)) {
       final expr = _expr();
       return _stmtFromExpr(expr);
@@ -336,12 +344,16 @@ final class Parser {
       }
     }
 
-    // C-style
+    // C-style (`=` or `:=` both introduce a mutable loop variable)
     String? initName;
     Expr? initExpr;
     if (!_check(TokenKind.semicolon)) {
       final name = _expect(TokenKind.ident, 'expected loop variable name');
-      _expect(TokenKind.equal, 'oczekiwano `=`');
+      if (_check(TokenKind.equal) || _check(TokenKind.colonEqual)) {
+        _advance();
+      } else {
+        throw ParseError('oczekiwano `=` lub `:=`', _current.pos);
+      }
       initName = name.lexeme;
       initExpr = _expr();
     }
@@ -394,7 +406,7 @@ final class Parser {
     if (!_canStartExpr(_current.kind)) return false;
     if (_check(TokenKind.ident) && _i + 1 < _tokens.length) {
       final next = _tokens[_i + 1].kind;
-      if (next == TokenKind.equal) {
+      if (next == TokenKind.equal || next == TokenKind.colonEqual) {
         return false;
       }
       // A call starting on the next line is a separate statement, not a value.
@@ -449,6 +461,22 @@ final class Parser {
       typeName: typeName,
       init: init,
       pos: letTok.pos,
+    );
+  }
+
+  /// `name := expr` — sugar for `let mut name = expr`.
+  LetStmt _shortLetStmt() {
+    final name = _expect(TokenKind.ident, 'expected variable name');
+    _rejectCKeyword(name, 'a variable name');
+    _expect(TokenKind.colonEqual, 'oczekiwano `:=`');
+    final init = _expr();
+    return LetStmt(
+      isMut: true,
+      name: name.lexeme,
+      typeName: null,
+      init: init,
+      pos: name.pos,
+      shortDecl: true,
     );
   }
 
