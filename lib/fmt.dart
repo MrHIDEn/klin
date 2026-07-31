@@ -125,8 +125,20 @@ void _writeStmt(StringBuffer buf, Stmt stmt, int indent) {
   switch (stmt) {
     case AsmStmt(:final code):
       buf.writeln('${pad}asm("${_escapeString(code)}")');
-    case LetStmt(:final isMut, :final name, :final typeName, :final init):
+    case LetStmt(
+        :final isMut,
+        :final name,
+        :final typeName,
+        :final init,
+        :final shortDecl
+      ):
       buf.write(pad);
+      if (shortDecl) {
+        buf.write('$name := ');
+        buf.write(_expr(init!, indent));
+        buf.writeln();
+        break;
+      }
       buf.write(isMut ? 'let mut ' : 'let ');
       buf.write(name);
       if (typeName != null) buf.write(': $typeName');

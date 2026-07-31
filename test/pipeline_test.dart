@@ -145,6 +145,39 @@ fn main() {
     expect(c, contains('y = (y + 1);'));
   });
 
+  test('golden: short_decl.kl — := sugar for let mut (issue 055)', () async {
+    final result = await _compileAndRun('test/short_decl.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/short_decl.out').readAsString());
+
+    final source = File('test/short_decl.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/short_decl.kl');
+    expect(c, contains('int32_t x = (2 + 3);'));
+    expect(c, contains('int32_t i = 0;'));
+    expect(c, isNot(contains('mut')));
+
+    final tokens = Lexer('x := 1').tokenize();
+    expect(tokens[1].kind, TokenKind.colonEqual);
+    expect(tokens[1].lexeme, ':=');
+  });
+
+  test('klin fmt: preserves := short decl (issue 055)', () {
+    final ugly = File('test/fmt_short_decl.kl').readAsStringSync();
+    final expected = File('test/fmt_short_decl.fmt.kl').readAsStringSync();
+    final once = formatSource(ugly);
+    expect(once, expected);
+    expect(formatSource(once), once);
+  });
+
+  test('error: := without initializer', () {
+    expect(
+      () => Parser(Lexer('fn main() { x := }').tokenize()).parse(),
+      throwsA(isA<ParseError>()),
+    );
+  });
+
   test('golden: int/float aliases emit fixed-width C types', () async {
     final result = await _compileAndRun('test/int_float_aliases.kl', tmp);
     expect(result.exitCode, 0, reason: result.stderr);
