@@ -289,6 +289,22 @@ fn main() {
     expect(expanded, contains('GPIOA_ODR_ODR5_toggle()'));
     expect(expanded, isNot(contains('RCC.AHB1ENR')));
     expect(File('${dir.path}/tiny_regs.h').existsSync(), isTrue);
+
+    expect(
+      () => preprocess(
+        r'''
+$peripherals_from_svd("tiny.svd", "RCC,GPIOA")
+fn main() { GPIOA.ODR.ODR5.toggle(1) }
+''',
+        path: klPath,
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is PreprocessError && e.toString().contains('takes no arguments'),
+        ),
+      ),
+    );
   });
 
   test('--emit-pp writes expanded Klin source', () async {

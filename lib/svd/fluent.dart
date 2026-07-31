@@ -1,20 +1,18 @@
 import 'dart:io';
 
 import '../token.dart';
+import 'emit.dart';
 import 'model.dart';
 import 'parse.dart';
-import 'svd2klin.dart';
 
 /// Result of `$peripherals_from_svd(...)`: header on disk + device for rewrite.
 final class SvdPeripheralsExpansion {
   final String cincludeSnippet;
   final SvdDevice device;
-  final String headerPath;
 
   const SvdPeripheralsExpansion({
     required this.cincludeSnippet,
     required this.device,
-    required this.headerPath,
   });
 }
 
@@ -65,23 +63,22 @@ SvdPeripheralsExpansion expandPeripheralsFromSvd({
   final klinPath =
       '${sourceDir.path}${Platform.pathSeparator}${stem}_regs.kl';
 
-  final generated = generateFromSvdFile(
-    svdFile.path,
+  final device = parseSvd(
+    svdFile.readAsStringSync(),
     peripherals: peripherals,
+  );
+  final guard = includeName.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '_');
+  final generated = emitSvd(
+    device,
+    headerGuard: '${guard}_INCLUDED',
     includeName: includeName,
   );
   File(headerPath).writeAsStringSync(generated.header);
   File(klinPath).writeAsStringSync(generated.klin);
 
-  final device = parseSvd(
-    svdFile.readAsStringSync(),
-    peripherals: peripherals,
-  );
-
   return SvdPeripheralsExpansion(
     cincludeSnippet: '@[cinclude("$includeName")]\n',
     device: device,
-    headerPath: headerPath,
   );
 }
 
@@ -156,6 +153,13 @@ String rewriteSvdFluent(
           if (match.method == 'toggle' && !info.hasToggle) {
             throw PreprocessError(
               'field `$key` has no `toggle` accessor',
+              startPos,
+              path: path,
+            );
+          }
+          if (match.method == 'toggle' && match.argsRaw.trim().isNotEmpty) {
+            throw PreprocessError(
+              '`toggle` takes no arguments',
               startPos,
               path: path,
             );
