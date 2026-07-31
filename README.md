@@ -66,6 +66,15 @@ Type `fn(T…): Ret` — top-level function as a value (C function pointer, no
 capture). See [note/13-fn-ptr.md](note/13-fn-ptr.md),
 [`examples/fn_ptr.kl`](examples/fn_ptr.kl).
 
+### `match`
+
+Default break — no fallthrough. Arms take value groups (`1, 2, 3`) or
+inclusive ranges (`4..=10`), plus a final `else`. Also an expression form
+in `let` / assignment position (`else` required there). Integer subjects
+only; lowers to an `if`/`else if` chain with the subject in one temp, so
+`break` / `continue` in an arm still belong to the enclosing loop. See
+[note/15-match.md](note/15-match.md), [`examples/match.kl`](examples/match.kl).
+
 ### Short declaration (`:=`)
 
 `name := expr` is sugar for `let mut name = expr`. See

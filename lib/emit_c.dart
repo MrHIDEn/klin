@@ -338,6 +338,8 @@ bool _stmtCallsStdio(Stmt stmt) => switch (stmt) {
       ReturnStmt(:final value) => value != null && _exprCallsStdio(value),
       DeferStmt(:final body) => _stmtCallsStdio(body),
       BlockStmt(:final block) => block.stmts.any(_stmtCallsStdio),
+      MatchStmt(:final subject, :final arms) => _exprCallsStdio(subject) ||
+          arms.any((arm) => arm.body.stmts.any(_stmtCallsStdio)),
       _ => false,
     };
 
@@ -368,6 +370,8 @@ bool _exprCallsStdio(Expr expr) => switch (expr) {
       StructLitExpr(:final namedFields, :final positionalFields) =>
         namedFields?.values.any(_exprCallsStdio) ??
             positionalFields!.any(_exprCallsStdio),
+      MatchExpr(:final subject, :final arms) => _exprCallsStdio(subject) ||
+          arms.any((arm) => _exprCallsStdio(arm.body)),
       _ => false,
     };
 
@@ -625,6 +629,8 @@ bool _stmtNeedsTrimFrac(Stmt stmt) => switch (stmt) {
       BlockStmt(:final block) => _blockNeedsTrimFrac(block),
       DeferStmt(:final body) => _stmtNeedsTrimFrac(body),
       MethodCallStmt(:final call) => _exprNeedsTrimFrac(call),
+      MatchStmt(:final subject, :final arms) => _exprNeedsTrimFrac(subject) ||
+          arms.any((arm) => _blockNeedsTrimFrac(arm.body)),
       _ => false,
     };
 
@@ -639,6 +645,8 @@ bool _exprNeedsTrimFrac(Expr expr) => switch (expr) {
       GroupExpr(:final inner) => _exprNeedsTrimFrac(inner),
       MethodCallExpr(:final receiver, :final args) =>
         _exprNeedsTrimFrac(receiver) || args.any(_exprNeedsTrimFrac),
+      MatchExpr(:final subject, :final arms) => _exprNeedsTrimFrac(subject) ||
+          arms.any((arm) => _exprNeedsTrimFrac(arm.body)),
       _ => false,
     };
 
@@ -1069,6 +1077,19 @@ void _emitStmt(
             returnCType: returnCType,
             state: state,
           );
+        } else if (init is MatchExpr) {
+          buf.writeln('$pad${_cDecl(ty, name)};');
+          _emitMatchAssign(
+            buf,
+            target: name,
+            targetType: ty,
+            match: init,
+            sourcePath: sourcePath,
+            indent: indent,
+            bareReturnAsZero: bareReturnAsZero,
+            returnCType: returnCType,
+            state: state,
+          );
         } else {
           buf.writeln('$pad${_cDecl(ty, name)} = ${_emitExpr(init, ctx)};');
         }
@@ -1095,6 +1116,18 @@ void _emitStmt(
           target: _emitExpr(target, ctx),
           targetType: target.resolvedType!,
           value: value,
+          sourcePath: sourcePath,
+          indent: indent,
+          bareReturnAsZero: bareReturnAsZero,
+          returnCType: returnCType,
+          state: state,
+        );
+      } else if (value is MatchExpr) {
+        _emitMatchAssign(
+          buf,
+          target: _emitExpr(target, ctx),
+          targetType: target.resolvedType!,
+          match: value,
           sourcePath: sourcePath,
           indent: indent,
           bareReturnAsZero: bareReturnAsZero,
@@ -1331,7 +1364,135 @@ void _emitStmt(
         state: state,
       );
       buf.writeln('$pad}');
+
+    case MatchStmt(:final pos):
+      _line(buf, pos.line, sourcePath);
+      _emitMatchStmt(
+        buf,
+        stmt,
+        sourcePath,
+        indent: indent,
+        pad: pad,
+        bareReturnAsZero: bareReturnAsZero,
+        returnCType: returnCType,
+        state: state,
+      );
   }
+}
+
+/// Lowers a `match` statement to an `if`/`else if`/`else` chain. The subject
+/// is evaluated once into a fresh temp so patterns with multiple values or
+/// ranges don't re-evaluate it — zero runtime overhead beyond a plain `if`.
+void _emitMatchStmt(
+  StringBuffer buf,
+  MatchStmt stmt,
+  String sourcePath, {
+  required int indent,
+  required String pad,
+  required bool bareReturnAsZero,
+  required String returnCType,
+  required _EmitState state,
+}) {
+  final ctx = _ExprCtx(
+    buf: buf,
+    sourcePath: sourcePath,
+    indent: indent,
+    bareReturnAsZero: bareReturnAsZero,
+    returnCType: returnCType,
+    state: state,
+  );
+  final subjectType = stmt.subject.resolvedType!;
+  final temp = state.nextValueTemp();
+  buf.writeln(
+      '$pad${_cDecl(subjectType, temp)} = ${_emitExpr(stmt.subject, ctx)};');
+  for (var i = 0; i < stmt.arms.length; i++) {
+    final arm = stmt.arms[i];
+    final isElse = arm.pattern is ElsePattern;
+    if (i == 0) {
+      buf.writeln(isElse
+          ? '$pad{'
+          : '${pad}if (${_patternCond(temp, arm.pattern, ctx)}) {');
+    } else {
+      buf.writeln(isElse
+          ? '$pad} else {'
+          : '$pad} else if (${_patternCond(temp, arm.pattern, ctx)}) {');
+    }
+    _emitBlock(
+      buf,
+      arm.body,
+      sourcePath,
+      indent: indent + 1,
+      bareReturnAsZero: bareReturnAsZero,
+      returnCType: returnCType,
+      state: state,
+    );
+  }
+  buf.writeln('$pad}');
+}
+
+/// Lowers a `match` expression's assignment: the subject is evaluated once,
+/// then each arm assigns `target` inside its own `if`/`else if`/`else` branch
+/// (reusing [_emitValueAssignment] so an arm body may itself be `or {}`/`!`).
+void _emitMatchAssign(
+  StringBuffer buf, {
+  required String target,
+  required KlinType targetType,
+  required MatchExpr match,
+  required String sourcePath,
+  required int indent,
+  required bool bareReturnAsZero,
+  required String returnCType,
+  required _EmitState state,
+}) {
+  final ctx = _ExprCtx(
+    buf: buf,
+    sourcePath: sourcePath,
+    indent: indent,
+    bareReturnAsZero: bareReturnAsZero,
+    returnCType: returnCType,
+    state: state,
+  );
+  final pad = '    ' * indent;
+  final subjectType = match.subject.resolvedType!;
+  final temp = state.nextValueTemp();
+  buf.writeln(
+      '$pad${_cDecl(subjectType, temp)} = ${_emitExpr(match.subject, ctx)};');
+  for (var i = 0; i < match.arms.length; i++) {
+    final arm = match.arms[i];
+    final isElse = arm.pattern is ElsePattern;
+    if (i == 0) {
+      buf.writeln(isElse
+          ? '$pad{'
+          : '${pad}if (${_patternCond(temp, arm.pattern, ctx)}) {');
+    } else {
+      buf.writeln(isElse
+          ? '$pad} else {'
+          : '$pad} else if (${_patternCond(temp, arm.pattern, ctx)}) {');
+    }
+    _emitValueAssignment(
+      buf,
+      target: target,
+      targetType: targetType,
+      value: arm.body,
+      sourcePath: sourcePath,
+      indent: indent + 1,
+      bareReturnAsZero: bareReturnAsZero,
+      returnCType: returnCType,
+      state: state,
+    );
+  }
+  buf.writeln('$pad}');
+}
+
+String _patternCond(String temp, MatchPattern pattern, _ExprCtx ctx) {
+  return switch (pattern) {
+    LitPattern(:final values) =>
+      values.map((v) => '$temp == ${_emitExpr(v, ctx)}').join(' || '),
+    RangePattern(:final start, :final endInclusive) =>
+      '($temp >= ${_emitExpr(start, ctx)} && $temp <= ${_emitExpr(endInclusive, ctx)})',
+    ElsePattern() =>
+      throw StateError('emit: `else` pattern has no condition'),
+  };
 }
 
 void _emitFrameCleanups(
@@ -1580,6 +1741,27 @@ String _emitExprRaw(Expr expr, _ExprCtx ctx) {
           target: out,
           targetType: outType,
           value: expr,
+          sourcePath: ctx.sourcePath,
+          indent: ctx.indent,
+          bareReturnAsZero: ctx.bareReturnAsZero,
+          returnCType: ctx.returnCType,
+          state: ctx.state,
+        );
+        return out;
+      }(),
+    MatchExpr(:final resolvedType) => () {
+        final outType = resolvedType;
+        if (outType == null) {
+          throw StateError('emit: `match` without an expression result type');
+        }
+        final out = ctx.state.nextValueTemp();
+        final pad = '    ' * ctx.indent;
+        ctx.buf.writeln('$pad${_cType(outType)} $out;');
+        _emitMatchAssign(
+          ctx.buf,
+          target: out,
+          targetType: outType,
+          match: expr,
           sourcePath: ctx.sourcePath,
           indent: ctx.indent,
           bareReturnAsZero: ctx.bareReturnAsZero,

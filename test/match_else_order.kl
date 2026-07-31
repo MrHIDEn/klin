@@ -1,0 +1,10 @@
+fn main() {
+    match 1 {
+        else {
+            puts("a")
+        }
+        1 {
+            puts("b")
+        }
+    }
+}

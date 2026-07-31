@@ -16,7 +16,7 @@ Prosto, bo C ma to samo — mapowanie niemal jeden do jednego.
   - C: `for i = 0; i < 5; i = i + 1 { ... }` (bez nawiasów; init wprowadza mut `i`)
 - **`while`** osobno (nie kopiujemy V-owego `for cond`)
 - **`match`** — poza kryterium 003 (`match`, domyślny break, bez fallthrough;
-  nie C-owy `switch`); osobny krok (014)
+  nie C-owy `switch`); osobny krok — zrobione w [014](014-match.md)
 - **`goto`** — nie w składni użytkownika; codegen może użyć wewnętrznie (008)
 
 ## Kryterium ukończenia

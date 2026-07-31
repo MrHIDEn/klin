@@ -1,0 +1,49 @@
+// `match` — default break (no fallthrough), value groups and inclusive ranges.
+// Lowers to a plain if/else chain; the subject is evaluated once.
+
+fn classify(x: i32) {
+    match x {
+        1, 2, 3 {
+            puts("small")
+        }
+        4..=10 {
+            puts("mid")
+        }
+        else {
+            puts("big")
+        }
+    }
+}
+
+fn main() {
+    classify(2)
+    classify(7)
+    classify(99)
+
+    // Expression form: every arm yields a value, `else` is required.
+    let x = 7
+    let fee = match x {
+        0 { 0 }
+        1..=5 { 10 }
+        else { 25 }
+    }
+    printf("fee=%d\n", fee)
+
+    // `break` / `continue` inside an arm belong to the enclosing loop,
+    // because an arm is an `if` branch, not a C `case`.
+    let mut sum = 0
+    for i in 0..<10 {
+        match i {
+            0, 1 {
+                continue
+            }
+            7 {
+                break
+            }
+            else {
+                sum = sum + i
+            }
+        }
+    }
+    printf("sum=%d\n", sum)
+}

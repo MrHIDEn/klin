@@ -123,14 +123,20 @@ final class Lexer {
         }
         return Token(TokenKind.greater, '>', start);
       case '.':
-        // ..<
-        if (_i + 2 < source.length &&
-            source[_i + 1] == '.' &&
-            source[_i + 2] == '<') {
-          _advance();
-          _advance();
-          _advance();
-          return Token(TokenKind.dotDotLess, '..<', start);
+        // ..< / ..=
+        if (_i + 2 < source.length && source[_i + 1] == '.') {
+          if (source[_i + 2] == '<') {
+            _advance();
+            _advance();
+            _advance();
+            return Token(TokenKind.dotDotLess, '..<', start);
+          }
+          if (source[_i + 2] == '=') {
+            _advance();
+            _advance();
+            _advance();
+            return Token(TokenKind.dotDotEqual, '..=', start);
+          }
         }
         _advance();
         return Token(TokenKind.dot, '.', start);
@@ -169,6 +175,7 @@ final class Lexer {
       'or' => Token(TokenKind.or_, lexeme, start),
       'error' => Token(TokenKind.error_, lexeme, start),
       'asm' => Token(TokenKind.asm_, lexeme, start),
+      'match' => Token(TokenKind.match_, lexeme, start),
       _ => Token(TokenKind.ident, lexeme, start),
     };
   }

@@ -1,0 +1,20 @@
+fn main() {
+    let mut x = 2
+    match x {
+        1, 2, 3 {
+            puts("small")
+        }
+        4..=10 {
+            puts("mid")
+        }
+        else {
+            puts("big")
+        }
+    }
+    let a = match x {
+        1 { 10 }
+        2..=4 { 20 }
+        else { 30 }
+    }
+    printf("%d\n", a)
+}

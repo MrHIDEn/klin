@@ -209,7 +209,27 @@ void _writeStmt(StringBuffer buf, Stmt stmt, int indent) {
       }
     case BlockStmt(:final block):
       _writeBlock(buf, block, indent, leadingNewline: true);
+    case MatchStmt(:final subject, :final arms):
+      buf.write('${pad}match ${_expr(subject, indent)} {\n');
+      for (final arm in arms) {
+        buf.writeln('$pad$indentUnit${_patternText(arm.pattern, indent)} {');
+        for (final s in arm.body.stmts) {
+          _writeStmt(buf, s, indent + 2);
+        }
+        buf.writeln('$pad$indentUnit}');
+      }
+      buf.writeln('$pad}');
   }
+}
+
+String _patternText(MatchPattern pattern, int indent) {
+  return switch (pattern) {
+    LitPattern(:final values) =>
+      values.map((v) => _expr(v, indent)).join(', '),
+    RangePattern(:final start, :final endInclusive) =>
+      '${_expr(start, indent)}..=${_expr(endInclusive, indent)}',
+    ElsePattern() => 'else',
+  };
 }
 
 void _writeIf(StringBuffer buf, IfStmt stmt, int indent, {required bool chained}) {
@@ -308,7 +328,22 @@ String _expr(Expr expr, [int indent = 0]) {
     PropagateExpr(:final result) => '${_expr(result, indent)}!',
     OrExpr(:final result, :final fallback) =>
       '${_expr(result, indent)} or ${_formatOrBlock(fallback, indent)}',
+    MatchExpr(:final subject, :final arms) =>
+      _formatMatchExpr(subject, arms, indent),
   };
+}
+
+String _formatMatchExpr(Expr subject, List<MatchExprArm> arms, int indent) {
+  final pad = indentUnit * indent;
+  final inner = indentUnit * (indent + 1);
+  final buf = StringBuffer('match ${_expr(subject, indent)} {\n');
+  for (final arm in arms) {
+    buf.writeln(
+      '$inner${_patternText(arm.pattern, indent + 1)} { ${_expr(arm.body, indent + 1)} }',
+    );
+  }
+  buf.write('$pad}');
+  return buf.toString();
 }
 
 String _formatOrBlock(OrBlock block, int indent) {

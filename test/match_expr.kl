@@ -1,0 +1,33 @@
+fn main() {
+    let x = 5
+    let a = match x {
+        1, 2, 3 { 100 }
+        4..=10 { 200 }
+        else { 300 }
+    }
+    printf("%d\n", a)
+
+    let mut b = 0
+    b = match x {
+        1, 2, 3 { 10 }
+        4..=10 { 20 }
+        else { 30 }
+    }
+    printf("%d\n", b)
+
+    // subject is an arbitrary expression, evaluated once
+    let n = 12
+    let label = match n / 5 {
+        0 { 1 }
+        1, 2 { 2 }
+        else { 3 }
+    }
+    printf("%d\n", label)
+
+    // arm bodies are arbitrary expressions of a common type
+    let c: f64 = match x {
+        1..=4 { 0.5 }
+        else { 1.5 + 1.0 }
+    }
+    printf("%.1f\n", c)
+}

@@ -90,6 +90,10 @@ final class Checker {
   String _currentFunction = '';
   String _currentModule = '';
 
+  /// `match` as an expression is only valid as a `let` initializer or an
+  /// assignment right-hand side (it lowers to statements in emission).
+  bool _allowMatchExpr = false;
+
   void check(Program program) {
     _functions.clear();
     _structs.clear();
@@ -539,7 +543,7 @@ final class Checker {
 
         final KlinType resolved;
         if (init != null) {
-          final initType = _inferExpr(init);
+          final initType = _withMatchExprAllowed(() => _inferExpr(init));
           if (annotated != null) {
             _expectAssignable(annotated, initType, init.pos);
             resolved = annotated;
@@ -577,9 +581,23 @@ final class Checker {
             pos,
           );
         }
-        final valueType = _inferExpr(value);
+        // The target place carries its own type: emission of `or {}` / `!` /
+        // `match` assignments reads it to declare the temporaries.
+        target.resolvedType = targetType;
+        final valueType = _withMatchExprAllowed(() => _inferExpr(value));
         _expectAssignable(targetType, valueType, value.pos);
         _materialize(value, targetType);
+
+      case MatchStmt(:final subject, :final arms):
+        _checkMatchSubject(subject);
+        final subjectType = subject.resolvedType!;
+        _checkMatchArmsOrder(arms.map((a) => a.pattern).toList());
+        for (final arm in arms) {
+          if (arm.pattern is! ElsePattern) {
+            _checkMatchPattern(arm.pattern, subjectType);
+          }
+          _checkBlock(arm.body);
+        }
 
       case CallStmt(:final moduleName, :final callee, :final args, :final pos):
         if (_tryCheckInterpPrint(moduleName, callee, args, pos,
@@ -1248,6 +1266,9 @@ final class Checker {
         IfStmt(:final thenBlock, :final elseBranch) => elseBranch != null &&
             _returnsOnAllPaths(thenBlock) &&
             _stmtReturns(elseBranch),
+        MatchStmt(:final arms) => arms.isNotEmpty &&
+            arms.last.pattern is ElsePattern &&
+            arms.every((arm) => _returnsOnAllPaths(arm.body)),
         _ => false,
       };
 
@@ -1547,6 +1568,8 @@ final class Checker {
       BinaryExpr(:final left, :final op, :final right, :final pos) =>
         _inferBinary(left, op, right, pos),
       GroupExpr(:final inner) => _inferExpr(inner),
+      MatchExpr(:final subject, :final arms, :final pos) =>
+        _inferMatchExpr(subject, arms, pos),
     };
     if (type is PrimType ||
         type is StrType ||
@@ -1721,7 +1744,113 @@ final class Checker {
           _expectAssignable(type.elem, _inferExpr(element), element.pos);
           _materialize(element, type.elem);
         }
+      case MatchExpr(:final arms):
+        for (final arm in arms) {
+          _materialize(arm.body, type);
+        }
     }
+  }
+
+  /// Runs [fn] with `match` allowed as an expression (only valid directly as
+  /// a `let` initializer or an assignment right-hand side).
+  T _withMatchExprAllowed<T>(T Function() fn) {
+    final saved = _allowMatchExpr;
+    _allowMatchExpr = true;
+    try {
+      return fn();
+    } finally {
+      _allowMatchExpr = saved;
+    }
+  }
+
+  void _checkMatchSubject(Expr subject) {
+    final subjectType = _inferExpr(subject);
+    final concrete = _defaultConcrete(subjectType, subject.pos);
+    if (concrete is! PrimType || !concrete.kind.isInteger) {
+      throw CheckError(
+        '`match` requires an integer subject, got `${concrete.displayName}`',
+        subject.pos,
+      );
+    }
+    _materialize(subject, concrete);
+  }
+
+  void _checkMatchArmsOrder(List<MatchPattern> patterns) {
+    for (var i = 0; i < patterns.length; i++) {
+      final pattern = patterns[i];
+      if (pattern is ElsePattern) {
+        if (i != patterns.length - 1) {
+          throw CheckError(
+            '`else` must be the last arm of `match`',
+            pattern.pos,
+          );
+        }
+      }
+    }
+  }
+
+  void _checkMatchPattern(MatchPattern pattern, KlinType subjectType) {
+    switch (pattern) {
+      case LitPattern(:final values):
+        for (final value in values) {
+          final valueType = _inferExpr(value);
+          _expectAssignable(subjectType, valueType, value.pos);
+          _materialize(value, subjectType);
+        }
+      case RangePattern(:final start, :final endInclusive):
+        final startType = _inferExpr(start);
+        final endType = _inferExpr(endInclusive);
+        _expectAssignable(subjectType, startType, start.pos);
+        _expectAssignable(subjectType, endType, endInclusive.pos);
+        _materialize(start, subjectType);
+        _materialize(endInclusive, subjectType);
+      case ElsePattern():
+        break;
+    }
+  }
+
+  KlinType _inferMatchExpr(
+    Expr subject,
+    List<MatchExprArm> arms,
+    SourcePos pos,
+  ) {
+    if (!_allowMatchExpr) {
+      throw CheckError(
+        '`match` as an expression is only allowed as a `let` initializer or an assignment right-hand side',
+        pos,
+      );
+    }
+    if (arms.isEmpty || arms.last.pattern is! ElsePattern) {
+      throw CheckError(
+        '`match` as an expression requires an `else` arm as the last arm',
+        pos,
+      );
+    }
+    _checkMatchSubject(subject);
+    final subjectType = subject.resolvedType!;
+    _checkMatchArmsOrder(arms.map((a) => a.pattern).toList());
+
+    KlinType? resultType;
+    _allowMatchExpr = false;
+    try {
+      for (final arm in arms) {
+        if (arm.pattern is! ElsePattern) {
+          _checkMatchPattern(arm.pattern, subjectType);
+        }
+        final bodyType = _inferExpr(arm.body);
+        resultType = resultType == null
+            ? bodyType
+            : _unifyNumeric(resultType, bodyType, arm.body.pos);
+      }
+    } finally {
+      _allowMatchExpr = true;
+    }
+
+    final concrete = _defaultConcrete(resultType!, pos);
+    for (final arm in arms) {
+      _materialize(arm.body, concrete);
+    }
+    return concrete;
   }
 
   void _expectAssignable(KlinType target, KlinType source, SourcePos pos) {
