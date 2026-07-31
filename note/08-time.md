@@ -12,6 +12,12 @@ Model jak Go: **Instant** (wall UTC) + **MonoInstant** (pomiary) + **Duration**
 | `time.mono()` | `CLOCK_MONOTONIC` → `MonoInstant` |
 | RTC / cykle CPU | **osobne** API (HAL/board) — nie `now()` |
 
+## Duration / span
+
+- `between(a, b)` / `a.until(b)` — `b - a`
+- `Duration.abs` / `mul`; składowe `as_ns` / `as_us` / `as_ms` / `as_s`
+- `MonoInstant.add` / `sub` (`Duration`) jak u `Instant`
+
 ## Przykład
 
 ```klin
@@ -23,6 +29,9 @@ fn main() {
     time.format(buf[:], "%Y-%m-%d", t)
     printf("%s\n", &buf[0])
 
+    let later = t.add(time.seconds(5))
+    printf("until_s=%lld\n", t.until(later).as_s())
+
     let t0 = time.mono()
     let dt = time.mono_since(t0)
     printf("elapsed_ns=%lld\n", dt.ns)
@@ -32,5 +41,6 @@ fn main() {
 Dialekt formatu MVP: `strftime` (`%Y %m %d %H %M %S` …).  
 Parse: `parse_iso` / `parse(fmt, s)` → `!Instant` (w `main` użyj `or { }`).
 
-Szczegóły i poza zakresem: [issues/037-datetime-format.md](../issues/037-datetime-format.md).
+Szczegóły i poza zakresem: [issues/037-datetime-format.md](../issues/037-datetime-format.md),
+[issues/038-time-api.md](../issues/038-time-api.md).
 Demo: [examples/time_demo.kl](../examples/time_demo.kl).

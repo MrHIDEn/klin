@@ -92,7 +92,7 @@ pub fn (d: Duration) as_ms(): i64 {
     return d.ns / 1000000
 }
 
-pub fn (d: Duration) as_sec(): i64 {
+pub fn (d: Duration) as_s(): i64 {
     return d.ns / 1000000000
 }
 
@@ -102,6 +102,17 @@ pub fn (a: Duration) add(b: Duration): Duration {
 
 pub fn (a: Duration) sub(b: Duration): Duration {
     return Duration{ ns: a.ns - b.ns }
+}
+
+pub fn (d: Duration) abs(): Duration {
+    if d.ns < 0 {
+        return Duration{ ns: 0 - d.ns }
+    }
+    return d
+}
+
+pub fn (d: Duration) mul(n: i64): Duration {
+    return Duration{ ns: d.ns * n }
 }
 
 pub fn now(): Instant {
@@ -142,6 +153,24 @@ pub fn (t: Instant) add(d: Duration): Instant {
 
 pub fn (t: Instant) sub(d: Duration): Instant {
     return Instant{ unix_ns: t.unix_ns - d.ns }
+}
+
+/// Duration from [t] until [u] (`u - t`).
+pub fn (t: Instant) until(u: Instant): Duration {
+    return between(t, u)
+}
+
+pub fn (m: MonoInstant) add(d: Duration): MonoInstant {
+    return MonoInstant{ ns: m.ns + d.ns }
+}
+
+pub fn (m: MonoInstant) sub(d: Duration): MonoInstant {
+    return MonoInstant{ ns: m.ns - d.ns }
+}
+
+/// Duration from [a] until [b] (`b - a`).
+pub fn (a: MonoInstant) until(b: MonoInstant): Duration {
+    return mono_between(a, b)
 }
 
 pub fn (t: Instant) before(u: Instant): bool {

@@ -10,7 +10,17 @@ fn main() {
     let a = time.unix(1000)
     let b = a.add(time.seconds(5))
     let span = time.between(a, b)
-    printf("span=%lld\n", span.as_sec())
+    printf("span=%lld\n", span.as_s())
+    printf("until=%lld\n", a.until(b).as_s())
+
+    let neg = time.seconds(5).sub(time.seconds(10))
+    printf("abs=%lld\n", neg.abs().as_s())
+    printf("mul=%lld\n", time.seconds(2).mul(3).as_s())
+
+    let m0 = time.MonoInstant{ ns: 1000 }
+    let m1 = m0.add(time.seconds(5))
+    printf("mono_until=%lld\n", m0.until(m1).as_s())
+    printf("mono_sub=%lld\n", m1.sub(time.seconds(2)).ns)
 
     let parsed = time.parse_iso("2024-01-01") or {
         printf("parse_fail\n")
