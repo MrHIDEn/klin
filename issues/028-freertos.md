@@ -38,4 +38,4 @@ bez własnego schedulera i bez ukrytej alokacji.
 
 ## Kryterium
 
-`examples/freertos_blink/` — ≥2 taski, delay, LED; bez narzutu vs C+FreeRTOS.
+`examples/stm32/freertos_blink/` — ≥2 taski, delay, LED; bez narzutu vs C+FreeRTOS.

@@ -837,7 +837,7 @@ fn main() {}
     );
     if (compiler.exitCode != 0) return;
 
-    const example = 'examples/blink_f411';
+    const example = 'examples/stm32/blink_f411';
     addTearDown(
         () => Process.run('make', ['clean'], workingDirectory: example));
     final registers = await Process.run(
