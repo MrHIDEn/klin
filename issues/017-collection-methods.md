@@ -82,9 +82,9 @@ zapisu API.
 Poza MVP: `flatMap`, `groupBy`, lazy iteratory (018), sort z
 comparator-domknięciem.
 
-## Warstwa 2 (`*_alloc`) — to samo issue, faza późniejsza
+## Warstwa 2 (`*_alloc`) — po [055](055-allocator.md)
 
-Nie osobny ticket. Wymaga typu `Allocator` (dziś tylko D1 w
+Wymaga typu `Allocator` ([055](055-allocator.md); D1 w
 `note/01-decyzje.md`).
 
 - API: `map_alloc(a, xs, f)`, `filter_alloc(a, xs, pred)`
@@ -97,7 +97,7 @@ Nie osobny ticket. Wymaga typu `Allocator` (dziś tylko D1 w
 1. **Docs** — ten plik: zamknięty projekt API. ✅
 2. **Fn-pointer** — typy `fn(...): T` bez capture. ✅
 3. **stdlib `slice` warstwa 0+1** — odczyty + `*_into`.
-4. **`Allocator`** + warstwa 2 `*_alloc`.
+4. **`Allocator`** ([055](055-allocator.md)) + warstwa 2 `*_alloc`.
 
 ## Fn-pointer (faza 2)
 
