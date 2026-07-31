@@ -28,8 +28,8 @@ defer a.free(out)
 
 ### Nazewnictwo
 
-- Zero alokacji, krótkie: `each`, `find` / `index_of`, `any`, `all`, `count`,
-  `reduce`
+- Zero alokacji, krótkie: `each`, `index_of`, `any`, `all`, `count`, `reduce`
+  (`index_of` zwraca indeks, nie element — nie mylić z JS `find`)
 - Produkcja do bufora: zawsze sufiks `_into` (`map_into`, `filter_into`)
 - Alokacja: zawsze sufiks `_alloc` (`map_alloc`, `filter_alloc`) — warstwa 2
 - Unikać gołych `map` / `filter` bez sufiksu
@@ -73,11 +73,11 @@ zapisu API.
 | Funkcja | Alokacja | Uwagi |
 |---|---|---|
 | `each` | brak | efekt uboczny |
-| `find` / `index_of` | brak | przy braku: **`-1`** |
+| `index_of` | brak | zwraca indeks; przy braku: **`-1`** |
 | `any` / `all` / `count` | brak | |
 | `reduce` | brak | akumulator + funkcja |
-| `map_into` | brak | `dst.len == xs.len` (błąd frontendu / assert) |
-| `filter_into` | brak | zwraca liczbę zapisanych; `dst.cap >= xs.len` |
+| `map_into` | brak | wymaga `dst.len == xs.len` (błąd frontendu / assert) |
+| `filter_into` | brak | wymaga `dst.len >= xs.len` (miejsce na worst-case; slice ma tylko `ptr`/`len`, bez `cap` — 007); zwraca liczbę zapisanych `n` (`0…xs.len`); przy za małym `dst` — błąd frontendu / assert (przepełnienie nie milczy) |
 
 Poza MVP: `flatMap`, `groupBy`, lazy iteratory (018), sort z
 comparator-domknięciem.
@@ -88,7 +88,8 @@ Nie osobny ticket. Wymaga typu `Allocator` (dziś tylko D1 w
 `note/01-decyzje.md`).
 
 - API: `map_alloc(a, xs, f)`, `filter_alloc(a, xs, pred)`
-- `filter_alloc`: dwa przebiegi albo `cap = xs.len` + trim — jawne w docs
+- `filter_alloc`: dwa przebiegi albo alokacja na `xs.len` elementów i
+  zwrócenie slice z `len = n` (bez pola `cap` w typie slice — 007)
 - Caller: `defer a.free(out)` albo `defer arena.deinit()`
 
 ## Fazy
