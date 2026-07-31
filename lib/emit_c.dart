@@ -446,6 +446,10 @@ void _emitMemHostHelpers(StringBuffer buf, Program program) {
       buf.writeln('        return r;');
       buf.writeln('    }');
       buf.writeln(
+          '    if ((size_t)n > SIZE_MAX / sizeof(int32_t)) {');
+      buf.writeln('        r.is_err = true; r.u.err = 2; return r;');
+      buf.writeln('    }');
+      buf.writeln(
           '    void *p = malloc((size_t)n * sizeof(int32_t));');
       buf.writeln('    if (p == NULL) { r.is_err = true; r.u.err = 2; return r; }');
       buf.writeln('    r.is_err = false;');
@@ -457,6 +461,18 @@ void _emitMemHostHelpers(StringBuffer buf, Program program) {
       final slice = _sliceCName(const PrimType(PrimKind.i32));
       buf.writeln('void klin_mem_free_i32($slice buf) {');
       buf.writeln('    free(buf.ptr);');
+      buf.writeln('}');
+      buf.writeln();
+    } else if (name == 'klin_mem_empty_u8') {
+      final slice = _sliceCName(const PrimType(PrimKind.u8));
+      buf.writeln('$slice klin_mem_empty_u8(void) {');
+      buf.writeln('    return ($slice){ NULL, 0 };');
+      buf.writeln('}');
+      buf.writeln();
+    } else if (name == 'klin_mem_empty_i32') {
+      final slice = _sliceCName(const PrimType(PrimKind.i32));
+      buf.writeln('$slice klin_mem_empty_i32(void) {');
+      buf.writeln('    return ($slice){ NULL, 0 };');
       buf.writeln('}');
       buf.writeln();
     }

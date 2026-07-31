@@ -79,11 +79,11 @@ import mem
 
 fn main() {
     let mut a = mem.heap()
-    let mut scratch: [1]u8
-    let mut buf = a.alloc_bytes(16) or { scratch[:] }
+    let mut buf = a.alloc_bytes(16) or { mem.empty_u8() }
     defer a.free_bytes(buf)
 }
 ```
 
 `alloc_bytes` / `alloc_i32` (and `free_*`) call libc only when this module is
-imported. Do **not** import on freestanding targets without a heap.
+imported. Use `empty_u8` / `empty_i32` in `or` fallbacks (safe with `free_*`).
+Do **not** import on freestanding targets without a heap.

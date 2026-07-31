@@ -19,8 +19,23 @@ fn host_alloc_i32(n: i32): ![]i32
 @[cimport, codename("klin_mem_free_i32")]
 fn host_free_i32(buf: []i32)
 
+@[cimport, codename("klin_mem_empty_u8")]
+fn host_empty_u8(): []u8
+
+@[cimport, codename("klin_mem_empty_i32")]
+fn host_empty_i32(): []i32
+
 pub fn heap(): Allocator {
     return Allocator{ _pad: 0 }
+}
+
+/// Empty slice (`ptr` NULL, `len` 0) — safe with `free_*`.
+pub fn empty_u8(): []u8 {
+    return host_empty_u8()
+}
+
+pub fn empty_i32(): []i32 {
+    return host_empty_i32()
 }
 
 pub fn (mut a: Allocator) alloc_bytes(n: i32): ![]u8 {

@@ -3,11 +3,10 @@ import io
 
 fn main() {
     let mut a = mem.heap()
-    let mut scratch: [1]u8
 
     let mut buf = a.alloc_bytes(4) or {
         io.println("alloc_bytes_fail")
-        scratch[:]
+        mem.empty_u8()
     }
     defer a.free_bytes(buf)
     buf[0] = 10
@@ -18,20 +17,19 @@ fn main() {
 
     let mut empty = a.alloc_bytes(0) or {
         io.println("empty_fail")
-        scratch[:]
+        mem.empty_u8()
     }
     defer a.free_bytes(empty)
     printf("empty_len=%d\n", empty.len)
 
     let _neg = a.alloc_bytes(0 - 1) or {
         printf("neg_err=%d\n", err)
-        scratch[:]
+        mem.empty_u8()
     }
 
-    let mut zi: [1]i32
     let mut xs = mem.alloc_i32(&a, 3) or {
         io.println("alloc_i32_fail")
-        zi[:]
+        mem.empty_i32()
     }
     defer mem.free_i32(&a, xs)
     xs[0] = 1

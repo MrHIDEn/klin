@@ -3,12 +3,10 @@ import io
 
 fn main() {
     let mut a = mem.heap()
-    let mut scratch: [1]u8
-    let mut zi: [1]i32
 
     let mut buf = a.alloc_bytes(8) or {
         io.println("oom")
-        scratch[:]
+        mem.empty_u8()
     }
     defer a.free_bytes(buf)
 
@@ -20,7 +18,7 @@ fn main() {
 
     let mut xs = mem.alloc_i32(&a, 2) or {
         io.println("oom_i32")
-        zi[:]
+        mem.empty_i32()
     }
     defer mem.free_i32(&a, xs)
     xs[0] = 40
