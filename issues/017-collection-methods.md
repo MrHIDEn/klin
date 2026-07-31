@@ -1,7 +1,7 @@
 # 017 — Metody kolekcji (`map` / `filter` / …)
 
 **Status:** 💭 do rozważenia (projekt API zamknięty; kod nie)
-**Zależy od:** 007 (slice ✅); implementacja: wskaźniki na funkcje; warstwa 2: `Allocator`
+**Zależy od:** 007 (slice ✅); implementacja: wskaźniki na funkcje; warstwa 2: `Allocator` ([057](057-allocator.md) ✅)
 
 ## Kontekst
 
@@ -82,22 +82,23 @@ zapisu API.
 Poza MVP: `flatMap`, `groupBy`, lazy iteratory (018), sort z
 comparator-domknięciem.
 
-## Warstwa 2 (`*_alloc`) — to samo issue, faza późniejsza
+## Warstwa 2 (`*_alloc`) — po [057](057-allocator.md) ✅
 
-Nie osobny ticket. Wymaga typu `Allocator` (dziś tylko D1 w
-`note/01-decyzje.md`).
+Typ `Allocator` jest w [`stdlib/mem`](../stdlib/mem.kl)
+([note/14-allocator.md](../note/14-allocator.md)). Warstwa 2 `*_alloc` nadal
+otwarta.
 
 - API: `map_alloc(a, xs, f)`, `filter_alloc(a, xs, pred)`
 - `filter_alloc`: dwa przebiegi albo alokacja na `xs.len` elementów i
   zwrócenie slice z `len = n` (bez pola `cap` w typie slice — 007)
-- Caller: `defer a.free(out)` albo `defer arena.deinit()`
+- Caller: `defer a.free_bytes(out)` / `mem.free_i32` albo później `defer arena.deinit()`
 
 ## Fazy
 
 1. **Docs** — ten plik: zamknięty projekt API. ✅
 2. **Fn-pointer** — typy `fn(...): T` bez capture. ✅
 3. **stdlib `slice` warstwa 0+1** — odczyty + `*_into`.
-4. **`Allocator`** + warstwa 2 `*_alloc`.
+4. **`Allocator`** ([057](057-allocator.md) ✅) + warstwa 2 `*_alloc` (otwarte).
 
 ## Fn-pointer (faza 2)
 

@@ -25,6 +25,7 @@ are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), n
 | `add_test.kl` | Sample `klin test` (`import testing`) |
 | `interp.kl` | String interpolation → `printf` ([note/07-interpolacja.md](../note/07-interpolacja.md)) |
 | `time_demo.kl` | `stdlib/time` — Instant / Duration / format ([note/08-time.md](../note/08-time.md)) |
+| `mem_heap.kl` | `stdlib/mem` — explicit `Allocator` heap ([note/14-allocator.md](../note/14-allocator.md)) |
 | `ffi_add/` | Host C `.a` via `@[cimport]` + `@[link]` ([note/09-ffi-c.md](../note/09-ffi-c.md)) |
 | `cexport_add/` | Klin → C via `@[cexport, codename]` ([note/09-ffi-c.md](../note/09-ffi-c.md)) |
 | `asm_add/` | Host `.S` via `@[link]` + `@[cimport]` ([note/10-asm.md](../note/10-asm.md)) |

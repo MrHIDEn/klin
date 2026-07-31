@@ -1,0 +1,27 @@
+import mem
+import io
+
+fn main() {
+    let mut a = mem.heap()
+
+    let mut buf = a.alloc_bytes(8) or {
+        io.println("oom")
+        mem.empty_u8()
+    }
+    defer a.free_bytes(buf)
+
+    buf[0] = 1
+    buf[1] = 2
+    buf[2] = 3
+    buf[7] = 8
+    printf("len=%d first=%d last=%d\n", buf.len, buf[0], buf[7])
+
+    let mut xs = mem.alloc_i32(&a, 2) or {
+        io.println("oom_i32")
+        mem.empty_i32()
+    }
+    defer mem.free_i32(&a, xs)
+    xs[0] = 40
+    xs[1] = 2
+    printf("sum=%d\n", xs[0] + xs[1])
+}

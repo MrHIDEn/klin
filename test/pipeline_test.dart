@@ -285,6 +285,29 @@ fn main() {
     expect(c, isNot(contains('malloc')));
   });
 
+  test('golden: stdlib mem Allocator heap alloc/free (issue 057)', () async {
+    final result = await _compileAndRun('test/mem_alloc.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/mem_alloc.out').readAsString());
+
+    final program = loadProject('test/mem_alloc.kl');
+    Checker().check(program);
+    final c = emitC(program, 'test/mem_alloc.kl');
+    expect(c, contains('klin_mem_alloc_u8'));
+    expect(c, contains('klin_mem_free_u8'));
+    expect(c, contains('klin_mem_alloc_i32'));
+    expect(c, contains('malloc'));
+    expect(c, contains('free('));
+    expect(c, contains('#include <stdlib.h>'));
+
+    final hello = loadProject('test/hello.kl');
+    Checker().check(hello);
+    final helloC = emitC(hello, 'test/hello.kl');
+    expect(helloC, isNot(contains('malloc')));
+    expect(helloC, isNot(contains('klin_mem_')));
+    expect(helloC, isNot(contains('#include <stdlib.h>')));
+  });
+
   test('nested fn types emit typedefs leaves-first', () {
     final file = File('${Directory.systemTemp.path}/klin_nested_fn.kl');
     file.writeAsStringSync(r'''

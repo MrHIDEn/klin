@@ -50,6 +50,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [046](046-emit-h.md) | `--emit-h` (nagłówek C z `@[cexport]`) | ✅ | 045 |
 | [047](047-directory-modules.md) | Katalog = jeden moduł (jak Go/V) | ✅ | 006, 020 |
 | [055](055-short-decl.md) | Skrót `:=` (= `let mut`) | ✅ | 002 |
+| [057](057-allocator.md) | `Allocator` (jawny alokator, D1) — `stdlib/mem` | ✅ | 007, 008 |
 
 ---
 
