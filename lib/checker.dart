@@ -543,7 +543,7 @@ final class Checker {
 
         final KlinType resolved;
         if (init != null) {
-          final initType = _withMatchExprAllowed(() => _inferExpr(init));
+          final initType = _inferLetOrAssignValue(init);
           if (annotated != null) {
             _expectAssignable(annotated, initType, init.pos);
             resolved = annotated;
@@ -584,7 +584,7 @@ final class Checker {
         // The target place carries its own type: emission of `or {}` / `!` /
         // `match` assignments reads it to declare the temporaries.
         target.resolvedType = targetType;
-        final valueType = _withMatchExprAllowed(() => _inferExpr(value));
+        final valueType = _inferLetOrAssignValue(value);
         _expectAssignable(targetType, valueType, value.pos);
         _materialize(value, targetType);
 
@@ -1751,8 +1751,18 @@ final class Checker {
     }
   }
 
-  /// Runs [fn] with `match` allowed as an expression (only valid directly as
-  /// a `let` initializer or an assignment right-hand side).
+  /// Infers a `let` initializer / assignment RHS. `match` is allowed only when
+  /// it *is* that value (optionally wrapped in groups), not nested inside
+  /// arithmetic, call arguments, etc.
+  KlinType _inferLetOrAssignValue(Expr value) {
+    if (_unwrapGroups(value) is MatchExpr) {
+      return _withMatchExprAllowed(() => _inferExpr(value));
+    }
+    return _inferExpr(value);
+  }
+
+  /// Runs [fn] with `match` allowed as an expression (see
+  /// [_inferLetOrAssignValue]).
   T _withMatchExprAllowed<T>(T Function() fn) {
     final saved = _allowMatchExpr;
     _allowMatchExpr = true;
@@ -1831,6 +1841,9 @@ final class Checker {
     _checkMatchArmsOrder(arms.map((a) => a.pattern).toList());
 
     KlinType? resultType;
+    // Arm bodies are ordinary expressions — not a fresh let/assign root —
+    // so nested `match` expressions stay forbidden here.
+    final savedAllow = _allowMatchExpr;
     _allowMatchExpr = false;
     try {
       for (final arm in arms) {
@@ -1843,7 +1856,7 @@ final class Checker {
             : _unifyNumeric(resultType, bodyType, arm.body.pos);
       }
     } finally {
-      _allowMatchExpr = true;
+      _allowMatchExpr = savedAllow;
     }
 
     final concrete = _defaultConcrete(resultType!, pos);

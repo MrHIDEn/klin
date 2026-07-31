@@ -300,6 +300,51 @@ fn main() {
     );
   });
 
+  test('error: match expression cannot nest under let arithmetic', () {
+    const source = 'fn main() { let a = 1 + match 1 { else { 2 } } }';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) =>
+              e is CheckError &&
+              e.toString().contains('only allowed as a `let` initializer'),
+        ),
+      ),
+    );
+  });
+
+  test('error: match expression cannot nest in let call argument', () {
+    const source =
+        'fn main() { let a = printf("%d\\n", match 1 { 1 { 2 } else { 3 } }) }';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) =>
+              e is CheckError &&
+              e.toString().contains('only allowed as a `let` initializer'),
+        ),
+      ),
+    );
+  });
+
+  test('grouped match expression is allowed as a let initializer', () async {
+    const source = '''
+fn main() {
+  let a = (match 1 { 1 { 2 } else { 3 } })
+  printf("%d\\n", a)
+}
+''';
+    final file = File('${tmp.path}/grouped_match.kl');
+    await file.writeAsString(source);
+    final result = await _compileAndRun(file.path, tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, '2\n');
+  });
+
   test('error: match requires at least one arm', () {
     expect(
       () => Parser(Lexer('fn main() { match 1 { } }').tokenize()).parse(),
