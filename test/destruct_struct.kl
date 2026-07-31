@@ -1,0 +1,31 @@
+struct Point {
+    x: i32
+    y: i32
+}
+
+fn make(): Point {
+    return Point{ x: 7, y: 9 }
+}
+
+fn main() {
+    let p = Point{ x: 3, y: 4 }
+
+    let { x, y } = p
+    printf("basic: %d %d\n", x, y)
+
+    {
+        let { y } = p
+        printf("subset: %d\n", y)
+    }
+
+    {
+        let mut { x } = p
+        x = x + 100
+        printf("mut: %d\n", x)
+    }
+
+    {
+        let { x, y } = make()
+        printf("call: %d %d\n", x, y)
+    }
+}

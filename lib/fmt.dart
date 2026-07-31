@@ -147,6 +147,13 @@ void _writeStmt(StringBuffer buf, Stmt stmt, int indent) {
         buf.write(_expr(init, indent));
       }
       buf.writeln();
+    case LetDestructureStmt(:final isMut, :final fields, :final source):
+      buf.write(pad);
+      buf.write(isMut ? 'let mut { ' : 'let { ');
+      buf.write(fields.join(', '));
+      buf.write(' } = ');
+      buf.write(_expr(source, indent));
+      buf.writeln();
     case AssignStmt(:final target, :final value):
       buf.writeln(
         '$pad${_expr(target, indent)} = ${_expr(value, indent)}',

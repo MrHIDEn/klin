@@ -189,6 +189,32 @@ final class LetStmt extends Stmt {
   });
 }
 
+/// Struct destructuring declaration (issue 056, phase A):
+///   let { x, y } = expr
+///   let mut { x, y } = expr
+/// Lowers to a sequence of plain field reads (`.field`) — no hidden cost.
+final class LetDestructureStmt extends Stmt {
+  final bool isMut;
+
+  /// Field/binding names in declaration order (phase A: name == field name).
+  final List<String> fields;
+
+  /// The struct value being destructured; evaluated once.
+  final Expr source;
+  final SourcePos pos;
+
+  /// Filled by the checker.
+  KlinType? sourceType;
+  List<KlinType>? fieldTypes;
+
+  LetDestructureStmt({
+    required this.isMut,
+    required this.fields,
+    required this.source,
+    required this.pos,
+  });
+}
+
 /// target = expr, where target is NameExpr or FieldExpr.
 final class AssignStmt extends Stmt {
   final Expr target;
