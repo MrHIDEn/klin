@@ -178,6 +178,196 @@ fn main() {
     );
   });
 
+  test('golden: match statement lowers to if/else chains (issue 014)',
+      () async {
+    final result = await _compileAndRun('test/match_stmt.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/match_stmt.out').readAsString());
+
+    final source = File('test/match_stmt.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/match_stmt.kl');
+    // No switch/case/break: `match` is an if/else chain, so arms never fall
+    // through and `break` inside an arm still belongs to the enclosing loop.
+    expect(c, isNot(contains('switch (')));
+    expect(c, isNot(contains('case ')));
+    // The subject is evaluated once into a temp, then compared.
+    expect(c, matches(RegExp(r'if \(\w+ == 1 \|\| \w+ == 2 \|\| \w+ == 3\)')));
+    expect(c, matches(RegExp(r'else if \(\(\w+ >= 4 && \w+ <= 10\)\)')));
+
+    final tokens = Lexer('match x { 1..=2 { } }').tokenize();
+    expect(tokens[0].kind, TokenKind.match_);
+    expect(tokens[4].kind, TokenKind.dotDotEqual);
+    expect(tokens[4].lexeme, '..=');
+  });
+
+  test('golden: match expression assigns from each arm (issue 014)', () async {
+    final result = await _compileAndRun('test/match_expr.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/match_expr.out').readAsString());
+
+    final source = File('test/match_expr.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/match_expr.kl');
+    expect(c, isNot(contains('switch (')));
+    // The result is a plain declaration assigned inside the branches.
+    expect(c, contains('int32_t a;'));
+    expect(c, contains('double c;'));
+  });
+
+  test('match statement calling only puts still includes <stdio.h>', () {
+    const source = '''
+fn main() {
+  match 1 {
+    1 { puts("one") }
+    else { puts("other") }
+  }
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'match_stdio.kl');
+    expect(c, contains('#include <stdio.h>'));
+  });
+
+  test('klin fmt: formats match arms (issue 014)', () {
+    final ugly = File('test/fmt_match.kl').readAsStringSync();
+    final expected = File('test/fmt_match.fmt.kl').readAsStringSync();
+    final once = formatSource(ugly);
+    expect(once, expected);
+    expect(formatSource(once), once);
+  });
+
+  test('error: match else arm must come last', () {
+    final source = File('test/match_else_order.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) {
+          if (e is! CheckError) return false;
+          final msg = e.toString();
+          return msg.contains('3:') &&
+              msg.contains('else') &&
+              msg.contains('last arm');
+        }),
+      ),
+    );
+  });
+
+  test('error: match requires an integer subject', () {
+    const source = 'fn main() { match 1.5 { 1 { puts("a") } } }';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) =>
+              e is CheckError && e.toString().contains('integer subject'),
+        ),
+      ),
+    );
+  });
+
+  test('error: match expression requires an else arm', () {
+    const source = 'fn main() { let a = match 1 { 1 { 2 } } }';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) => e is CheckError && e.toString().contains('requires an `else`'),
+        ),
+      ),
+    );
+  });
+
+  test('error: match expression only in let/assign position', () {
+    const source =
+        'fn main() { printf("%d\\n", match 1 { 1 { 2 } else { 3 } }) }';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) =>
+              e is CheckError &&
+              e.toString().contains('only allowed as a `let` initializer'),
+        ),
+      ),
+    );
+  });
+
+  test('error: match expression cannot nest under let arithmetic', () {
+    const source = 'fn main() { let a = 1 + match 1 { else { 2 } } }';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) =>
+              e is CheckError &&
+              e.toString().contains('only allowed as a `let` initializer'),
+        ),
+      ),
+    );
+  });
+
+  test('error: match expression cannot nest in let call argument', () {
+    const source =
+        'fn main() { let a = printf("%d\\n", match 1 { 1 { 2 } else { 3 } }) }';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+          (e) =>
+              e is CheckError &&
+              e.toString().contains('only allowed as a `let` initializer'),
+        ),
+      ),
+    );
+  });
+
+  test('grouped match expression is allowed as a let initializer', () async {
+    const source = '''
+fn main() {
+  let a = (match 1 { 1 { 2 } else { 3 } })
+  printf("%d\\n", a)
+}
+''';
+    final file = File('${tmp.path}/grouped_match.kl');
+    await file.writeAsString(source);
+    final result = await _compileAndRun(file.path, tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, '2\n');
+  });
+
+  test('error: match requires at least one arm', () {
+    expect(
+      () => Parser(Lexer('fn main() { match 1 { } }').tokenize()).parse(),
+      throwsA(isA<ParseError>()),
+    );
+  });
+
+  test('assignment from or-block resolves the target type', () async {
+    const source = '''
+fn fallible(): !i32 { return error(1) }
+fn main() {
+  let mut b = 0
+  b = fallible() or { 42 }
+  printf("%d\\n", b)
+}
+''';
+    final file = File('${tmp.path}/assign_or.kl');
+    await file.writeAsString(source);
+    final result = await _compileAndRun(file.path, tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, '42\n');
+  });
+
   test('golden: int/float aliases emit fixed-width C types', () async {
     final result = await _compileAndRun('test/int_float_aliases.kl', tmp);
     expect(result.exitCode, 0, reason: result.stderr);

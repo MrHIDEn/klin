@@ -22,6 +22,7 @@ are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), n
 | `slice_sum.kl` | Arrays / slices |
 | `fn_ptr.kl` | Function pointers without capture ([017](../issues/017-collection-methods.md) phase 2) |
 | `short_decl.kl` | `:=` sugar for `let mut` ([055](../issues/055-short-decl.md), [note/14](../note/14-short-decl.md)) |
+| `match.kl` | `match` stmt + expr, no fallthrough ([014](../issues/014-match.md), [note/15](../note/15-match.md)) |
 | `add_test.kl` | Sample `klin test` (`import testing`) |
 | `interp.kl` | String interpolation → `printf` ([note/07-interpolacja.md](../note/07-interpolacja.md)) |
 | `time_demo.kl` | `stdlib/time` — Instant / Duration / format ([note/08-time.md](../note/08-time.md)) |

@@ -1,15 +1,14 @@
 # 014 — `match` (domyślny break)
 
-**Status:** 💭 backlog (do rozważenia)
+**Status:** ✅ ukończone
 **Zależy od:** 003
 
 > **Uwaga historyczna.** Wczesna, kompletna implementacja `match` powstała na
 > branchu `issue-014-match` (2026-07-30), ale nigdy nie została scalona do
 > `main` — powstała względem starego frontendu i dziś konfliktuje w rdzeniu
-> (`lexer`/`parser`/`ast`/`checker`/`emit_c`). Traktować ją jako **referencję
-> projektową** (składnia, testy, docs), a nie jako gotowy do merge kod. Przy
-> realizacji: świeży branch z `origin/main` i implementacja od zera pod
-> aktualny frontend.
+> (`lexer`/`parser`/`ast`/`checker`/`emit_c`). Posłużyła jako **referencja
+> projektowa** (składnia, testy, docs); właściwa implementacja powstała od zera
+> na świeżym branchu z `origin/main`. Stary branch można usunąć.
 
 ## Zakres
 
@@ -41,9 +40,9 @@ Z przypisaniem (wyrażenie):
 
 ```
 let a = match x {
-    1, 2, 3 { "abc" }
-    4..=10  { "def" }
-    else    { "other" }
+    1, 2, 3 { 10 }
+    4..=10  { 20 }
+    else    { 30 }
 }
 ```
 
@@ -52,9 +51,22 @@ let a = match x {
 - Emisja: łańcuch `if` / `else if` (subject raz do zmiennej tymczasowej)
 - Wzorce `>= 4` itd. — później
 - `else` wymagane w formie wyrażenia; w instrukcji opcjonalne
+- Podmiot musi być całkowitoliczbowy (`i8`…`u64`, `int`); `f64` / struktury —
+  błąd checkera
+- Forma wyrażenia tylko jako inicjalizator `let` albo prawa strona
+  przypisania (obniża się do instrukcji, nie do wyrażenia C)
+- Ramiona zwracają wartość, nie napis — `str` nie jest jeszcze typem
+  pierwszej klasy (przykład z `"abc"` z wczesnego szkicu nie przechodzi
+  checkera również poza `match`)
+
+Szczegóły: [note/15-match.md](../note/15-match.md).
 
 ## Kryterium ukończenia
 
-- [ ] `match` jako instrukcja — test złoty
-- [ ] `let a = match …` — test złoty
-- [ ] brak fallthrough między ramionami
+- [x] `match` jako instrukcja — test złoty (`test/match_stmt.kl`)
+- [x] `let a = match …` — test złoty (`test/match_expr.kl`)
+- [x] brak fallthrough między ramionami (emisja bez `switch`/`case`)
+- [x] błędy checkera: `else` nie na końcu, brak `else` w wyrażeniu,
+      podmiot nie-całkowity, `match` jako wyrażenie w złej pozycji
+- [x] `klin fmt` (`test/fmt_match.kl`), przykład
+      [`examples/match.kl`](../examples/match.kl)

@@ -39,6 +39,11 @@ final class Parser {
   int _i = 0;
   final Set<String> _importedModules = {};
 
+  /// While parsing a `match` subject or pattern, a bare `name {` is the match
+  /// body brace, not a struct literal. Reset inside `(`/`[`/arg lists, where a
+  /// `{` after a name is unambiguously a struct literal.
+  bool _noStructLit = false;
+
   Parser(this._tokens);
 
   Program parse() {
@@ -231,6 +236,7 @@ final class Parser {
     if (_check(TokenKind.if_)) return _ifStmt();
     if (_check(TokenKind.while_)) return _whileStmt();
     if (_check(TokenKind.for_)) return _forStmt();
+    if (_check(TokenKind.match_)) return _matchStmt();
     if (_check(TokenKind.return_)) return _returnStmt();
     if (_check(TokenKind.defer_)) return _deferStmt();
     if (_check(TokenKind.asm_)) return _asmStmt();
@@ -317,6 +323,77 @@ final class Parser {
     final cond = _expr();
     final body = _block();
     return WhileStmt(cond: cond, body: body, pos: tok.pos);
+  }
+
+  /// Parse a `match` subject/pattern expression with struct literals suppressed
+  /// so a trailing `name {` reads as the body brace, not a struct literal.
+  Expr _matchHeaderExpr() {
+    final saved = _noStructLit;
+    _noStructLit = true;
+    final e = _expr();
+    _noStructLit = saved;
+    return e;
+  }
+
+  MatchStmt _matchStmt() {
+    final tok = _expect(TokenKind.match_, 'expected `match`');
+    final subject = _matchHeaderExpr();
+    _expect(TokenKind.lBrace, 'expected `{` after the `match` subject');
+    final arms = <MatchStmtArm>[];
+    while (!_check(TokenKind.rBrace) && !_check(TokenKind.eof)) {
+      final pattern = _matchPattern();
+      final body = _block();
+      arms.add(MatchStmtArm(pattern: pattern, body: body));
+    }
+    _expect(TokenKind.rBrace, 'expected `}` closing `match`');
+    if (arms.isEmpty) {
+      throw ParseError('`match` requires at least one arm', tok.pos);
+    }
+    return MatchStmt(subject: subject, arms: arms, pos: tok.pos);
+  }
+
+  MatchExpr _matchExpr() {
+    final tok = _expect(TokenKind.match_, 'expected `match`');
+    final subject = _matchHeaderExpr();
+    _expect(TokenKind.lBrace, 'expected `{` after the `match` subject');
+    final arms = <MatchExprArm>[];
+    while (!_check(TokenKind.rBrace) && !_check(TokenKind.eof)) {
+      final pattern = _matchPattern();
+      _expect(TokenKind.lBrace, 'expected `{` before the arm value');
+      final body = _expr();
+      _expect(TokenKind.rBrace, 'expected `}` after the arm value');
+      arms.add(MatchExprArm(pattern: pattern, body: body));
+    }
+    _expect(TokenKind.rBrace, 'expected `}` closing `match`');
+    if (arms.isEmpty) {
+      throw ParseError('`match` requires at least one arm', tok.pos);
+    }
+    return MatchExpr(subject: subject, arms: arms, pos: tok.pos);
+  }
+
+  MatchPattern _matchPattern() {
+    if (_check(TokenKind.else_)) {
+      final t = _advance();
+      return ElsePattern(t.pos);
+    }
+    final saved = _noStructLit;
+    _noStructLit = true;
+    final first = _expr();
+    MatchPattern result;
+    if (_check(TokenKind.dotDotEqual)) {
+      final op = _advance();
+      final end = _expr();
+      result = RangePattern(first, end, op.pos);
+    } else {
+      final values = <Expr>[first];
+      while (_check(TokenKind.comma)) {
+        _advance();
+        values.add(_expr());
+      }
+      result = LitPattern(values, first.pos);
+    }
+    _noStructLit = saved;
+    return result;
   }
 
   Stmt _forStmt() {
@@ -431,7 +508,8 @@ final class Parser {
         TokenKind.star ||
         TokenKind.ampersand ||
         TokenKind.cast ||
-        TokenKind.error_ =>
+        TokenKind.error_ ||
+        TokenKind.match_ =>
           true,
         _ => false,
       };
@@ -482,6 +560,8 @@ final class Parser {
 
   List<Expr> _argList() {
     _expect(TokenKind.lParen, 'oczekiwano `(`');
+    final savedNoStruct = _noStructLit;
+    _noStructLit = false;
     final args = <Expr>[];
     if (!_check(TokenKind.rParen)) {
       args.add(_expr());
@@ -491,6 +571,7 @@ final class Parser {
       }
     }
     _expect(TokenKind.rParen, 'oczekiwano `)`');
+    _noStructLit = savedNoStruct;
     return args;
   }
 
@@ -590,6 +671,7 @@ final class Parser {
 
   Expr _primary() {
     final t = _current;
+    if (t.kind == TokenKind.match_) return _matchExpr();
     Expr expr;
     switch (t.kind) {
       case TokenKind.intLit:
@@ -643,7 +725,7 @@ final class Parser {
         } else if (_check(TokenKind.lParen)) {
           _rejectCKeyword(t, 'a call name');
           expr = CallExpr(callee: t.lexeme, args: _argList(), pos: t.pos);
-        } else if (_check(TokenKind.lBrace)) {
+        } else if (_check(TokenKind.lBrace) && !_noStructLit) {
           expr = _structLit(t);
         } else {
           expr = NameExpr(t.lexeme, t.pos);
@@ -652,12 +734,17 @@ final class Parser {
       case TokenKind.lBracket:
         _advance();
         final elements = <Expr>[];
-        if (!_check(TokenKind.rBracket)) {
-          elements.add(_expr());
-          while (_check(TokenKind.comma)) {
-            _advance();
+        {
+          final savedNoStruct = _noStructLit;
+          _noStructLit = false;
+          if (!_check(TokenKind.rBracket)) {
             elements.add(_expr());
+            while (_check(TokenKind.comma)) {
+              _advance();
+              elements.add(_expr());
+            }
           }
+          _noStructLit = savedNoStruct;
         }
         _expect(TokenKind.rBracket, 'expected `]` after array literal');
         expr = ArrayLitExpr(elements: elements, pos: t.pos);
@@ -667,13 +754,19 @@ final class Parser {
         _expect(TokenKind.lParen, 'oczekiwano `(` po `cast`');
         final typeName = _typeName();
         _expect(TokenKind.comma, 'oczekiwano `,` po typie castowania');
+        final savedNoStructCast = _noStructLit;
+        _noStructLit = false;
         final value = _expr();
+        _noStructLit = savedNoStructCast;
         _expect(TokenKind.rParen, 'oczekiwano `)` po castowaniu');
         expr = CastExpr(typeName: typeName, expr: value, pos: t.pos);
         break;
       case TokenKind.lParen:
         final open = _advance();
+        final savedNoStructParen = _noStructLit;
+        _noStructLit = false;
         final inner = _expr();
+        _noStructLit = savedNoStructParen;
         _expect(TokenKind.rParen, 'oczekiwano `)`');
         expr = GroupExpr(inner, open.pos);
         break;
@@ -688,7 +781,10 @@ final class Parser {
           _expect(TokenKind.rBracket, 'oczekiwano `]` po `:`');
           expr = SliceFromExpr(array: expr, pos: bracket.pos);
         } else {
+          final savedNoStructIndex = _noStructLit;
+          _noStructLit = false;
           final index = _expr();
+          _noStructLit = savedNoStructIndex;
           _expect(TokenKind.rBracket, 'oczekiwano `]` po indeksie');
           expr = IndexExpr(object: expr, index: index, pos: bracket.pos);
         }

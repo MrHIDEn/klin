@@ -46,6 +46,7 @@ enum TokenKind {
   or_,
   error_,
   asm_,
+  match_,
 
   // literals and names
   ident,
@@ -73,6 +74,7 @@ enum TokenKind {
   greaterEqual,
   dot,
   dotDotLess, // ..<
+  dotDotEqual, // ..=
   semicolon,
   comma,
 

@@ -340,6 +340,54 @@ final class BlockStmt extends Stmt {
   SourcePos get pos => block.pos;
 }
 
+/// `match subject { arms }` — statement form (default break, no fallthrough).
+final class MatchStmt extends Stmt {
+  final Expr subject;
+  final List<MatchStmtArm> arms;
+  final SourcePos pos;
+
+  MatchStmt({required this.subject, required this.arms, required this.pos});
+}
+
+final class MatchStmtArm {
+  final MatchPattern pattern;
+  final Block body;
+
+  MatchStmtArm({required this.pattern, required this.body});
+}
+
+/// A single arm's pattern: literal group, inclusive range, or `else`.
+sealed class MatchPattern {
+  SourcePos get pos;
+}
+
+/// `1, 2, 3`
+final class LitPattern extends MatchPattern {
+  final List<Expr> values;
+  @override
+  final SourcePos pos;
+
+  LitPattern(this.values, this.pos);
+}
+
+/// `4..=10` (inclusive on both ends)
+final class RangePattern extends MatchPattern {
+  final Expr start;
+  final Expr endInclusive;
+  @override
+  final SourcePos pos;
+
+  RangePattern(this.start, this.endInclusive, this.pos);
+}
+
+/// `else`
+final class ElsePattern extends MatchPattern {
+  @override
+  final SourcePos pos;
+
+  ElsePattern(this.pos);
+}
+
 sealed class Expr {
   SourcePos get pos;
 
@@ -595,4 +643,21 @@ final class OrExpr extends Expr {
   final SourcePos pos;
 
   OrExpr(this.result, this.fallback, this.pos);
+}
+
+/// `match subject { arm { value } … }` — expression form. Only valid as a
+/// `let` initializer or assignment RHS (it lowers to statements in emission).
+final class MatchExpr extends Expr {
+  final Expr subject;
+  final List<MatchExprArm> arms;
+  final SourcePos pos;
+
+  MatchExpr({required this.subject, required this.arms, required this.pos});
+}
+
+final class MatchExprArm {
+  final MatchPattern pattern;
+  final Expr body;
+
+  MatchExprArm({required this.pattern, required this.body});
 }

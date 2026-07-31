@@ -30,6 +30,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | # | Zadanie | Status | Zależy od |
 |---|---|---|---|
 | [012](012-stdlib-io.md) | Opcjonalny moduł I/O (`io.print` / `println`) | ✅ | 006 |
+| [014](014-match.md) | `match` (domyślny break, `1,2,3` / `4..=10`, stmt+expr) | ✅ | 003 |
 | [016](016-string-interpolation.md) | Interpolowane napisy | ✅ | 012 |
 | [019](019-default-int-types.md) | Domyślne typy (`int` / `float` → `i32` / `f64`) | ✅ | 002 |
 | [020](020-biblioteki-klin.md) | Własne biblioteki Klina (`lib/` / `-I` / `KLIN_PATH`) | ✅ | 006 |
@@ -58,7 +59,6 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 
 | # | Zadanie | Status | Zależy od |
 |---|---|---|---|
-| [014](014-match.md) | `match` (domyślny break, `1,2,3` / `4..=10`, stmt+expr) | 💭 | 003 |
 | [017](017-collection-methods.md) | Metody kolekcji (`map`/`filter`/…) — projekt API / fazy | 💭 | 007 |
 | [018](018-generators-yield.md) | Generatory / `yield` | 💭 | 004+ |
 | [024](024-rtos.md) | RTOS (FreeRTOS / Zephyr / …) | 💭 | 010+ |

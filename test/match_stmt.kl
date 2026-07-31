@@ -1,0 +1,45 @@
+fn classify(x: i32) {
+    match x {
+        1, 2, 3 {
+            puts("small")
+        }
+        4..=10 {
+            puts("mid")
+        }
+        else {
+            puts("big")
+        }
+    }
+}
+
+fn main() {
+    classify(2)
+    classify(7)
+    classify(99)
+
+    // no `else` arm: nothing runs when no pattern matches
+    let mut hits = 0
+    for i in 0..<5 {
+        match i {
+            0 {
+                hits = hits + 1
+            }
+            2, 3 {
+                hits = hits + 10
+            }
+        }
+    }
+    printf("%d\n", hits)
+
+    // arms do not fall through: only the first match runs
+    let mut seen = 0
+    match 3 {
+        1..=5 {
+            seen = 1
+        }
+        3 {
+            seen = 2
+        }
+    }
+    printf("%d\n", seen)
+}
