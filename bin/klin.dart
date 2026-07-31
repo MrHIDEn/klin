@@ -9,32 +9,43 @@ import 'package:klin/lexer.dart';
 import 'package:klin/parser.dart';
 import 'package:klin/preprocess.dart';
 import 'package:klin/project.dart';
+import 'package:klin/version.dart';
 
 /// CLI: argv → preprocess → lex → parse → check → emit → optionally cc → run
 ///
 /// Usage:
+///   klin --version|-v
+///   klin --help|-h
 ///   klin run [--cc gcc|clang|tcc] <file.kl>
 ///   klin fmt [-w] <file.kl…>
 ///   klin test [--cc gcc|clang|tcc] [path…]
 ///   klin [--cc gcc|clang|tcc] [--emit-c|--emit-pp] <file.kl>
 Future<void> main(List<String> args) async {
-  if (args.isNotEmpty && args.first == 'fmt') {
+  if (args.isEmpty) {
+    stdout.write(_usageText());
+    exit(0);
+  }
+  if (args.length == 1 && (args.first == '--version' || args.first == '-v')) {
+    stdout.writeln('klin $klinVersion');
+    exit(0);
+  }
+  if (args.length == 1 && (args.first == '--help' || args.first == '-h')) {
+    stdout.write(_usageText());
+    exit(0);
+  }
+
+  if (args.first == 'fmt') {
     await _runFmt(args.skip(1).toList());
     return;
   }
-  if (args.isNotEmpty && args.first == 'test') {
+  if (args.first == 'test') {
     await _runTest(args.skip(1).toList());
     return;
   }
 
   final opts = _parseArgs(args);
   if (opts == null) {
-    stderr.writeln(
-      'usage: klin run [--cc gcc|clang|tcc] <file.kl>\n'
-      '       klin fmt [-w] <file.kl…>\n'
-      '       klin test [--cc gcc|clang|tcc] [path…]\n'
-      '       klin [--cc gcc|clang|tcc] [--emit-c|--emit-pp] <file.kl>',
-    );
+    stderr.write(_usageText());
     exit(2);
   }
 
@@ -286,6 +297,14 @@ _Opts? _parseArgs(List<String> args) {
   if (command != null && command != 'run') return null;
   return _Opts(source, cc, emitC, emitPp);
 }
+
+String _usageText() =>
+    'usage: klin --version|-v\n'
+    '       klin --help|-h\n'
+    '       klin run [--cc gcc|clang|tcc] <file.kl>\n'
+    '       klin fmt [-w] <file.kl…>\n'
+    '       klin test [--cc gcc|clang|tcc] [path…]\n'
+    '       klin [--cc gcc|clang|tcc] [--emit-c|--emit-pp] <file.kl>\n';
 
 String _basenameWithoutExt(String path) {
   final name = path.split(Platform.pathSeparator).last;

@@ -2,6 +2,14 @@
 
 Wejście: `dart run bin/klin.dart <subcommand|plik.kl> …`
 
+## Meta
+
+| Flaga | Sens |
+|---|---|
+| `--version` / `-v` | Wypisz `klin <wersja>` (z `lib/version.dart` / `pubspec.yaml`) |
+| `--help` / `-h` | Usage na stdout, exit 0 |
+| *(bez argumentów)* | Jak `--help` |
+
 ## Subkomendy
 
 | Komenda | Sens |
@@ -17,5 +25,6 @@ Wejście: `dart run bin/klin.dart <subcommand|plik.kl> …`
 |---|---|
 | `--emit-c` | Zapisz wygenerowany `.c` (domyślnie `out/`), bez kompilacji / run |
 | `--emit-pp` | Zapisz wynik preprocessora (`.pp.kl`), bez dalszych etapów |
+| `--cc <gcc\|clang\|tcc>` | Host C compiler (domyślnie `gcc`) |
 
 Szczegóły fmt: [05-fmt.md](05-fmt.md). Makra / SVD: [04-makra.md](04-makra.md).
