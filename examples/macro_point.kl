@@ -1,0 +1,20 @@
+// Compile-time $fn macro (see note/04-makra.md).
+// Run: dart run bin/klin.dart run examples/macro_point.kl
+// Peek: dart run bin/klin.dart --emit-pp examples/macro_point.kl
+
+$fn point(name: name, T: type) {
+struct $name {
+  x: $T
+  y: $T
+}
+fn (p: $name) len_sq(): $T {
+  return p.x * p.x + p.y * p.y
+}
+}
+
+$point(Vec2i, i32)
+
+fn main() {
+  let v = Vec2i{ 3, 4 }
+  printf("%d\n", v.len_sq())
+}
