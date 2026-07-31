@@ -218,18 +218,35 @@ fn main() {
     expect(c, contains('len_sq'));
   });
 
-  test('error: unknown macro reports call site', () {
+  test('error: unknown macro reports call site and file path', () {
     expect(
-      () => preprocess(r'$missing(i32)', path: 't.kl'),
+      () => preprocess(r'$missing(i32)', path: 'mod/t.kl'),
       throwsA(
         predicate(
           (e) =>
               e is PreprocessError &&
+              e.toString().contains('mod/t.kl:') &&
               e.toString().contains('unknown macro') &&
               e.toString().contains(r'$missing'),
         ),
       ),
     );
+  });
+
+  test(r'$ in macro strings/comments is not an unsubstituted slot', () {
+    final expanded = preprocess(r'''
+$fn note(T: type) {
+fn f(): $T {
+  // keep $hint
+  puts("$USD")
+  return 0
+}
+}
+$note(i32)
+''', path: 't.kl');
+    expect(expanded, contains(r'// keep $hint'));
+    expect(expanded, contains(r'puts("$USD")'));
+    expect(expanded, contains('fn f(): i32'));
   });
 
   test('--emit-pp writes expanded Klin source', () async {

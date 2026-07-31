@@ -39,7 +39,7 @@ Future<void> main(List<String> args) async {
       final expanded = preprocess(await file.readAsString(), path: sourcePath);
       await File('out/$base.pp.kl').writeAsString(expanded);
     } on PreprocessError catch (e) {
-      stderr.writeln('$sourcePath:$e');
+      stderr.writeln('$e');
       exit(1);
     }
     return;
@@ -50,7 +50,7 @@ Future<void> main(List<String> args) async {
     program = loadProject(sourcePath);
     Checker().check(program);
   } on PreprocessError catch (e) {
-    stderr.writeln('$sourcePath:$e');
+    stderr.writeln('$e');
     exit(1);
   } on LexError catch (e) {
     stderr.writeln('$sourcePath:$e');

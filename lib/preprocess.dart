@@ -12,11 +12,12 @@ import 'token.dart';
 final class PreprocessError implements Exception {
   final String message;
   final SourcePos pos;
+  final String path;
 
-  const PreprocessError(this.message, this.pos);
+  const PreprocessError(this.message, this.pos, {this.path = '<input>'});
 
   @override
-  String toString() => '${pos.line}:${pos.col}: $message';
+  String toString() => '$path:${pos.line}:${pos.col}: $message';
 }
 
 final class _MacroParam {
@@ -55,6 +56,9 @@ final class _PpScanner {
 
   _PpScanner(this.source, this.path);
 
+  Never _err(String message, [SourcePos? pos]) =>
+      throw PreprocessError(message, pos ?? _pos, path: path);
+
   String expand() {
     final macros = <String, _MacroDef>{};
     final out = StringBuffer();
@@ -63,10 +67,7 @@ final class _PpScanner {
       if (_startsWithFn()) {
         final def = _parseFnDef();
         if (macros.containsKey(def.name)) {
-          throw PreprocessError(
-            'redefinition of macro `\$${def.name}`',
-            def.pos,
-          );
+          _err('redefinition of macro `\$${def.name}`', def.pos);
         }
         macros[def.name] = def;
         continue;
@@ -82,16 +83,13 @@ final class _PpScanner {
         if (!_atEnd && _peek == '(') {
           final def = macros[name];
           if (def == null) {
-            throw PreprocessError('unknown macro `\$$name`', start);
+            _err('unknown macro `\$$name`', start);
           }
           final args = _parseArgList();
           out.write(_expandCall(def, args, start));
           continue;
         }
-        throw PreprocessError(
-          'expected `(` after macro `\$$name`',
-          start,
-        );
+        _err('expected `(` after macro `\$$name`', start);
       }
 
       // Skip strings / comments so `$` inside them is left alone.
@@ -123,11 +121,11 @@ final class _PpScanner {
     _skipSpace();
     final name = _readIdent();
     if (name.isEmpty) {
-      throw PreprocessError('expected macro name after `\$fn`', _pos);
+      _err('expected macro name after `\$fn`');
     }
     _skipSpace();
     if (_atEnd || _peek != '(') {
-      throw PreprocessError('expected `(` after macro name', _pos);
+      _err('expected `(` after macro name');
     }
     _advance();
     final params = <_MacroParam>[];
@@ -137,20 +135,17 @@ final class _PpScanner {
         _skipSpace();
         final pname = _readIdent();
         if (pname.isEmpty) {
-          throw PreprocessError('expected parameter name', _pos);
+          _err('expected parameter name');
         }
         _skipSpace();
         if (_atEnd || _peek != ':') {
-          throw PreprocessError('expected `:` after parameter `$pname`', _pos);
+          _err('expected `:` after parameter `$pname`');
         }
         _advance();
         _skipSpace();
         final kind = _readIdent();
         if (kind != 'type' && kind != 'name' && kind != 'str') {
-          throw PreprocessError(
-            'macro parameter kind must be `type`, `name`, or `str`',
-            _pos,
-          );
+          _err('macro parameter kind must be `type`, `name`, or `str`');
         }
         params.add(_MacroParam(pname, kind));
         _skipSpace();
@@ -163,12 +158,12 @@ final class _PpScanner {
     }
     _skipSpace();
     if (_atEnd || _peek != ')') {
-      throw PreprocessError('expected `)` after macro parameters', _pos);
+      _err('expected `)` after macro parameters');
     }
     _advance();
     _skipSpace();
     if (_atEnd || _peek != '{') {
-      throw PreprocessError('expected `{` to start macro body', _pos);
+      _err('expected `{` to start macro body');
     }
     final body = _readBalanced('{', '}');
     return _MacroDef(name: name, params: params, body: body, pos: start);
@@ -176,7 +171,7 @@ final class _PpScanner {
 
   List<String> _parseArgList() {
     if (_atEnd || _peek != '(') {
-      throw PreprocessError('expected `(`', _pos);
+      _err('expected `(`');
     }
     _advance();
     final args = <String>[];
@@ -198,14 +193,14 @@ final class _PpScanner {
     }
     _skipSpace();
     if (_atEnd || _peek != ')') {
-      throw PreprocessError('expected `)` after macro arguments', _pos);
+      _err('expected `)` after macro arguments');
     }
     _advance();
     return args;
   }
 
   String _readArg() {
-    if (_atEnd) throw PreprocessError('expected macro argument', _pos);
+    if (_atEnd) _err('expected macro argument');
     if (_peek == '"') {
       final lit = _readStringLiteral();
       // Strip quotes for substitution into `$name` / `$T` slots.
@@ -214,14 +209,14 @@ final class _PpScanner {
     // Bare identifier or type name (i32, *mut u8 — MVP: single ident only).
     final id = _readIdent();
     if (id.isEmpty) {
-      throw PreprocessError('expected macro argument', _pos);
+      _err('expected macro argument');
     }
     return id;
   }
 
   String _expandCall(_MacroDef def, List<String> args, SourcePos callPos) {
     if (args.length != def.params.length) {
-      throw PreprocessError(
+      _err(
         'macro `\$${def.name}` expects ${def.params.length} arguments, '
         'got ${args.length}',
         callPos,
@@ -236,20 +231,55 @@ final class _PpScanner {
         (_) => value,
       );
     }
-    // Leftover `$ident` in the body is an error.
-    final leftover = RegExp(r'\$[A-Za-z_][A-Za-z0-9_]*').firstMatch(body);
+    final leftover = _firstCodeSlot(body);
     if (leftover != null) {
-      throw PreprocessError(
-        'unsubstituted `${leftover.group(0)}` in expansion of `\$${def.name}`',
+      _err(
+        'unsubstituted `$leftover` in expansion of `\$${def.name}`',
         callPos,
       );
     }
     return body;
   }
 
+  /// First `$ident` outside string literals and `//` comments, if any.
+  static String? _firstCodeSlot(String text) {
+    var i = 0;
+    while (i < text.length) {
+      final c = text[i];
+      if (c == '"') {
+        i++;
+        while (i < text.length && text[i] != '"') {
+          if (text[i] == '\\' && i + 1 < text.length) i += 2;
+          else i++;
+        }
+        if (i < text.length) i++;
+        continue;
+      }
+      if (c == '/' && i + 1 < text.length && text[i + 1] == '/') {
+        i += 2;
+        while (i < text.length && text[i] != '\n') {
+          i++;
+        }
+        continue;
+      }
+      if (c == r'$' &&
+          i + 1 < text.length &&
+          _isIdentStart(text[i + 1])) {
+        final start = i;
+        i += 2;
+        while (i < text.length && _isIdentContinue(text[i])) {
+          i++;
+        }
+        return text.substring(start, i);
+      }
+      i++;
+    }
+    return null;
+  }
+
   String _readBalanced(String open, String close) {
     if (_atEnd || _peek != open) {
-      throw PreprocessError('expected `$open`', _pos);
+      _err('expected `$open`');
     }
     _advance(); // consume open
     final buf = StringBuffer();
@@ -275,7 +305,7 @@ final class _PpScanner {
       }
     }
     if (depth != 0) {
-      throw PreprocessError('unclosed `$open` in macro body', _pos);
+      _err('unclosed `$open` in macro body');
     }
     return buf.toString();
   }
@@ -291,7 +321,7 @@ final class _PpScanner {
         buf.write(_advance());
       }
     }
-    if (_atEnd) throw PreprocessError('unterminated string in macro', _pos);
+    if (_atEnd) _err('unterminated string in macro');
     buf.write(_advance()); // closing "
     return buf.toString();
   }
@@ -306,7 +336,7 @@ final class _PpScanner {
 
   void _expectPrefix(String prefix) {
     if (!_startsWith(prefix)) {
-      throw PreprocessError('expected `$prefix`', _pos);
+      _err('expected `$prefix`');
     }
     for (var k = 0; k < prefix.length; k++) {
       _advance();
