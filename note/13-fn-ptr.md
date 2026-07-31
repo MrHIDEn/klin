@@ -21,3 +21,6 @@ fn main() {
 
 Część [issue 017](../issues/017-collection-methods.md) (faza 2). Example:
 [`examples/fn_ptr.kl`](../examples/fn_ptr.kl).
+
+Moduł [`stdlib/slice.kl`](../stdlib/slice.kl) (warstwa 0+1) używa tych typów
+jako callbacków (`map_into_i32`, …).
