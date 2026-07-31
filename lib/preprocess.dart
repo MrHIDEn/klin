@@ -96,7 +96,7 @@ final class _PpScanner {
               callPos: start,
             );
             svdDevice = expansion.device;
-            out.write(expansion.cincludeSnippet);
+            out.write(expansion.klinSnippet);
             continue;
           }
           final def = macros[name];

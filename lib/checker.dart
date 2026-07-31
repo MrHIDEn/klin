@@ -872,11 +872,19 @@ final class Checker {
           pos,
         );
       }
-      // C FFI (for example puts/printf): its signature is unknown.
-      for (final arg in args) {
-        _inferExpr(arg);
+      // Host builtins with unknown/varargs signatures (issue 021).
+      // Everything else requires an explicit `@[cimport]` declaration.
+      if (callee == 'puts' || callee == 'printf') {
+        for (final arg in args) {
+          _inferExpr(arg);
+        }
+        return const _CheckedCall(PrimType(PrimKind.i32), null);
       }
-      return const _CheckedCall(PrimType(PrimKind.i32), null);
+      throw CheckError(
+        'unknown function `$callee` — declare it with `@[cimport]` '
+        '(or use host builtins `puts` / `printf`)',
+        pos,
+      );
     }
     final decl = _functionDecl(module, callee);
     if (module != _currentModule && !decl.isPub) {

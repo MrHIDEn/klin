@@ -23,12 +23,15 @@ dart run bin/klin.dart --emit-pp examples/point_macro.kl
 | `test` | Run `*_test.kl` (`import testing`) |
 | `--emit-c` | Write generated `.c` only |
 | `--emit-pp` | Write preprocessor output (`.pp.kl`) |
+| `-l` / `-L` | Host linker libs / search paths ([note/09-ffi-c.md](note/09-ffi-c.md)) |
 
 CLI summary (PL): [note/06-cli.md](note/06-cli.md).
 
 Optional host I/O and clocks: [`stdlib/`](stdlib/) (`import io`, `import testing`,
 `import time` — see [note/08-time.md](note/08-time.md)).
-Bare-metal programs omit those imports. STM32 demos:
+C FFI (`@[cimport]` / `@[link]`): [note/09-ffi-c.md](note/09-ffi-c.md),
+example [`examples/ffi_add/`](examples/ffi_add/).
+Bare-metal programs omit host stdlib imports. STM32 demos:
 [`examples/stm32/`](examples/stm32/) — see [`examples/README.md`](examples/README.md).
 
 ### Macros and SVD
