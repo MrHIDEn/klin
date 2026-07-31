@@ -252,6 +252,33 @@ fn main() {
     expect(c, isNot(contains('malloc')));
   });
 
+  test('nested fn types emit typedefs leaves-first', () {
+    final file = File('${Directory.systemTemp.path}/klin_nested_fn.kl');
+    file.writeAsStringSync(r'''
+fn id(x: i32): i32 {
+    return x
+}
+
+fn pick(): fn(i32): i32 {
+    return id
+}
+
+fn main() {
+    let f = pick()
+    printf("%d\n", f(7))
+}
+''');
+    final program = loadProject(file.path);
+    Checker().check(program);
+    final c = emitC(program, file.path);
+    final outer = c.indexOf('typedef');
+    // Inner fn(i32):i32 typedef must appear before any that mention it as return.
+    final innerName = 'klin_fn_i32__i32';
+    final outerRet = c.indexOf('(*klin_fn_void_');
+    expect(c.indexOf(innerName), lessThan(outerRet == -1 ? c.length : outerRet));
+    expect(c, contains(innerName));
+  });
+
   test('time.parse_iso failure uses or branch', () async {
     final file = File('${tmp.path}/time_bad_parse.kl');
     await file.writeAsString(r'''

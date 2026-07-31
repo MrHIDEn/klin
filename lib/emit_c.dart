@@ -41,14 +41,16 @@ String emitC(Program program, String sourcePath) {
       _collectFnTypes(param.resolvedType, fnTypes);
     }
   }
-  for (final type in fnTypes) {
+  final orderedFnTypes = fnTypes.toList()
+    ..sort((a, b) => _fnTypeDepth(a).compareTo(_fnTypeDepth(b)));
+  for (final type in orderedFnTypes) {
     final name = _fnTypedefName(type);
     final ps = type.params.isEmpty
         ? 'void'
         : type.params.map(_cType).join(', ');
     buf.writeln('typedef ${_cType(type.ret)} (*$name)($ps);');
   }
-  if (fnTypes.isNotEmpty) buf.writeln();
+  if (orderedFnTypes.isNotEmpty) buf.writeln();
   if (_programNeedsTrimFrac(program)) {
     buf.writeln('#include <stdio.h>');
     buf.writeln('#include <string.h>');
@@ -677,6 +679,21 @@ String _fnTypedefName(FnType type) {
   final ps = type.params.map(_typeToken).join('_');
   final ret = _typeToken(type.ret);
   return ps.isEmpty ? 'klin_fn_void_$ret' : 'klin_fn_${ps}__$ret';
+}
+
+int _fnTypeDepth(FnType type) {
+  var depth = 0;
+  for (final p in type.params) {
+    if (p is FnType) {
+      final d = _fnTypeDepth(p) + 1;
+      if (d > depth) depth = d;
+    }
+  }
+  if (type.ret is FnType) {
+    final d = _fnTypeDepth(type.ret as FnType) + 1;
+    if (d > depth) depth = d;
+  }
+  return depth;
 }
 
 String _sliceCName(PrimType elem) => 'klin_slice_${elem.kind.klinName}';
