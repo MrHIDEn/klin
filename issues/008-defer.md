@@ -1,6 +1,6 @@
 # 008 — defer
 
-**Status:** ✅ ukończone
+**Status:** ✅ zrobione
 **Zależy od:** 007
 
 ## Zakres

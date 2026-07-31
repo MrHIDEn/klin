@@ -1,6 +1,6 @@
 # 012 — Opcjonalny moduł I/O (`println` itd.)
 
-**Status:** ✅ ukończone
+**Status:** ✅ zrobione
 **Zależy od:** 006 (moduły)
 
 ## Kontekst

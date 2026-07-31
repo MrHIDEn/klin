@@ -1,6 +1,6 @@
 # 007 — Wskaźniki, tablice, slice'y
 
-**Status:** ✅ ukończone
+**Status:** ✅ zrobione
 **Zależy od:** 006
 
 ## Zakres

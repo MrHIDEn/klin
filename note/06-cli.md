@@ -26,8 +26,10 @@ Wejście: `dart run bin/klin.dart <subcommand|plik.kl> …`
 | `--emit-c` | Zapisz wygenerowany `.c` (domyślnie `out/`), bez kompilacji / run |
 | `--emit-pp` | Zapisz wynik preprocessora (`.pp.kl`), bez dalszych etapów |
 | `--cc <gcc\|clang\|tcc>` | Host C compiler (domyślnie `gcc`) |
-| `-l <name>` / `-lname` | Link `-lname` (jak cc) |
-| `-L <dir>` / `-Ldir` | Szukaj libów w `dir` |
+| `-I <dir>` / `-Idir` | Szukaj źródeł Klin (`import` → `name.kl`) w `dir` |
+| `-l <name>` / `-lname` | Link `-lname` (jak cc; FFI C) |
+| `-L <dir>` / `-Ldir` | Szukaj libów C w `dir` |
 
+Ścieżki Klin (`lib/`, `-I`, `$KLIN_PATH`): [11-biblioteki-klin.md](11-biblioteki-klin.md).
 Szczegóły fmt: [05-fmt.md](05-fmt.md). Makra / SVD: [04-makra.md](04-makra.md).
 FFI (import `@[cimport]`/`@[link]` i export `@[cexport]`): [09-ffi-c.md](09-ffi-c.md).

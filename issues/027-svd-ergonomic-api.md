@@ -1,6 +1,6 @@
 # 027 — Ładne API SVD (`$peripherals_from_svd` / fluent)
 
-**Status:** ✅ ukończone
+**Status:** ✅ zrobione
 **Zależy od:** 011 (emitter / zero-cost MMIO) + 026 (preprocesor)
 
 ## Cel

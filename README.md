@@ -23,12 +23,15 @@ dart run bin/klin.dart --emit-pp examples/point_macro.kl
 | `test` | Run `*_test.kl` (`import testing`) |
 | `--emit-c` | Write generated `.c` only |
 | `--emit-pp` | Write preprocessor output (`.pp.kl`) |
+| `-I` | Klin source search dirs (`import` → `name.kl`; [note/11-biblioteki-klin.md](note/11-biblioteki-klin.md)) |
 | `-l` / `-L` | Host linker libs / search paths ([note/09-ffi-c.md](note/09-ffi-c.md)) |
 
 CLI summary (PL): [note/06-cli.md](note/06-cli.md).
 
 Optional host I/O and clocks: [`stdlib/`](stdlib/) (`import io`, `import testing`,
 `import time` — see [note/08-time.md](note/08-time.md)).
+Klin libraries (`lib/`, `-I`, `$KLIN_PATH`): [note/11-biblioteki-klin.md](note/11-biblioteki-klin.md),
+[`examples/klin_lib/`](examples/klin_lib/).
 C FFI — import (`@[cimport]` / `@[link]`) **and** export (`@[cexport]`):
 [note/09-ffi-c.md](note/09-ffi-c.md), examples
 [`ffi_add/`](examples/ffi_add/) and [`cexport_add/`](examples/cexport_add/).

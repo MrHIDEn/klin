@@ -1,6 +1,6 @@
 # 026 — Preprocessor (`$…`, D3)
 
-**Status:** ✅ ukończone
+**Status:** ✅ zrobione
 **Zależy od:** stabilny frontend (praktycznie po 010+)
 
 ## Cel

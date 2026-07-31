@@ -1,6 +1,6 @@
 # 019 — Domyślne typy (`int` / literały)
 
-**Status:** ✅ ukończone
+**Status:** ✅ zrobione
 **Zależy od:** 002 (już: untyped int → domyślnie `i32`, float → `f64`); 010 (bare metal)
 
 ## Kontekst

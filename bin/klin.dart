@@ -17,10 +17,10 @@ import 'package:klin/version.dart';
 /// Usage:
 ///   klin --version|-v
 ///   klin --help|-h
-///   klin run [--cc …] [-l lib] [-L dir] <file.kl>
+///   klin run [--cc …] [-I dir] [-l lib] [-L dir] <file.kl>
 ///   klin fmt [-w] <file.kl…>
-///   klin test [--cc …] [-l lib] [-L dir] [path…]
-///   klin [--cc …] [-l lib] [-L dir] [--emit-c|--emit-pp] <file.kl>
+///   klin test [--cc …] [-I dir] [-l lib] [-L dir] [path…]
+///   klin [--cc …] [-I dir] [-l lib] [-L dir] [--emit-c|--emit-pp] <file.kl>
 Future<void> main(List<String> args) async {
   if (args.isEmpty) {
     stdout.write(_usageText());
@@ -74,7 +74,7 @@ Future<void> main(List<String> args) async {
 
   final Program program;
   try {
-    program = loadProject(sourcePath);
+    program = loadProject(sourcePath, klinPathDirs: opts.klinPathDirs);
     Checker().check(program);
   } on PreprocessError catch (e) {
     stderr.writeln('$e');
@@ -182,6 +182,7 @@ Future<void> _runFmt(List<String> args) async {
 
 Future<void> _runTest(List<String> args) async {
   var cc = 'gcc';
+  final klinPathDirs = <String>[];
   final libs = <String>[];
   final libDirs = <String>[];
   final paths = <String>[];
@@ -193,6 +194,14 @@ Future<void> _runTest(List<String> args) async {
         exit(2);
       }
       cc = args[++i];
+    } else if (a == '-I') {
+      if (i + 1 >= args.length) {
+        stderr.writeln(_testUsage());
+        exit(2);
+      }
+      klinPathDirs.add(args[++i]);
+    } else if (a.startsWith('-I') && a.length > 2) {
+      klinPathDirs.add(a.substring(2));
     } else if (a == '-l') {
       if (i + 1 >= args.length) {
         stderr.writeln(_testUsage());
@@ -245,6 +254,7 @@ Future<void> _runTest(List<String> args) async {
       final result = await runKlinTestFile(
         path,
         cc: cc,
+        klinPathDirs: klinPathDirs,
         cliLibs: libs,
         cliLibDirs: libDirs,
       );
@@ -292,6 +302,7 @@ final class _Opts {
   final String cc;
   final bool emitC;
   final bool emitPp;
+  final List<String> klinPathDirs;
   final List<String> libs;
   final List<String> libDirs;
 
@@ -300,6 +311,7 @@ final class _Opts {
     this.cc,
     this.emitC,
     this.emitPp,
+    this.klinPathDirs,
     this.libs,
     this.libDirs,
   );
@@ -312,6 +324,7 @@ _Opts? _parseArgs(List<String> args) {
   String cc = 'gcc';
   var emitC = false;
   var emitPp = false;
+  final klinPathDirs = <String>[];
   final libs = <String>[];
   final libDirs = <String>[];
   String? command;
@@ -325,6 +338,11 @@ _Opts? _parseArgs(List<String> args) {
       emitC = true;
     } else if (a == '--emit-pp') {
       emitPp = true;
+    } else if (a == '-I') {
+      if (i + 1 >= args.length) return null;
+      klinPathDirs.add(args[++i]);
+    } else if (a.startsWith('-I') && a.length > 2) {
+      klinPathDirs.add(a.substring(2));
     } else if (a == '-l') {
       if (i + 1 >= args.length) return null;
       libs.add(args[++i]);
@@ -349,19 +367,19 @@ _Opts? _parseArgs(List<String> args) {
   if (emitC && emitPp) return null;
   // `run` means compile+execute; `--emit-c` / `--emit-pp` skip execution.
   if (command != null && command != 'run') return null;
-  return _Opts(source, cc, emitC, emitPp, libs, libDirs);
+  return _Opts(source, cc, emitC, emitPp, klinPathDirs, libs, libDirs);
 }
 
 String _testUsage() =>
-    'usage: klin test [--cc gcc|clang|tcc] [-l lib] [-L dir] [path…]';
+    'usage: klin test [--cc gcc|clang|tcc] [-I dir] [-l lib] [-L dir] [path…]';
 
 String _usageText() =>
     'usage: klin --version|-v\n'
     '       klin --help|-h\n'
-    '       klin run [--cc gcc|clang|tcc] [-l lib] [-L dir] <file.kl>\n'
+    '       klin run [--cc gcc|clang|tcc] [-I dir] [-l lib] [-L dir] <file.kl>\n'
     '       klin fmt [-w] <file.kl…>\n'
-    '       klin test [--cc gcc|clang|tcc] [-l lib] [-L dir] [path…]\n'
-    '       klin [--cc gcc|clang|tcc] [-l lib] [-L dir] '
+    '       klin test [--cc gcc|clang|tcc] [-I dir] [-l lib] [-L dir] [path…]\n'
+    '       klin [--cc gcc|clang|tcc] [-I dir] [-l lib] [-L dir] '
     '[--emit-c|--emit-pp] <file.kl>\n';
 
 String _basenameWithoutExt(String path) {

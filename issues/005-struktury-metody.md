@@ -1,6 +1,6 @@
 # 005 — Struktury i metody
 
-**Status:** ✅ ukończone
+**Status:** ✅ zrobione
 **Zależy od:** 004
 
 ## Opis

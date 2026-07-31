@@ -1,6 +1,6 @@
 # 038 — Ergonomia API `stdlib/time`
 
-**Status:** ✅
+**Status:** ✅ zrobione
 **Zależy od:** 037
 
 ## Zakres

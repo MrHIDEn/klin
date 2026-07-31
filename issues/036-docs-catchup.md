@@ -1,6 +1,6 @@
 # 036 — Docs nie pokrywają nowych cech Klina
 
-**Status:** ✅ (catch-up w PR z 016)
+**Status:** ✅ zrobione (catch-up w PR z 016)
 **Zależy od:** cech ✅ na `main` (026–035) oraz 016
 
 ## Cel

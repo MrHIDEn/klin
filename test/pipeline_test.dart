@@ -851,6 +851,88 @@ fn main() {
     expect(c, isNot(contains('file_a_answer')));
   });
 
+  test('import resolves from lib/ next to the importer (issue 020)', () async {
+    final dir = Directory.systemTemp.createTempSync('klin_lib_dir_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    Directory('${dir.path}/lib').createSync();
+    File('${dir.path}/lib/mathx.kl').writeAsStringSync('''
+module mathx
+pub fn add(a: i32, b: i32): i32 { return a + b }
+''');
+    File('${dir.path}/app.kl').writeAsStringSync('''
+module app
+import mathx
+fn main() {
+  printf("%d\\n", mathx.add(2, 3))
+}
+''');
+    final result = await _compileAndRun('${dir.path}/app.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, '5\n');
+  });
+
+  test('import -I / KLIN_PATH; sibling wins over lib/ (issue 020)', () async {
+    final root = Directory.systemTemp.createTempSync('klin_lib_path_');
+    addTearDown(() => root.deleteSync(recursive: true));
+    final vendor = Directory('${root.path}/vendor')..createSync();
+    File('${vendor.path}/mathx.kl').writeAsStringSync('''
+module mathx
+pub fn add(a: i32, b: i32): i32 { return a + b }
+''');
+    final appDir = Directory('${root.path}/app')..createSync();
+    Directory('${appDir.path}/lib').createSync();
+    File('${appDir.path}/lib/mathx.kl').writeAsStringSync('''
+module mathx
+pub fn add(a: i32, b: i32): i32 { return 99 }
+''');
+    File('${appDir.path}/mathx.kl').writeAsStringSync('''
+module mathx
+pub fn add(a: i32, b: i32): i32 { return 7 }
+''');
+    File('${appDir.path}/app.kl').writeAsStringSync('''
+module app
+import mathx
+fn main() {
+  printf("%d\\n", mathx.add(2, 3))
+}
+''');
+
+    // Sibling wins over lib/.
+    final sibling = await _compileAndRun('${appDir.path}/app.kl', tmp);
+    expect(sibling.exitCode, 0, reason: sibling.stderr);
+    expect(sibling.stdout, '7\n');
+
+    File('${appDir.path}/mathx.kl').deleteSync();
+    Directory('${appDir.path}/lib').deleteSync(recursive: true);
+
+    // -I finds vendor.
+    final viaI = await Process.run(
+      'dart',
+      [
+        'run',
+        'bin/klin.dart',
+        'run',
+        '-I',
+        vendor.path,
+        '${appDir.path}/app.kl',
+      ],
+    );
+    expect(viaI.exitCode, 0, reason: '${viaI.stderr}${viaI.stdout}');
+    expect(viaI.stdout, '5\n');
+
+    // $KLIN_PATH finds vendor.
+    final viaEnv = await Process.run(
+      'dart',
+      ['run', 'bin/klin.dart', 'run', '${appDir.path}/app.kl'],
+      environment: {
+        ...Platform.environment,
+        'KLIN_PATH': vendor.path,
+      },
+    );
+    expect(viaEnv.exitCode, 0, reason: '${viaEnv.stderr}${viaEnv.stdout}');
+    expect(viaEnv.stdout, '5\n');
+  });
+
   test('error: mutating method on immutable variable', () {
     final source = File('test/bad_mut_method.kl').readAsStringSync();
     final program = Parser(Lexer(source).tokenize()).parse();

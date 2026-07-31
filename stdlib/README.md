@@ -1,12 +1,17 @@
 # Klin stdlib
 
-Optional modules resolved after a sibling `.kl` of the same name.
+Optional modules resolved after project / user library paths.
 
-Search order for `import io`:
+Search order for `import io` (first hit wins):
 
 1. `./io.kl` next to the importing file
-2. `$KLIN_STDLIB/io.kl` if set
-3. `<repo>/stdlib/io.kl` (package root with `pubspec.yaml`)
+2. `./lib/io.kl` next to the importing file
+3. each `-I <dir>/io.kl` (CLI)
+4. each `$KLIN_PATH` entry (`:` on Unix, `;` on Windows)
+5. `$KLIN_STDLIB/io.kl` if set
+6. `<repo>/stdlib/io.kl` (package root with `pubspec.yaml`)
+
+User libraries: [note/11-biblioteki-klin.md](../note/11-biblioteki-klin.md).
 
 | Module | Role |
 |---|---|

@@ -1,6 +1,6 @@
 # 006 — Moduły
 
-**Status:** ✅ ukończone
+**Status:** ✅ zrobione
 **Zależy od:** 005
 
 ## Zakres

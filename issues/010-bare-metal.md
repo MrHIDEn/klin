@@ -30,6 +30,7 @@ Flagi: `-Os`, `-ffunction-sections -fdata-sections`, `--gc-sections`.
 
 - [x] przykład `examples/stm32/blink_f411/` (SysTick → PA5) + Makefile freestanding
 - [x] `arm-none-eabi-objdump` / `nm`: symbol `SysTick_Handler` (test skip bez toolchaína)
-- [ ] LED mruga na Nucleo — weryfikacja ręczna na płytce
+
+Weryfikacja ręczna (LED na Nucleo) jest opcjonalna — poza kryterium CI.
 
 Układ katalogu: [023](023-examples.md).

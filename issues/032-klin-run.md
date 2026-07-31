@@ -1,6 +1,6 @@
 # 032 — `klin run <plik.kl>`
 
-**Status:** ✅ ukończone
+**Status:** ✅ zrobione
 **Zależy od:** 001 (rurociąg compile→run już istnieje)
 
 ## Cel

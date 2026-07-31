@@ -7,7 +7,13 @@ import 'preprocess.dart';
 import 'token.dart';
 
 /// Loads an entry file and all of its transitive imports.
-Program loadProject(String entryPath) {
+///
+/// [klinPathDirs] are CLI `-I` directories (searched in order, after `lib/`).
+/// Environment `$KLIN_PATH` is also consulted (PATH-style separator).
+Program loadProject(
+  String entryPath, {
+  List<String> klinPathDirs = const [],
+}) {
   final structs = <StructDecl>[];
   final funcs = <FuncDecl>[];
   final importAliases = <String, Map<String, String>>{};
@@ -42,7 +48,11 @@ Program loadProject(String entryPath) {
     }
     final aliases = <String, String>{};
     for (final importName in unit.imports) {
-      final childPath = _resolveImportPath(file.parent.path, importName);
+      final childPath = _resolveImportPath(
+        file.parent.path,
+        importName,
+        klinPathDirs: klinPathDirs,
+      );
       final childModule = load(childPath);
       aliases[importName] = childModule;
     }
@@ -61,17 +71,39 @@ Program loadProject(String entryPath) {
   );
 }
 
-/// Sibling file first, then `$KLIN_STDLIB`, then package `stdlib/`.
-String _resolveImportPath(String fromDir, String importName) {
+/// Resolves `import name` → path to `name.kl`.
+///
+/// Order: sibling → `lib/` → `-I` dirs → `$KLIN_PATH` → `$KLIN_STDLIB` / repo
+/// `stdlib/`.
+String _resolveImportPath(
+  String fromDir,
+  String importName, {
+  List<String> klinPathDirs = const [],
+}) {
+  final fileName = '$importName.kl';
+  final sep = Platform.pathSeparator;
   final candidates = <String>[
-    '$fromDir${Platform.pathSeparator}$importName.kl',
-    for (final dir in _stdlibSearchDirs())
-      '$dir${Platform.pathSeparator}$importName.kl',
+    '$fromDir$sep$fileName',
+    '$fromDir${sep}lib$sep$fileName',
+    for (final dir in klinPathDirs) '$dir$sep$fileName',
+    for (final dir in _klinPathEnvDirs()) '$dir$sep$fileName',
+    for (final dir in _stdlibSearchDirs()) '$dir$sep$fileName',
   ];
   for (final path in candidates) {
     if (File(path).existsSync()) return path;
   }
   throw FileSystemException('imported file not found', candidates.first);
+}
+
+/// Directories from `$KLIN_PATH` (`:` on Unix, `;` on Windows).
+Iterable<String> _klinPathEnvDirs() sync* {
+  final env = Platform.environment['KLIN_PATH'];
+  if (env == null || env.isEmpty) return;
+  final sep = Platform.isWindows ? ';' : ':';
+  for (final part in env.split(sep)) {
+    final trimmed = part.trim();
+    if (trimmed.isNotEmpty) yield trimmed;
+  }
 }
 
 Iterable<String> _stdlibSearchDirs() sync* {

@@ -25,10 +25,10 @@ HAL (STM32Cube / LL) → [031](031-biblioteki-hal.md).
 
 ## Poza zakresem / później
 
-- [ ] Pełny parser nagłówków C
-- [ ] Biblioteki Klina (020) — osobne issue
-- [x] Jednostki ASM (`.s` via `@[link]`) → [022](022-biblioteki-asm.md)
-- [ ] Manifest projektu (JSON/toml) zamiast attrs + CLI
-- [x] `cexport` → [045](045-cexport.md)
-- [ ] rpath / `LD_LIBRARY_PATH`
-- [ ] Pełne typowanie varargs (`printf`) poza allowlistą builtins
+- Pełny parser nagłówków C
+- Biblioteki Klina → [020](020-biblioteki-klin.md) ✅
+- Jednostki ASM (`.s` via `@[link]`) → [022](022-biblioteki-asm.md) ✅
+- Manifest projektu (JSON/toml) zamiast attrs + CLI
+- `cexport` → [045](045-cexport.md) ✅
+- rpath / `LD_LIBRARY_PATH`
+- Pełne typowanie varargs (`printf`) poza allowlistą builtins
