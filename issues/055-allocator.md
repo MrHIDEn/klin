@@ -18,15 +18,14 @@ import mem
 
 fn main() {
     let mut a = mem.heap()
-    let mut scratch: [1]u8
-    let mut buf = a.alloc_bytes(16) or { scratch[:] }
+    let mut buf = a.alloc_bytes(16) or { mem.empty_u8() }
     defer a.free_bytes(buf)
     // typed: mem.alloc_i32(&a, n) / mem.free_i32(&a, xs)
 }
 ```
 
 - `Allocator` + `heap()`; metody `alloc_bytes` / `free_bytes`; wolne `alloc_u8` /
-  `alloc_i32` (+ `free_*`)
+  `alloc_i32` (+ `free_*`); `empty_u8` / `empty_i32` do bezpiecznych `or`
 - Emisja: `klin_mem_*` → `malloc` / `free` tylko przy `import mem`
 - `n < 0` / OOM → `!T`; `n == 0` → pusty slice bez `malloc`
 - Docs: [note/14-allocator.md](../note/14-allocator.md); golden `test/mem_alloc.kl`;
