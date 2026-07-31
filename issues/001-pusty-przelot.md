@@ -1,6 +1,6 @@
 # 001 — Pusty przelot: hello world przez cały rurociąg
 
-**Status:** ✅ ukończone
+**Status:** ✅ zrobione
 **Szacunek:** kilka wieczorów
 **Zależy od:** 000
 

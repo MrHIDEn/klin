@@ -1,6 +1,6 @@
 # 025 — English project (except pl-PL)
 
-**Status:** ✅
+**Status:** ✅ zrobione
 **Zależy od:** —
 
 ## Cel

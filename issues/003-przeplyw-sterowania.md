@@ -1,6 +1,6 @@
 # 003 — Przepływ sterowania
 
-**Status:** ✅ ukończone
+**Status:** ✅ zrobione
 **Zależy od:** 002
 
 ## Zakres

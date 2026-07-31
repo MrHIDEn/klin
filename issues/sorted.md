@@ -30,7 +30,11 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | # | Zadanie | Status | Zależy od |
 |---|---|---|---|
 | [012](012-stdlib-io.md) | Opcjonalny moduł I/O (`io.print` / `println`) | ✅ | 006 |
+| [016](016-string-interpolation.md) | Interpolowane napisy | ✅ | 012 |
 | [019](019-default-int-types.md) | Domyślne typy (`int` / `float` → `i32` / `f64`) | ✅ | 002 |
+| [020](020-biblioteki-klin.md) | Własne biblioteki Klina (`lib/` / `-I` / `KLIN_PATH`) | ✅ | 006 |
+| [021](021-biblioteki-c.md) | Biblioteki C (FFI / link) | ✅ | 006, 010 |
+| [022](022-biblioteki-asm.md) | Jednostki ASM (`.s` via `@[link]`) | ✅ | 021 |
 | [023](023-examples.md) | Katalog `examples/` (+ `stm32/`) | ✅ | 001+ |
 | [025](025-english-project.md) | English project (except `issues/` + `note/`) | ✅ | — |
 | [026](026-preprocessor.md) | Preprocessor (`$fn`…, D3) | ✅ | 010+ |
@@ -39,13 +43,11 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [033](033-gofmt-style.md) | Formatowanie w stylu Go (`klin fmt`) | ✅ | 005+ |
 | [035](035-klin-test.md) | `klin test` (jak `go test`, kod Klina) | ✅ | 032 |
 | [036](036-docs-catchup.md) | Docs catch-up (CLI / stdlib / cechy ✅) | ✅ | 026–035 |
-| [016](016-string-interpolation.md) | Interpolowane napisy | ✅ | 012 |
 | [037](037-datetime-format.md) | Formatowanie daty/czasu (`stdlib/time`) | ✅ | 016 |
 | [038](038-time-api.md) | Ergonomia API `time` (`until` / `abs` / `as_s`) | ✅ | 037 |
 | [039](039-time-calendar.md) | Kalendarzowe `add_days` / miesiące / lata | ✅ | 037 |
-| [021](021-biblioteki-c.md) | Biblioteki C (FFI / link) | ✅ | 006, 010 |
 | [045](045-cexport.md) | Eksport Klin → C (`@[cexport]`) | ✅ | 021 |
-| [022](022-biblioteki-asm.md) | Jednostki ASM (`.s` via `@[link]`) | ✅ | 021 |
+
 ---
 
 ## Backlog — do rozważenia
@@ -54,8 +56,6 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 |---|---|---|---|
 | [017](017-collection-methods.md) | Metody kolekcji (`map`/`filter`/…) — projekt API / fazy | 💭 | 007 |
 | [018](018-generators-yield.md) | Generatory / `yield` | 💭 | 004+ |
-| [020](020-biblioteki-klin.md) | Własne biblioteki Klina | 💭 | 006 |
-| [046](046-emit-h.md) | `--emit-h` (nagłówek C z `@[cexport]`) | 💭 | 045 |
 | [024](024-rtos.md) | RTOS (FreeRTOS / Zephyr / …) | 💭 | 010+ |
 | [028](028-freertos.md) | Ładna współpraca z FreeRTOS | 💭 | 024, 010, 021 |
 | [029](029-async-event-loop.md) | Event loop / async·await | 💭 | 018?, 028? |
@@ -67,6 +67,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [042](042-time-format-luxon.md) | Dialekt formatu `yyyy-MM-dd` w `time` | 💭 | 037 |
 | [043](043-rtc.md) | RTC → `Instant` (osobny moduł) | 💭 | 010, 031? |
 | [044](044-cpu-cycles.md) | Cykle CPU / SysTick → `Duration` | 💭 | 010 |
+| [046](046-emit-h.md) | `--emit-h` (nagłówek C z `@[cexport]`) | 💭 | 045 |
 
 ---
 

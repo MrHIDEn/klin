@@ -1,6 +1,6 @@
 # 004 — Funkcje
 
-**Status:** ✅ ukończone
+**Status:** ✅ zrobione
 **Zależy od:** 003
 
 ## Zakres

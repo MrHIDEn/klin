@@ -1,6 +1,6 @@
 # 023 — Katalog `examples/`
 
-**Status:** ✅ ukończone (zalążek + układ STM32)
+**Status:** ✅ zrobione (zalążek + układ STM32)
 **Zależy od:** bieżącego stanu języka (001–012+)
 
 ## Cel

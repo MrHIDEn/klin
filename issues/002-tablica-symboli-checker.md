@@ -1,6 +1,6 @@
 # 002 — Tablica symboli i type checker
 
-**Status:** ✅ ukończone
+**Status:** ✅ zrobione
 **Zależy od:** 001
 
 ## Opis

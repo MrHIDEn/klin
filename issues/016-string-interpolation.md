@@ -1,6 +1,6 @@
 # 016 — Interpolowane napisy
 
-**Status:** ✅
+**Status:** ✅ zrobione
 **Zależy od:** 012 (`str` / `io`)
 
 ## Ustalenia

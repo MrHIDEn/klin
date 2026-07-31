@@ -1,0 +1,6 @@
+module app
+import mathx
+
+fn main() {
+    printf("%d\n", mathx.add(2, 3))
+}

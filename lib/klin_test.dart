@@ -67,6 +67,7 @@ Future<KlinTestFileResult> runKlinTestFile(
   String entryPath, {
   String cc = 'gcc',
   Directory? outDir,
+  List<String> klinPathDirs = const [],
   List<String> cliLibs = const [],
   List<String> cliLibDirs = const [],
 }) async {
@@ -75,7 +76,7 @@ Future<KlinTestFileResult> runKlinTestFile(
   final dir = outDir ?? Directory('out');
   await dir.create(recursive: true);
 
-  var program = loadProject(absEntry);
+  var program = loadProject(absEntry, klinPathDirs: klinPathDirs);
 
   final entryTests = _entryTestFns(program, absEntry);
   // Only the entry file's `main` counts. Imported mains are dropped so they

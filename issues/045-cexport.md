@@ -28,9 +28,9 @@ fn add(a: i32, b: i32): i32 {
 Przykład: [`examples/cexport_add/`](../examples/cexport_add/).
 Nota: [`note/09-ffi-c.md`](../note/09-ffi-c.md) (import **i** export).
 
-## Poza zakresem
+## Poza zakresem / później
 
-- [ ] `--emit-h` (nagłówek C z prototypami) → [046](046-emit-h.md)
-- [ ] automatyczne `.a` / `.so`
-- [ ] `cexport` na metodach / typach
-- [ ] rpath / `LD_LIBRARY_PATH`
+- `--emit-h` (nagłówek C z prototypami) → [046](046-emit-h.md)
+- automatyczne `.a` / `.so`
+- `cexport` na metodach / typach
+- rpath / `LD_LIBRARY_PATH`

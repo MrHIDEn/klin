@@ -1,6 +1,6 @@
 # 035 — `klin test` (testy w Klinie, jak `go test`)
 
-**Status:** ✅ ukończone
+**Status:** ✅ zrobione
 **Zależy od:** [032](032-klin-run.md) (`klin run`); `stdlib/testing`
 
 ## Cel

@@ -1,6 +1,6 @@
 # 033 — Formatowanie w stylu Go (`gofmt`)
 
-**Status:** ✅ ukończone
+**Status:** ✅ zrobione
 **Zależy od:** stabilna gramatyka (praktycznie po 005+); nie blokuje kolejki głównej
 
 ## Cel

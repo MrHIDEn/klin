@@ -1,6 +1,6 @@
 # 039 — Operacje kalendarzowe na `Instant`
 
-**Status:** ✅
+**Status:** ✅ zrobione
 **Zależy od:** [037](037-datetime-format.md)
 
 ## Zakres
