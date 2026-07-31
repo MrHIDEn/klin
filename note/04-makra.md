@@ -84,6 +84,9 @@ Expand → `@[cinclude("…_regs.h")]` + `RCC_AHB1ENR_GPIOAEN_set(1)` itd.
 (reuse emittera z 011; zero-cost `static inline`). Przykład:
 [`examples/stm32/blink_f411/blink.kl`](../examples/stm32/blink_f411/blink.kl).
 
+Docelowy UX: `$device("github/…/stm32f411.svd", …)` (Go-like fetch + cache)
+oraz opcjonalnie paczki `import stm32_…` — [053](../issues/053-device-board-assets.md).
+
 ## Czego to nie jest
 
 - Nie Nelua z pełnym AST-quote / metaprogramowaniem.

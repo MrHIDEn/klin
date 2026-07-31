@@ -36,3 +36,8 @@ examples/
 
 - Nie zastępować `test/*.kl` — złote zostają w `test/`.
 - Nie obiecywać pełnego tutoriala (to bliżej README / 013).
+
+## Potem
+
+Czytelniejszy układ dem / scaffold embedded (app vs board vs boilerplate):
+[054](054-embedded-project-layout.md).

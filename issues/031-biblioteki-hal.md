@@ -26,6 +26,8 @@ Sensowna współpraca z HAL **bez** przepisywania Cubemx do Klina i **bez**
 - jasny podział względem [011](011-svd.md) / [027](027-svd-ergonomic-api.md):
   SVD = typowane rejestry; HAL = wyższe API vendora — można używać osobno
   lub razem (HAL pod spodem i tak często tyka tych samych rejestrów)
+- paczki chip/board i `$device`/`$board` (bez mieszania z HAL):
+  [053](053-device-board-assets.md)
 
 ## Rozważania / przykłady myślowe (nie speć)
 
