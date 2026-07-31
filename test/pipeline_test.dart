@@ -941,6 +941,39 @@ fn main() {
     expect(c, isNot(contains('#include <stdio.h>')));
   });
 
+  test('klin test runs *_test.kl and reports assert failures (issue 035)',
+      () async {
+    final pass = await Process.run(
+      'dart',
+      ['run', 'bin/klin.dart', 'test', 'examples/add_test.kl'],
+    );
+    expect(pass.exitCode, 0, reason: pass.stderr.toString());
+    expect(pass.stdout.toString(), contains('ok\texamples/add_test.kl'));
+    expect(pass.stdout.toString(), contains('PASS'));
+
+    final dir = Directory('${tmp.path}/klin_tests')..createSync();
+    File('${dir.path}/fail_test.kl').writeAsStringSync('''
+import testing
+fn test_boom() {
+  testing.assert_eq_i32(1, 2)
+}
+''');
+    final fail = await Process.run(
+      'dart',
+      ['run', 'bin/klin.dart', 'test', '${dir.path}/fail_test.kl'],
+      environment: {
+        ...Platform.environment,
+        'KLIN_STDLIB': Directory('stdlib').absolute.path,
+      },
+    );
+    expect(fail.exitCode, isNot(0));
+    expect(fail.stdout.toString(), contains('FAIL'));
+    expect(
+      '${fail.stdout}${fail.stderr}',
+      contains('assert_eq_i32'),
+    );
+  });
+
   test('klin run compiles and executes a program', () async {
     final proc = await Process.run(
       'dart',

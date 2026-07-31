@@ -1,0 +1,19 @@
+/// Host-side test helpers for `klin test`. Do not import on bare metal.
+module testing
+
+@[cinclude("<stdlib.h>"), cimport, codename("exit")]
+pub fn exit(code: i32)
+
+pub fn assert(cond: bool) {
+    if !(cond) {
+        puts("FAIL: assert")
+        exit(1)
+    }
+}
+
+pub fn assert_eq_i32(got: i32, want: i32) {
+    if !(got == want) {
+        printf("FAIL: assert_eq_i32 got=%d want=%d\n", got, want)
+        exit(1)
+    }
+}

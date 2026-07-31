@@ -37,6 +37,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [027](027-svd-ergonomic-api.md) | Ładne API SVD (`$peripherals_from_svd`) | ✅ | 011, 026 |
 | [032](032-klin-run.md) | CLI: `klin run <plik.kl>` | ✅ | 001 |
 | [033](033-gofmt-style.md) | Formatowanie w stylu Go (`klin fmt`) | ✅ | 005+ |
+| [035](035-klin-test.md) | `klin test` (jak `go test`, kod Klina) | ✅ | 032 |
 
 ---
 
@@ -56,7 +57,6 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [030](030-isr-decorators.md) | Przerwania przez dekoratory | 💭 | 010 |
 | [031](031-biblioteki-hal.md) | Biblioteki HAL (Cube / LL) | 💭 | 010, 021 |
 | [034](034-typy-generyczne.md) | Typy generyczne w języku (vs D3/`$fn`) | 💭 | 026 |
-| [035](035-klin-test.md) | `klin test` (jak `go test`, kod Klina) | 💭 | 032 |
 
 ---
 
