@@ -47,6 +47,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [038](038-time-api.md) | Ergonomia API `time` (`until` / `abs` / `as_s`) | ✅ | 037 |
 | [039](039-time-calendar.md) | Kalendarzowe `add_days` / miesiące / lata | ✅ | 037 |
 | [045](045-cexport.md) | Eksport Klin → C (`@[cexport]`) | ✅ | 021 |
+| [047](047-directory-modules.md) | Katalog = jeden moduł (jak Go/V) | ✅ | 006, 020 |
 
 ---
 
@@ -68,6 +69,8 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [043](043-rtc.md) | RTC → `Instant` (osobny moduł) | 💭 | 010, 031? |
 | [044](044-cpu-cycles.md) | Cykle CPU / SysTick → `Duration` | 💭 | 010 |
 | [046](046-emit-h.md) | `--emit-h` (nagłówek C z `@[cexport]`) | 💭 | 045 |
+| [048](048-import-aliases.md) | Aliasy importów (+ string lokalny) | 💭 | 006, 047 |
+| [049](049-remote-imports.md) | Importy zdalne (GitHub / path jak Go) | 💭 | 048, 020, 047 |
 
 ---
 

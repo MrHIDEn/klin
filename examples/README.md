@@ -27,6 +27,7 @@ are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), n
 | `cexport_add/` | Klin → C via `@[cexport, codename]` ([note/09-ffi-c.md](../note/09-ffi-c.md)) |
 | `asm_add/` | Host `.S` via `@[link]` + `@[cimport]` ([note/10-asm.md](../note/10-asm.md)) |
 | `klin_lib/` | `lib/` + `-I` / `$KLIN_PATH` ([note/11-biblioteki-klin.md](../note/11-biblioteki-klin.md)) |
+| `pkg_geom/` | Katalog = jeden moduł (`geom/*.kl`, issue 047) |
 | `modules/` | `module` / `import` (`app.kl` entry) |
 | `stm32/blink_f411/` | Nucleo-F411RE LED — `$peripherals_from_svd` + `@[link("startup.s")]` → `out/*.link` |
 

@@ -7,7 +7,8 @@
 
 - wiele plików
 - `module nazwa` / `import`
-- `pub` — bez niego symbol jest prywatny
+- `pub` — bez niego symbol jest prywatny (**w module**; pliki pakietu-katalogu
+  z [047](047-directory-modules.md) dzielą tę przestrzeń)
 - prefiks modułu w manglingu
 - `static` w C dla symboli prywatnych
 

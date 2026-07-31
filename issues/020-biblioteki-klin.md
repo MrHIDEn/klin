@@ -19,3 +19,5 @@
 - nested `import a/b`
 - osobne jednostki `.c`/`.a` z lib Klin
 - mieszanie z FFI C (021) / ASM (022) w tym kroku
+- aliasy / string import → [048](048-import-aliases.md)
+- remote GitHub → [049](049-remote-imports.md)

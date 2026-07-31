@@ -6,10 +6,13 @@ import 'parser.dart';
 import 'preprocess.dart';
 import 'token.dart';
 
-/// Loads an entry file and all of its transitive imports.
+/// Loads an entry file (and same-module siblings) plus transitive imports.
 ///
 /// [klinPathDirs] are CLI `-I` directories (searched in order, after `lib/`).
 /// Environment `$KLIN_PATH` is also consulted (PATH-style separator).
+///
+/// `import name` resolves to `name.kl` **or** a directory `name/` of `.kl`
+/// files (issue 047). Both in the same search slot → error.
 Program loadProject(
   String entryPath, {
   List<String> klinPathDirs = const [],
@@ -18,51 +21,158 @@ Program loadProject(
   final funcs = <FuncDecl>[];
   final importAliases = <String, Map<String, String>>{};
   final loading = <String>{};
-  final loaded = <String, String>{}; // path → moduleName
+  final loaded = <String, String>{}; // packageKey → moduleName
+  final fileModule = <String, String>{}; // abs file path → moduleName
   SourcePos? firstPos;
 
-  String load(String path) {
-    final file = File(path).absolute;
-    final normalized = file.path;
-    final existing = loaded[normalized];
+  String loadPackageFiles(
+    List<String> filePaths, {
+    String? requiredModule,
+  }) {
+    final absFiles = [
+      for (final p in filePaths) File(p).absolute.path,
+    ]..sort();
+    if (absFiles.isEmpty) {
+      throw FileSystemException('imported package has no .kl files', '');
+    }
+
+    // Already loaded as part of a larger (or identical) package — do not
+    // re-parse / re-register declarations (issue 047 / Bugbot).
+    if (absFiles.every(fileModule.containsKey)) {
+      final module = fileModule[absFiles.first]!;
+      for (final path in absFiles) {
+        if (fileModule[path] != module) {
+          throw ParseError(
+            'file `$path` already loaded as module `${fileModule[path]}`',
+            const SourcePos(1, 1),
+          );
+        }
+      }
+      return module;
+    }
+    if (absFiles.any(fileModule.containsKey)) {
+      final conflict = absFiles.firstWhere(fileModule.containsKey);
+      throw ParseError(
+        'file `$conflict` already loaded as part of another package',
+        const SourcePos(1, 1),
+      );
+    }
+
+    final packageKey = absFiles.join('\x1e');
+    final existing = loaded[packageKey];
     if (existing != null) return existing;
-    if (!loading.add(normalized)) {
-      throw ParseError('cyclic import `$normalized`', const SourcePos(1, 1));
+    if (!loading.add(packageKey)) {
+      throw ParseError('cyclic import `$packageKey`', const SourcePos(1, 1));
     }
-    if (!file.existsSync()) {
-      throw FileSystemException('imported file not found', normalized);
+
+    final units = <({String path, ModuleUnit unit, String moduleName})>[];
+    for (final path in absFiles) {
+      final file = File(path);
+      if (!file.existsSync()) {
+        throw FileSystemException('imported file not found', path);
+      }
+      final expanded = preprocess(file.readAsStringSync(), path: path);
+      final unit = Parser(Lexer(expanded).tokenize()).parseUnit();
+      final moduleName = unit.declaredName ?? _fileStem(path);
+      if (requiredModule != null && moduleName != requiredModule) {
+        throw ParseError(
+          'module `$moduleName` in `$path` does not match package '
+          '`$requiredModule`',
+          unit.pos,
+        );
+      }
+      units.add((path: path, unit: unit, moduleName: moduleName));
     }
-    final expanded = preprocess(file.readAsStringSync(), path: file.path);
-    final unit = Parser(Lexer(expanded).tokenize()).parseUnit();
-    final moduleName = unit.declaredName ?? _fileStem(file.path);
-    firstPos ??= unit.pos;
-    for (final struct in unit.structs) {
-      struct.moduleName = moduleName;
-      struct.sourcePath = file.path;
-      structs.add(struct);
+
+    final moduleName = units.first.moduleName;
+    for (final u in units) {
+      if (u.moduleName != moduleName) {
+        throw ParseError(
+          'mixed module names in package (`$moduleName` vs `${u.moduleName}`)',
+          u.unit.pos,
+        );
+      }
     }
-    for (final func in unit.funcs) {
-      func.moduleName = moduleName;
-      func.sourcePath = file.path;
-      funcs.add(func);
+
+    firstPos ??= units.first.unit.pos;
+    for (final u in units) {
+      for (final struct in u.unit.structs) {
+        struct.moduleName = moduleName;
+        struct.sourcePath = u.path;
+        structs.add(struct);
+      }
+      for (final func in u.unit.funcs) {
+        func.moduleName = moduleName;
+        func.sourcePath = u.path;
+        funcs.add(func);
+      }
     }
-    final aliases = <String, String>{};
-    for (final importName in unit.imports) {
-      final childPath = _resolveImportPath(
-        file.parent.path,
+
+    // Mark files loaded before resolving imports so same-package
+    // `import otherfile` does not re-register declarations.
+    for (final path in absFiles) {
+      fileModule[path] = moduleName;
+    }
+    loaded[packageKey] = moduleName;
+
+    final aliases = importAliases.putIfAbsent(moduleName, () => {});
+    final pendingImports = <String>{};
+    for (final u in units) {
+      for (final importName in u.unit.imports) {
+        pendingImports.add(importName);
+      }
+    }
+    // Resolve imports relative to the package directory (parent of files).
+    final fromDir = File(absFiles.first).parent.path;
+    for (final importName in pendingImports.toList()..sort()) {
+      final target = _resolveImportTarget(
+        fromDir,
         importName,
         klinPathDirs: klinPathDirs,
       );
-      final childModule = load(childPath);
+      final childModule = switch (target) {
+        _FileImport(:final path) => loadPackageFiles([path]),
+        _DirImport(:final path) => loadPackageFiles(
+            _packageKlFiles(path),
+            requiredModule: importName,
+          ),
+      };
       aliases[importName] = childModule;
     }
-    importAliases[moduleName] = aliases;
-    loading.remove(normalized);
-    loaded[normalized] = moduleName;
+
+    loading.remove(packageKey);
     return moduleName;
   }
 
-  load(entryPath);
+  // Entry: load the entry file plus same-module siblings in its directory.
+  final entryAbs = File(entryPath).absolute.path;
+  final entryExpanded =
+      preprocess(File(entryAbs).readAsStringSync(), path: entryAbs);
+  final entryUnit = Parser(Lexer(entryExpanded).tokenize()).parseUnit();
+  final entryModule = entryUnit.declaredName ?? _fileStem(entryAbs);
+  final entryDir = File(entryAbs).parent.path;
+  final siblingFiles = <String>[entryAbs];
+  final moduleDecl = RegExp('(?:^|\\n)\\s*module\\s+$entryModule\\b');
+  for (final path in _packageKlFiles(entryDir)) {
+    if (path == entryAbs) continue;
+    final raw = File(path).readAsStringSync();
+    final looksLikeSibling = _fileStem(path) == entryModule ||
+        moduleDecl.hasMatch(raw);
+    try {
+      final expanded = preprocess(raw, path: path);
+      final unit = Parser(Lexer(expanded).tokenize()).parseUnit();
+      final name = unit.declaredName ?? _fileStem(path);
+      if (name == entryModule) siblingFiles.add(path);
+    } on PreprocessError {
+      if (looksLikeSibling) rethrow;
+    } on LexError {
+      if (looksLikeSibling) rethrow;
+    } on ParseError {
+      if (looksLikeSibling) rethrow;
+    }
+  }
+  loadPackageFiles(siblingFiles);
+
   return Program(
     structs,
     funcs,
@@ -71,29 +181,78 @@ Program loadProject(
   );
 }
 
-/// Resolves `import name` → path to `name.kl`.
+sealed class _ImportTarget {
+  const _ImportTarget();
+}
+
+final class _FileImport extends _ImportTarget {
+  final String path;
+  const _FileImport(this.path);
+}
+
+final class _DirImport extends _ImportTarget {
+  final String path;
+  const _DirImport(this.path);
+}
+
+/// Resolves `import name` → single file or package directory.
 ///
-/// Order: sibling → `lib/` → `-I` dirs → `$KLIN_PATH` → `$KLIN_STDLIB` / repo
-/// `stdlib/`.
-String _resolveImportPath(
+/// Per search root (sibling, `lib/`, `-I`, `$KLIN_PATH`, stdlib): try
+/// `name.kl` and `name/` in that slot; both present → ambiguous.
+_ImportTarget _resolveImportTarget(
   String fromDir,
   String importName, {
   List<String> klinPathDirs = const [],
 }) {
-  final fileName = '$importName.kl';
   final sep = Platform.pathSeparator;
-  final candidates = <String>[
-    '$fromDir$sep$fileName',
-    '$fromDir${sep}lib$sep$fileName',
-    for (final dir in klinPathDirs) '$dir$sep$fileName',
-    for (final dir in _klinPathEnvDirs()) '$dir$sep$fileName',
-    for (final dir in _stdlibSearchDirs()) '$dir$sep$fileName',
+  final roots = <String>[
+    fromDir,
+    '$fromDir${sep}lib',
+    ...klinPathDirs,
+    ..._klinPathEnvDirs(),
+    ..._stdlibSearchDirs(),
   ];
-  for (final path in candidates) {
-    if (File(path).existsSync()) return path;
+
+  for (final root in roots) {
+    final filePath = '$root$sep$importName.kl';
+    final dirPath = '$root$sep$importName';
+    final hasFile = File(filePath).existsSync();
+    final dirFiles = _packageKlFilesIfDir(dirPath);
+    final hasDir = dirFiles.isNotEmpty;
+    if (hasFile && hasDir) {
+      throw FileSystemException(
+        'ambiguous import `$importName`: both `$filePath` and package '
+        'directory `$dirPath` exist',
+        filePath,
+      );
+    }
+    if (hasFile) return _FileImport(File(filePath).absolute.path);
+    if (hasDir) return _DirImport(Directory(dirPath).absolute.path);
   }
-  throw FileSystemException('imported file not found', candidates.first);
+
+  throw FileSystemException(
+    'imported file not found',
+    '$fromDir$sep$importName.kl',
+  );
 }
+
+/// `.kl` files in [dir], excluding `*_test.kl`. Empty if not a directory.
+List<String> _packageKlFiles(String dir) {
+  final directory = Directory(dir);
+  if (!directory.existsSync()) return const [];
+  final out = <String>[];
+  for (final entity in directory.listSync(followLinks: false)) {
+    if (entity is! File) continue;
+    final name = entity.path.split(Platform.pathSeparator).last;
+    if (!name.endsWith('.kl')) continue;
+    if (name.endsWith('_test.kl')) continue;
+    out.add(entity.absolute.path);
+  }
+  out.sort();
+  return out;
+}
+
+List<String> _packageKlFilesIfDir(String dir) => _packageKlFiles(dir);
 
 /// Directories from `$KLIN_PATH` (`:` on Unix, `;` on Windows).
 Iterable<String> _klinPathEnvDirs() sync* {
