@@ -28,7 +28,7 @@ time.now() ukrywający RTC / CYCCNT
 
 Follow-upy (osobne issue):
 
-- [ ] [039](039-time-calendar.md) — kalendarzowe `add_days` / `add_months` / `add_years`; ewentualnie `Interval`
+- [x] [039](039-time-calendar.md) — kalendarzowe `add_days` / `add_months` / `add_years` (bez `Interval`)
 - [ ] [040](040-time-zones.md) — IANA timezones + DST
 - [ ] [041](041-time-locale-relative.md) — locale (nazwy dni/miesięcy) + relative strings
 - [ ] [042](042-time-format-luxon.md) — tokeny Luxon (`yyyy-MM-dd`) tylko w `time.format` / `parse`

@@ -12,7 +12,7 @@ Search order for `import io`:
 |---|---|
 | [`io`](io.kl) | Host `print` / `println` (thin libc wrappers) |
 | [`testing`](testing.kl) | `assert` / `assert_eq_i32` for `klin test` |
-| [`time`](time.kl) | Wall / monotonic clocks, `Duration`, format into caller buffer |
+| [`time`](time.kl) | Wall / monotonic clocks, `Duration`, format, UTC calendar `add_*` |
 
 ## `io`
 
@@ -60,4 +60,5 @@ fn main() {
 ```
 
 `now()` = wall, `mono()` = monotonic. RTC / CPU cycles are separate APIs.
+Calendar: `add_days` / `add_months` / `add_years` / `add_date` (UTC, `!Instant`).
 Do **not** import on freestanding targets without libc `time`.

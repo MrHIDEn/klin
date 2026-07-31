@@ -1,0 +1,49 @@
+import time
+
+fn main() {
+    let t = time.unix(1704067200)
+    let y1 = t.add_years(1) or {
+        printf("year_fail\n")
+        time.unix(0)
+    }
+    let mut buf: [32]u8
+    time.format(buf[:], "%Y-%m-%d", y1)
+    printf("y1=%s\n", &buf[0])
+
+    let jan31 = time.unix(1706659200)
+    let m1 = jan31.add_months(1) or {
+        printf("month_fail\n")
+        time.unix(0)
+    }
+    time.format(buf[:], "%Y-%m-%d", m1)
+    printf("m1=%s\n", &buf[0])
+
+    let d5 = t.add_days(5) or {
+        printf("day_fail\n")
+        time.unix(0)
+    }
+    time.format(buf[:], "%Y-%m-%d", d5)
+    printf("d5=%s\n", &buf[0])
+
+    let back = d5.add_days(0 - 5) or {
+        printf("back_fail\n")
+        time.unix(0)
+    }
+    time.format(buf[:], "%Y-%m-%d", back)
+    printf("back=%s\n", &buf[0])
+
+    let tod = time.unix(1704123045)
+    let tod_y = tod.add_years(1) or {
+        printf("tod_fail\n")
+        time.unix(0)
+    }
+    time.format(buf[:], "%Y-%m-%d %H:%M:%S", tod_y)
+    printf("tod=%s\n", &buf[0])
+
+    let with_frac = time.unix(1704067200).add(time.nanoseconds(123))
+    let frac_y = with_frac.add_years(1) or {
+        printf("frac_fail\n")
+        time.unix(0)
+    }
+    printf("frac=%lld\n", frac_y.unix_ns % 1000000000)
+}
