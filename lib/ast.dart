@@ -24,6 +24,9 @@ final class ModuleUnit {
   final List<String> imports;
   final List<StructDecl> structs;
   final List<FuncDecl> funcs;
+
+  /// Top-level declarations in source order (`StructDecl` / `FuncDecl`).
+  final List<Object> decls;
   final SourcePos pos;
 
   const ModuleUnit({
@@ -31,6 +34,7 @@ final class ModuleUnit {
     required this.imports,
     required this.structs,
     required this.funcs,
+    required this.decls,
     required this.pos,
   });
 }

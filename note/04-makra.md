@@ -1,8 +1,8 @@
 # Makra czasu kompilacji (`$fn`, D3)
 
 Decyzja: [01-decyzje.md](01-decyzje.md) § D3. Issue: [026](../issues/026-preprocessor.md).
-Przykład: [`macro_point.kl`](../examples/macro_point.kl) (`$fn`) oraz
-[`macro_point_plain.kl`](../examples/macro_point_plain.kl) (to samo bez makra).
+Przykład: [`point.kl`](../examples/point.kl) (zwykły Klin) oraz
+[`point_macro.kl`](../examples/point_macro.kl) (to samo przez `$fn`).
 
 ## Po co
 
@@ -53,8 +53,8 @@ fn main() {
 Podgląd:
 
 ```sh
-dart run bin/klin.dart --emit-pp examples/macro_point.kl
-# → out/macro_point.pp.kl
+dart run bin/klin.dart --emit-pp examples/point_macro.kl
+# → out/point_macro.pp.kl
 ```
 
 ## Parametry makra (MVP)

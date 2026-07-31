@@ -1,16 +1,17 @@
-// Same program as macro_point.kl, without $fn — what --emit-pp produces.
-// Run: dart run bin/klin.dart run examples/macro_point_plain.kl
+// Canonical Vec2i + len_sq (no macros). Pair: point_macro.kl
+// Run: dart run bin/klin.dart run examples/point.kl
 // See: note/04-makra.md
 
 struct Vec2i {
-  x: i32
-  y: i32
+    x: i32
+    y: i32
 }
+
 fn (p: Vec2i) len_sq(): i32 {
-  return p.x * p.x + p.y * p.y
+    return p.x * p.x + p.y * p.y
 }
 
 fn main() {
-  let v = Vec2i{ 3, 4 }
-  printf("%d\n", v.len_sq())
+    let v = Vec2i{ 3, 4 }
+    printf("%d\n", v.len_sq())
 }

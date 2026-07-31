@@ -7,7 +7,7 @@
 
 Decyzja **D3** ([note/01-decyzje.md](../note/01-decyzje.md)): generyki **nie**
 w gramatyce — zamiast tego makra czasu kompilacji (`$fn`, monomorfizacja
-przed parse). MVP jest i działa (`macro_point`, SVD fluent przez expand).
+przed parse). MVP jest i działa (`point_macro`, SVD fluent przez expand).
 
 To nie zamyka tematu na zawsze. Warto wrócić, gdy będzie widać, gdzie makra
 bolą: komunikaty błędów, czytelność bibliotek, powtarzalne wzorce

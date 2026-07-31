@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:klin/ast.dart';
 import 'package:klin/checker.dart';
 import 'package:klin/emit_c.dart';
+import 'package:klin/fmt.dart';
 import 'package:klin/lexer.dart';
 import 'package:klin/parser.dart';
 import 'package:klin/preprocess.dart';
@@ -12,12 +13,19 @@ import 'package:klin/project.dart';
 ///
 /// Usage:
 ///   klin run [--cc gcc|clang|tcc] <file.kl>
+///   klin fmt [-w] <file.kl…>
 ///   klin [--cc gcc|clang|tcc] [--emit-c|--emit-pp] <file.kl>
 Future<void> main(List<String> args) async {
+  if (args.isNotEmpty && args.first == 'fmt') {
+    await _runFmt(args.skip(1).toList());
+    return;
+  }
+
   final opts = _parseArgs(args);
   if (opts == null) {
     stderr.writeln(
       'usage: klin run [--cc gcc|clang|tcc] <file.kl>\n'
+      '       klin fmt [-w] <file.kl…>\n'
       '       klin [--cc gcc|clang|tcc] [--emit-c|--emit-pp] <file.kl>',
     );
     exit(2);
@@ -92,6 +100,56 @@ Future<void> main(List<String> args) async {
   stdout.write(run.stdout);
   stderr.write(run.stderr);
   exit(run.exitCode);
+}
+
+Future<void> _runFmt(List<String> args) async {
+  var write = false;
+  final paths = <String>[];
+  for (final a in args) {
+    if (a == '-w') {
+      write = true;
+    } else if (a.startsWith('-')) {
+      stderr.writeln('usage: klin fmt [-w] <file.kl…>');
+      exit(2);
+    } else {
+      paths.add(a);
+    }
+  }
+  if (paths.isEmpty) {
+    stderr.writeln('usage: klin fmt [-w] <file.kl…>');
+    exit(2);
+  }
+
+  var failed = false;
+  for (final path in paths) {
+    final file = File(path);
+    if (!await file.exists()) {
+      stderr.writeln('klin: file not found `$path`');
+      failed = true;
+      continue;
+    }
+    final raw = await file.readAsString();
+    try {
+      final formatted = formatSource(raw);
+      if (write) {
+        if (formatted != raw) {
+          await file.writeAsString(formatted);
+        }
+      } else {
+        stdout.write(formatted);
+        if (paths.length > 1 && !formatted.endsWith('\n')) {
+          stdout.writeln();
+        }
+      }
+    } on LexError catch (e) {
+      stderr.writeln('$path:$e');
+      failed = true;
+    } on ParseError catch (e) {
+      stderr.writeln('$path:$e');
+      failed = true;
+    }
+  }
+  if (failed) exit(1);
 }
 
 final class _Opts {

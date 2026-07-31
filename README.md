@@ -30,6 +30,12 @@ Inspect the result with `--emit-pp` (`out/<file>.pp.kl`). Fluent register
 access (`RCC.AHB1ENR.GPIOAEN.set(1)`) lowers to the same zero-cost
 `static inline` accessors as `svd2klin`.
 
+Format sources with a Go-style canonical printer (`klin fmt`, optional `-w`):
+
+```sh
+dart run bin/klin.dart fmt -w examples/hello.kl
+```
+
 ## Test
 
 ```sh

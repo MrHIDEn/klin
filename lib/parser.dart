@@ -47,6 +47,7 @@ final class Parser {
   ModuleUnit parseUnit() {
     final funcs = <FuncDecl>[];
     final structs = <StructDecl>[];
+    final decls = <Object>[];
     String? declaredName;
     final imports = <String>[];
     if (_check(TokenKind.module)) {
@@ -67,9 +68,13 @@ final class Parser {
         isPub = true;
       }
       if (_check(TokenKind.struct)) {
-        structs.add(_struct(isPub, attrs));
+        final decl = _struct(isPub, attrs);
+        structs.add(decl);
+        decls.add(decl);
       } else if (_check(TokenKind.fn)) {
-        funcs.add(_func(isPub, attrs));
+        final decl = _func(isPub, attrs);
+        funcs.add(decl);
+        decls.add(decl);
       } else {
         throw ParseError(
             'expected struct or function declaration', _current.pos);
@@ -89,6 +94,7 @@ final class Parser {
       imports: imports,
       structs: structs,
       funcs: funcs,
+      decls: decls,
       pos: pos,
     );
   }
