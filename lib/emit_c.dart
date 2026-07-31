@@ -228,6 +228,7 @@ void _emitTimeHostHelpers(StringBuffer buf) {
   buf.writeln('#include <time.h>');
   buf.writeln('#include <stdio.h>');
   buf.writeln('#include <string.h>');
+  buf.writeln('#include <errno.h>');
   buf.writeln();
   buf.writeln('int64_t klin_time_wall_ns(void) {');
   buf.writeln('    struct timespec ts;');
@@ -257,8 +258,10 @@ void _emitTimeHostHelpers(StringBuffer buf) {
   buf.writeln();
   buf.writeln(
       'static int32_t klin_time_from_tm(int64_t *out_ns, struct tm *tm) {');
+  buf.writeln('    errno = 0;');
   buf.writeln('    time_t sec = timegm(tm);');
-  buf.writeln('    if (sec == (time_t)-1) return 2;');
+  // time_t -1 is also a valid UTC instant (1969-12-31 23:59:59); only fail on errno.
+  buf.writeln('    if (sec == (time_t)-1 && errno != 0) return 2;');
   buf.writeln('    *out_ns = (int64_t)sec * 1000000000LL;');
   buf.writeln('    return 0;');
   buf.writeln('}');
@@ -267,11 +270,13 @@ void _emitTimeHostHelpers(StringBuffer buf) {
       'int32_t klin_time_parse_iso(int64_t *out_ns, const char *s) {');
   buf.writeln('    if (out_ns == NULL || s == NULL) return 1;');
   buf.writeln('    int y = 0, mo = 0, d = 0, h = 0, mi = 0, sec = 0;');
+  buf.writeln('    int consumed = 0;');
   buf.writeln(
-      '    if (sscanf(s, "%d-%d-%dT%d:%d:%dZ", &y, &mo, &d, &h, &mi, &sec) == 6) {');
-  buf.writeln('        /* full ISO */');
+      '    if (sscanf(s, "%d-%d-%dT%d:%d:%dZ%n", &y, &mo, &d, &h, &mi, &sec, &consumed) == 6) {');
+  buf.writeln('        if (s[consumed] != \'\\0\') return 1;');
   buf.writeln(
-      '    } else if (sscanf(s, "%d-%d-%d", &y, &mo, &d) == 3) {');
+      '    } else if (sscanf(s, "%d-%d-%d%n", &y, &mo, &d, &consumed) == 3) {');
+  buf.writeln('        if (s[consumed] != \'\\0\') return 1;');
   buf.writeln('        h = 0; mi = 0; sec = 0;');
   buf.writeln('    } else {');
   buf.writeln('        return 1;');
