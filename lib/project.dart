@@ -3,6 +3,7 @@ import 'dart:io';
 import 'ast.dart';
 import 'lexer.dart';
 import 'parser.dart';
+import 'preprocess.dart';
 import 'token.dart';
 
 /// Loads an entry file and all of its transitive imports.
@@ -25,7 +26,8 @@ Program loadProject(String entryPath) {
     if (!file.existsSync()) {
       throw FileSystemException('imported file not found', normalized);
     }
-    final unit = Parser(Lexer(file.readAsStringSync()).tokenize()).parseUnit();
+    final expanded = preprocess(file.readAsStringSync(), path: file.path);
+    final unit = Parser(Lexer(expanded).tokenize()).parseUnit();
     final moduleName = unit.declaredName ?? _fileStem(file.path);
     firstPos ??= unit.pos;
     for (final struct in unit.structs) {

@@ -25,6 +25,9 @@ it:
 dart run bin/klin.dart --emit-c examples/hello.kl
 ```
 
+`$fn` macros expand before parsing. Inspect the result with `--emit-pp`
+(`out/<file>.pp.kl`).
+
 ## Test
 
 ```sh

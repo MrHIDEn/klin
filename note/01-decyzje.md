@@ -75,6 +75,9 @@ strategią przy backendzie C.
 
 Ryzyko: czas kompilacji, komunikaty błędów z rozwiniętych makr.
 
+**MVP (026):** [04-makra.md](04-makra.md) — przed/po expand + przykład
+[`examples/macro_point.kl`](../examples/macro_point.kl).
+
 ---
 
 ## D4. Mangling nazw
