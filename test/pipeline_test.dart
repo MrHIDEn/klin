@@ -212,6 +212,57 @@ fn main() {
     expect(c, contains('%.8s'));
   });
 
+  test('golden: stdlib time Instant/Duration/format (issue 037)', () async {
+    final result = await _compileAndRun('test/time_basic.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/time_basic.out').readAsString());
+
+    final program = loadProject('test/time_basic.kl');
+    Checker().check(program);
+    final c = emitC(program, 'test/time_basic.kl');
+    expect(c, contains('klin_time_format'));
+    expect(c, contains('klin_time_wall_ns'));
+    expect(c, contains('klin_time_mono_ns'));
+    expect(c, contains('clock_gettime'));
+    expect(c, isNot(contains('malloc')));
+  });
+
+  test('time.parse_iso failure uses or branch', () async {
+    final file = File('${tmp.path}/time_bad_parse.kl');
+    await file.writeAsString(r'''
+import time
+
+fn main() {
+    let t = time.parse_iso("not-a-date") or {
+        printf("bad=%d\n", err)
+        time.unix(0)
+    }
+    printf("ok=%lld\n", t.unix_ns)
+}
+''');
+    final result = await _compileAndRun(file.path, tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, contains('bad='));
+    expect(result.stdout, contains('ok=0'));
+  });
+
+  test('time.format returns -1 for too-small buffer', () async {
+    final file = File('${tmp.path}/time_tiny_buf.kl');
+    await file.writeAsString(r'''
+import time
+
+fn main() {
+    let t = time.unix(1704067200)
+    let mut buf: [1]u8
+    let n = time.format(buf[:], "%Y-%m-%d", t)
+    printf("n=%d\n", n)
+}
+''');
+    final result = await _compileAndRun(file.path, tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, contains('n=-1'));
+  });
+
   test('error: interpolated string in let is print-only', () {
     final source = r'''
 fn main() {
