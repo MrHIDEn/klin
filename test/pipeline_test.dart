@@ -972,6 +972,31 @@ fn test_boom() {
       '${fail.stdout}${fail.stderr}',
       contains('assert_eq_i32'),
     );
+
+    // Imported `main` must not suppress the test harness.
+    File('${dir.path}/lib_with_main.kl').writeAsStringSync('''
+module lib_with_main
+pub fn value(): i32 { return 7 }
+fn main() { puts("imported-main") }
+''');
+    File('${dir.path}/import_main_test.kl').writeAsStringSync('''
+import lib_with_main
+import testing
+fn test_value() {
+  testing.assert_eq_i32(lib_with_main.value(), 7)
+}
+''');
+    final imported = await Process.run(
+      'dart',
+      ['run', 'bin/klin.dart', 'test', '${dir.path}/import_main_test.kl'],
+      environment: {
+        ...Platform.environment,
+        'KLIN_STDLIB': Directory('stdlib').absolute.path,
+      },
+    );
+    expect(imported.exitCode, 0, reason: imported.stderr.toString());
+    expect(imported.stdout.toString(), contains('ok\t'));
+    expect('${imported.stdout}${imported.stderr}', isNot(contains('imported-main')));
   });
 
   test('klin run compiles and executes a program', () async {

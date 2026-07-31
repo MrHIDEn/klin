@@ -75,10 +75,17 @@ Future<KlinTestFileResult> runKlinTestFile(
   var program = loadProject(absEntry);
 
   final entryTests = _entryTestFns(program, absEntry);
-  final hasMain = program.funcs.any(
-    (f) => f.receiver == null && f.name == 'main' && f.body != null,
+  // Only the entry file's `main` counts. Imported mains are dropped so they
+  // neither skip the harness nor collide with an injected test `main`.
+  program = _withoutImportedMains(program, absEntry);
+  final hasEntryMain = program.funcs.any(
+    (f) =>
+        _isFromEntry(f, absEntry) &&
+        f.receiver == null &&
+        f.name == 'main' &&
+        f.body != null,
   );
-  if (!hasMain) {
+  if (!hasEntryMain) {
     if (entryTests.isEmpty) {
       throw CheckError(
         'no `test_*` functions and no `main` in test file',
@@ -119,15 +126,32 @@ Future<KlinTestFileResult> runKlinTestFile(
 }
 
 List<FuncDecl> _entryTestFns(Program program, String absEntry) {
-  final normalized = File(absEntry).absolute.path;
   return program.funcs.where((f) {
     if (f.receiver != null || f.body == null || f.params.isNotEmpty) {
       return false;
     }
     if (!f.name.startsWith('test_')) return false;
-    if (f.sourcePath == null) return false;
-    return File(f.sourcePath!).absolute.path == normalized;
+    return _isFromEntry(f, absEntry);
   }).toList();
+}
+
+bool _isFromEntry(FuncDecl f, String absEntry) {
+  if (f.sourcePath == null) return false;
+  return File(f.sourcePath!).absolute.path == File(absEntry).absolute.path;
+}
+
+Program _withoutImportedMains(Program program, String absEntry) {
+  final funcs = program.funcs.where((f) {
+    if (f.receiver != null || f.name != 'main') return true;
+    return _isFromEntry(f, absEntry);
+  }).toList();
+  if (funcs.length == program.funcs.length) return program;
+  return Program(
+    program.structs,
+    funcs,
+    program.pos,
+    importAliases: program.importAliases,
+  );
 }
 
 Program _withInjectedMain(
