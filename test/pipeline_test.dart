@@ -228,6 +228,18 @@ fn main() {
     expect(c, isNot(contains('malloc')));
   });
 
+  test('golden: time calendar add_days/months/years (issue 039)', () async {
+    final result = await _compileAndRun('test/time_calendar.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/time_calendar.out').readAsString());
+
+    final program = loadProject('test/time_calendar.kl');
+    Checker().check(program);
+    final c = emitC(program, 'test/time_calendar.kl');
+    expect(c, contains('klin_time_add_date'));
+    expect(c, isNot(contains('malloc')));
+  });
+
   test('time.parse_iso failure uses or branch', () async {
     final file = File('${tmp.path}/time_bad_parse.kl');
     await file.writeAsString(r'''

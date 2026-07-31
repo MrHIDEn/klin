@@ -18,6 +18,20 @@ Model jak Go: **Instant** (wall UTC) + **MonoInstant** (pomiary) + **Duration**
 - `Duration.abs` / `mul`; składowe `as_ns` / `as_us` / `as_ms` / `as_s`
 - `MonoInstant.add` / `sub` (`Duration`) jak u `Instant`
 
+## Kalendarz (UTC, Go `AddDate`)
+
+Nie mylić z `add(Duration)` (czyste ns). Operacje cywilne:
+
+```klin
+let t = time.unix(1704067200)   // 2024-01-01 UTC
+let y = t.add_years(1) or { t } // 2025-01-01
+let m = time.unix(1706659200).add_months(1) or { t }  // 2024-01-31 → 2024-03-02
+let d = t.add_days(5) or { t }
+```
+
+`add_date(years, months, days)` — wspólna ścieżka; ujemne wartości cofają.
+Zachowuje godzinę UTC i ułamek ns. Strefy IANA → [040](../issues/040-time-zones.md).
+
 ## Przykład
 
 ```klin
@@ -42,5 +56,7 @@ Dialekt formatu MVP: `strftime` (`%Y %m %d %H %M %S` …).
 Parse: `parse_iso` / `parse(fmt, s)` → `!Instant` (w `main` użyj `or { }`).
 
 Szczegóły i poza zakresem: [issues/037-datetime-format.md](../issues/037-datetime-format.md),
-[issues/038-time-api.md](../issues/038-time-api.md).
+[issues/038-time-api.md](../issues/038-time-api.md),
+[issues/039-time-calendar.md](../issues/039-time-calendar.md).
 Demo: [examples/time_demo.kl](../examples/time_demo.kl).
+Golden calendar: `test/time_calendar.kl`.

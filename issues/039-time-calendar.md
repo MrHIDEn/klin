@@ -1,23 +1,21 @@
 # 039 — Operacje kalendarzowe na `Instant`
 
-**Status:** 💭 do rozważenia
+**Status:** ✅
 **Zależy od:** [037](037-datetime-format.md)
 
-## Kontekst
+## Zakres
 
-MVP `time` dodaje / odejmuje tylko nanosekundy (`Duration`). Luxon / Go
-`AddDate` operują na **kalendarzu** (dzień / miesiąc / rok wall-clock), co
-nie sprowadza się 1:1 do stałej liczby ns (miesiące, DST przy lokalnym
-czasie — strefy → [040](040-time-zones.md)).
+Go-style UTC civil calendar add na wall `Instant`:
 
-## Propozycja
+- `add_date(years, months, days): !Instant`
+- `add_years` / `add_months` / `add_days` (ujemne `n` = cofanie)
+- Host: `klin_time_add_date` (`gmtime_r` + `timegm`, zachowany ułamek ns)
+- Bez typu `Interval` (nadal dwa `Instant` + `between`)
 
-- `add_days` / `add_months` / `add_years` na wall `Instant` (UTC w MVP)
-- opcjonalnie cienki `Interval` `{ start, end }` + metody długości w ns;
-  MVP 037: dwa `Instant` + `between` wystarczy — nie wymuszać typu od razu
+Golden: `test/time_calendar.kl`. Docs: [note/08-time.md](../note/08-time.md).
 
-## Czego nie robić
+## Poza zakresem
 
-- Ukrytej alokacji / magicznego locale.
-- Mieszać ze strefami IANA (040) ani z cukrem `${t:…}` (nie planowane).
-- Kalendarzowych miesięcy jako `Duration` w ns.
+- IANA / DST → [040](040-time-zones.md)
+- Locale / relative → [041](041-time-locale-relative.md)
+- Interval struct, cukier `${t:…}`, kalendarzowe miesiące jako `Duration` w ns

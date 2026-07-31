@@ -205,6 +205,7 @@ bool _programNeedsTimeHost(Program program) {
     'klin_time_format',
     'klin_time_parse',
     'klin_time_parse_iso',
+    'klin_time_add_date',
   };
   for (final func in program.funcs) {
     for (final attr in func.attrs) {
@@ -293,6 +294,29 @@ void _emitTimeHostHelpers(StringBuffer buf) {
   buf.writeln('    const char *end = strptime(s, fmt, &tm);');
   buf.writeln('    if (end == NULL || *end != \'\\0\') return 1;');
   buf.writeln('    return klin_time_from_tm(out_ns, &tm);');
+  buf.writeln('}');
+  buf.writeln();
+  // Go-style AddDate on UTC civil calendar; preserves sub-second ns.
+  buf.writeln(
+      'int32_t klin_time_add_date(int64_t *out_ns, int64_t unix_ns, int32_t years, int32_t months, int32_t days) {');
+  buf.writeln('    if (out_ns == NULL) return 1;');
+  buf.writeln('    int64_t sec = unix_ns / 1000000000LL;');
+  buf.writeln('    int64_t frac = unix_ns % 1000000000LL;');
+  buf.writeln('    if (frac < 0) {');
+  buf.writeln('        frac += 1000000000LL;');
+  buf.writeln('        sec -= 1;');
+  buf.writeln('    }');
+  buf.writeln('    time_t tsec = (time_t)sec;');
+  buf.writeln('    struct tm tm;');
+  buf.writeln('    if (gmtime_r(&tsec, &tm) == NULL) return 1;');
+  buf.writeln('    tm.tm_year += (int)years;');
+  buf.writeln('    tm.tm_mon += (int)months;');
+  buf.writeln('    tm.tm_mday += (int)days;');
+  buf.writeln('    tm.tm_isdst = 0;');
+  buf.writeln('    int32_t rc = klin_time_from_tm(out_ns, &tm);');
+  buf.writeln('    if (rc != 0) return rc;');
+  buf.writeln('    *out_ns += frac;');
+  buf.writeln('    return 0;');
   buf.writeln('}');
   buf.writeln();
 }

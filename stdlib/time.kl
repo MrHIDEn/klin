@@ -32,6 +32,9 @@ fn host_parse_iso(out_ns: *mut i64, s: str): i32
 @[cimport, codename("klin_time_parse")]
 fn host_parse(out_ns: *mut i64, fmt: str, s: str): i32
 
+@[cimport, codename("klin_time_add_date")]
+fn host_add_date(out_ns: *mut i64, unix_ns: i64, years: i32, months: i32, days: i32): i32
+
 pub fn nanosecond(): Duration {
     return Duration{ ns: 1 }
 }
@@ -153,6 +156,28 @@ pub fn (t: Instant) add(d: Duration): Instant {
 
 pub fn (t: Instant) sub(d: Duration): Instant {
     return Instant{ unix_ns: t.unix_ns - d.ns }
+}
+
+/// Go-style UTC civil calendar add (`AddDate`). Negative values move backward.
+pub fn (t: Instant) add_date(years: i32, months: i32, days: i32): !Instant {
+    let mut ns: i64 = 0
+    let rc = host_add_date(&ns, t.unix_ns, years, months, days)
+    if rc != 0 {
+        return error(rc)
+    }
+    return Instant{ unix_ns: ns }
+}
+
+pub fn (t: Instant) add_years(n: i32): !Instant {
+    return t.add_date(n, 0, 0)
+}
+
+pub fn (t: Instant) add_months(n: i32): !Instant {
+    return t.add_date(0, n, 0)
+}
+
+pub fn (t: Instant) add_days(n: i32): !Instant {
+    return t.add_date(0, 0, n)
 }
 
 /// Duration from [t] until [u] (`u - t`).
