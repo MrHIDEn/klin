@@ -30,8 +30,9 @@ CLI summary (PL): [note/06-cli.md](note/06-cli.md).
 
 Optional host I/O and clocks: [`stdlib/`](stdlib/) (`import io`, `import testing`,
 `import time` — see [note/08-time.md](note/08-time.md)).
-Klin libraries (`lib/`, `-I`, `$KLIN_PATH`): [note/11-biblioteki-klin.md](note/11-biblioteki-klin.md),
-[`examples/klin_lib/`](examples/klin_lib/).
+Klin libraries (`lib/`, `-I`, `$KLIN_PATH`; directory packages):
+[note/11-biblioteki-klin.md](note/11-biblioteki-klin.md),
+[`examples/klin_lib/`](examples/klin_lib/), [`examples/pkg_geom/`](examples/pkg_geom/).
 C FFI — import (`@[cimport]` / `@[link]`) **and** export (`@[cexport]`):
 [note/09-ffi-c.md](note/09-ffi-c.md), examples
 [`ffi_add/`](examples/ffi_add/) and [`cexport_add/`](examples/cexport_add/).

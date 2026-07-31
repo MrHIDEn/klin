@@ -933,6 +933,120 @@ fn main() {
     expect(viaEnv.stdout, '5\n');
   });
 
+  test('directory package is one module; private shared across files (issue 047)',
+      () async {
+    final result = await _compileAndRun('examples/pkg_geom/app.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, '25\n');
+
+    final program = loadProject('examples/pkg_geom/app.kl');
+    Checker().check(program);
+    final c = emitC(program, 'examples/pkg_geom/app.kl');
+    expect(c, contains('static int32_t geom_sq('));
+    expect(c, contains('geom_Vec2_len_sq('));
+  });
+
+  test('entry loads same-module sibling files (issue 047)', () async {
+    final dir = Directory.systemTemp.createTempSync('klin_pkg_entry_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    File('${dir.path}/helper.kl').writeAsStringSync('''
+module app
+fn answer(): i32 { return 7 }
+''');
+    File('${dir.path}/main.kl').writeAsStringSync('''
+module app
+fn main() {
+  printf("%d\\n", answer())
+}
+''');
+    final result = await _compileAndRun('${dir.path}/main.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, '7\n');
+  });
+
+  test('*_test.kl is skipped when loading a package directory (issue 047)', () {
+    final dir = Directory.systemTemp.createTempSync('klin_pkg_skip_test_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    Directory('${dir.path}/geom').createSync();
+    File('${dir.path}/geom/vec.kl').writeAsStringSync('''
+module geom
+pub fn n(): i32 { return 1 }
+''');
+    File('${dir.path}/geom/geom_test.kl').writeAsStringSync('''
+module geom
+pub fn n(): i32 { return 99 }
+''');
+    File('${dir.path}/app.kl').writeAsStringSync('''
+module app
+import geom
+fn main() {
+  printf("%d\\n", geom.n())
+}
+''');
+    final program = loadProject('${dir.path}/app.kl');
+    Checker().check(program);
+    // Duplicate `n` would fail if *_test.kl were loaded.
+    final c = emitC(program, '${dir.path}/app.kl');
+    expect(c, contains('klin_ret_0 = 1'));
+    expect(c, isNot(contains('99')));
+  });
+
+  test('ambiguous name.kl and name/ directory is an error (issue 047)', () {
+    final dir = Directory.systemTemp.createTempSync('klin_pkg_ambig_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    File('${dir.path}/geom.kl').writeAsStringSync('''
+module geom
+pub fn n(): i32 { return 1 }
+''');
+    Directory('${dir.path}/geom').createSync();
+    File('${dir.path}/geom/a.kl').writeAsStringSync('''
+module geom
+pub fn n(): i32 { return 2 }
+''');
+    File('${dir.path}/app.kl').writeAsStringSync('''
+module app
+import geom
+fn main() {}
+''');
+    expect(
+      () => loadProject('${dir.path}/app.kl'),
+      throwsA(
+        predicate(
+          (e) =>
+              e is FileSystemException &&
+              e.message.contains('ambiguous import'),
+        ),
+      ),
+    );
+  });
+
+  test('package directory rejects mismatched module name (issue 047)', () {
+    final dir = Directory.systemTemp.createTempSync('klin_pkg_mismatch_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    Directory('${dir.path}/geom').createSync();
+    File('${dir.path}/geom/a.kl').writeAsStringSync('''
+module wrong
+pub fn n(): i32 { return 1 }
+''');
+    File('${dir.path}/app.kl').writeAsStringSync('''
+module app
+import geom
+fn main() {
+  printf("%d\\n", geom.n())
+}
+''');
+    expect(
+      () => loadProject('${dir.path}/app.kl'),
+      throwsA(
+        predicate(
+          (e) =>
+              e is ParseError &&
+              e.toString().contains('does not match package'),
+        ),
+      ),
+    );
+  });
+
   test('error: mutating method on immutable variable', () {
     final source = File('test/bad_mut_method.kl').readAsStringSync();
     final program = Parser(Lexer(source).tokenize()).parse();

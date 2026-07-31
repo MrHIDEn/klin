@@ -2,16 +2,17 @@
 
 Optional modules resolved after project / user library paths.
 
-Search order for `import io` (first hit wins):
+Search order for `import io` (first hit wins; in each slot, `io.kl` **or**
+directory `io/` — both at once is an error):
 
-1. `./io.kl` next to the importing file
-2. `./lib/io.kl` next to the importing file
-3. each `-I <dir>/io.kl` (CLI)
+1. `./io.kl` or `./io/` next to the importing file
+2. `./lib/io.kl` or `./lib/io/`
+3. each `-I <dir>/…` (CLI)
 4. each `$KLIN_PATH` entry (`:` on Unix, `;` on Windows)
-5. `$KLIN_STDLIB/io.kl` if set
-6. `<repo>/stdlib/io.kl` (package root with `pubspec.yaml`)
+5. `$KLIN_STDLIB/…` if set
+6. `<repo>/stdlib/…` (package root with `pubspec.yaml`)
 
-User libraries: [note/11-biblioteki-klin.md](../note/11-biblioteki-klin.md).
+User libraries / directory packages: [note/11-biblioteki-klin.md](../note/11-biblioteki-klin.md).
 
 | Module | Role |
 |---|---|

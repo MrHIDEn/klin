@@ -47,6 +47,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [038](038-time-api.md) | Ergonomia API `time` (`until` / `abs` / `as_s`) | ✅ | 037 |
 | [039](039-time-calendar.md) | Kalendarzowe `add_days` / miesiące / lata | ✅ | 037 |
 | [045](045-cexport.md) | Eksport Klin → C (`@[cexport]`) | ✅ | 021 |
+| [047](047-directory-modules.md) | Katalog = jeden moduł (jak Go/V) | ✅ | 006, 020 |
 
 ---
 
