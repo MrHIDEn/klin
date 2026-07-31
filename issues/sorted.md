@@ -28,7 +28,7 @@ wypluwa plik z definicjami rejestrów. Wejście → wyjście, koniec.
 
 | # | Zadanie | Status | Zależy od |
 |---|---|---|---|
-| [012](012-stdlib-io.md) | Opcjonalny moduł I/O (`println`) | 💭 | 006 |
+| [012](012-stdlib-io.md) | Opcjonalny moduł I/O (`println`) | ✅ | 006 |
 | [016](016-string-interpolation.md) | Interpolowane napisy | 💭 | 012? |
 | [017](017-collection-methods.md) | Metody kolekcji (`map`/`filter`/…) | 💭 | 007 |
 | [018](018-generators-yield.md) | Generatory / `yield` | 💭 | 004+ |

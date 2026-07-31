@@ -1,0 +1,5 @@
+/// Optional host I/O. Thin wrappers over libc — do not import on bare metal.
+module io
+
+@[cinclude("<stdio.h>"), cimport, codename("puts")]
+pub fn println(msg: str): i32

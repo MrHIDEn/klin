@@ -1,7 +1,7 @@
 # 012 — Opcjonalny moduł I/O (`println` itd.)
 
-**Status:** 💭 do rozważenia
-**Zależy od:** 006 (moduły), ewentualnie wygodniejsze stringi
+**Status:** ✅ ukończone
+**Zależy od:** 006 (moduły)
 
 ## Kontekst
 
@@ -11,9 +11,9 @@ nie biblioteka standardowa Klina.
 V ma builtin `print` / `println` / `eprint` / `eprintln`. Klin **nie**
 powinien mieć dwóch równorzędnych API w rdzeniu (`puts` + `println`).
 
-## Propozycja (później)
+## Decyzja
 
-Opcjonalny moduł stdlib, importowany jawnie — nie w builtinach:
+Opcjonalny moduł `stdlib/io.kl`, importowany jawnie — nie w builtinach:
 
 ```
 import io
@@ -23,17 +23,14 @@ fn main() {
 }
 ```
 
-Emisja: cienkie wywołanie C (`puts` / `fwrite` / podobne). Zero magii,
-zgodne z zasadą nadrzędną. Na bare-metalu po prostu nie importujesz.
+- Nazwa: `io` (nie `vstd`).
+- Emisja: `@[cimport, codename("puts")]` — zero narzutu względem `puts`.
+- Typ `str` = `const char*` (parametry FFI / stdlib; literały napisów).
+- Na bare-metalu po prostu nie importujesz.
+- Szukanie: sibling → `$KLIN_STDLIB` → `<repo>/stdlib/`.
 
-## Nazwa — do decyzji
+## Kryterium ukończenia
 
-| Kandydat | Uwaga |
-|---|---|
-| `io` / `std.io` / `klin.io` | Neutralne — preferowane |
-| `vstd` / `vlike` | Sugeruje kompatybilność z V, której nie utrzymamy — unikać |
-
-## Czego NIE robić teraz
-
-- Nie dodawać `println` do rdzenia obok `puts`
-- Nie zaczynać stdlib przed działającymi modułami (006)
+- [x] `import io` + `io.println(...)` działa w teście złotym
+- [x] emisja woła `puts` (nie osobną funkcję-wrapper z `bl`)
+- [x] `puts` w rdzeniu nadal działa bez importu (cienkie FFI jak w 001)
