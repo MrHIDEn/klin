@@ -51,7 +51,8 @@ Startup nadal może być surowym `.s` ([010](010-bare-metal.md)) — chodzi o
 2. Wspólne reguły Make / skrypt pod ARM (bez zmiany semantyki języka)
 3. Opcjonalnie: `klin init nucleo-f411` (lub szablon w repo) — po [053](053-device-board-assets.md)
    sensowniejsze (`$device` zamiast `../../../third_party/...`).
-   Wnioski host vs MCU + board pack: [075](075-board-pack-init-host.md).
+   Wnioski host vs MCU + **trzy warstwy** (pack / init / `board`+.ioc):
+   [075 §1b](075-board-pack-init-host.md).
 
 ## Czego nie robić
 
