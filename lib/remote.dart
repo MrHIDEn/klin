@@ -450,10 +450,14 @@ Future<(String assetDir, String commit)> fetchRemoteAsset(
     File('${staging.path}$sep.commit')
         .writeAsStringSync('${commit.toLowerCase()}\n');
 
-    // Keep sibling .svd paths already in cache: same pin → copy old bytes;
-    // pin bump → refresh from the new checkout when the file still exists.
+    // Keep sibling .svd paths: prefer bytes from this checkout; only reuse
+    // prior cache bytes when pin and commit are unchanged (adding a file).
     if (Directory(assetDir).existsSync()) {
-      final samePin = readPin(assetDir) == pinValue;
+      final prevPin = readPin(assetDir);
+      final prevCommit = readCommit(assetDir);
+      final samePin = prevPin == pinValue;
+      final sameCommit = prevCommit != null &&
+          (commit.startsWith(prevCommit) || prevCommit.startsWith(commit));
       for (final entity in Directory(assetDir).listSync(recursive: true)) {
         if (entity is! File) continue;
         final name = entity.path.split(sep).last;
@@ -462,13 +466,11 @@ Future<(String assetDir, String commit)> fetchRemoteAsset(
         final staged = File('${staging.path}$sep$rel');
         if (staged.existsSync()) continue;
         staged.parent.createSync(recursive: true);
-        if (samePin) {
+        final fromCheckout = File([tmp.path, ...rel.split(sep)].join(sep));
+        if (fromCheckout.existsSync()) {
+          fromCheckout.copySync(staged.path);
+        } else if (samePin && sameCommit) {
           entity.copySync(staged.path);
-        } else {
-          final fromCheckout = File([tmp.path, ...rel.split(sep)].join(sep));
-          if (fromCheckout.existsSync()) {
-            fromCheckout.copySync(staged.path);
-          }
         }
       }
     }
@@ -529,13 +531,29 @@ Future<(String filePath, String ref, bool modUpdated)> ensureRemoteDevice({
   }
 
   final lockEntry = lock?.packages[asset.path];
+  final assetDir = assetCacheDir(asset, cacheRoot: cacheRoot);
+  final cachePin = readPin(assetDir);
+  final cacheCommit = readCommit(assetDir);
+  final cachedFile = cachedDeviceFilePath(asset, cacheRoot: cacheRoot);
+
+  // Shared repo cache: one .commit for all .svd files. Prefer an existing
+  // same-pin install over a stale per-file lock SHA (avoids downgrade that
+  // would mix sibling SVDs from different checkouts).
+  final cacheReusable = !force &&
+      cachePin == version &&
+      cacheCommit != null &&
+      cachedFile != null;
+
   final useLock = !force &&
+      !cacheReusable &&
       lockEntry != null &&
       lockEntry.version == version &&
       RegExp(r'^[0-9a-f]{7,40}$').hasMatch(lockEntry.commit);
-  final gitRef = useLock ? lockEntry.commit : version;
+  final gitRef = cacheReusable
+      ? cacheCommit
+      : (useLock ? lockEntry.commit : version);
 
-  final (assetDir, commit) = await fetchRemoteAsset(
+  final (_, commit) = await fetchRemoteAsset(
     asset,
     gitRef: gitRef,
     pin: version,
@@ -564,6 +582,17 @@ Future<(String filePath, String ref, bool modUpdated)> ensureRemoteDevice({
         '(expected ${lockEntry.commit}, got $commit)',
       );
     }
+  } else if (!force &&
+      lockEntry != null &&
+      lockEntry.version == version &&
+      RegExp(r'^[0-9a-f]{7,40}$').hasMatch(lockEntry.commit) &&
+      (commit.startsWith(lockEntry.commit) ||
+          lockEntry.commit.startsWith(commit)) &&
+      lockEntry.hash != hash) {
+    throw StateError(
+      'klin.lock hash mismatch for `${asset.path}@$version` '
+      '(expected sha256:${lockEntry.hash}, got sha256:$hash)',
+    );
   }
 
   if (modUpdated || mod.devices[asset.path] != version) {
@@ -583,6 +612,23 @@ Future<(String filePath, String ref, bool modUpdated)> ensureRemoteDevice({
       commit: commit,
       hash: hash,
     );
+    // Align sibling device locks for the same repo + pin to this commit.
+    final prefix = '${asset.repoPath}/';
+    for (final path in outLock.packages.keys.toList()) {
+      if (path == asset.path || !path.startsWith(prefix)) continue;
+      final entry = outLock.packages[path]!;
+      if (entry.version != version) continue;
+      final siblingFile = cachedDeviceFilePath(
+        parseRemoteAsset(path),
+        cacheRoot: cacheRoot,
+      );
+      if (siblingFile == null) continue;
+      outLock.packages[path] = KlinLockEntry(
+        version: version,
+        commit: commit,
+        hash: fileContentHash(siblingFile),
+      );
+    }
     final outFile = lockFile ?? klinLockFileFor(modFile);
     saveKlinLock(outFile, outLock);
   }
