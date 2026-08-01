@@ -1595,6 +1595,26 @@ fn main() {
     expect(c, contains('osa_answer'));
   });
 
+  test('string path import tolerates a trailing `.kl` (issue 048)', () async {
+    final dir = Directory.systemTemp.createTempSync('klin_pathkl048_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    Directory('${dir.path}/sub').createSync();
+    File('${dir.path}/sub/osa.kl').writeAsStringSync('''
+module osa
+pub fn answer(): i32 { return 9 }
+''');
+    File('${dir.path}/app.kl').writeAsStringSync('''
+module app
+import "sub/osa.kl"
+fn main() {
+  printf("%d\\n", osa.answer())
+}
+''');
+    final result = await _compileAndRun('${dir.path}/app.kl', dir);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, '9\n');
+  });
+
   test('error: conflicting import alias (issue 048)', () {
     final dir = Directory.systemTemp.createTempSync('klin_aliasdup048_');
     addTearDown(() => dir.deleteSync(recursive: true));

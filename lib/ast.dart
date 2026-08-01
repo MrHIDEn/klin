@@ -41,13 +41,16 @@ final class ImportSpec {
     required this.pos,
   });
 
-  /// Last path segment of [spec] without a trailing `.kl`.
+  /// Resolution key: [spec] without a trailing `.kl` (so `"a/b.kl"` and
+  /// `"a/b"` resolve identically; the loader appends `.kl` itself).
+  String get resolutionKey =>
+      spec.endsWith('.kl') ? spec.substring(0, spec.length - 3) : spec;
+
+  /// Last path segment of the resolution key.
   String get defaultQualifier {
-    var last = spec;
-    final slash = last.lastIndexOf('/');
-    if (slash >= 0) last = last.substring(slash + 1);
-    if (last.endsWith('.kl')) last = last.substring(0, last.length - 3);
-    return last;
+    final key = resolutionKey;
+    final slash = key.lastIndexOf('/');
+    return slash >= 0 ? key.substring(slash + 1) : key;
   }
 
   /// The identifier used to qualify references in source.

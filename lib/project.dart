@@ -122,7 +122,8 @@ Program loadProject(
     for (final u in units) {
       for (final imp in u.unit.imports) {
         final existing = byQualifier[imp.qualifier];
-        if (existing != null && existing.spec != imp.spec) {
+        if (existing != null &&
+            existing.resolutionKey != imp.resolutionKey) {
           throw ParseError(
             'import alias `${imp.qualifier}` is already bound to '
             '`${existing.spec}`',
@@ -138,7 +139,7 @@ Program loadProject(
       final imp = byQualifier[qualifier]!;
       final target = _resolveImportTarget(
         fromDir,
-        imp.spec,
+        imp.resolutionKey,
         klinPathDirs: klinPathDirs,
       );
       final childModule = switch (target) {
