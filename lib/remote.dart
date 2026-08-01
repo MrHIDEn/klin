@@ -180,12 +180,19 @@ String packageContentHash(String pkgDir) {
 
 final class KlinMod {
   final int version;
-  final Map<String, String> requires; // path → ref
+  final Map<String, String> requires; // path → ref (Klin packages)
+  final Map<String, String> devices; // path → ref (SVD assets, issue 053)
 
-  KlinMod({this.version = 1, Map<String, String>? requires})
-      : requires = Map<String, String>.from(requires ?? {});
+  KlinMod({
+    this.version = 1,
+    Map<String, String>? requires,
+    Map<String, String>? devices,
+  })  : requires = Map<String, String>.from(requires ?? {}),
+        devices = Map<String, String>.from(devices ?? {});
 
   static KlinMod empty() => KlinMod();
+
+  bool get isEmpty => requires.isEmpty && devices.isEmpty;
 }
 
 /// Find `klin.mod` walking up from [startDir]. Returns null if none.
@@ -203,6 +210,7 @@ File? findKlinModFile(String startDir) {
 
 KlinMod parseKlinMod(String content) {
   final requires = <String, String>{};
+  final devices = <String, String>{};
   var version = 1;
   for (final rawLine in content.split('\n')) {
     final line = rawLine.trim();
@@ -218,16 +226,25 @@ KlinMod parseKlinMod(String content) {
       requires[parts[1]] = parts[2];
       continue;
     }
+    if (parts.length == 3 && parts[0] == 'device') {
+      parseRemoteAsset('${parts[1]}@${parts[2]}');
+      devices[parts[1]] = parts[2];
+      continue;
+    }
     throw FormatException('invalid klin.mod line: `$rawLine`');
   }
-  return KlinMod(version: version, requires: requires);
+  return KlinMod(version: version, requires: requires, devices: devices);
 }
 
 String formatKlinMod(KlinMod mod) {
   final buf = StringBuffer('klin ${mod.version}\n');
-  final keys = mod.requires.keys.toList()..sort();
-  for (final path in keys) {
+  final reqKeys = mod.requires.keys.toList()..sort();
+  for (final path in reqKeys) {
     buf.writeln('require $path ${mod.requires[path]}');
+  }
+  final devKeys = mod.devices.keys.toList()..sort();
+  for (final path in devKeys) {
+    buf.writeln('device $path ${mod.devices[path]}');
   }
   return buf.toString();
 }
@@ -237,6 +254,445 @@ KlinMod loadKlinMod(File file) => parseKlinMod(file.readAsStringSync());
 void saveKlinMod(File file, KlinMod mod) {
   file.parent.createSync(recursive: true);
   file.writeAsStringSync(formatKlinMod(mod));
+}
+
+// --- Remote SVD / device assets (issue 053) ---------------------------------
+
+/// MVP allowlist: patched SVD mirrors only (not raw ST).
+const allowedDeviceRepos = {
+  'github/tinygo-org/stm32-svd',
+};
+
+/// Parsed `host/owner/repo/rel/path.svd` with optional `@ref`.
+final class RemoteAsset {
+  final String host;
+  final String owner;
+  final String repo;
+  final String filePath; // repo-relative, e.g. svd/stm32f411.svd
+  final String? ref;
+
+  const RemoteAsset({
+    required this.host,
+    required this.owner,
+    required this.repo,
+    required this.filePath,
+    this.ref,
+  });
+
+  /// Full asset path without `@ref`.
+  String get path => '$host/$owner/$repo/$filePath';
+
+  String get repoPath => '$host/$owner/$repo';
+
+  RemoteImport get asRepo => RemoteImport(
+        host: host,
+        owner: owner,
+        repo: repo,
+        ref: ref,
+      );
+}
+
+/// True when [spec] looks like a remote device asset (`….svd`).
+bool isRemoteDevicePath(String spec) {
+  var path = spec.trim();
+  final at = path.lastIndexOf('@');
+  if (at > 0) path = path.substring(0, at).trim();
+  if (!path.toLowerCase().endsWith('.svd')) return false;
+  final slash = path.indexOf('/');
+  if (slash <= 0) return false;
+  return remoteHosts.contains(path.substring(0, slash));
+}
+
+/// Parse `github/owner/repo/rel/file.svd` or `…@ref`.
+RemoteAsset parseRemoteAsset(String spec) {
+  var path = spec.trim();
+  String? ref;
+  final at = path.lastIndexOf('@');
+  if (at > 0) {
+    ref = path.substring(at + 1).trim();
+    path = path.substring(0, at).trim();
+    if (ref.isEmpty) {
+      throw FormatException('empty @ref in remote device `$spec`');
+    }
+    if (ref.contains('..') || ref.contains('/') || ref.contains('\\')) {
+      throw FormatException('invalid @ref in remote device `$spec`');
+    }
+  }
+  if (!path.toLowerCase().endsWith('.svd')) {
+    throw FormatException(
+      'remote device `$spec` must end with `.svd`',
+    );
+  }
+  final parts = path.split('/');
+  if (parts.length < 4 || parts.any((p) => p.isEmpty)) {
+    throw FormatException(
+      'remote device `$spec` must be host/owner/repo/path.svd '
+      '(optionally @ref)',
+    );
+  }
+  final host = parts[0];
+  if (!remoteHosts.contains(host)) {
+    throw FormatException(
+      'remote host `$host` is not allowed (use github or gitlab)',
+    );
+  }
+  final owner = parts[1];
+  final repo = parts[2];
+  if (!_isSafePathSegment(owner) || !_isSafePathSegment(repo)) {
+    throw FormatException(
+      'remote device `$spec` has an invalid owner or repo segment',
+    );
+  }
+  final fileParts = parts.sublist(3);
+  for (final seg in fileParts) {
+    if (!_isSafePathSegment(seg)) {
+      throw FormatException(
+        'remote device `$spec` has an invalid path segment `$seg`',
+      );
+    }
+  }
+  final repoKey = '$host/$owner/$repo';
+  if (!allowedDeviceRepos.contains(repoKey)) {
+    throw FormatException(
+      'remote device repo `$repoKey` is not on the allowlist '
+      '(MVP: github/tinygo-org/stm32-svd)',
+    );
+  }
+  return RemoteAsset(
+    host: host,
+    owner: owner,
+    repo: repo,
+    filePath: fileParts.join('/'),
+    ref: ref,
+  );
+}
+
+/// Directory for a cached device repo: `$cache/asset/host/owner/repo`.
+String assetCacheDir(RemoteAsset asset, {String? cacheRoot}) {
+  final root = klinCacheRoot(override: cacheRoot);
+  final sep = Platform.pathSeparator;
+  return '$root${sep}asset$sep${asset.host}$sep${asset.owner}$sep${asset.repo}';
+}
+
+/// Absolute path to a cached SVD file, or null if missing.
+String? cachedDeviceFilePath(RemoteAsset asset, {String? cacheRoot}) {
+  final dir = assetCacheDir(asset, cacheRoot: cacheRoot);
+  final sep = Platform.pathSeparator;
+  final file = File('$dir$sep${asset.filePath.replaceAll('/', sep)}');
+  if (!file.existsSync()) return null;
+  return file.path;
+}
+
+String fileContentHash(String filePath) {
+  final bytes = File(filePath).readAsBytesSync();
+  return sha256.convert(bytes).toString();
+}
+
+bool _isDeviceRepoInstalled(String assetDir, String pinValue) {
+  if (!Directory(assetDir).existsSync()) return false;
+  final pin = readPin(assetDir);
+  return pin == pinValue && readCommit(assetDir) != null;
+}
+
+/// Fetch [asset] into the asset cache. Returns `(assetDir, commitSha)`.
+Future<(String assetDir, String commit)> fetchRemoteAsset(
+  RemoteAsset asset, {
+  required String gitRef,
+  String? pin,
+  String? cacheRoot,
+  bool force = false,
+}) async {
+  final pinValue = pin ?? gitRef;
+  final assetDir = assetCacheDir(asset, cacheRoot: cacheRoot);
+  final sep = Platform.pathSeparator;
+  final targetFile = File(
+    '$assetDir$sep${asset.filePath.replaceAll('/', sep)}',
+  );
+
+  if (!force &&
+      _isDeviceRepoInstalled(assetDir, pinValue) &&
+      targetFile.existsSync()) {
+    final commit = readCommit(assetDir)!;
+    if (cacheSatisfiesRemoteFetch(
+      cachedPin: pinValue,
+      pinValue: pinValue,
+      cachedCommit: commit,
+      gitRef: gitRef,
+    )) {
+      return (assetDir, commit);
+    }
+  }
+
+  final tmp = Directory.systemTemp.createTempSync('klin_device_');
+  // Stage under the cache parent so rename stays on one filesystem.
+  final parent = Directory(assetDir).parent;
+  parent.createSync(recursive: true);
+  final staging = Directory(
+    '${parent.path}$sep.klin_devstage_${DateTime.now().microsecondsSinceEpoch}',
+  )..createSync();
+  var swapped = false;
+  try {
+    final commit = await _gitCheckoutRef(asset.asRepo.gitUrl, gitRef, tmp.path);
+    final srcFile = File(
+      [tmp.path, ...asset.filePath.split('/')].join(sep),
+    );
+    if (!srcFile.existsSync()) {
+      throw FileSystemException(
+        'remote device `${asset.path}` not found in repo after fetch',
+        srcFile.path,
+      );
+    }
+    final destRel = asset.filePath.replaceAll('/', sep);
+    final dest = File('${staging.path}$sep$destRel');
+    dest.parent.createSync(recursive: true);
+    srcFile.copySync(dest.path);
+    File('${staging.path}$sep.pin').writeAsStringSync('$pinValue\n');
+    File('${staging.path}$sep.commit')
+        .writeAsStringSync('${commit.toLowerCase()}\n');
+
+    // Keep sibling .svd paths: prefer bytes from this checkout; only reuse
+    // prior cache bytes when pin and commit are unchanged (adding a file).
+    if (Directory(assetDir).existsSync()) {
+      final prevPin = readPin(assetDir);
+      final prevCommit = readCommit(assetDir);
+      final samePin = prevPin == pinValue;
+      final sameCommit = prevCommit != null &&
+          (commit.startsWith(prevCommit) || prevCommit.startsWith(commit));
+      for (final entity in Directory(assetDir).listSync(recursive: true)) {
+        if (entity is! File) continue;
+        final name = entity.path.split(sep).last;
+        if (!name.endsWith('.svd')) continue;
+        final rel = entity.path.substring(assetDir.length + 1);
+        final staged = File('${staging.path}$sep$rel');
+        if (staged.existsSync()) continue;
+        staged.parent.createSync(recursive: true);
+        final fromCheckout = File([tmp.path, ...rel.split(sep)].join(sep));
+        if (fromCheckout.existsSync()) {
+          fromCheckout.copySync(staged.path);
+        } else if (samePin && sameCommit) {
+          entity.copySync(staged.path);
+        }
+      }
+    }
+
+    _swapCacheDir(staging.path, assetDir);
+    swapped = true;
+    return (assetDir, commit.toLowerCase());
+  } finally {
+    if (tmp.existsSync()) tmp.deleteSync(recursive: true);
+    if (!swapped && staging.existsSync()) {
+      staging.deleteSync(recursive: true);
+    }
+  }
+}
+
+/// Atomically replace [destDir] with [stagingDir] (same parent filesystem).
+void _swapCacheDir(String stagingDir, String destDir) {
+  final dest = Directory(destDir);
+  final staging = Directory(stagingDir);
+  if (!dest.existsSync()) {
+    staging.renameSync(destDir);
+    return;
+  }
+  final backup = Directory('$destDir.__klin_old');
+  if (backup.existsSync()) backup.deleteSync(recursive: true);
+  dest.renameSync(backup.path);
+  try {
+    staging.renameSync(destDir);
+  } catch (_) {
+    if (!Directory(destDir).existsSync() && backup.existsSync()) {
+      backup.renameSync(destDir);
+    }
+    rethrow;
+  }
+  backup.deleteSync(recursive: true);
+}
+
+/// Ensure [asset] is installed per [mod] / lock. Updates `device` lines + lock.
+Future<(String filePath, String ref, bool modUpdated)> ensureRemoteDevice({
+  required RemoteAsset asset,
+  required KlinMod mod,
+  required File modFile,
+  KlinLock? lock,
+  File? lockFile,
+  String? cacheRoot,
+  bool force = false,
+}) async {
+  var modUpdated = false;
+  String version;
+  if (asset.ref != null) {
+    version = asset.ref!;
+    if (mod.devices[asset.path] != version) modUpdated = true;
+  } else if (mod.devices.containsKey(asset.path)) {
+    version = mod.devices[asset.path]!;
+  } else {
+    version = await resolveLatestRef(asset.asRepo);
+    modUpdated = true;
+  }
+
+  final lockEntry = lock?.packages[asset.path];
+  final assetDir = assetCacheDir(asset, cacheRoot: cacheRoot);
+  final cachePin = readPin(assetDir);
+  final cacheCommit = readCommit(assetDir);
+  final cachedFile = cachedDeviceFilePath(asset, cacheRoot: cacheRoot);
+
+  // Shared repo cache: one .commit for all .svd files. Prefer an existing
+  // same-pin install over a stale per-file lock SHA (avoids downgrade that
+  // would mix sibling SVDs from different checkouts).
+  final cacheReusable = !force &&
+      cachePin == version &&
+      cacheCommit != null &&
+      cachedFile != null;
+
+  final useLock = !force &&
+      !cacheReusable &&
+      lockEntry != null &&
+      lockEntry.version == version &&
+      RegExp(r'^[0-9a-f]{7,40}$').hasMatch(lockEntry.commit);
+  final gitRef = cacheReusable
+      ? cacheCommit
+      : (useLock ? lockEntry.commit : version);
+
+  final (_, commit) = await fetchRemoteAsset(
+    asset,
+    gitRef: gitRef,
+    pin: version,
+    cacheRoot: cacheRoot,
+    force: force,
+  );
+  final filePath = cachedDeviceFilePath(asset, cacheRoot: cacheRoot);
+  if (filePath == null) {
+    throw FileSystemException(
+      'device `${asset.path}` missing after fetch',
+      assetDir,
+    );
+  }
+  final hash = fileContentHash(filePath);
+  if (useLock) {
+    if (lockEntry.hash != hash) {
+      throw StateError(
+        'klin.lock hash mismatch for `${asset.path}@$version` '
+        '(expected sha256:${lockEntry.hash}, got sha256:$hash)',
+      );
+    }
+    if (!commit.startsWith(lockEntry.commit) &&
+        !lockEntry.commit.startsWith(commit)) {
+      throw StateError(
+        'klin.lock commit mismatch for `${asset.path}@$version` '
+        '(expected ${lockEntry.commit}, got $commit)',
+      );
+    }
+  } else if (!force &&
+      lockEntry != null &&
+      lockEntry.version == version &&
+      RegExp(r'^[0-9a-f]{7,40}$').hasMatch(lockEntry.commit) &&
+      (commit.startsWith(lockEntry.commit) ||
+          lockEntry.commit.startsWith(commit)) &&
+      lockEntry.hash != hash) {
+    throw StateError(
+      'klin.lock hash mismatch for `${asset.path}@$version` '
+      '(expected sha256:${lockEntry.hash}, got sha256:$hash)',
+    );
+  }
+
+  if (modUpdated || mod.devices[asset.path] != version) {
+    mod.devices[asset.path] = version;
+    saveKlinMod(modFile, mod);
+    modUpdated = true;
+  }
+
+  final outLock = lock ?? KlinLock.empty();
+  final prev = outLock.packages[asset.path];
+  if (prev == null ||
+      prev.version != version ||
+      prev.commit != commit ||
+      prev.hash != hash) {
+    outLock.packages[asset.path] = KlinLockEntry(
+      version: version,
+      commit: commit,
+      hash: hash,
+    );
+    // Align sibling device locks for the same repo + pin to this commit.
+    final prefix = '${asset.repoPath}/';
+    for (final path in outLock.packages.keys.toList()) {
+      if (path == asset.path || !path.startsWith(prefix)) continue;
+      final entry = outLock.packages[path]!;
+      if (entry.version != version) continue;
+      final siblingFile = cachedDeviceFilePath(
+        parseRemoteAsset(path),
+        cacheRoot: cacheRoot,
+      );
+      if (siblingFile == null) continue;
+      outLock.packages[path] = KlinLockEntry(
+        version: version,
+        commit: commit,
+        hash: fileContentHash(siblingFile),
+      );
+    }
+    final outFile = lockFile ?? klinLockFileFor(modFile);
+    saveKlinLock(outFile, outLock);
+  }
+  return (filePath, version, modUpdated);
+}
+
+/// Resolve a `$device` / `$peripherals_from_svd` path to a local SVD file.
+///
+/// Order: existing local file (incl. vendored `github/…/*.svd`) → asset cache
+/// (offline). Throws [FileSystemException] with a `klin get` hint when a
+/// remote-shaped path is missing from cache.
+String resolveSvdPath(
+  String svdArg, {
+  required String sourcePath,
+  String? cacheRoot,
+}) {
+  final sourceFile = File(sourcePath).absolute;
+  final sourceDir = sourceFile.parent;
+  final localFile = File(
+    svdArg.startsWith('/') ||
+            (svdArg.length >= 3 &&
+                svdArg[1] == ':' &&
+                (svdArg[2] == '\\' || svdArg[2] == '/'))
+        ? svdArg
+        : '${sourceDir.path}${Platform.pathSeparator}$svdArg',
+  ).absolute;
+  if (localFile.existsSync()) return localFile.path;
+
+  if (isRemoteDevicePath(svdArg)) {
+    final asset = parseRemoteAsset(svdArg);
+    // Prefer pin from klin.mod when path has no @ref.
+    RemoteAsset effective = asset;
+    if (asset.ref == null) {
+      final modFile = findKlinModFile(sourceDir.path);
+      if (modFile != null) {
+        final mod = loadKlinMod(modFile);
+        final pinned = mod.devices[asset.path];
+        if (pinned != null) {
+          effective = RemoteAsset(
+            host: asset.host,
+            owner: asset.owner,
+            repo: asset.repo,
+            filePath: asset.filePath,
+            ref: pinned,
+          );
+        }
+      }
+    }
+    final cached = cachedDeviceFilePath(effective, cacheRoot: cacheRoot);
+    if (cached != null) {
+      final dir = assetCacheDir(effective, cacheRoot: cacheRoot);
+      final pin = readPin(dir);
+      if (effective.ref == null || pin == effective.ref) return cached;
+    }
+    throw FileSystemException(
+      'remote device `${asset.path}` is not in the Klin cache; '
+      'run `klin get ${asset.path}${asset.ref != null ? '@${asset.ref}' : ''}` '
+      'first (compile stays offline)',
+      cachedDeviceFilePath(asset, cacheRoot: cacheRoot) ??
+          assetCacheDir(asset, cacheRoot: cacheRoot),
+    );
+  }
+
+  throw FileSystemException('SVD file not found', localFile.path);
 }
 
 // --- klin.lock (issue 065) --------------------------------------------------

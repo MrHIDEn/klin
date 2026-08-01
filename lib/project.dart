@@ -11,7 +11,8 @@ import 'token.dart';
 ///
 /// [klinPathDirs] are CLI `-I` directories (searched in order, after `lib/`).
 /// Environment `$KLIN_PATH` is also consulted (PATH-style separator).
-/// [klinCacheDir] overrides `$KLIN_CACHE` for remote imports (issue 049).
+/// [klinCacheDir] overrides `$KLIN_CACHE` for remote imports (049) and
+/// `$device` SVD assets (053).
 ///
 /// `import name` resolves to `name.kl` **or** a directory `name/` of `.kl`
 /// files (issue 047). Both in the same search slot → error.
@@ -75,7 +76,11 @@ Program loadProject(
       if (!file.existsSync()) {
         throw FileSystemException('imported file not found', path);
       }
-      final expanded = preprocess(file.readAsStringSync(), path: path);
+      final expanded = preprocess(
+        file.readAsStringSync(),
+        path: path,
+        klinCacheDir: klinCacheDir,
+      );
       final unit = Parser(Lexer(expanded).tokenize()).parseUnit();
       final moduleName = unit.declaredName ?? _fileStem(path);
       if (requiredModule != null && moduleName != requiredModule) {
@@ -163,8 +168,11 @@ Program loadProject(
 
   // Entry: load the entry file plus same-module siblings in its directory.
   final entryAbs = File(entryPath).absolute.path;
-  final entryExpanded =
-      preprocess(File(entryAbs).readAsStringSync(), path: entryAbs);
+  final entryExpanded = preprocess(
+    File(entryAbs).readAsStringSync(),
+    path: entryAbs,
+    klinCacheDir: klinCacheDir,
+  );
   final entryUnit = Parser(Lexer(entryExpanded).tokenize()).parseUnit();
   final entryModule = entryUnit.declaredName ?? _fileStem(entryAbs);
   final entryDir = File(entryAbs).parent.path;
@@ -176,7 +184,11 @@ Program loadProject(
     final looksLikeSibling = _fileStem(path) == entryModule ||
         moduleDecl.hasMatch(raw);
     try {
-      final expanded = preprocess(raw, path: path);
+      final expanded = preprocess(
+        raw,
+        path: path,
+        klinCacheDir: klinCacheDir,
+      );
       final unit = Parser(Lexer(expanded).tokenize()).parseUnit();
       final name = unit.declaredName ?? _fileStem(path);
       if (name == entryModule) siblingFiles.add(path);

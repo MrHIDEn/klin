@@ -249,7 +249,7 @@ Future<void> _runUpgrade(List<String> args) async {
   }
 }
 
-/// `klin get` / `klin update` — fetch remote packages; write klin.mod + klin.lock.
+/// `klin get` / `klin update` — fetch packages + devices; write klin.mod + lock.
 Future<void> _runGet(List<String> args, {required bool force}) async {
   final cmd = force ? 'update' : 'get';
   try {
@@ -262,21 +262,52 @@ Future<void> _runGet(List<String> args, {required bool force}) async {
 
     final specs = <String>[];
     if (args.isEmpty) {
-      if (!modFile.existsSync() || mod.requires.isEmpty) {
+      if (!modFile.existsSync() || mod.isEmpty) {
         stderr.writeln(
-          'klin $cmd: no klin.mod requires; pass path[@ref] '
-          '(e.g. github/mrhiden/osa@v0.1.0)',
+          'klin $cmd: no klin.mod requires/devices; pass path[@ref] '
+          '(e.g. github/mrhiden/osa@v0.1.0 or '
+          'github/tinygo-org/stm32-svd/svd/stm32f411.svd@main)',
         );
         exit(2);
       }
       for (final path in mod.requires.keys.toList()..sort()) {
         specs.add('$path@${mod.requires[path]}');
       }
+      for (final path in mod.devices.keys.toList()..sort()) {
+        specs.add('$path@${mod.devices[path]}');
+      }
     } else {
       specs.addAll(args);
     }
 
     for (final spec in specs) {
+      if (isRemoteDevicePath(spec)) {
+        final asset = parseRemoteAsset(spec);
+        final effective = force &&
+                asset.ref == null &&
+                mod.devices[asset.path] != null
+            ? RemoteAsset(
+                host: asset.host,
+                owner: asset.owner,
+                repo: asset.repo,
+                filePath: asset.filePath,
+                ref: mod.devices[asset.path],
+              )
+            : asset;
+        final (filePath, ref, _) = await ensureRemoteDevice(
+          asset: effective,
+          mod: mod,
+          modFile: modFile,
+          lock: lock,
+          lockFile: lockFile,
+          force: force,
+        );
+        if (modFile.existsSync()) mod = loadKlinMod(modFile);
+        if (lockFile.existsSync()) lock = loadKlinLock(lockFile);
+        stdout.writeln('${asset.path}@$ref → $filePath');
+        continue;
+      }
+
       final remote = parseRemoteImport(spec);
       // update without @ref keeps klin.mod pin; get without @ref may resolve latest
       final effective = force && remote.ref == null && mod.requires[remote.path] != null
@@ -295,7 +326,6 @@ Future<void> _runGet(List<String> args, {required bool force}) async {
         lockFile: lockFile,
         force: force,
       );
-      // Reload mod/lock after possible write.
       if (modFile.existsSync()) mod = loadKlinMod(modFile);
       if (lockFile.existsSync()) lock = loadKlinLock(lockFile);
       stdout.writeln('${remote.path}@$ref → $pkgDir');

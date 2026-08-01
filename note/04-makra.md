@@ -68,10 +68,12 @@ Definicja: `$fn nazwa(param: kind, …) { … }`.
 Wywołanie: `$nazwa(args…)`. Nieznane `$slot` w ciele po expand = błąd
 (z wyjątkiem `$…` w stringach i `//` komentarzach).
 
-## Built-in: `$peripherals_from_svd` (027)
+## Built-in: `$device` / `$peripherals_from_svd` (027, 053)
 
 ```klin
-$peripherals_from_svd("../../../third_party/svd/stm32f411.svd", "RCC,GPIOA,STK")
+// lokalnie (027) albo remote z cache (053):
+$device("github/tinygo-org/stm32-svd/svd/stm32f411.svd", "RCC,GPIOA,STK")
+// alias: $peripherals_from_svd("…", "…")
 
 fn main() {
   RCC.AHB1ENR.GPIOAEN.set(1)
@@ -81,11 +83,14 @@ fn main() {
 ```
 
 Expand → `@[cinclude("…_regs.h")]` + `RCC_AHB1ENR_GPIOAEN_set(1)` itd.
-(reuse emittera z 011; zero-cost `static inline`). Przykład:
+(reuse emittera z 011; zero-cost `static inline`). Przykład lokalny:
 [`examples/stm32/blink_f411/blink.kl`](../examples/stm32/blink_f411/blink.kl).
 
-Docelowy UX: `$device("github/…/stm32f411.svd", …)` (Go-like fetch + cache)
-oraz opcjonalnie paczki `import stm32_…` — [053](../issues/053-device-board-assets.md).
+Remote SVD (053): `klin get github/tinygo-org/stm32-svd/svd/stm32f411.svd@main`
+→ cache `$KLIN_CACHE/asset/…`, linia `device …` w `klin.mod` + wpis w
+`klin.lock`. Kompilacja / `run` bez sieci; brak cache → błąd z hintem
+`klin get`. Allowlista MVP: `github/tinygo-org/stm32-svd`. Board / `.ioc`
+osobno (później: `board` w `klin.mod` / wąski `.ioc`).
 
 ## Czego to nie jest
 
