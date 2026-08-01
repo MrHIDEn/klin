@@ -3,6 +3,14 @@
 **Status:** 💭 wnioski (docs); implementacja później  
 **Zależy od:** [010](010-bare-metal.md), [054](054-embedded-project-layout.md), [053](053-device-board-assets.md); mile [074](074-board-ioc-klin-mod.md)
 
+## Werdykt w skrócie
+
+**Laptop (host): bez magii linkera/startupu — bez tych plików.**
+
+`klin run examples/hello.kl` nie wymaga `linker.ld` ani `startup.s`. Entry i
+link robi **CRT + libc hosta** (gcc/clang/tcc). Żadnego freestanding, żadnej
+tablicy wektorów. Magia ld/startup dotyczy **tylko bare-metalu** (`examples/stm32/…`).
+
 ## Problem
 
 `linker.ld` + `startup.s` to największy próg wejścia bare-metalu: mapa pamięci,
@@ -37,13 +45,17 @@ Cel UX: 95% userów **nigdy nie edytuje** `linker.ld` / `startup.s`; edytuje
 To boilerplate **targetu / boardu**, nie linia w `klin.mod` obok `device`
 (mod pinuje artefakty do fetch; ld leży w packu / `board/`).
 
-### 3. Host (laptop) — **nie ma** tej magii
+### 3. Host (laptop) — **nie ma** tej magii i **nie ma tych plików**
 
 Na laptopie ścieżka to `klin run` → emit C → host `gcc`/`clang`/`tcc` →
 link z **systemowym CRT + libc** (crt0, domyślny skrypt linkera OS).
 
-User **nie** dostarcza `startup.s` ani `linker.ld`. Nie ma freestanding
-wektorów przerwań. To nie jest „ten sam problem co Nucleo”.
+- **Brak** `startup.s` w projekcie hostowym.
+- **Brak** `linker.ld` / `-T …` w typowym `klin run`.
+- **Brak** freestanding wektorów przerwań.
+
+To nie jest „ten sam problem co Nucleo”. Host ≠ MCU; nie projektować UX
+bare-metalu tak, jakby każdy program Klin wymagał ld/startup.
 
 | | Host | Bare-metal (STM32, …) |
 |---|---|---|
@@ -74,7 +86,8 @@ niższy priorytet.
 
 ## Kryterium (gdy wejdzie implementacja)
 
-- [ ] udokumentowany podział: host vs MCU (ten issue + `examples/README`)
+- [x] udokumentowany podział: host vs MCU (ten issue + `examples/README`)
+      — laptop: bez magii, bez `linker.ld`/`startup.s`
 - [ ] co najmniej jeden board pack / szablon Nucleo-F411 bez edycji ld przez usera
 - [ ] (opcjonalnie) `klin init nucleo-f411` albo równoważny scaffold w repo
 - [ ] (opcjonalnie, niski priorytet) `klin init` host → `hello` + moda

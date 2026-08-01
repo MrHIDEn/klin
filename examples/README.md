@@ -9,6 +9,10 @@ dart run bin/klin.dart fmt -w examples/hello.kl       # write in place
 dart run bin/klin.dart test examples/                 # *_test.kl
 ```
 
+**Host (laptop):** zwykłe `*.kl` powyżej — **bez** `linker.ld` / `startup.s`
+(CRT + libc systemu). Magia ld/startup tylko w bare-metal
+`stm32/…` ([075](../issues/075-board-pack-init-host.md)).
+
 Style: [note/05-fmt.md](../note/05-fmt.md) (`klin fmt`). Sources with `$…` macros
 are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), not
 `point_macro.kl` / `stm32/.../blink.kl` as-is.
@@ -42,4 +46,5 @@ are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), n
 | `stm32/blink_f411/` | Nucleo-F411RE LED — lokalne `$peripherals_from_svd` + `@[link("startup.s")]` → `out/*.link` |
 | `stm32/device_f411/` | To samo przez `$device` + `klin.mod` / `klin get` ([053](../issues/053-device-board-assets.md)) |
 
-Bare-metal boards go under `stm32/<name>/`.
+Bare-metal boards go under `stm32/<name>/` (tu dopiero `startup.s` + `linker.ld`
+— pack/scaffold, nie wymóg hosta; [075](../issues/075-board-pack-init-host.md)).
