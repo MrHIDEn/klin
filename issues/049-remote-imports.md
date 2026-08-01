@@ -1,7 +1,8 @@
 # 049 — Importy zdalne (GitHub / path jak Go)
 
 **Status:** 💭 do rozważenia
-**Zależy od:** [048](048-import-aliases.md) (string + alias), [020](020-biblioteki-klin.md), [047](047-directory-modules.md)
+**Zależy od:** [048](048-import-aliases.md) (string + alias), [020](020-biblioteki-klin.md), [047](047-directory-modules.md);
+fixture e2e: [063](063-remote-fixture-osa.md) (`github/mrhiden/osa`, tag `v0.1.0`)
 
 ## Kontekst
 
@@ -64,6 +65,12 @@ Zachowanie:
 Nazwy robocze: `get` / `update`. Alternatywy przy realizacji: `klin mod download`
 / `klin mod tidy` (styl Go) — wybrać jedną konwencję, nie obie naraz w MVP.
 
+## Fixture e2e
+
+Publiczny pakiet do testów i przykładów: [063](063-remote-fixture-osa.md) —
+https://github.com/MrHIDEn/osa (`import "github/mrhiden/osa"`, pin `v0.1.0`).
+Offline CI: preseed cache / mock HTTP; nie wymaga sieci przy każdym jobie.
+
 ## Poza zakresem
 
 - pełny registry jak npm / centrala Klin
@@ -72,3 +79,5 @@ Nazwy robocze: `get` / `update`. Alternatywy przy realizacji: `klin mod download
 - surowe `import "*.svd"` w składni modułów — artefakty to [053](053-device-board-assets.md)
   (`$device("github/…/….svd")` = Go-like fetch SVD; ten issue = remote **modułów** Klin)
 - auto-update w tle / przy każdym CI bez jawnego kroku
+- treść / hosting paczki `osa` → [063](063-remote-fixture-osa.md)
+
