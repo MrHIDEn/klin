@@ -159,6 +159,50 @@ callera, nie magiczny Future w runtime.
 Taski RTOS / ticki event-loop **nie** wymagają zamiany metod w Promise/Future —
 wystarczą wolne `fn` (+ opcjonalnie `$rtos_task` / `$event_loop`).
 
+### Szkic 1-plikowy: `async`/`await` (styl Rust) + remote lib
+
+**Niekompilowalne dziś.** Plik roboczy:
+[`examples/sketch_async_eventloop.kl`](../examples/sketch_async_eventloop.kl).
+Wymaga feature rdzenia (`async`/`await`) oraz paczki po
+`klin get github/mrhiden/eventloop@…` ([049](049-remote-imports.md)).
+
+```klin
+/// SKETCH — Rust-like state machine + explicit executor (no JS Promise).
+
+import "github/mrhiden/eventloop"
+import io
+
+async fn delay_ms(ms: i32) {
+    eventloop.sleep_ms(ms).await
+}
+
+async fn ticker() {
+    while true {
+        io.println("tick")
+        delay_ms(100).await
+    }
+}
+
+fn main() {
+    let mut queue_buf: [64]u8
+    let mut ex = eventloop.Executor{}
+    ex.init(queue_buf[:])
+    ex.spawn(ticker)   // stan maszyny w executorze / buforze — nie heap Promise
+    ex.run()           // tu jest „życie”: poll timerów → resume po await
+}
+```
+
+Gdzie co się dzieje:
+
+| Fragment | Rola |
+|---|---|
+| `async fn ticker` | cukier rdzenia → struct stanu + `poll` (jak Rust) |
+| `delay_ms(100).await` | zawieś `ticker`, wróć do executora |
+| `eventloop.Executor` / `run` | **biblioteka zdalna** — jawna pętla |
+| `queue_buf` | pamięć callera — zero ukrytego malloc |
+
+Bez `async` ten sam efekt = callbacki + `every_ms` + `run` (sekcja wyżej).
+
 ## Hipotezy techniczne (nie zobowiązanie)
 
 - **A)** opcjonalny moduł + jawny executor / `Allocator` (raczej host)
