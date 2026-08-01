@@ -84,6 +84,32 @@ nie enum (brak dyskryminanty całkowitej), tylko **nazwany zbiór stałych
 Propozycja: **na razie pominąć**; jeśli potrzebne, dać `fn (c: E) label(): str`
 zamiast enuma stringowego. Zapisane jako opcja, nie zobowiązanie.
 
+## Do rozważenia: enum oparty o KV / uniwersalny „kvenum" / string-enum
+
+Osobny, opcjonalny wariant enuma jako **mapa klucz→wartość** (nie tylko
+całkowita dyskryminanta). Warianty do rozważenia:
+
+- **kv-enum** — wariant `wariant = wartość` z jednym, wspólnym typem wartości,
+  np. `str` (string-enum), `i64`, czy inny skalar: `enum Http: str { Ok = "ok",
+  NotFound = "not_found" }`. Emisja: tablica stałych (`static const`) indeksowana
+  dyskryminantą + akcesor `value()` — zero ukrytego kosztu.
+- **uniwersalny kvenum** — każdy wariant niesie krotkę/rekord metadanych
+  (np. `{ code: i32, label: str }`), coś jak „enhanced enum" z Darta, ale
+  **bez** heap i refleksji: statyczna tablica rekordów + akcesory. To już bliskie
+  wariantom-z-danymi, więc granica z „enum algebraiczny" (poza zakresem) musi być
+  jasna: tu **stała** tablica per-wariant, nie payload runtime.
+- **string-enum** (styl TS) — szczególny przypadek kv-enum z wartością `str`
+  (patrz sekcja wyżej).
+
+Relacja do [060](060-map-kv.md) (mapa KV): kvenum to **statyczny, domknięty**
+zbiór (znany w compile-time), więc lepiej pasuje tablica stałych niż hash-mapa;
+map-KV zostaje dla danych dynamicznych. Realizacja przez `$fn` (monomorfizacja)
+jak reszta.
+
+Status: **do rozważenia** — czy jako rozszerzenie składni `enum` (wartości per
+wariant), czy jako osobny konstrukt; oraz czy w ogóle, skoro `fn (c: E)
+value(): T` + `match` już to pokrywa bez nowej cechy.
+
 ## Poza zakresem (na start)
 
 - Enumy algebraiczne z danymi (Rust/Swift `enum` z payloadem) — duży, osobny
