@@ -87,6 +87,18 @@ import "github/mrhiden/osa"
 
 `outdated` / `upgrade` → [066](../issues/066-klin-upgrade-outdated.md) ✅.
 
+## Device SVD (`$device`) — issue 053
+
+```klin
+$device("github/tinygo-org/stm32-svd/svd/stm32f411.svd", "RCC,GPIOA")
+```
+
+- To **nie** jest `import` — artefakt vendora (SVD), nie moduł Klin.
+- `klin get …/file.svd@ref` → `$KLIN_CACHE/asset/host/owner/repo/…`,
+  `klin.mod` linia `device path ref`, `klin.lock` (commit + sha256 pliku).
+- Allowlista MVP: `github/tinygo-org/stm32-svd`. Lokalna ścieżka nadal działa.
+- Board / CubeMX `.ioc` — poza MVP (osobny issue po 053).
+
 ## Poza zakresem
 
 Osobne `.a` z lib Klin. Aliasy / import ścieżkowy: [048](../issues/048-import-aliases.md) ✅.

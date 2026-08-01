@@ -37,19 +37,24 @@ final class _MacroDef {
 }
 
 /// Expands `$fn` definitions and `$name(...)` invocations in [source].
-String preprocess(String source, {String path = '<input>'}) {
-  final scanner = _PpScanner(source, path);
+String preprocess(
+  String source, {
+  String path = '<input>',
+  String? klinCacheDir,
+}) {
+  final scanner = _PpScanner(source, path, klinCacheDir: klinCacheDir);
   return scanner.expand();
 }
 
 final class _PpScanner {
   final String source;
   final String path;
+  final String? klinCacheDir;
   int _i = 0;
   int _line = 1;
   int _col = 1;
 
-  _PpScanner(this.source, this.path);
+  _PpScanner(this.source, this.path, {this.klinCacheDir});
 
   Never _err(String message, [SourcePos? pos]) =>
       throw PreprocessError(message, pos ?? _pos, path: path);
@@ -77,14 +82,14 @@ final class _PpScanner {
         final name = _readIdent();
         _skipSpace();
         if (!_atEnd && _peek == '(') {
-          if (name == 'peripherals_from_svd') {
+          if (name == 'peripherals_from_svd' || name == 'device') {
             if (svdDevice != null) {
-              _err('duplicate `\$peripherals_from_svd`', start);
+              _err('duplicate `\$device` / `\$peripherals_from_svd`', start);
             }
             final args = _parseArgList();
             if (args.isEmpty || args.length > 2) {
               _err(
-                '`\$peripherals_from_svd` expects 1 or 2 arguments '
+                '`\$$name` expects 1 or 2 arguments '
                 '(svd path[, peripherals])',
                 start,
               );
@@ -94,6 +99,7 @@ final class _PpScanner {
               peripheralsArg: args.length > 1 ? args[1] : null,
               sourcePath: path,
               callPos: start,
+              klinCacheDir: klinCacheDir,
             );
             svdDevice = expansion.device;
             out.write(expansion.klinSnippet);

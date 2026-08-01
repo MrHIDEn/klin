@@ -1,11 +1,12 @@
 import 'dart:io';
 
+import '../remote.dart';
 import '../token.dart';
 import 'emit.dart';
 import 'model.dart';
 import 'parse.dart';
 
-/// Result of `$peripherals_from_svd(...)`: decls + device for fluent rewrite.
+/// Result of `$peripherals_from_svd` / `$device`: decls + device for fluent rewrite.
 final class SvdPeripheralsExpansion {
   /// Klin text to splice in (`@[cinclude]` + `@[cimport]` accessors).
   final String klinSnippet;
@@ -17,21 +18,36 @@ final class SvdPeripheralsExpansion {
   });
 }
 
-/// Resolves SVD, writes `{stem}_regs.h` (and `.kl`) next to the Klin source,
-/// returns Klin decls (`cinclude` + `cimport`) plus the device for fluent rewrite.
+/// Resolves SVD (local or remote cache), writes `{stem}_regs.h` / `.kl` next to
+/// the Klin source, returns Klin decls plus the device for fluent rewrite.
 SvdPeripheralsExpansion expandPeripheralsFromSvd({
   required String svdArg,
   String? peripheralsArg,
   required String sourcePath,
   required SourcePos callPos,
+  String? klinCacheDir,
 }) {
   final sourceFile = File(sourcePath).absolute;
   final sourceDir = sourceFile.parent;
-  final svdFile = File(
-    svdArg.startsWith('/') || _isWindowsDrive(svdArg)
-        ? svdArg
-        : '${sourceDir.path}${Platform.pathSeparator}$svdArg',
-  ).absolute;
+  late final File svdFile;
+  try {
+    svdFile = File(
+      resolveSvdPath(
+        svdArg,
+        sourcePath: sourcePath,
+        cacheRoot: klinCacheDir,
+      ),
+    );
+  } on FileSystemException catch (e) {
+    final where = e.path != null ? ' (${e.path})' : '';
+    throw PreprocessError(
+      '${e.message}$where',
+      callPos,
+      path: sourcePath,
+    );
+  } on FormatException catch (e) {
+    throw PreprocessError(e.message, callPos, path: sourcePath);
+  }
   if (!svdFile.existsSync()) {
     throw PreprocessError(
       'SVD file not found `${svdFile.path}`',
@@ -51,7 +67,7 @@ SvdPeripheralsExpansion expandPeripheralsFromSvd({
         .toSet();
     if (peripherals.isEmpty) {
       throw PreprocessError(
-        'empty peripherals list in `\$peripherals_from_svd`',
+        'empty peripherals list in `\$device` / `\$peripherals_from_svd`',
         callPos,
         path: sourcePath,
       );
@@ -364,9 +380,6 @@ bool _isIdentStart(String c) {
 
 bool _isIdentContinue(String c) =>
     _isIdentStart(c) || (c.codeUnitAt(0) >= 48 && c.codeUnitAt(0) <= 57);
-
-bool _isWindowsDrive(String path) =>
-    path.length >= 2 && path[1] == ':' && _isIdentStart(path[0]);
 
 String _fileStem(String path) {
   final name = path.split(Platform.pathSeparator).last;

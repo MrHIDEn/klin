@@ -18,8 +18,8 @@ Wejście: `dart run bin/klin.dart <subcommand|plik.kl> …`
 | *(bare path)* | Alias `run` — `klin examples/hello.kl` |
 | `fmt [-w] <plik.kl>` | Canonical printer (4 spacje, K&R). Bez `-w` → stdout; z `-w` → zapis |
 | `test [ścieżka…]` | Szuka `*_test.kl`, uruchamia `test_*` (jak `go test`) |
-| `get [path[@ref]…]` | Pobierz remote do cache; zapis `klin.mod` + `klin.lock` ([049](../issues/049-remote-imports.md), [065](../issues/065-project-lockfile.md)) |
-| `update [path[@ref]…]` | Force ponowne pobranie (bez args = wszystkie z `klin.mod`); odświeża lock |
+| `get [path[@ref]…]` | Pobierz remote pakiet **lub** device SVD (`.svd`) do cache; zapis `klin.mod` (`require` / `device`) + `klin.lock` ([049](../issues/049-remote-imports.md), [053](../issues/053-device-board-assets.md), [065](../issues/065-project-lockfile.md)) |
+| `update [path[@ref]…]` | Force ponowne pobranie (bez args = wszystkie `require`/`device` z `klin.mod`); odświeża lock |
 | `outdated [path…]` | Raport: pin z moda vs najnowszy tag/ref na hoście ([066](../issues/066-klin-upgrade-outdated.md); **sieć**) |
 | `upgrade [path…]` | Bump outdated → latest + pobranie ([066](../issues/066-klin-upgrade-outdated.md); **sieć**) |
 

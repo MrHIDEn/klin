@@ -1,7 +1,7 @@
 # 053 — `$device` + Go-like fetch SVD (IOC / board)
 
-**Status:** 💭 do rozważenia
-**Zależy od:** [027](027-svd-ergonomic-api.md); infrastruktura cache/fetch wspólna z [049](049-remote-imports.md) (gdy będzie); paczki opcjonalnie [020](020-biblioteki-klin.md) / [047](047-directory-modules.md)
+**Status:** ✅ MVP (SVD + `device` w `klin.mod`); board / `.ioc` — później  
+**Zależy od:** [027](027-svd-ergonomic-api.md); [049](049-remote-imports.md)
 
 ## Kontekst
 
@@ -21,94 +21,84 @@ i wymaga ręcznego vendorowania SVD. Chcemy czystszego modelu: jak w Go —
 ten sam styl stringów co Go/`import "…"`, ale **inna komenda**, żeby nie
 mieszać modeli.
 
-## Cel A — Go-style fetch SVD (priorytet UX)
+## Cel A — Go-style fetch SVD (priorytet UX) — MVP ✅
 
 Użytkownik (lub cienka paczka) pisze path jak moduł Go; Klin resolvuje →
 cache → codegen. Bez ręcznego kopiowania `third_party/svd/`.
 
 ```klin
 // top-level — nie w main
-$device("github/tinygo-org/stm32-svd/stm32f411.svd", use: "RCC,GPIOA,STK")
-// skrót katalogowy (opcjonalnie, później):
-// $device("stm32f411", use: "RCC,GPIOA,STK")  // → znane mirror / allowlista
+$device("github/tinygo-org/stm32-svd/svd/stm32f411.svd", "RCC,GPIOA,STK")
+// alias: $peripherals_from_svd(…)
 
 fn main() {
   RCC.AHB1ENR.GPIOAEN.set(1)
 }
 ```
 
-**Resolucja (jak `go mod` / [049](049-remote-imports.md)):**
+**Resolucja:**
 
-1. lokalny plik / ścieżka względna (dziś)
-2. cache użytkownika / projektu (po wcześniejszym fetch)
-3. sieć: hosty z allowlisty (np. `tinygo-org/stm32-svd`, łatki stm32-rs —
-   **nie** surowe ST jako domyślne; patrz [011](011-svd.md))
-4. pin wersji / commit / tag w path albo lockfile — minimum przy realizacji
+1. lokalny plik / ścieżka względna (027)
+2. cache `$KLIN_CACHE/asset/host/owner/repo/…` (po `klin get`)
+3. sieć tylko przez `klin get` / `klin update` — allowlista
+   `github/tinygo-org/stm32-svd` (nie surowe ST; patrz [011](011-svd.md))
+4. pin w `klin.mod` (`device path ref`) + `klin.lock` (commit + sha256 pliku)
 
-**Fetch widoczny:** osobne `klin get` / `klin update` z [049](049-remote-imports.md)
-(ta sama infrastruktura cache co remote `import`; `update` odświeża też SVD
-w cache). Ewentualnie pierwsza kompilacja loguje pobranie — bez cichej sieci.
-`--offline` → błąd gdy brak cache.
+**Manifest — jeden `klin.mod`:**
 
-Źródło domyślne: poprawione SVD ([tinygo-org/stm32-svd](https://github.com/tinygo-org/stm32-svd)),
-nie surowe pliki ST.
-
-## Cel B — warstwa paczek (opcjonalnie, równolegle)
-
-Dla boardów / wielu peryferiów nadal sensowne cienkie paczki Klin:
-
-```klin
-import stm32_f411          // w środku: $device("github/…/stm32f411.svd", …)
-import board_nucleo_f411re // stałe pinów; ewent. $board("…")
+```
+klin 1
+require github/mrhiden/osa v0.1.0
+device github/tinygo-org/stm32-svd/svd/stm32f411.svd main
 ```
 
-Aplikacja może więc:
+`klin get github/tinygo-org/stm32-svd/svd/stm32f411.svd@main` dopisuje `device`.
+Bez args odświeża `require` **i** `device`. Kompilacja / `run` bez sieci;
+brak cache → błąd z hintem `klin get`.
 
-- **bezpośrednio** `$device("github/…/….svd", …)` — jak Go, jeden plik, albo
-- **`import` paczki** — gdy chcesz API boardu / gotowy zestaw `use:`.
+## Cel B — warstwa paczek (opcjonalnie, później)
 
-Oba OK; remote SVD nie wymaga paczki pośredniej.
+```klin
+import stm32_f411          // w środku: $device("github/…/….svd", …)
+import board_nucleo_f411re // stałe pinów; ewent. $board("…")
+```
 
 ## Składnia built-inów
 
 ```klin
-$device("…" /* lokalnie | github/…/name.svd | krótka nazwa */, use: "RCC,GPIOA")
-$board("…")   // opcjonalnie, wąski .ioc → stałe; nie pełny CubeMX
+$device("…" /* lokalnie | github/…/….svd */, "RCC,GPIOA")
+$board("…")   // później — wąski .ioc → stałe; nie pełny CubeMX
 ```
 
-- top-level, rodzina `$` (D3); dziś MVP = `$peripherals_from_svd`
-- docelowo `$device` = nazwa kanoniczna (alias starego)
-- **nie** `import "foo.svd"` w gramatyce `import` — to nadal moduły Klin;
-  string remote dla SVD idzie przez `$device("…")` (ten sam *kształt* path
-  co 049, inny keyword)
+- top-level, rodzina `$` (D3); `$device` = alias `$peripherals_from_svd`
+- **nie** `import "foo.svd"` — string remote dla SVD idzie przez `$device("…")`
 
 ## Szkic ewolucji
 
-1. **Teraz OK:** lokalne `$peripherals_from_svd` ([027](027-svd-ergonomic-api.md)).
-2. **Potem:** `$device` + resolucja lokalna = jak dziś.
-3. **Potem:** remote path `github/…/….svd` + cache + allowlista + widoczny fetch
-   (współdzielić infrastrukturę z [049](049-remote-imports.md) gdzie się da).
-4. **Opcjonalnie:** krótkie ID chipów (`stm32f411`); paczki board; `$board`.
-5. **Później:** remote paczek Klin z `$device` w środku (049).
+1. ~~Lokalne `$peripherals_from_svd` ([027](027-svd-ergonomic-api.md)).~~
+2. ~~`$device` + resolucja lokalna.~~
+3. ~~Remote path + cache + allowlista + widoczny fetch + `device` w mod.~~
+4. **Później:** `board` / wąski `.ioc`; krótkie ID chipów; paczki board.
+5. Remote paczek Klin z `$device` w środku (049).
 
 ## Czego nie robić
 
-- `import "x.svd"` jako składnia modułów — miesza z [048](048-import-aliases.md);
-  fetch SVD = `$device("…")` (Go-like string, nie słowo `import`)
-- osobne keyword `svd` / `ioc` / `device` poza rodziną `$`
+- `import "x.svd"` jako składnia modułów
+- osobne keyword `svd` / `ioc` / `device` poza rodziną `$` (linia `device` w
+  **modzie** jest OK — to nie keyword języka)
 - pełny CubeMX `.ioc` → Klin
-- cichy download bez logu / bez możliwości `--offline`
-- domyślnie surowe SVD ST (błędy — [011](011-svd.md)); mirror z łatkami
+- cichy download przy `run` / kompilacji
+- domyślnie surowe SVD ST
 - HAL przez ten mechanizm — [031](031-biblioteki-hal.md)
 
-## Kryterium (gdy wejdzie do prac)
+## Kryterium
 
-- [ ] `$device("github/…/stm32f411.svd", …)` (lub równoważny path) → fetch + cache + codegen
-- [ ] ponowna kompilacja offline z cache; `--offline` gdy brak pliku = błąd jasny
-- [ ] allowlista hostów / znane mirror SVD; pin wersji (szkic)
-- [ ] lokalna ścieżka nadal działa (regresja blink)
-- [ ] zero-cost jak 027 (`objdump`)
-- [ ] dokumentacja: `import` = Klin; `$device("github/…")` = artefakt jak Go-get
+- [x] `$device("github/…/….svd", …)` → `klin get` + cache + codegen
+- [x] ponowna kompilacja offline z cache; brak pliku = błąd z `klin get`
+- [x] allowlista (`github/tinygo-org/stm32-svd`); pin w mod + lock
+- [x] lokalna ścieżka nadal działa (`$device` / `$peripherals_from_svd`)
+- [x] zero-cost jak 027 (ten sam emitter)
+- [x] dokumentacja: `import` = Klin; `$device("github/…")` = artefakt
 - [ ] (opcjonalnie) paczki `import stm32_…` / `$board` / krótkie ID chipa
 
 ## Powiązane

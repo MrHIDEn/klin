@@ -1760,6 +1760,84 @@ fn main() { printf("%d\\n", o.version()) }
     expect(formatKlinMod(mod), 'klin 1\nrequire github/mrhiden/osa v0.1.0\n');
   });
 
+  test('klin.mod device + parseRemoteAsset (issue 053)', () {
+    const devicePath =
+        'github/tinygo-org/stm32-svd/svd/stm32f411.svd';
+    final mod = parseKlinMod(
+      'klin 1\n'
+      'require github/mrhiden/osa v0.1.0\n'
+      'device $devicePath main\n',
+    );
+    expect(mod.devices[devicePath], 'main');
+    expect(
+      formatKlinMod(mod),
+      'klin 1\n'
+      'require github/mrhiden/osa v0.1.0\n'
+      'device $devicePath main\n',
+    );
+
+    final asset = parseRemoteAsset('$devicePath@main');
+    expect(asset.host, 'github');
+    expect(asset.owner, 'tinygo-org');
+    expect(asset.repo, 'stm32-svd');
+    expect(asset.filePath, 'svd/stm32f411.svd');
+    expect(asset.path, devicePath);
+    expect(asset.ref, 'main');
+    expect(isRemoteDevicePath(devicePath), isTrue);
+    expect(isRemoteDevicePath('github/mrhiden/osa'), isFalse);
+
+    expect(
+      () => parseRemoteAsset('github/acme/svd/chip.svd'),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => parseRemoteAsset('github/tinygo-org/stm32-svd/../x.svd'),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
+  test(r'$device alias + remote miss suggests klin get (issue 053)', () {
+    final dir = Directory('${tmp.path}/svd_device_alias')..createSync();
+    File('${dir.path}/tiny.svd').writeAsStringSync('''
+<device><peripherals>
+  <peripheral><name>RCC</name><baseAddress>0x40023800</baseAddress><registers>
+    <register><name>AHB1ENR</name><addressOffset>0x30</addressOffset><fields>
+      <field><name>GPIOAEN</name><bitOffset>0</bitOffset><bitWidth>1</bitWidth></field>
+    </fields></register>
+  </registers></peripheral>
+</peripherals></device>
+''');
+    final klPath = '${dir.path}/dev.kl';
+    File(klPath).writeAsStringSync(r'''
+$device("tiny.svd", "RCC")
+fn main() { RCC.AHB1ENR.GPIOAEN.set(1) }
+''');
+    final expanded = preprocess(
+      File(klPath).readAsStringSync(),
+      path: klPath,
+    );
+    expect(expanded, contains('RCC_AHB1ENR_GPIOAEN_set(1)'));
+
+    final cache = Directory.systemTemp.createTempSync('klin_nocache053_');
+    addTearDown(() => cache.deleteSync(recursive: true));
+    expect(
+      () => preprocess(
+        r'''
+$device("github/tinygo-org/stm32-svd/svd/stm32f411.svd", "RCC")
+fn main() {}
+''',
+        path: klPath,
+        klinCacheDir: cache.path,
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is PreprocessError && e.toString().contains('klin get'),
+        ),
+      ),
+    );
+  });
+
   test('klin.lock parse/format round-trip (issue 065)', () {
     const sha = '0123456789abcdef0123456789abcdef01234567';
     const hash =
@@ -1967,6 +2045,66 @@ fn main() { printf("%d\\n", o.version()) }
     expect(run.exitCode, 0, reason: '${run.stderr}${run.stdout}');
     expect(run.stdout, await File('test/remote_osa.out').readAsString());
   }, timeout: Timeout(Duration(minutes: 2)));
+
+  test(
+    'klin get device SVD + \$device offline preprocess (issue 053 network)',
+    () async {
+    final cache = Directory.systemTemp.createTempSync('klin_get053_');
+    addTearDown(() => cache.deleteSync(recursive: true));
+    final work = Directory.systemTemp.createTempSync('klin_getwork053_');
+    addTearDown(() => work.deleteSync(recursive: true));
+    const devicePath =
+        'github/tinygo-org/stm32-svd/svd/stm32f411.svd';
+    File('${work.path}/app.kl').writeAsStringSync('''
+\$device("$devicePath", "RCC,GPIOA")
+fn main() {
+  RCC.AHB1ENR.GPIOAEN.set(1)
+}
+''');
+    final repoRoot = Directory.current.path;
+    final klinBin = '$repoRoot/bin/klin.dart';
+    final env = {
+      ...Platform.environment,
+      'KLIN_CACHE': cache.path,
+    };
+
+    final get = await Process.run(
+      'dart',
+      ['run', klinBin, 'get', '$devicePath@main'],
+      workingDirectory: work.path,
+      environment: env,
+    );
+    expect(get.exitCode, 0, reason: '${get.stderr}${get.stdout}');
+    expect(File('${work.path}/klin.mod').existsSync(), isTrue);
+    final mod = loadKlinMod(File('${work.path}/klin.mod'));
+    expect(mod.devices[devicePath], 'main');
+    expect(File('${work.path}/klin.lock').existsSync(), isTrue);
+    final lock = loadKlinLock(File('${work.path}/klin.lock'));
+    final entry = lock.packages[devicePath]!;
+    expect(entry.version, 'main');
+    expect(entry.commit, matches(RegExp(r'^[0-9a-f]{40}$')));
+    expect(entry.hash, matches(RegExp(r'^[0-9a-f]{64}$')));
+    final svdCached =
+        '${cache.path}/asset/github/tinygo-org/stm32-svd/svd/stm32f411.svd';
+    expect(File(svdCached).existsSync(), isTrue);
+    expect(fileContentHash(svdCached), entry.hash);
+
+    final pp = await Process.run(
+      'dart',
+      ['run', klinBin, '--emit-pp', '${work.path}/app.kl'],
+      workingDirectory: work.path,
+      environment: env,
+    );
+    expect(pp.exitCode, 0, reason: '${pp.stderr}${pp.stdout}');
+    final ppFile = File('${work.path}/out/app.pp.kl');
+    // emit-pp may write under cwd out/ — accept either
+    final ppText = ppFile.existsSync()
+        ? ppFile.readAsStringSync()
+        : File('$repoRoot/out/app.pp.kl').readAsStringSync();
+    expect(ppText, contains('RCC_AHB1ENR_GPIOAEN_set(1)'));
+  },
+    timeout: Timeout(Duration(minutes: 3)),
+  );
 
   test('klin outdated/upgrade with osa@v0.1.0 (issue 066 network)', () async {
     final cache = Directory.systemTemp.createTempSync('klin_outdated066_');
