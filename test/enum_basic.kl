@@ -1,0 +1,36 @@
+enum Color { Red, Green, Blue }
+
+enum Status: u8 { Ok, Warn = 5, Err }
+
+// Method with a receiver on an enum (issue 072).
+fn (c: Color) name(): str {
+    match c {
+        Color.Red { return "red" }
+        Color.Green { return "green" }
+        else { return "blue" }
+    }
+}
+
+fn main() {
+    let c: Color = Color.Green
+    printf("name: %s\n", c.name())
+
+    if c == Color.Green {
+        printf("is green\n")
+    }
+
+    // Explicit enum -> integer and integer -> enum conversion.
+    let s: Status = Status.Warn
+    printf("warn as int: %d\n", cast(i32, s))
+    let back: Status = cast(Status, 5)
+    if back == Status.Warn {
+        printf("roundtrip ok\n")
+    }
+
+    match c {
+        Color.Red { printf("red\n") }
+        Color.Green { printf("green\n") }
+        Color.Blue { printf("blue\n") }
+        else { printf("?\n") }
+    }
+}

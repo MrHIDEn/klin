@@ -675,6 +675,15 @@ fn main() {
     expect(formatSource(once), once);
   });
 
+  test('klin fmt: formats enum declarations (issue 072)', () {
+    const ugly =
+        'enum Color{Red,Green,Blue}\nenum Status : u8 { Ok , Warn = 5 , Err }\nfn main(){}';
+    final once = formatSource(ugly);
+    expect(once, contains('enum Color {\n    Red\n    Green\n    Blue\n}'));
+    expect(once, contains('enum Status: u8 {\n    Ok\n    Warn = 5\n    Err\n}'));
+    expect(formatSource(once), once);
+  });
+
   test('error: match else arm must come last', () {
     final source = File('test/match_else_order.kl').readAsStringSync();
     final program = Parser(Lexer(source).tokenize()).parse();
@@ -700,9 +709,116 @@ fn main() {
       throwsA(
         predicate(
           (e) =>
-              e is CheckError && e.toString().contains('integer subject'),
+              e is CheckError &&
+              e.toString().contains('integer or enum subject'),
         ),
       ),
+    );
+  });
+
+  test('golden: enums — base type, methods, match, cast (issue 072)', () async {
+    final result = await _compileAndRun('test/enum_basic.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/enum_basic.out').readAsString());
+
+    final source = File('test/enum_basic.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/enum_basic.kl');
+    // Portable emission: a base typedef plus an anonymous enum of constants
+    // (no C23 `enum E : T`, so tcc works).
+    expect(c, contains('typedef int32_t Color;'));
+    expect(c, contains('enum { Color_Red, Color_Green, Color_Blue };'));
+    expect(c, contains('typedef uint8_t Status;'));
+    expect(c, contains('Status_Warn = 5'));
+    // Receiver method on an enum + enum constant + explicit casts.
+    expect(c, contains('Color_name(Color c)'));
+    expect(c, contains('c == Color_Green'));
+    expect(c, contains('(int32_t)(s)'));
+    expect(c, contains('(Status)(5)'));
+  });
+
+  test('error: enum base type must be an integer (issue 072)', () {
+    const source = 'enum E: f64 { A, B }\nfn main() {}';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate(
+          (e) => e is CheckError && e.toString().contains('base type'))),
+    );
+  });
+
+  test('error: unknown enum variant (issue 072)', () {
+    const source = '''
+enum Color { Red, Green }
+fn main() {
+  let c: Color = Color.Blue
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate(
+          (e) => e is CheckError && e.toString().contains('no variant'))),
+    );
+  });
+
+  test('error: cannot compare two different enums (issue 072)', () {
+    const source = '''
+enum A { X }
+enum B { Y }
+fn main() {
+  let a: A = A.X
+  let b: B = B.Y
+  if a == b {
+    puts("no")
+  }
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate(
+          (e) => e is CheckError && e.toString().contains('cannot compare'))),
+    );
+  });
+
+  test('error: range pattern is not allowed for an enum (issue 072)', () {
+    const source = '''
+enum Color { Red, Green, Blue }
+fn main() {
+  let c: Color = Color.Red
+  match c {
+    Color.Red ..= Color.Blue { puts("x") }
+    else { puts("y") }
+  }
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError && e.toString().contains('range patterns'))),
+    );
+  });
+
+  test('error: duplicate enum variant (issue 072)', () {
+    const source = 'enum E { A, A }\nfn main() {}';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError && e.toString().contains('duplicate enum variant'))),
+    );
+  });
+
+  test('error: enum name collides with a struct (issue 072)', () {
+    const source = 'struct T { x: i32 }\nenum T { A }\nfn main() {}';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError && e.toString().contains('redeclaration of type'))),
     );
   });
 
