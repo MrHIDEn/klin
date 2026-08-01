@@ -74,7 +74,11 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist/stdlib | Out-Null
           Copy-Item -Recurse -Force stdlib/* dist/stdlib/
           Copy-Item -Force "${{ matrix.bin }}" dist/
-          Compress-Archive -Path dist/${{ matrix.bin }}, dist/stdlib -DestinationPath "${{ matrix.asset }}.${{ matrix.ext }}" -Force
+          # Compress from inside dist so the archive root has the binary and
+          # stdlib/ side by side (matching Unix `tar -C dist`).
+          Push-Location dist
+          Compress-Archive -Path "${{ matrix.bin }}", stdlib -DestinationPath "..\${{ matrix.asset }}.${{ matrix.ext }}" -Force
+          Pop-Location
           $h = (Get-FileHash "${{ matrix.asset }}.${{ matrix.ext }}" -Algorithm SHA256).Hash.ToLower()
           "$h  ${{ matrix.asset }}.${{ matrix.ext }}" | Out-File -Encoding ascii "${{ matrix.asset }}.sha256"
 
