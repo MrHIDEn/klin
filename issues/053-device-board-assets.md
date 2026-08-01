@@ -1,6 +1,6 @@
 # 053 — `$device` + Go-like fetch SVD (IOC / board)
 
-**Status:** ✅ MVP (SVD + `device` w `klin.mod`); board / `.ioc` — później  
+**Status:** ✅ MVP (SVD + `device` w `klin.mod`); board / `.ioc` → [074](074-board-ioc-klin-mod.md)  
 **Zależy od:** [027](027-svd-ergonomic-api.md); [049](049-remote-imports.md)
 
 ## Kontekst
@@ -78,17 +78,18 @@ $board("…")   // później — wąski .ioc → stałe; nie pełny CubeMX
 1. ~~Lokalne `$peripherals_from_svd` ([027](027-svd-ergonomic-api.md)).~~
 2. ~~`$device` + resolucja lokalna.~~
 3. ~~Remote path + cache + allowlista + widoczny fetch + `device` w mod.~~
-4. **Później:** `board` / wąski `.ioc`; krótkie ID chipów; paczki board.
+4. **Później:** `board` / wąski `.ioc` → [074](074-board-ioc-klin-mod.md); krótkie ID chipów; paczki board.
 5. Remote paczek Klin z `$device` w środku (049).
 
 ## Czego nie robić
 
-- `import "x.svd"` jako składnia modułów
+- `import "x.svd"` jako składnia modułów — miesza z [048](048-import-aliases.md);
+  fetch SVD = `$device("…")` (Go-like string, nie słowo `import`)
 - osobne keyword `svd` / `ioc` / `device` poza rodziną `$` (linia `device` w
   **modzie** jest OK — to nie keyword języka)
-- pełny CubeMX `.ioc` → Klin
+- pełny CubeMX `.ioc` → Klin — pinout / `$board` / dyrektywa `board` → [074](074-board-ioc-klin-mod.md)
 - cichy download przy `run` / kompilacji
-- domyślnie surowe SVD ST
+- domyślnie surowe SVD ST (błędy — [011](011-svd.md)); mirror z łatkami
 - HAL przez ten mechanizm — [031](031-biblioteki-hal.md)
 
 ## Kryterium
@@ -100,7 +101,8 @@ $board("…")   // później — wąski .ioc → stałe; nie pełny CubeMX
 - [x] zero-cost jak 027 (ten sam emitter)
 - [x] dokumentacja: `import` = Klin; `$device("github/…")` = artefakt
 - [x] przykład: [`examples/stm32/device_f411/`](../examples/stm32/device_f411/)
-- [ ] (opcjonalnie) paczki `import stm32_…` / `$board` / krótkie ID chipa
+- [x] dyrektywa `device` w `klin.mod` (obok `require`; jawne + niejawne jak 049)
+- [ ] (opcjonalnie) paczki `import stm32_…` / krótkie ID chipa — board → [074](074-board-ioc-klin-mod.md)
 
 ## Powiązane
 
@@ -110,3 +112,4 @@ $board("…")   // później — wąski .ioc → stałe; nie pełny CubeMX
 - [031](031-biblioteki-hal.md) — HAL osobno
 - [048](048-import-aliases.md) / [049](049-remote-imports.md) — string/remote dla
   **modułów** Klin; ten issue = ten sam *styl* fetch dla **artefaktów** `$device`
+- [074](074-board-ioc-klin-mod.md) — `board` w `klin.mod` + wąski `.ioc` (po 053)

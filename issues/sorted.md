@@ -82,7 +82,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [070](070-host-orm-sqlite.md) | ORM-like / typed repo nad SQLite (host, niski priorytet) | 💭 | 050, 021 |
 | [051](051-json-wrapper.md) | Opakowanie JSON + ścieżki `$…` (niski priorytet) | 💭 | 021, 026? |
 | [052](052-klinstruct.md) | `klinstruct` — pack/unpack jak cstruct (niski priorytet) | 💭 | 007, 020/047 |
-| [053](053-device-board-assets.md) | `$device` + Go-like fetch SVD (IOC/board) | ✅ (MVP: SVD + `device` w mod; board później) | 027, 049 |
+| [053](053-device-board-assets.md) | `$device` + Go-like fetch SVD (`device` w `klin.mod`) | ✅ (MVP; board → 074) | 027, 049 |
 | [054](054-embedded-project-layout.md) | Wygląd / układ projektu embedded | 💭 | 023, 010 |
 | [056](056-destructuring.md) | Dekonstrukcja (`{}` / `[]` / multi-assign; bez tupli) | ✅ (A+A′+B+C+D; bare `[]=` pominięte) | 005, 007? |
 | [058](058-source-file-split.md) | Podział dużych plików źródłowych kompilatora (dług techn.) | 💭 | — |
@@ -96,6 +96,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [071](071-lambda.md) | Lambdy / `fn (…) => expr` (werdykt: nie teraz; po D7) | 💭 | fn-ptr, D7 |
 | [072](072-enums.md) | Enumy (styl C23, opcjonalny typ bazowy; metody; string-enum do rozważenia) | 💭 | 002, 005, 014 |
 | [073](073-mem-leak-detection.md) | Wykrywanie potencjalnych wycieków pamięci (Valgrind/ASan, debug-alokator, lint) | 💭 | 057, 008 |
+| [074](074-board-ioc-klin-mod.md) | `board` w `klin.mod` + wąski CubeMX `.ioc` (pinout) | 💭 | 053 |
 
 ---
 

@@ -1,4 +1,4 @@
-# 072 — `board` w `klin.mod` + wąski CubeMX `.ioc` (pinout)
+# 074 — `board` w `klin.mod` + wąski CubeMX `.ioc` (pinout)
 
 **Status:** 💭 do rozważenia (po MVP [053](053-device-board-assets.md))
 **Zależy od:** [053](053-device-board-assets.md) (`$device` + `device` w modzie + cache `asset/`); mile [054](054-embedded-project-layout.md); **nie** [031](031-biblioteki-hal.md)
