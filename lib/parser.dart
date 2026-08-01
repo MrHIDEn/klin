@@ -360,6 +360,14 @@ final class Parser {
       expr is IndexExpr ||
       (expr is UnaryExpr && expr.op == '*');
 
+  /// A `(` forms a call only when it is on the same source line as its callee.
+  /// A `(` that opens a new line starts a new statement instead (Go-like; the
+  /// same rule [_looksLikeReturnValue] uses for `return`). Without this,
+  /// `f\n(x)` parses as `f(x)`, which for example swallows a following
+  /// `(*p).field = …` statement into the previous line's trailing identifier.
+  bool _callParenSameLine(SourcePos calleePos) =>
+      _check(TokenKind.lParen) && _current.pos.line == calleePos.line;
+
   /// `t0, t1, … = v0, v1, …` — multi-assignment (issue 056, phase B).
   Stmt _multiAssign(Expr first) {
     final targets = <Expr>[first];
@@ -1002,7 +1010,7 @@ final class Parser {
           _advance();
           final member =
               _expect(TokenKind.ident, 'expected module symbol name');
-          if (_check(TokenKind.lParen)) {
+          if (_callParenSameLine(member.pos)) {
             expr = CallExpr(
               moduleName: t.lexeme,
               callee: member.lexeme,
@@ -1014,7 +1022,7 @@ final class Parser {
           } else {
             throw ParseError('expected call or struct literal', member.pos);
           }
-        } else if (_check(TokenKind.lParen)) {
+        } else if (_callParenSameLine(t.pos)) {
           _rejectCKeyword(t, 'a call name');
           expr = CallExpr(callee: t.lexeme, args: _argList(), pos: t.pos);
         } else if (_check(TokenKind.lBrace) && !_noStructLit) {
@@ -1084,7 +1092,7 @@ final class Parser {
       }
       _advance();
       final member = _expect(TokenKind.ident, 'expected field name lub metody');
-      if (_check(TokenKind.lParen)) {
+      if (_callParenSameLine(member.pos)) {
         expr = MethodCallExpr(
           receiver: expr,
           name: member.lexeme,

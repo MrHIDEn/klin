@@ -1,0 +1,16 @@
+struct P {
+    x: i32
+    y: i32
+}
+
+fn main() {
+    let mut q = P{ x: 0, y: 0 }
+    let p: *mut P = &q
+
+    // Each `(` opens a statement on a new line right after a trailing
+    // identifier (`&q`, then `q.x`) — previously misparsed as a call on that
+    // identifier. A `(` starting a line now begins a new statement.
+    (*p).x = 7
+    (*p).y = 9
+    printf("%d %d\n", q.x, q.y)
+}

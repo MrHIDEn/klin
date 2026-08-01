@@ -2619,6 +2619,58 @@ fn main() {
     );
   });
 
+  test('golden: assign to a field through a *mut deref (parser + checker)',
+      () async {
+    final result = await _compileAndRun('test/deref_field_assign.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(
+        result.stdout, await File('test/deref_field_assign.out').readAsString());
+
+    final source = File('test/deref_field_assign.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/deref_field_assign.kl');
+    expect(c, contains('(*(p)).x = 7;'));
+    expect(c, contains('(*(p)).y = 9;'));
+  });
+
+  test('parser: `(` on a new line starts a new statement, not a call', () {
+    // `&q` ends a line; the next line opens with `(`. Previously this parsed as
+    // a call `q(*p)`, swallowing the assignment. It must now be two statements.
+    const source = '''
+struct P {
+  x: i32
+}
+fn main() {
+  let mut q = P{ x: 0 }
+  let p: *mut P = &q
+  (*p).x = 7
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final main = program.funcs.firstWhere((f) => f.name == 'main');
+    // let q, let p, (*p).x = 7  → three statements (no swallowing).
+    expect(main.body!.stmts.length, 3);
+    expect(main.body!.stmts.last, isA<AssignStmt>());
+  });
+
+  test('parser: same-line `(` still parses as a call', () {
+    const source = '''
+fn add(a: i32, b: i32): i32 {
+  return a + b
+}
+fn main() {
+  let x = add(2, 3)
+  printf("%d\\n", x)
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'call.kl');
+    expect(c, contains('add(2, 3)'));
+  });
+
   test('error: wrong function argument count', () {
     final source = File('test/bad_arity.kl').readAsStringSync();
     final program = Parser(Lexer(source).tokenize()).parse();
