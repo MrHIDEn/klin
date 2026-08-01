@@ -30,4 +30,10 @@ fn main() {
     // A `_`-skipped literal element is still evaluated (side effects run).
     let [_, keep] = [noisy(), 5]
     printf("keep: %d\n", keep)
+
+    // A renamed binding may shadow the source name (in a nested block).
+    {
+        let { x: p, y: q } = p
+        printf("shadow: %d %d\n", p, q)
+    }
 }
