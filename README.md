@@ -94,6 +94,18 @@ in `let` / assignment position (`else` required there). Integer subjects
 only; lowers to an `if`/`else if` chain with the subject in one temp, so
 `break` / `continue` in an arm still belong to the enclosing loop. See
 [note/15-match.md](note/15-match.md), [`examples/match.kl`](examples/match.kl).
+An enum subject is also allowed (arms use `Enum.Variant`, no ranges).
+
+### Enums
+
+`enum Color { Red, Green, Blue }` is a distinct named type over an integer base
+(default `i32`; `enum Status: u8 { Ok, Warn = 5, Err }` sets the base and explicit
+values). Variants are read as `Color.Red`, compared with `==` / `!=`, and used in
+`match`. Methods work with a receiver (`fn (c: Color) name(): str`). Conversion
+to/from the integer base is explicit via `cast` (`cast(i32, c)`, `cast(Color, 1)`)
+— never implicit. Emission is a portable `typedef` plus integer constants (no C23
+`enum E : T`, so gcc/clang/tcc all work), zero hidden cost. See
+[issues/072-enums.md](issues/072-enums.md), [`examples/enums.kl`](examples/enums.kl).
 
 ### Short declaration (`:=`)
 
