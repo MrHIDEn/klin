@@ -442,7 +442,9 @@ final class Parser {
 
   IfStmt _ifStmt() {
     final ifTok = _expect(TokenKind.if_, 'oczekiwano `if`');
-    final cond = _expr();
+    // Optional parens: `if cond {` and `if (cond) {` — same. Suppress struct
+    // literals so a trailing `name {` is the body brace (issue 064).
+    final cond = _headerExpr();
     final thenBlock = _block();
     Stmt? elseBranch;
     if (_check(TokenKind.else_)) {
@@ -463,20 +465,25 @@ final class Parser {
 
   WhileStmt _whileStmt() {
     final tok = _expect(TokenKind.while_, 'oczekiwano `while`');
-    final cond = _expr();
+    final cond = _headerExpr();
     final body = _block();
     return WhileStmt(cond: cond, body: body, pos: tok.pos);
   }
 
-  /// Parse a `match` subject/pattern expression with struct literals suppressed
-  /// so a trailing `name {` reads as the body brace, not a struct literal.
-  Expr _matchHeaderExpr() {
+  /// Parse an expression with struct literals suppressed so a trailing
+  /// `name {` reads as the following block brace, not a struct literal.
+  /// Used for `if`/`while` conditions and `match` headers. Parentheses still
+  /// allow a struct literal inside: `if (Foo{…}).x { … }` (parens clear the flag).
+  Expr _headerExpr() {
     final saved = _noStructLit;
     _noStructLit = true;
     final e = _expr();
     _noStructLit = saved;
     return e;
   }
+
+  /// Same as [_headerExpr] — name kept for call sites that talk about `match`.
+  Expr _matchHeaderExpr() => _headerExpr();
 
   MatchStmt _matchStmt() {
     final tok = _expect(TokenKind.match_, 'expected `match`');
@@ -552,7 +559,8 @@ final class Parser {
         _advance(); // in
         final start = _expr();
         _expect(TokenKind.dotDotLess, 'oczekiwano `..<`');
-        final end = _expr();
+        // `for i in 0..<n {` — bare `n` must not eat the body `{` as struct lit.
+        final end = _headerExpr();
         final body = _block();
         return ForRangeStmt(
           name: name.lexeme,
@@ -591,7 +599,8 @@ final class Parser {
       final name = _expect(TokenKind.ident, 'expected name in post expression');
       _expect(TokenKind.equal, 'oczekiwano `=`');
       postName = name.lexeme;
-      postExpr = _expr();
+      // `for ; ; i = j {` — bare `j` must not eat the body `{` as struct lit.
+      postExpr = _headerExpr();
     }
 
     final body = _block();

@@ -1,0 +1,10 @@
+// Struct literal in an if-condition still works inside parentheses.
+struct Point {
+    x: i32
+}
+
+fn main() {
+    if (Point{ x: 3 }).x > 0 {
+        printf("ok\n")
+    }
+}
