@@ -325,6 +325,41 @@ KlinLock loadKlinLockOrEmpty(File file) {
   return loadKlinLock(file);
 }
 
+/// Parse `v1.2.3` / `1.2.3` into `[major, minor, patch]`, else null.
+List<int>? parseSemverParts(String ref) {
+  final m = RegExp(r'^v?(\d+)\.(\d+)\.(\d+)$').firstMatch(ref.trim());
+  if (m == null) return null;
+  return [
+    int.parse(m.group(1)!),
+    int.parse(m.group(2)!),
+    int.parse(m.group(3)!),
+  ];
+}
+
+/// Compare two semver refs. Returns negative / zero / positive, or null if
+/// either side is not strict `v?X.Y.Z`.
+int? compareSemverRefs(String a, String b) {
+  final pa = parseSemverParts(a);
+  final pb = parseSemverParts(b);
+  if (pa == null || pb == null) return null;
+  for (var i = 0; i < 3; i++) {
+    final c = pa[i].compareTo(pb[i]);
+    if (c != 0) return c;
+  }
+  return 0;
+}
+
+/// True when [candidate] should replace [current] (`klin upgrade` / outdated).
+///
+/// Semver pins: only when candidate is greater than current. Otherwise any
+/// different latest (branch / non-semver) is treated as an upgrade candidate.
+bool isUpgradeTarget(String current, String candidate) {
+  if (current == candidate) return false;
+  final cmp = compareSemverRefs(current, candidate);
+  if (cmp != null) return cmp < 0;
+  return true;
+}
+
 /// Resolve "latest" ref for a remote: newest `v*` semver tag, else main/master.
 Future<String> resolveLatestRef(RemoteImport remote) async {
   final tags = await _gitLsRemote(remote.gitUrl, '--tags');
@@ -338,16 +373,9 @@ Future<String> resolveLatestRef(RemoteImport remote) async {
     const prefix = 'refs/tags/';
     if (!ref.startsWith(prefix)) continue;
     final tag = ref.substring(prefix.length);
-    final m = RegExp(r'^v?(\d+)\.(\d+)\.(\d+)').firstMatch(tag);
-    if (m == null) continue;
-    semver.add((
-      [
-        int.parse(m.group(1)!),
-        int.parse(m.group(2)!),
-        int.parse(m.group(3)!),
-      ],
-      tag,
-    ));
+    final parts = parseSemverParts(tag);
+    if (parts == null) continue;
+    semver.add((parts, tag));
   }
   if (semver.isNotEmpty) {
     semver.sort((a, b) {
@@ -371,6 +399,68 @@ Future<String> resolveLatestRef(RemoteImport remote) async {
     ['ls-remote', remote.gitUrl],
     'no tags or main/master on ${remote.gitUrl}',
   );
+}
+
+/// One package where [klin.mod] pin is behind remote latest (issue 066).
+final class OutdatedPackage {
+  final String path;
+  final String current;
+  final String latest;
+
+  const OutdatedPackage({
+    required this.path,
+    required this.current,
+    required this.latest,
+  });
+}
+
+typedef LatestRefResolver = Future<String> Function(RemoteImport remote);
+
+/// Compare `klin.mod` requires to remote latest tags/refs.
+///
+/// [onlyPaths] limits the scan (must already be in [mod.requires]).
+Future<List<OutdatedPackage>> collectOutdated(
+  KlinMod mod, {
+  Iterable<String>? onlyPaths,
+  LatestRefResolver resolveLatest = resolveLatestRef,
+}) async {
+  final paths = <String>[];
+  if (onlyPaths == null || onlyPaths.isEmpty) {
+    paths.addAll(mod.requires.keys);
+  } else {
+    for (final raw in onlyPaths) {
+      final remote = parseRemoteImport(raw);
+      if (remote.ref != null) {
+        throw FormatException(
+          'outdated/upgrade path must not include @ref (`$raw`)',
+        );
+      }
+      if (!mod.requires.containsKey(remote.path)) {
+        throw FormatException('`$remote.path` is not in klin.mod requires');
+      }
+      paths.add(remote.path);
+    }
+  }
+  paths.sort();
+
+  final out = <OutdatedPackage>[];
+  for (final path in paths) {
+    final current = mod.requires[path]!;
+    final latest = await resolveLatest(parseRemoteImport(path));
+    if (isUpgradeTarget(current, latest)) {
+      out.add(OutdatedPackage(path: path, current: current, latest: latest));
+    }
+  }
+  return out;
+}
+
+String formatOutdatedReport(List<OutdatedPackage> rows) {
+  if (rows.isEmpty) return 'all packages up to date\n';
+  final buf = StringBuffer();
+  for (final row in rows) {
+    buf.writeln('${row.path}\t${row.current}\t${row.latest}');
+  }
+  return buf.toString();
 }
 
 Future<List<String>> _gitLsRemote(String url, String mode) async {
