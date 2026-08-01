@@ -2,3 +2,5 @@ bytes=100
 empty_len=0
 neg_err=1
 i32=6
+i64=600
+f64=4

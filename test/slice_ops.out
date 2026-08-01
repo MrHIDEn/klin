@@ -3,4 +3,13 @@ n=2 f0=1 f1=3
 idx=0
 any=1
 count=2
-sum=2
+reduce=2
+copy=1,-2,3,0 (n=4)
+rev=0,3,-2,1 (n=4)
+sum=2 product=0
+min=-2 max=3
+has3=1 has9=0
+i64 sum=15 product=80
+i64 min=2
+f64 sum=4
+f64 max=2

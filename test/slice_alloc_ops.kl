@@ -9,6 +9,14 @@ fn is_pos(x: i32): bool {
     return x > 0
 }
 
+fn dbl_i64(x: i64): i64 {
+    return x * 2
+}
+
+fn is_pos_f64(x: f64): bool {
+    return x > 0.0
+}
+
 fn main() {
     let mut a = mem.heap()
     let xs: [4]i32 = [1, 0 - 2, 3, 0]
@@ -26,4 +34,25 @@ fn main() {
     }
     defer mem.free_i32(&a, filtered)
     printf("n=%d f0=%d f1=%d\n", filtered.len, filtered[0], filtered[1])
+
+    // i64 map_alloc
+    let mut xl: [3]i64
+    xl[0] = 5
+    xl[1] = 6
+    xl[2] = 7
+    let mut ml = slice_alloc.map_alloc_i64(&a, xl[:], dbl_i64) or {
+        printf("map_i64_fail\n")
+        mem.empty_i64()
+    }
+    defer mem.free_i64(&a, ml)
+    printf("map_i64=%lld,%lld,%lld\n", ml[0], ml[1], ml[2])
+
+    // f64 filter_alloc
+    let xf: [4]f64 = [1.0, 0.0 - 1.0, 2.0, 0.0 - 3.0]
+    let mut ff = slice_alloc.filter_alloc_f64(&a, xf[:], is_pos_f64) or {
+        printf("filter_f64_fail\n")
+        mem.empty_f64()
+    }
+    defer mem.free_f64(&a, ff)
+    printf("f64 n=%d v0=%g v1=%g\n", ff.len, ff[0], ff[1])
 }
