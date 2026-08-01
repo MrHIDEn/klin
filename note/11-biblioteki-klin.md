@@ -97,6 +97,7 @@ $device("github/tinygo-org/stm32-svd/svd/stm32f411.svd", "RCC,GPIOA")
 - `klin get …/file.svd@ref` → `$KLIN_CACHE/asset/host/owner/repo/…`,
   `klin.mod` linia `device path ref`, `klin.lock` (commit + sha256 pliku).
 - Allowlista MVP: `github/tinygo-org/stm32-svd`. Lokalna ścieżka nadal działa.
+- Przykład: [`examples/stm32/device_f411/`](../examples/stm32/device_f411/).
 - Board / CubeMX `.ioc` — poza MVP (osobny issue po 053).
 
 ## Poza zakresem
