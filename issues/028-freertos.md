@@ -80,6 +80,29 @@ fn main() {
 i chcemy jedną składnię atrybutów; domyślnie **nie** budować ogólnego systemu
 user-dekoratorów. Por. ISR: [030](030-isr-decorators.md).
 
+Porównanie cukru (ten sam efekt pod spodem: fn + stack + rejestracja):
+
+| | `$rtos_task` (lib / 026) | `@[meta("rtos.task", …)]` | `@[task(…)]` |
+|---|---|---|---|
+| Działa bez nowego atrybutu w rdzeniu | tak | nie (hook / plugin) | nie (allowlista) |
+| Składnia „jak dekorator” | średnio (`$` + blok) | bliżej TS/Python | bliżej TS/Python |
+| Parametry stack/prio jawne | tak | tak | tak |
+| Lib bez forka kompilatora | tak | słabo | nie |
+
+Szkic `@[meta]` (hipotetyczny — **nie** w języku dziś):
+
+```klin
+@[meta("rtos.task", stack=512, prio=2)]
+fn blink(arg: *mut u8) { … }
+```
+
+Albo stringowo: `@[meta("rtos.task:stack=512,prio=2")]`. Kto czyta `meta`?
+Albo makro/skaner w libce, albo kompilator z hookiem — prawie plugin system.
+Dlatego preferowane `$rtos_task`, nie ogólne user-`@[…]`.
+
+Event-loop w tasku: to samo podejście makrami — [029](029-async-event-loop.md)
+(`$event_loop`, zagnieżdżalne w `$rtos_task`).
+
 ## Mutexy / dane współdzielone (krytyczne)
 
 - wiele tasków + wspólny stan = wyścigi, torn reads, deadlocks, inwersja

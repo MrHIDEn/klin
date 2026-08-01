@@ -13,9 +13,10 @@ Pokrewne: [018](018-generators-yield.md), [024](024-rtos.md), [028](028-freertos
 ## Model warstw (pełna elastyczność, nie wymuszenie)
 
 1. **samo `main`** — bare metal / pętla ręczna / WFI; bez event-loopa i bez RTOS
-2. **`main` + event-loop** — jeden opcjonalny loop w `main` (dekorator), bez RTOS
-3. **`main` + taski RTOS + event-loopy gdzie chcemy** — dekorator na `main`,
-   dekorator na wybranym tasku; loop tylko tam, gdzie go założono.
+2. **`main` + event-loop** — jeden opcjonalny loop w `main` (makro / API lib),
+   bez RTOS
+3. **`main` + taski RTOS + event-loopy gdzie chcemy** — makro/API na `main`
+   i/lub na wybranym tasku; loop tylko tam, gdzie go założono.
    Nie „jeden globalny Node-loop na cały firmware”.
 
 ## Współdzielenie danych vs loop
@@ -39,10 +40,69 @@ event loop rozpada się na dwie części o różnym statusie:
 2. **Cukier `async`/`await` (i generatory)** — to **feature rdzenia**
    (parser/emit, desugar do jawnej maszyny stanów, hipoteza B poniżej), nie da
    się dostarczyć jako `.kl`. Spięte z [018](018-generators-yield.md) i decyzją
-   D1/D3. Dekoratory zakładające loop na `main`/tasku są też poziomu języka.
+   D1/D3. Cukier zakładający loop na `main`/tasku: **makra lib** (jak
+   `$rtos_task` w [028](028-freertos.md)), nie user-`@[…]` ani obowiązkowy
+   atrybut w rdzeniu.
 
 Wniosek: sam runtime pętli → biblioteka (najlepiej w Klinie); `async`/`await` →
 rdzeń, jeśli w ogóle. „Raczej jako biblioteka" dotyczy tylko punktu 1.
+
+## Preferowany cukier: `$event_loop` (makro lib)
+
+Ten sam kierunek co `$rtos_task` w 028 — ergonomia w bibliotece, expand jawny,
+bez ukrytego schedulera / alokacji kolejki.
+
+### Samo `main` + loop (bez RTOS)
+
+```klin
+$event_loop() {
+    fn main() {
+        // init; rejestracja timerów / fd / IRQ → kolejka
+    }
+    fn on_tick() { … }
+}
+```
+
+Albo ciaśniej (ciało ≈ setup + run):
+
+```klin
+$event_loop() {
+    eloop.every_ms(100, on_tick)
+    // expand → main z while { eloop.poll(); wfi() } / jawnym run()
+}
+```
+
+### Z RTOS — loop tylko na wybranym tasku
+
+```klin
+$rtos_task("net", 1024, 3) {
+    $event_loop() {
+        eloop.on(sock_readable, handle_pkt)
+    }
+}
+
+$rtos_task("blink", 512, 2) {
+    // bez loopa — delay / toggle
+}
+```
+
+| | `$event_loop` (lib / 026) | `async` / `await` |
+|---|---|---|
+| Pętla poll + kolejka + WFI | tak | — |
+| Jawne bufory / `Allocator` | tak | — |
+| Cukier `await foo()` | nie | feature rdzenia (018 / tu) |
+
+Minimalny obraz po expandzie (idea):
+
+```klin
+fn main() {
+    eloop.init(queue_buf[:])
+    eloop.every_ms(100, on_tick)
+    eloop.run()   // while { poll(); } — jawne, w lib
+}
+```
+
+Porównanie `$…` vs `@[meta]` / `@[task]`: tabela w [028](028-freertos.md).
 
 ## Hipotezy techniczne (nie zobowiązanie)
 
