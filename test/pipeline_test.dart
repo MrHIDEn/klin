@@ -275,6 +275,78 @@ fn main() {
     );
   });
 
+  test('golden: multi-assignment swap (issue 056 phase B)', () async {
+    final result = await _compileAndRun('test/multi_assign.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/multi_assign.out').readAsString());
+
+    final source = File('test/multi_assign.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/multi_assign.kl');
+    // Values are captured into temps before any target is written.
+    expect(c, contains('int32_t klin_val_0 = b;'));
+    expect(c, contains('int32_t klin_val_1 = a;'));
+    expect(c, contains('a = klin_val_0;'));
+    expect(c, contains('b = klin_val_1;'));
+  });
+
+  test('error: multi-assignment count mismatch (issue 056)', () {
+    const source = '''
+fn main() {
+  let mut a: i32 = 1
+  let mut b: i32 = 2
+  a, b = 1
+}
+''';
+    expect(
+      () => Parser(Lexer(source).tokenize()).parse(),
+      throwsA(
+        predicate((e) =>
+            e is ParseError && e.toString().contains('2 targets but 1 values')),
+      ),
+    );
+  });
+
+  test('error: multi-assignment to an immutable target (issue 056)', () {
+    const source = '''
+fn main() {
+  let a: i32 = 1
+  let mut b: i32 = 2
+  a, b = b, a
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) =>
+            e is CheckError && e.toString().contains('immutable variable `a`')),
+      ),
+    );
+  });
+
+  test('error: multi-assignment rejects `or`/`!`/`match` values (issue 056)',
+      () {
+    const source = '''
+fn fallible(): !i32 { return error(1) }
+fn main() {
+  let mut a: i32 = 1
+  let mut b: i32 = 2
+  a, b = fallible()!, 3
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) =>
+            e is CheckError &&
+            e.toString().contains('must be plain expressions')),
+      ),
+    );
+  });
+
   test('error: unhandled !T result', () {
     const source = '''
 fn fallible(): !i32 { return error(1) }

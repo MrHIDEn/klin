@@ -685,6 +685,32 @@ final class Checker {
         _expectAssignable(targetType, valueType, value.pos);
         _materialize(value, targetType);
 
+      case MultiAssignStmt(:final targets, :final values):
+        for (var i = 0; i < targets.length; i++) {
+          final target = targets[i];
+          final value = values[i];
+          // Special assignment forms need dedicated lowering; keep phase B to
+          // plain values (use a separate statement for `or` / `!` / `match`).
+          if (value is OrExpr || value is PropagateExpr || value is MatchExpr) {
+            throw CheckError(
+              'multi-assignment values must be plain expressions '
+              '(assign `or` / `!` / `match` in its own statement)',
+              value.pos,
+            );
+          }
+          final targetType = _checkAssignableTarget(target, target.pos);
+          if (targetType is ArrayType) {
+            throw CheckError(
+              'cannot assign an entire array (assign elements or use a slice)',
+              target.pos,
+            );
+          }
+          target.resolvedType = targetType;
+          final valueType = _inferExpr(value);
+          _expectAssignable(targetType, valueType, value.pos);
+          _materialize(value, targetType);
+        }
+
       case MatchStmt(:final subject, :final arms):
         _checkMatchSubject(subject);
         final subjectType = subject.resolvedType!;
