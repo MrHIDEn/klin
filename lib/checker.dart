@@ -711,6 +711,55 @@ final class Checker {
           _materialize(value, targetType);
         }
 
+      case StructAssignStmt(
+          :final fields,
+          :final targets,
+          :final source,
+          :final pos
+        ):
+        final sourceType =
+            _defaultConcrete(_inferLetOrAssignValue(source), source.pos);
+        if (sourceType is! StructType) {
+          throw CheckError(
+            'destructuring requires a struct, got `${sourceType.displayName}`',
+            source.pos,
+          );
+        }
+        _materialize(source, sourceType);
+        final decl = _structs[_key(sourceType.moduleName, sourceType.name)]!;
+        final fieldTypes = <KlinType>[];
+        for (var i = 0; i < fields.length; i++) {
+          final fieldName = fields[i];
+          FieldDecl? field;
+          for (final candidate in decl.fields) {
+            if (candidate.name == fieldName) {
+              field = candidate;
+              break;
+            }
+          }
+          if (field == null) {
+            throw CheckError(
+              'struct `${sourceType.name}` has no field `$fieldName`',
+              pos,
+            );
+          }
+          final fieldType = field.resolvedType!;
+          if (fieldType is ArrayType) {
+            throw CheckError(
+              'cannot destructure array field `$fieldName` '
+              '(bind the struct and index it instead)',
+              pos,
+            );
+          }
+          final target = targets[i];
+          final targetType = _checkAssignableTarget(target, target.pos);
+          _expectAssignable(targetType, fieldType, target.pos);
+          target.resolvedType = targetType;
+          fieldTypes.add(fieldType);
+        }
+        stmt.sourceType = sourceType;
+        stmt.fieldTypes = fieldTypes;
+
       case MatchStmt(:final subject, :final arms):
         _checkMatchSubject(subject);
         final subjectType = subject.resolvedType!;

@@ -347,6 +347,79 @@ fn main() {
     );
   });
 
+  test('golden: bare struct assignment `{ } =` (issue 056 phase A\')', () async {
+    final result = await _compileAndRun('test/struct_assign.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/struct_assign.out').readAsString());
+
+    final source = File('test/struct_assign.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/struct_assign.kl');
+    // The source is copied once, then each field is assigned to its target.
+    expect(c, contains('x = klin_val_0.x;'));
+    expect(c, contains('y = klin_val_0.y;'));
+    // A rename assigns the field to a differently named target.
+    expect(c, contains('a = klin_val_1.x;'));
+  });
+
+  test("a plain block after a statement stays a block (issue 056)", () async {
+    // `{ ... }` with no trailing `=` must not be read as a destructure pattern.
+    const source = '''
+fn main() {
+  let mut x: i32 = 1
+  {
+    x = 2
+  }
+  printf("%d\\n", x)
+}
+''';
+    final file = File('${tmp.path}/block_stmt.kl');
+    await file.writeAsString(source);
+    final result = await _compileAndRun(file.path, tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, '2\n');
+  });
+
+  test("error: bare struct assign to an immutable target (issue 056)", () {
+    const source = '''
+struct P { x: i32
+ y: i32 }
+fn main() {
+  let x: i32 = 0
+  let mut y: i32 = 0
+  let p = P{ x: 1, y: 2 }
+  { x, y } = p
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) =>
+            e is CheckError && e.toString().contains('immutable variable `x`')),
+      ),
+    );
+  });
+
+  test("error: bare struct assign rename to a non-place (issue 056)", () {
+    const source = '''
+struct P { x: i32
+ y: i32 }
+fn main() {
+  let p = P{ x: 1, y: 2 }
+  { x: 5 } = p
+}
+''';
+    expect(
+      () => Parser(Lexer(source).tokenize()).parse(),
+      throwsA(
+        predicate((e) =>
+            e is ParseError && e.toString().contains('must be assignable')),
+      ),
+    );
+  });
+
   test('error: unhandled !T result', () {
     const source = '''
 fn fallible(): !i32 { return error(1) }

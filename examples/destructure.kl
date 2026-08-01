@@ -2,6 +2,7 @@
 // Phase A: `let { x, y } = p`       (struct fields, by name)
 // Phase C: `let [a, b] = xs`        (fixed-length array `[N]T`, positional)
 // Phase D: `let { x: px } = p`      (rename) and `let [_, b] = xs` (skip)
+// Phase A': `{ x, y } = p`          (assign fields to existing places)
 // All lower to plain reads (`.field` / `xs[i]`) — they disappear in C.
 
 struct Vec2 {
@@ -67,6 +68,15 @@ fn show_skip() {
     printf("skip = %d, %d\n", b, d)
 }
 
+fn show_bare_assign() {
+    // Bare `{ … } = p` assigns fields to already-declared places (phase A').
+    let mut x: i32 = 0
+    let mut y: i32 = 0
+    let p = Vec2{ x: 7, y: 8 }
+    { x, y } = p
+    printf("bare = (%d, %d)\n", x, y)
+}
+
 fn main() {
     show_both()
     show_subset()
@@ -76,4 +86,5 @@ fn main() {
     show_array_literal()
     show_rename()
     show_skip()
+    show_bare_assign()
 }
