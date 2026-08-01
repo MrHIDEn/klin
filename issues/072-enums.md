@@ -117,7 +117,8 @@ value(): T` + `match` już to pokrywa bez nowej cechy.
 - Automatyczne `to_string`/refleksja bez jawnej metody.
 - Wymuszona wyczerpalność `match` po enumie — do rozważenia osobno (wartościowe,
   ale to rozszerzenie checkera/`match`).
-- Bitflagi/`enum` jako flagi (`|`/`&`) — ewentualnie później.
+- Bitflagi/`enum` jako flagi (`|`/`&`) — ewentualnie później; wymaga operatorów
+  bitowych ([078](078-bitwise-ops.md)), których język dziś nie ma.
 
 ## Kryteria (gdy wchodzi do prac)
 
