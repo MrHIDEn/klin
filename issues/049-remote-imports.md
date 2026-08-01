@@ -13,7 +13,21 @@ Go: `import "github.com/user/repo/pkg"`. Klin mógłby w przyszłości
 ```klin
 import "github/mrhiden/osa"       // qualifier = osa (ostatni segment)
 import "github/mrhiden/osa" oso   // qualifier = oso
+import "gitlab/mrhiden/osa"       // drugi dozwolony host
 ```
+
+## Decyzja (MVP): rozpoznanie remote po słowie-kluczu hosta
+
+Na razie import zdalny jest rozpoznawany **wyłącznie** po pierwszym segmencie
+ścieżki będącym zarezerwowanym słowem-kluczem hosta: **`github`** lub
+**`gitlab`**. Każda inna ścieżka `import "…"` to zwykły import **lokalny**
+(względny; jak w [048](048-import-aliases.md)).
+
+- Dozwolone hosty (allowlista MVP): `github`, `gitlab`. Inne = błąd lub lokalne
+  (do rozstrzygnięcia przy realizacji).
+- `github` / `gitlab` są zarezerwowane jako prefiksy — lokalny katalog o takiej
+  nazwie nie może ich cieniować.
+- Reszta zachowania (cache, `klin get` / `update`, brak cichej sieci) — niżej.
 
 ## Szkic (później)
 
