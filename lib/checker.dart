@@ -1390,7 +1390,37 @@ final class Checker {
     throw CheckError('invalid assignment target', pos);
   }
 
-  void _requireMutableStructPlace(Expr object, SourcePos pos) {
+  void _requireMutableStructPlace(Expr object, SourcePos pos) =>
+      _requireMutablePlace(
+        object,
+        pos,
+        immutableVarMessage: 'cannot assign to a field of an immutable variable',
+        immutableExprMessage:
+            'cannot assign to a field of an immutable expression',
+      );
+
+  void _requireMutableArrayPlace(Expr object, SourcePos pos) =>
+      _requireMutablePlace(
+        object,
+        pos,
+        immutableVarMessage: 'cannot assign to an immutable array',
+        immutableExprMessage: 'cannot assign through an immutable expression',
+      );
+
+  /// Recursively verifies that [object] is a mutable place (an lvalue chain).
+  ///
+  /// Accepts nested places — struct fields, fixed-array elements reached through
+  /// a `mut` receiver or variable, and writes through a `*mut` dereference —
+  /// mirroring the recursive check used for `&` ([_isMutablePlace]). Slice
+  /// element storage is shared with the caller (Go-like), so it stays writable.
+  /// The two message parameters preserve the caller's context (field vs array)
+  /// for the terminal error.
+  void _requireMutablePlace(
+    Expr object,
+    SourcePos pos, {
+    required String immutableVarMessage,
+    required String immutableExprMessage,
+  }) {
     final base = _unwrapGroups(object);
     if (base is NameExpr) {
       final symbol = _scope.lookup(base.name);
@@ -1398,28 +1428,41 @@ final class Checker {
         throw CheckError('nieznana zmienna `${base.name}`', pos);
       }
       if (!symbol.isMut) {
-        throw CheckError(
-            'cannot assign to a field of an immutable variable', pos);
+        throw CheckError(immutableVarMessage, pos);
       }
       base.isPtrReceiver = symbol.isPtrReceiver;
       return;
     }
-    throw CheckError(
-        'cannot assign to a field of an immutable expression', pos);
-  }
-
-  void _requireMutableArrayPlace(Expr object, SourcePos pos) {
-    final base = _unwrapGroups(object);
-    if (base is NameExpr) {
-      final symbol = _scope.lookup(base.name);
-      if (symbol == null)
-        throw CheckError('nieznana zmienna `${base.name}`', pos);
-      if (!symbol.isMut) {
-        throw CheckError('cannot assign to an immutable array', pos);
+    if (base is FieldExpr) {
+      _requireMutablePlace(
+        base.object,
+        pos,
+        immutableVarMessage: immutableVarMessage,
+        immutableExprMessage: immutableExprMessage,
+      );
+      return;
+    }
+    if (base is IndexExpr) {
+      if (_inferExpr(base.object) is SliceType) return;
+      _requireMutablePlace(
+        base.object,
+        pos,
+        immutableVarMessage: immutableVarMessage,
+        immutableExprMessage: immutableExprMessage,
+      );
+      return;
+    }
+    if (base is UnaryExpr && base.op == '*') {
+      final pointer = _inferExpr(base.operand);
+      if (pointer is! PtrType) {
+        throw CheckError('dereference requires a pointer', pos);
+      }
+      if (!pointer.isMut) {
+        throw CheckError('cannot write through an immutable pointer', pos);
       }
       return;
     }
-    throw CheckError('cannot assign through an immutable expression', pos);
+    throw CheckError(immutableExprMessage, pos);
   }
 
   Expr _unwrapGroups(Expr expr) {

@@ -2561,6 +2561,64 @@ fn main() {
     );
   });
 
+  test('golden: nested mutable places (issue 069 checker unblock)', () async {
+    final result = await _compileAndRun('test/nested_mut_place.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(
+        result.stdout, await File('test/nested_mut_place.out').readAsString());
+
+    final source = File('test/nested_mut_place.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/nested_mut_place.kl');
+    // A mut receiver's nested array element writes through the pointer.
+    expect(c, contains('b->slots[i] = v;'));
+    // Nested struct field and array-element field through a mut variable.
+    expect(c, contains('o.inner.x = 5;'));
+    expect(c, contains('xs[0].x = 9;'));
+  });
+
+  test('error: nested array write through an immutable receiver', () {
+    const source = '''
+struct Bus {
+  slots: [2]i32
+}
+fn (b: Bus) set(i: i32, v: i32) {
+  b.slots[i] = v
+}
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) => e is CheckError && e.toString().contains('immutable')),
+      ),
+    );
+  });
+
+  test('error: nested struct field write through an immutable variable', () {
+    const source = '''
+struct Inner {
+  x: i32
+}
+struct Outer {
+  inner: Inner
+}
+fn main() {
+  let o = Outer{ inner: Inner{ x: 1 } }
+  o.inner.x = 5
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) => e is CheckError && e.toString().contains('immutable')),
+      ),
+    );
+  });
+
   test('error: wrong function argument count', () {
     final source = File('test/bad_arity.kl').readAsStringSync();
     final program = Parser(Lexer(source).tokenize()).parse();

@@ -1,0 +1,33 @@
+struct Bus {
+    slots: [2]i32
+}
+
+// A mut receiver can write a nested array element (issue 069 unblock).
+fn (mut b: Bus) set(i: i32, v: i32) {
+    b.slots[i] = v
+}
+
+struct Inner {
+    x: i32
+}
+
+struct Outer {
+    inner: Inner
+}
+
+fn main() {
+    let mut bus = Bus{ slots: [0, 0] }
+    bus.set(0, 11)
+    bus.set(1, 22)
+    printf("bus: %d %d\n", bus.slots[0], bus.slots[1])
+
+    // Nested struct field through a mut variable.
+    let mut o = Outer{ inner: Inner{ x: 1 } }
+    o.inner.x = 5
+    printf("outer: %d\n", o.inner.x)
+
+    // Field of a fixed-array element through a mut variable.
+    let mut xs: [2]Inner = [Inner{ x: 0 }, Inner{ x: 0 }]
+    xs[0].x = 9
+    printf("arr: %d\n", xs[0].x)
+}
