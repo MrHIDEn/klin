@@ -76,7 +76,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [049](049-remote-imports.md) | Importy zdalne + `klin.mod` + `klin get` / `update` | ✅ | 048, 020, 047, 063 |
 | [063](063-remote-fixture-osa.md) | Fixture zdalny `mrhiden/osa` (e2e 049) | ✅ | 047 |
 | [065](065-project-lockfile.md) | `klin.lock` / sumy (jak go.sum) | ✅ | 049 |
-| [066](066-klin-upgrade-outdated.md) | `klin upgrade` / outdated (nowsze deps) | 💭 | 049 |
+| [066](066-klin-upgrade-outdated.md) | `klin upgrade` / outdated (nowsze deps) | ✅ | 049 |
 | [067](067-homebrew.md) | Homebrew: `brew install klin` | 💭 | publiczne release’y |
 | [050](050-sqlite-wrapper.md) | Opakowanie SQLite (FFI, niski priorytet) | 💭 | 021 |
 | [051](051-json-wrapper.md) | Opakowanie JSON + ścieżki `$…` (niski priorytet) | 💭 | 021, 026? |

@@ -85,7 +85,7 @@ import "github/mrhiden/osa"
 - Lock: `klin.lock` — commit SHA + `sha256` źródeł ([065](../issues/065-project-lockfile.md) ✅).
 - Fixture: https://github.com/MrHIDEn/osa ([063](../issues/063-remote-fixture-osa.md)).
 
-`upgrade` → [066](../issues/066-klin-upgrade-outdated.md).
+`outdated` / `upgrade` → [066](../issues/066-klin-upgrade-outdated.md) ✅.
 
 ## Poza zakresem
 

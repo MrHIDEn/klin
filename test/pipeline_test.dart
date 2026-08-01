@@ -1834,6 +1834,44 @@ fn main() { printf("%d\\n", o.version()) }
     );
   });
 
+  test('isUpgradeTarget / collectOutdated (issue 066)', () async {
+    expect(isUpgradeTarget('v0.1.0', 'v0.1.0'), isFalse);
+    expect(isUpgradeTarget('v0.1.0', 'v0.2.0'), isTrue);
+    expect(isUpgradeTarget('v0.2.0', 'v0.1.0'), isFalse);
+    expect(isUpgradeTarget('1.0.0', 'v1.0.1'), isTrue);
+    expect(isUpgradeTarget('main', 'v0.1.0'), isTrue);
+    expect(isUpgradeTarget('main', 'main'), isFalse);
+
+    final mod = KlinMod(requires: {
+      'github/mrhiden/osa': 'v0.1.0',
+      'github/acme/lib': 'v1.0.0',
+    });
+    Future<String> fakeLatest(RemoteImport r) async => switch (r.path) {
+          'github/mrhiden/osa' => 'v0.2.0',
+          'github/acme/lib' => 'v1.0.0',
+          _ => 'v0.0.0',
+        };
+    final rows = await collectOutdated(mod, resolveLatest: fakeLatest);
+    expect(rows.length, 1);
+    expect(rows.single.path, 'github/mrhiden/osa');
+    expect(rows.single.current, 'v0.1.0');
+    expect(rows.single.latest, 'v0.2.0');
+    expect(
+      formatOutdatedReport(rows),
+      'github/mrhiden/osa\tv0.1.0\tv0.2.0\n',
+    );
+    expect(formatOutdatedReport(const []), 'all packages up to date\n');
+
+    expect(
+      () => collectOutdated(
+        mod,
+        onlyPaths: ['github/missing/pkg'],
+        resolveLatest: fakeLatest,
+      ),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
   test('klin get fetches osa@v0.1.0 and run works (issue 049 network)', () async {
     final cache = Directory.systemTemp.createTempSync('klin_get049_');
     addTearDown(() => cache.deleteSync(recursive: true));
@@ -1916,6 +1954,52 @@ fn main() { printf("%d\\n", o.version()) }
     );
     expect(run.exitCode, 0, reason: '${run.stderr}${run.stdout}');
     expect(run.stdout, await File('test/remote_osa.out').readAsString());
+  }, timeout: Timeout(Duration(minutes: 2)));
+
+  test('klin outdated/upgrade with osa@v0.1.0 (issue 066 network)', () async {
+    final cache = Directory.systemTemp.createTempSync('klin_outdated066_');
+    addTearDown(() => cache.deleteSync(recursive: true));
+    final work = Directory.systemTemp.createTempSync('klin_outdatedwork066_');
+    addTearDown(() => work.deleteSync(recursive: true));
+    File('${work.path}/klin.mod').writeAsStringSync(
+      'klin 1\nrequire github/mrhiden/osa v0.1.0\n',
+    );
+    final repoRoot = Directory.current.path;
+    final klinBin = '$repoRoot/bin/klin.dart';
+    final env = {
+      ...Platform.environment,
+      'KLIN_CACHE': cache.path,
+    };
+
+    final get = await Process.run(
+      'dart',
+      ['run', klinBin, 'get'],
+      workingDirectory: work.path,
+      environment: env,
+    );
+    expect(get.exitCode, 0, reason: '${get.stderr}${get.stdout}');
+
+    final outdated = await Process.run(
+      'dart',
+      ['run', klinBin, 'outdated'],
+      workingDirectory: work.path,
+      environment: env,
+    );
+    expect(outdated.exitCode, 0, reason: '${outdated.stderr}${outdated.stdout}');
+    expect(outdated.stdout, 'all packages up to date\n');
+
+    final upgrade = await Process.run(
+      'dart',
+      ['run', klinBin, 'upgrade'],
+      workingDirectory: work.path,
+      environment: env,
+    );
+    expect(upgrade.exitCode, 0, reason: '${upgrade.stderr}${upgrade.stdout}');
+    expect(upgrade.stdout, 'all packages up to date\n');
+    expect(
+      loadKlinMod(File('${work.path}/klin.mod')).requires['github/mrhiden/osa'],
+      'v0.1.0',
+    );
   }, timeout: Timeout(Duration(minutes: 2)));
 
   test('error: conflicting import alias (issue 048)', () {
