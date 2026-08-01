@@ -1766,6 +1766,47 @@ fn main() { printf("%d\\n", o.version()) }
     );
   });
 
+  test('cacheSatisfiesRemoteFetch requires lock SHA match (issue 065)', () {
+    const pin = 'v0.1.0';
+    const sha = '0123456789abcdef0123456789abcdef01234567';
+    expect(
+      cacheSatisfiesRemoteFetch(
+        cachedPin: pin,
+        pinValue: pin,
+        cachedCommit: sha,
+        gitRef: pin,
+      ),
+      isTrue,
+    );
+    expect(
+      cacheSatisfiesRemoteFetch(
+        cachedPin: pin,
+        pinValue: pin,
+        cachedCommit: sha,
+        gitRef: sha,
+      ),
+      isTrue,
+    );
+    expect(
+      cacheSatisfiesRemoteFetch(
+        cachedPin: pin,
+        pinValue: pin,
+        cachedCommit: sha,
+        gitRef: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      ),
+      isFalse,
+    );
+    expect(
+      cacheSatisfiesRemoteFetch(
+        cachedPin: pin,
+        pinValue: pin,
+        cachedCommit: null,
+        gitRef: sha,
+      ),
+      isFalse,
+    );
+  });
+
   test('packageContentHash is stable and order-independent (issue 065)', () {
     final dir = Directory.systemTemp.createTempSync('klin_hash065_');
     addTearDown(() => dir.deleteSync(recursive: true));

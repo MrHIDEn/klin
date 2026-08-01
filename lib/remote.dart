@@ -392,6 +392,23 @@ Future<List<String>> _gitLsRemote(String url, String mode) async {
       .toList();
 }
 
+/// Whether an installed cache entry can satisfy a fetch without network.
+///
+/// When [gitRef] looks like a commit SHA (lock prefer-SHA), the cached
+/// `.commit` must match — otherwise stale pin+wrong-SHA would skip repair.
+bool cacheSatisfiesRemoteFetch({
+  required String? cachedPin,
+  required String pinValue,
+  required String? cachedCommit,
+  required String gitRef,
+}) {
+  if (cachedPin != pinValue || cachedCommit == null) return false;
+  if (!RegExp(r'^[0-9a-fA-F]{7,40}$').hasMatch(gitRef)) return true;
+  final want = gitRef.toLowerCase();
+  final have = cachedCommit.toLowerCase();
+  return have.startsWith(want) || want.startsWith(have);
+}
+
 /// Fetch [remote] at [gitRef] into the package cache.
 ///
 /// Returns `(pkgDir, commitSha)`. [pin] is written to `.pin` (klin.mod version);
@@ -407,16 +424,22 @@ Future<(String pkgDir, String commit)> fetchRemote(
   final pkgDir = packageCacheDir(remote, cacheRoot: cacheRoot);
   if (!force && isPackageInstalled(pkgDir)) {
     final existing = readPin(pkgDir);
-    if (existing == pinValue) {
-      final commit = readCommit(pkgDir);
-      if (commit != null) return (pkgDir, commit);
-      // Legacy cache without `.commit` — fall through and refresh metadata.
-    } else {
+    if (existing != pinValue) {
       throw StateError(
         'package `${remote.path}` is already installed at `$existing`; '
         'use `klin update ${remote.path}@$pinValue` to change',
       );
     }
+    final commit = readCommit(pkgDir);
+    if (cacheSatisfiesRemoteFetch(
+      cachedPin: existing,
+      pinValue: pinValue,
+      cachedCommit: commit,
+      gitRef: gitRef,
+    )) {
+      return (pkgDir, commit!);
+    }
+    // Missing `.commit`, or pin matches but SHA ≠ locked gitRef — re-fetch.
   }
 
   final tmp = Directory.systemTemp.createTempSync('klin_get_');
