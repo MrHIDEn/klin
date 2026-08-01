@@ -11,6 +11,21 @@
 - Repo `klin` może być private — wtedy `brew` działa tylko dla osób z dostępem
   (HTTPS token / SSH) albo po upublicznieniu + release
 
+## Platformy w Release ([076](../issues/076-release-windows-arm.md))
+
+Na tag `v*` workflow buduje 6 assetów (`dart compile exe` per host — brak
+cross-kompilacji):
+
+| Platforma | Asset |
+|---|---|
+| macOS arm64 / x64 | `klin-macos-arm64.tar.gz` / `klin-macos-amd64.tar.gz` |
+| Linux x64 / arm64 | `klin-linux-amd64.tar.gz` / `klin-linux-arm64.tar.gz` |
+| Windows x64 / arm64 | `klin-windows-amd64.zip` / `klin-windows-arm64.zip` |
+
+Każdy asset ma `.sha256`. Homebrew obejmuje macOS/Linux; Windows na teraz przez
+`.zip` z Release (Scoop/WinGet — przyszłość). Na Windows host C-kompilator do
+`klin run` to MSVC / clang / mingw.
+
 ## Instalacja (HEAD / z clone)
 
 Wymaga [Dart tap](https://github.com/dart-lang/homebrew-dart) do zbudowania:
