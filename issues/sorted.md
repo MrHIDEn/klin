@@ -83,6 +83,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [058](058-source-file-split.md) | Podział dużych plików źródłowych kompilatora (dług techn.) | 💭 | — |
 | [059](059-kstruct-macros.md) | Makra `$kstruct` / `$kstruct_from` (bogatsze klinstruct) | 💭 | 026, 052 |
 | [060](060-map-kv.md) | Mapa KV (hash map) — język / stdlib / C | 💭 | 007, 057? |
+| [061](061-micropython-machine-api.md) | API w stylu MicroPython `machine` (PWM, UART, …) | 💭 | 010, 031? |
 
 ---
 
