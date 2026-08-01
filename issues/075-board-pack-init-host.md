@@ -84,7 +84,9 @@ $device("github/…/stm32f411.svd", "RCC,GPIOA,STK")  // MMIO z SVD
 $board("github/…/nucleo_f411re.ioc")                 // stałe LED→PA5 itd.
 ```
 
-- `klin get` ściąga `.ioc` do cache `asset/`,
+- `klin get` ściąga `.ioc` do cache `asset/` (ziarno); typowy flow potem
+  **kopiuje** do `board/*.ioc` w projekcie — lokalny plik = prawda, w gicie,
+  **nie** nadpisywany przez `get`/`update` (szczegóły: [074](074-board-ioc-klin-mod.md)),
 - parser wycina **tylko mapę pinów** → codegen stałych,
 - **nie** generuje `linker.ld` / `startup.s` — te nadal z A (pack) / B (init).
 

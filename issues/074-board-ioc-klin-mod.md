@@ -48,6 +48,31 @@ fn main() {
 - rodzina `$` (D3); **nie** `import "*.ioc"`
 - ten sam `klin get` / cache `asset/` / `klin.lock` co SVD; **inny** parser po fetchu
 
+## Lokalne `.ioc` w projekcie (werdykt)
+
+Po edycji w Cube / ręcznie **`.ioc` należy do projektu** — idzie z gitem.
+Remote/`klin.mod` **nie mogą** go nadpisać przy zwykłym `get` / `update`.
+
+| Źródło | Rola |
+|---|---|
+| Cache po `klin get …ioc@ref` | upstream / ziarno startowe |
+| Plik w projekcie (`board/*.ioc`) | **edytowalna prawda**; commitowany |
+
+Flow:
+
+1. **Tylko lokalnie** — `$board("board/nucleo.ioc")`; bez linii `board github/…`
+   (albo linia tylko jako dokumentacja „skąd wzięto”).
+2. **Remote jako ziarno** — `klin get` → cache; `klin init` / pierwszy setup
+   **kopiuje** do `board/*.ioc`. Od tej pory resolucja = lokalna ścieżka.
+3. **`klin update` nie nadpisuje** lokalnego `.ioc`. Odświeżenie z upstreamu =
+   osobna, jawna komenda (np. „reset from remote”), nie domyślne zachowanie.
+
+Resolucja jak SVD ([053](053-device-board-assets.md)): **local-first** —
+istniejący plik obok źródeł wygrywa przed cache `asset/`.
+
+Linia `board github/…` w modzie = pin **upstreamu** (wersja ziarna), nie
+„zawsze bierz z sieci zamiast lokalnego”.
+
 ## Kiedy otwierać implementację
 
 1. MVP 053 działa (`device` + `$device` + offline offline).
@@ -57,17 +82,19 @@ fn main() {
 ## Zakres (gdy wejdzie)
 
 - [ ] dyrektywa `board` w parserze `klin.mod` + lock
-- [ ] `$board("…")` lokalnie, potem remote path
+- [ ] `$board("…")` lokalnie, potem remote path (local-first)
+- [ ] lokalne `.ioc` w projekcie nie nadpisywane przez `get`/`update`
 - [ ] parser **wycinka** `.ioc` → stałe pinów (nazwa → port/pin)
 - [ ] zero HAL / clock tree / generowanego `main` z Cube
 - [ ] e2e: jedno Nucleo `.ioc` → kilka stałych; blink bez ręcznego pinoutu
-- [ ] docs: „nie zastępuje Cube”
+- [ ] docs: „nie zastępuje Cube”; lokalna prawda vs upstream
 
 ## Czego nie robić
 
 - pełny CubeMX → projekt Klin
 - mylenie z `device` (SVD) ani z `require` (lib `.kl`)
 - cichy download przy `run`
+- **`klin get`/`update` nadpisujące** lokalne, edytowane `.ioc` w projekcie
 - HAL przez IOC — [031](031-biblioteki-hal.md)
 
 ## Powiązane
