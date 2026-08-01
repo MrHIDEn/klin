@@ -79,6 +79,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [066](066-klin-upgrade-outdated.md) | `klin upgrade` / outdated (nowsze deps) | 💭 | 049 |
 | [067](067-homebrew.md) | Homebrew: `brew install klin` | 💭 | publiczne release’y |
 | [050](050-sqlite-wrapper.md) | Opakowanie SQLite (FFI, niski priorytet) | 💭 | 021 |
+| [070](070-host-orm-sqlite.md) | ORM-like / typed repo nad SQLite (host, niski priorytet) | 💭 | 050, 021 |
 | [051](051-json-wrapper.md) | Opakowanie JSON + ścieżki `$…` (niski priorytet) | 💭 | 021, 026? |
 | [052](052-klinstruct.md) | `klinstruct` — pack/unpack jak cstruct (niski priorytet) | 💭 | 007, 020/047 |
 | [053](053-device-board-assets.md) | `$device` + Go-like fetch SVD (IOC/board) | 💭 | 027, 049? |
