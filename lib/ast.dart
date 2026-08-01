@@ -215,6 +215,34 @@ final class LetDestructureStmt extends Stmt {
   });
 }
 
+/// Fixed-array destructuring declaration (issue 056, phase C):
+///   let [a, b] = xs        // xs : [2]T
+///   let mut [a, b] = xs
+/// Only fixed-length arrays `[N]T` with `N` == number of patterns. Lowers to
+/// positional reads (`xs[i]`) or, for an array literal source, element-wise
+/// binds — no hidden cost.
+final class LetArrayDestructureStmt extends Stmt {
+  final bool isMut;
+
+  /// Binding names in positional order (index i binds element i).
+  final List<String> names;
+
+  /// The array value being destructured; a name is indexed in place, an array
+  /// literal binds element-wise.
+  final Expr source;
+  final SourcePos pos;
+
+  /// Filled by the checker (element type of the source array).
+  KlinType? elemType;
+
+  LetArrayDestructureStmt({
+    required this.isMut,
+    required this.names,
+    required this.source,
+    required this.pos,
+  });
+}
+
 /// target = expr, where target is NameExpr or FieldExpr.
 final class AssignStmt extends Stmt {
   final Expr target;

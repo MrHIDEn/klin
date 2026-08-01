@@ -622,6 +622,52 @@ final class Checker {
           );
         }
 
+      case LetArrayDestructureStmt(
+          :final isMut,
+          :final names,
+          :final source,
+          :final pos
+        ):
+        // The source must be indexable without side effects or an invalid C
+        // array copy, so restrict phase C to array variables and literals.
+        if (source is! NameExpr && source is! ArrayLitExpr) {
+          throw CheckError(
+            'array destructuring source must be an array variable or literal',
+            source.pos,
+          );
+        }
+        final sourceType =
+            _defaultConcrete(_inferLetOrAssignValue(source), source.pos);
+        if (sourceType is! ArrayType) {
+          throw CheckError(
+            'array destructuring requires a fixed-length array `[N]T`, '
+            'got `${sourceType.displayName}`',
+            source.pos,
+          );
+        }
+        if (sourceType.len != names.length) {
+          throw CheckError(
+            'array has ${sourceType.len} element(s) but the pattern binds '
+            '${names.length}',
+            pos,
+          );
+        }
+        final elemType = sourceType.elem;
+        if (elemType is ArrayType) {
+          throw CheckError(
+            'cannot destructure a nested array element '
+            '(bind the array and index it instead)',
+            pos,
+          );
+        }
+        _materialize(source, sourceType);
+        stmt.elemType = elemType;
+        for (final name in names) {
+          _scope.define(
+            _Symbol(name: name, type: elemType, isMut: isMut, pos: pos),
+          );
+        }
+
       case AssignStmt(:final target, :final value, :final pos):
         final targetType = _checkAssignableTarget(target, pos);
         if (targetType is ArrayType) {

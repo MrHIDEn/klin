@@ -524,6 +524,9 @@ final class Parser {
     if (_check(TokenKind.lBrace)) {
       return _structDestructureLet(letTok, isMut);
     }
+    if (_check(TokenKind.lBracket)) {
+      return _arrayDestructureLet(letTok, isMut);
+    }
     final name = _expect(TokenKind.ident, 'expected variable name');
     _rejectCKeyword(name, 'a variable name');
     String? typeName;
@@ -581,6 +584,47 @@ final class Parser {
     return LetDestructureStmt(
       isMut: isMut,
       fields: fields,
+      source: source,
+      pos: letTok.pos,
+    );
+  }
+
+  /// `let [mut] [a, b] = expr` — fixed-array destructuring (issue 056, phase C).
+  Stmt _arrayDestructureLet(Token letTok, bool isMut) {
+    _expect(TokenKind.lBracket, 'oczekiwano `[`');
+    final names = <String>[];
+    final seen = <String>{};
+    if (!_check(TokenKind.rBracket)) {
+      while (true) {
+        final name = _expect(TokenKind.ident, 'expected binding name');
+        _rejectCKeyword(name, 'a variable name');
+        if (!seen.add(name.lexeme)) {
+          throw ParseError(
+            'duplicate name `${name.lexeme}` in destructuring pattern',
+            name.pos,
+          );
+        }
+        names.add(name.lexeme);
+        if (_check(TokenKind.comma)) {
+          _advance();
+          if (_check(TokenKind.rBracket)) break; // trailing comma
+          continue;
+        }
+        break;
+      }
+    }
+    _expect(TokenKind.rBracket, 'expected `]` after destructuring pattern');
+    if (names.isEmpty) {
+      throw ParseError(
+        'destructuring pattern needs at least one binding',
+        letTok.pos,
+      );
+    }
+    _expect(TokenKind.equal, 'expected `=` in destructuring `let`');
+    final source = _expr();
+    return LetArrayDestructureStmt(
+      isMut: isMut,
+      names: names,
       source: source,
       pos: letTok.pos,
     );
