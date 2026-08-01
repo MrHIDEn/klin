@@ -63,7 +63,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [018](018-generators-yield.md) | Generatory / `yield` | 💭 | 004+ |
 | [024](024-rtos.md) | RTOS (FreeRTOS / Zephyr / …) | 💭 | 010+ |
 | [028](028-freertos.md) | Ładna współpraca z FreeRTOS | 💭 | 024, 010, 021 |
-| [029](029-async-event-loop.md) | Event loop / async·await | 💭 | 018?, 028? |
+| [029](029-async-event-loop.md) | Event loop / async·await (duże zwierzę; MVP = lib bez async) | 💭 | 018?, 028?, 049? |
 | [030](030-isr-decorators.md) | Przerwania przez dekoratory | 💭 | 010 |
 | [031](031-biblioteki-hal.md) | Biblioteki HAL (Cube / LL) | 💭 | 010, 021 |
 | [034](034-typy-generyczne.md) | Generyki w gramatyce — nie teraz (D3/`$fn`; ew. cukier później) | 💭 | 026 |
