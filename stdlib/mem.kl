@@ -19,11 +19,29 @@ fn host_alloc_i32(n: i32): ![]i32
 @[cimport, codename("klin_mem_free_i32")]
 fn host_free_i32(buf: []i32)
 
+@[cimport, codename("klin_mem_alloc_i64")]
+fn host_alloc_i64(n: i32): ![]i64
+
+@[cimport, codename("klin_mem_free_i64")]
+fn host_free_i64(buf: []i64)
+
+@[cimport, codename("klin_mem_alloc_f64")]
+fn host_alloc_f64(n: i32): ![]f64
+
+@[cimport, codename("klin_mem_free_f64")]
+fn host_free_f64(buf: []f64)
+
 @[cimport, codename("klin_mem_empty_u8")]
 fn host_empty_u8(): []u8
 
 @[cimport, codename("klin_mem_empty_i32")]
 fn host_empty_i32(): []i32
+
+@[cimport, codename("klin_mem_empty_i64")]
+fn host_empty_i64(): []i64
+
+@[cimport, codename("klin_mem_empty_f64")]
+fn host_empty_f64(): []f64
 
 pub fn heap(): Allocator {
     return Allocator{ _pad: 0 }
@@ -60,4 +78,28 @@ pub fn alloc_i32(a: *mut Allocator, n: i32): ![]i32 {
 
 pub fn free_i32(a: *mut Allocator, buf: []i32) {
     host_free_i32(buf)
+}
+
+pub fn empty_i64(): []i64 {
+    return host_empty_i64()
+}
+
+pub fn alloc_i64(a: *mut Allocator, n: i32): ![]i64 {
+    return host_alloc_i64(n)
+}
+
+pub fn free_i64(a: *mut Allocator, buf: []i64) {
+    host_free_i64(buf)
+}
+
+pub fn empty_f64(): []f64 {
+    return host_empty_f64()
+}
+
+pub fn alloc_f64(a: *mut Allocator, n: i32): ![]f64 {
+    return host_alloc_f64(n)
+}
+
+pub fn free_f64(a: *mut Allocator, buf: []f64) {
+    host_free_f64(buf)
 }
