@@ -1,0 +1,7 @@
+import "github/mrhiden/osa"
+
+fn main() {
+    printf("version=%d\n", osa.version())
+    printf("2+3=%d\n", osa.add(2, 3))
+    printf("clamp=%d\n", osa.clamp(10, 0, 5))
+}

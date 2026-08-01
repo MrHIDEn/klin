@@ -4,18 +4,22 @@ import 'ast.dart';
 import 'lexer.dart';
 import 'parser.dart';
 import 'preprocess.dart';
+import 'remote.dart';
 import 'token.dart';
 
 /// Loads an entry file (and same-module siblings) plus transitive imports.
 ///
 /// [klinPathDirs] are CLI `-I` directories (searched in order, after `lib/`).
 /// Environment `$KLIN_PATH` is also consulted (PATH-style separator).
+/// [klinCacheDir] overrides `$KLIN_CACHE` for remote imports (issue 049).
 ///
 /// `import name` resolves to `name.kl` **or** a directory `name/` of `.kl`
 /// files (issue 047). Both in the same search slot → error.
+/// Remote `import "github|gitlab/…"` resolves only from the package cache.
 Program loadProject(
   String entryPath, {
   List<String> klinPathDirs = const [],
+  String? klinCacheDir,
 }) {
   final structs = <StructDecl>[];
   final funcs = <FuncDecl>[];
@@ -141,6 +145,7 @@ Program loadProject(
         fromDir,
         imp.resolutionKey,
         klinPathDirs: klinPathDirs,
+        klinCacheDir: klinCacheDir,
       );
       final childModule = switch (target) {
         _FileImport(:final path) => loadPackageFiles([path]),
@@ -211,11 +216,19 @@ final class _DirImport extends _ImportTarget {
 ///
 /// Per search root (sibling, `lib/`, `-I`, `$KLIN_PATH`, stdlib): try
 /// `name.kl` and `name/` in that slot; both present → ambiguous.
+///
+/// Remote paths (`github/…`, `gitlab/…`) resolve **only** from the Klin
+/// package cache — never from a local `github/` folder (issue 049).
 _ImportTarget _resolveImportTarget(
   String fromDir,
   String importName, {
   List<String> klinPathDirs = const [],
+  String? klinCacheDir,
 }) {
+  if (isRemoteImportPath(importName)) {
+    return _resolveRemoteImportTarget(importName, klinCacheDir: klinCacheDir);
+  }
+
   final sep = Platform.pathSeparator;
   final roots = <String>[
     fromDir,
@@ -245,6 +258,27 @@ _ImportTarget _resolveImportTarget(
   throw FileSystemException(
     'imported file not found',
     '$fromDir$sep$importName.kl',
+  );
+}
+
+_ImportTarget _resolveRemoteImportTarget(
+  String importName, {
+  String? klinCacheDir,
+}) {
+  final RemoteImport remote;
+  try {
+    remote = parseRemoteImport(importName);
+  } on FormatException catch (e) {
+    throw FileSystemException(e.message, importName);
+  }
+  final pkgDir = packageCacheDir(remote, cacheRoot: klinCacheDir);
+  if (isPackageInstalled(pkgDir)) {
+    return _DirImport(Directory(pkgDir).absolute.path);
+  }
+  throw FileSystemException(
+    'remote package `${remote.path}` is not in the cache; '
+    'run `klin get ${remote.path}` (or `klin get ${remote.path}@<ref>`)',
+    pkgDir,
   );
 }
 

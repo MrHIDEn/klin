@@ -10,6 +10,7 @@ import 'package:klin/link_args.dart';
 import 'package:klin/parser.dart';
 import 'package:klin/preprocess.dart';
 import 'package:klin/project.dart';
+import 'package:klin/remote.dart';
 import 'package:klin/version.dart';
 
 /// CLI: argv → preprocess → lex → parse → check → emit → optionally cc → run
@@ -20,6 +21,8 @@ import 'package:klin/version.dart';
 ///   klin run [--cc …] [-I dir] [-l lib] [-L dir] <file.kl>
 ///   klin fmt [-w] <file.kl…>
 ///   klin test [--cc …] [-I dir] [-l lib] [-L dir] [path…]
+///   klin get [path[@ref]…]
+///   klin update [path[@ref]…]
 ///   klin [--cc …] [-I dir] [-l lib] [-L dir] [--emit-c] [--emit-h] [--emit-pp] <file.kl>
 Future<void> main(List<String> args) async {
   if (args.isEmpty) {
@@ -41,6 +44,14 @@ Future<void> main(List<String> args) async {
   }
   if (args.first == 'test') {
     await _runTest(args.skip(1).toList());
+    return;
+  }
+  if (args.first == 'get') {
+    await _runGet(args.skip(1).toList(), force: false);
+    return;
+  }
+  if (args.first == 'update') {
+    await _runGet(args.skip(1).toList(), force: true);
     return;
   }
 
@@ -138,6 +149,67 @@ Future<void> main(List<String> args) async {
   stdout.write(run.stdout);
   stderr.write(run.stderr);
   exit(run.exitCode);
+}
+
+/// `klin get` / `klin update` — fetch remote packages into cache (issue 049).
+Future<void> _runGet(List<String> args, {required bool force}) async {
+  final cmd = force ? 'update' : 'get';
+  try {
+    final cwd = Directory.current.path;
+    var modFile = findKlinModFile(cwd);
+    var mod = modFile != null ? loadKlinMod(modFile) : KlinMod.empty();
+    modFile ??= File('$cwd${Platform.pathSeparator}klin.mod');
+
+    final specs = <String>[];
+    if (args.isEmpty) {
+      if (!modFile.existsSync() || mod.requires.isEmpty) {
+        stderr.writeln(
+          'klin $cmd: no klin.mod requires; pass path[@ref] '
+          '(e.g. github/mrhiden/osa@v0.1.0)',
+        );
+        exit(2);
+      }
+      for (final path in mod.requires.keys.toList()..sort()) {
+        specs.add('$path@${mod.requires[path]}');
+      }
+    } else {
+      specs.addAll(args);
+    }
+
+    for (final spec in specs) {
+      final remote = parseRemoteImport(spec);
+      // update without @ref keeps klin.mod pin; get without @ref may resolve latest
+      final effective = force && remote.ref == null && mod.requires[remote.path] != null
+          ? RemoteImport(
+              host: remote.host,
+              owner: remote.owner,
+              repo: remote.repo,
+              ref: mod.requires[remote.path],
+            )
+          : remote;
+      final (pkgDir, ref, _) = await ensureRemotePackage(
+        remote: effective,
+        mod: mod,
+        modFile: modFile,
+        force: force,
+      );
+      // Reload mod after possible write.
+      if (modFile.existsSync()) mod = loadKlinMod(modFile);
+      stdout.writeln('${remote.path}@$ref → $pkgDir');
+    }
+  } on FormatException catch (e) {
+    stderr.writeln('klin $cmd: ${e.message}');
+    exit(1);
+  } on StateError catch (e) {
+    stderr.writeln('klin $cmd: $e');
+    exit(1);
+  } on ProcessException catch (e) {
+    stderr.writeln('klin $cmd: ${e.message}');
+    exit(1);
+  } on FileSystemException catch (e) {
+    stderr.writeln('klin $cmd: ${e.message}: ${e.path}');
+    exit(1);
+  }
 }
 
 Future<void> _runFmt(List<String> args) async {
@@ -394,6 +466,8 @@ String _usageText() =>
     '       klin run [--cc gcc|clang|tcc] [-I dir] [-l lib] [-L dir] <file.kl>\n'
     '       klin fmt [-w] <file.kl…>\n'
     '       klin test [--cc gcc|clang|tcc] [-I dir] [-l lib] [-L dir] [path…]\n'
+    '       klin get [path[@ref]…]\n'
+    '       klin update [path[@ref]…]\n'
     '       klin [--cc gcc|clang|tcc] [-I dir] [-l lib] [-L dir] '
     '[--emit-c] [--emit-h] [--emit-pp] <file.kl>\n';
 
