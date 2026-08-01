@@ -1,6 +1,6 @@
 # 056 — Dekonstrukcja (`{}` / `[]` / multi-assign)
 
-**Status:** 🔨 w toku — faza A ✅ (struktury) + faza C ✅ (tablice `[N]T`)
+**Status:** 🔨 w toku — fazy A ✅ (struktury) + C ✅ (tablice `[N]T`) + D ✅ (rename / `_`)
 **Zależy od:** [005](005-struktury-metody.md) (struct lit/pola ✅); mile [007](007-wskazniki-tablice-slice.md) (tablice stałej długości)
 
 > **Nie mylić z destruktorami RAII.** D6 ([note/01-decyzje.md](../note/01-decyzje.md)):
@@ -99,7 +99,7 @@ jawny indeks / slice — nie cukier `[x]=`.
 | A′ | bare `{ a, b } = s` (reassign; wymaga lookaheadu) | 005 | ⏳ |
 | B | `a, b = b, a` (multi-assign, bez multi-return) | parser + checker tmp | ⏳ |
 | C | `let [a, b] = xs` dla `[N]T`, `N` znane | 007 | ✅ |
-| D | rename `{ x: px }`, `_` w tablicach (skip) | po A/C | ⏳ |
+| D | rename `{ x: px }`, `_` w tablicach (skip) | po A/C | ✅ |
 
 **Faza A (zrobione):** `let { … } = expr` i `let mut { … } = expr` dla struktur —
 podzbiór pól, kolejność nieistotna, źródło liczone raz (kopia do tymczasowej gdy
@@ -113,10 +113,18 @@ stałej długości `[N]T`, gdzie `N` == liczba wzorców (pełne pokrycie, brak
 niejednoznaczności `[x] = tab`). Nazwana tablica indeksowana w miejscu
 (`xs[i]`), literał tablicowy wiązany element po elemencie. Odrzucane przez
 frontend: slice `[]T` (długość runtime), niezgodna długość, źródło inne niż
-zmienna/literał tablicy, zagnieżdżony element tablicowy. Skip `_` należy do
-fazy D. Przykład [`examples/destructure.kl`](../examples/destructure.kl), testy
+zmienna/literał tablicy, zagnieżdżony element tablicowy. Przykład
+[`examples/destructure.kl`](../examples/destructure.kl), testy
 w [`test/destruct_array.kl`](../test/destruct_array.kl) +
 `test/pipeline_test.dart`.
+
+**Faza D (zrobione):** rename pól struktury `let { x: px, y: py } = p` (mieszalne
+z polami bez zmiany nazwy) oraz `_` jako skip pozycji w tablicy
+`let [_, b, _, d] = xs` (pełne pokrycie nadal wymagane, min. jedno realne
+wiązanie; indeksy zachowane). Testy w
+[`test/destruct_phase_d.kl`](../test/destruct_phase_d.kl) +
+`test/pipeline_test.dart`. Poza zakresem zostaje bare reassignment
+(`{ … } = p` / `[ … ] = xs`, faza A′) i multi-assign (faza B).
 
 ## Kryterium „issue zamknięte jako decyzja”
 
