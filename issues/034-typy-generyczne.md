@@ -1,40 +1,53 @@
-# 034 — Typy generyczne w języku (do rozważenia)
+# 034 — Typy generyczne w języku
 
-**Status:** 💭 do rozważenia
+**Status:** 💭 nie teraz (zostajemy przy D3)
 **Zależy od:** doświadczenia z D3 / [026](026-preprocessor.md); nie blokuje kolejki głównej
+
+## Werdykt (po 017 / 057)
+
+**Nie wdrażamy generyków w gramatyce.** Zostajemy przy **D3**
+([note/01-decyzje.md](../note/01-decyzje.md)): monomorfizacja przez `$fn`
+przed parse.
+
+Pełny system typów z `T` w tablicy symboli (wariant 3) to duży koszt frontendu
+przy **tym samym** emitcie C — zysk to głównie ergonomia nazw, nie model
+wykonania. Zasada nadrzędna i tak wymaga monomorfizacji.
+
+Po [017](017-collection-methods.md) / [057](057-allocator.md) `$fn` w stdlib
+wystarcza: `slice` / `slice_alloc` (`_i32` / `_u8`), `mem.alloc_i32` /
+`alloc_u8`. Ból jest nazewniczy (`map_into_i32` vs `map_into[T]`), nie
+semantyczny. **`a.alloc(T, n)` nadal nie obiecywać**
+([note/14-allocator.md](../note/14-allocator.md)).
 
 ## Kontekst
 
-Decyzja **D3** ([note/01-decyzje.md](../note/01-decyzje.md)): generyki **nie**
-w gramatyce — zamiast tego makra czasu kompilacji (`$fn`, monomorfizacja
-przed parse). MVP jest i działa (`point_macro`, SVD fluent przez expand).
+D3: generyki **nie** w gramatyce — makra czasu kompilacji. MVP działa
+(`point_macro`, SVD fluent, slice helpers — [note/16-slice.md](../note/16-slice.md)).
 
-To nie zamyka tematu na zawsze. Warto wrócić, gdy będzie widać, gdzie makra
-bolą: komunikaty błędów, czytelność bibliotek, powtarzalne wzorce
-(`Option`/`Result` parametryzowane, kontenery, [017](017-collection-methods.md)).
+## Warianty (gdy wrócimy)
 
-## Pytanie
+1. **Tylko D3** — wzmocnić makra (lepsze diagnostyki, dedent/`fmt`, cytowanie AST).
+2. **Cienka warstwa generyków** — cukier (`fn id[T](x: T): T`) rozwijany do
+   tego samego co `$fn` (checker widzi `T`, emit jak monomorfy). **Preferowany**
+   cel przy otwarciu tematu.
+3. **Pełniejsze generyki** — parametry typów w tablicy symboli, constraints;
+   większy koszt — nie planować domyślnie.
 
-Czy Klinowi **przydałyby się** typy generyczne w rdzeniu (np. `struct Vec[T]`,
-`fn id[T](x: T): T`), przy zachowaniu zasady nadrzędnej:
+Bez vtable / boxowania domyślnie; frontend łapie błędy zanim gcc zobaczy `.c`.
 
-- monomorfizacja do C (jak dziś makra) — **bez** vtable / boxowania domyślnie,
-- zero ukrytego kosztu w emitowanym kodzie,
-- frontend łapie błędy zanim gcc zobaczy `.c`.
+## Kryterium ponownego otwarcia
 
-## Warianty (później)
+Dopiero gdy zbierzesz **2–3 twarde miejsca**, gdzie `$fn` jest wyraźnie gorsze
+— nie „ładniej by było”:
 
-1. **Zostawić tylko D3** — wzmocnić makra (lepsze diagnostyki, dedent/`fmt`,
-   cytowanie AST).
-2. **Cienka warstwa generyków** — cukier składniowy rozwijany do tego samego
-   co `$fn` (checker widzi `T`, emit jak monomorfy).
-3. **Pełniejsze generyki** — parametry typów w tablicy symboli, constraints
-   później; większy koszt implementacji.
+1. kontener z metodami (`Vec[T]` / `HashMap[K,V]`) trudny jako sam makro-expand
+2. parametryzowane `Option`/`Result` w wielu API (dziś `!T` wystarcza)
+3. diagnostyki z rozwiniętego `$fn` realnie blokują użytkowników
 
-## Kryterium otwarcia tematu
+Wtedy planować **wariant 2**, nie wariant 3.
 
-Nie „zaimplementować generyki”, tylko decyzja / notatka: **zostajemy przy D3**
-albo **planujemy wariant 2/3** z przykładem (np. `Vec[T]` vs `$fn vec`).
+## Checklist decyzji
 
-- [ ] zebrać 2–3 miejsca w stdlib/przykładach, gdzie `$fn` jest wyraźnie gorsze
-- [ ] krótka aktualizacja D3 albo osobna decyzja w `note/`
+- [x] Werdykt: zostajemy przy D3; otwarcie tematu = wariant 2 po kryteriach powyżej
+- [x] Krótki dopisek w D3 ([note/01-decyzje.md](../note/01-decyzje.md))
+- [ ] Zebrać 2–3 twarde miejsca bólu `$fn` (warunek startu implementacji — nie teraz)

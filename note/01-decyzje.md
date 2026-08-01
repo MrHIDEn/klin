@@ -88,6 +88,12 @@ Ryzyko: czas kompilacji, komunikaty błędów z rozwiniętych makr.
 [`examples/point.kl`](../examples/point.kl) /
 [`point_macro.kl`](../examples/point_macro.kl).
 
+**Po 017 / 057:** `$fn` w stdlib wystarcza (`slice` / `slice_alloc`,
+`mem.alloc_i32` / `alloc_u8`). Generyki w gramatyce — **nie teraz**;
+ew. cienki cukier → ten sam expand (wariant 2) dopiero przy twardym bólu.
+Szczegóły: [034](../issues/034-typy-generyczne.md). Nadal nie obiecywać
+`a.alloc(T, n)`.
+
 ---
 
 ## D4. Mangling nazw

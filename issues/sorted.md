@@ -66,7 +66,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [029](029-async-event-loop.md) | Event loop / async·await | 💭 | 018?, 028? |
 | [030](030-isr-decorators.md) | Przerwania przez dekoratory | 💭 | 010 |
 | [031](031-biblioteki-hal.md) | Biblioteki HAL (Cube / LL) | 💭 | 010, 021 |
-| [034](034-typy-generyczne.md) | Typy generyczne w języku (vs D3/`$fn`) | 💭 | 026 |
+| [034](034-typy-generyczne.md) | Generyki w gramatyce — nie teraz (D3/`$fn`; ew. cukier później) | 💭 | 026 |
 | [040](040-time-zones.md) | Strefy IANA + DST | 💭 | 037 |
 | [041](041-time-locale-relative.md) | Locale dat + relative strings | 💭 | 037 |
 | [042](042-time-format-luxon.md) | Dialekt formatu `yyyy-MM-dd` w `time` | 💭 | 037 |
