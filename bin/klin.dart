@@ -23,6 +23,8 @@ import 'package:klin/version.dart';
 ///   klin test [--cc …] [-I dir] [-l lib] [-L dir] [path…]
 ///   klin get [path[@ref]…]
 ///   klin update [path[@ref]…]
+///   klin outdated [path…]
+///   klin upgrade [path…]
 ///   klin [--cc …] [-I dir] [-l lib] [-L dir] [--emit-c] [--emit-h] [--emit-pp] <file.kl>
 Future<void> main(List<String> args) async {
   if (args.isEmpty) {
@@ -52,6 +54,14 @@ Future<void> main(List<String> args) async {
   }
   if (args.first == 'update') {
     await _runGet(args.skip(1).toList(), force: true);
+    return;
+  }
+  if (args.first == 'outdated') {
+    await _runOutdated(args.skip(1).toList());
+    return;
+  }
+  if (args.first == 'upgrade') {
+    await _runUpgrade(args.skip(1).toList());
     return;
   }
 
@@ -151,7 +161,95 @@ Future<void> main(List<String> args) async {
   exit(run.exitCode);
 }
 
-/// `klin get` / `klin update` — fetch remote packages into cache (issue 049).
+/// `klin outdated` — report requires behind remote latest (issue 066; uses network).
+Future<void> _runOutdated(List<String> args) async {
+  try {
+    final modFile = findKlinModFile(Directory.current.path);
+    if (modFile == null || !modFile.existsSync()) {
+      stderr.writeln('klin outdated: no klin.mod found');
+      exit(2);
+    }
+    final mod = loadKlinMod(modFile);
+    if (mod.requires.isEmpty) {
+      stderr.writeln('klin outdated: klin.mod has no requires');
+      exit(2);
+    }
+    final rows = await collectOutdated(
+      mod,
+      onlyPaths: args.isEmpty ? null : args,
+    );
+    stdout.write(formatOutdatedReport(rows));
+  } on FormatException catch (e) {
+    stderr.writeln('klin outdated: ${e.message}');
+    exit(1);
+  } on ProcessException catch (e) {
+    stderr.writeln('klin outdated: ${e.message}');
+    exit(1);
+  }
+}
+
+/// `klin upgrade` — bump outdated requires to latest + fetch (issue 066).
+Future<void> _runUpgrade(List<String> args) async {
+  try {
+    final cwd = Directory.current.path;
+    final modFile = findKlinModFile(cwd);
+    if (modFile == null || !modFile.existsSync()) {
+      stderr.writeln('klin upgrade: no klin.mod found');
+      exit(2);
+    }
+    var mod = loadKlinMod(modFile);
+    if (mod.requires.isEmpty) {
+      stderr.writeln('klin upgrade: klin.mod has no requires');
+      exit(2);
+    }
+    final lockFile = klinLockFileFor(modFile);
+    var lock = loadKlinLockOrEmpty(lockFile);
+
+    final rows = await collectOutdated(
+      mod,
+      onlyPaths: args.isEmpty ? null : args,
+    );
+    if (rows.isEmpty) {
+      stdout.write(formatOutdatedReport(rows));
+      return;
+    }
+
+    for (final row in rows) {
+      final base = parseRemoteImport(row.path);
+      final remote = RemoteImport(
+        host: base.host,
+        owner: base.owner,
+        repo: base.repo,
+        ref: row.latest,
+      );
+      final (pkgDir, ref, _) = await ensureRemotePackage(
+        remote: remote,
+        mod: mod,
+        modFile: modFile,
+        lock: lock,
+        lockFile: lockFile,
+        force: true,
+      );
+      if (modFile.existsSync()) mod = loadKlinMod(modFile);
+      if (lockFile.existsSync()) lock = loadKlinLock(lockFile);
+      stdout.writeln('${row.path}: ${row.current} → $ref → $pkgDir');
+    }
+  } on FormatException catch (e) {
+    stderr.writeln('klin upgrade: ${e.message}');
+    exit(1);
+  } on StateError catch (e) {
+    stderr.writeln('klin upgrade: $e');
+    exit(1);
+  } on ProcessException catch (e) {
+    stderr.writeln('klin upgrade: ${e.message}');
+    exit(1);
+  } on FileSystemException catch (e) {
+    stderr.writeln('klin upgrade: ${e.message}: ${e.path}');
+    exit(1);
+  }
+}
+
+/// `klin get` / `klin update` — fetch remote packages; write klin.mod + klin.lock.
 Future<void> _runGet(List<String> args, {required bool force}) async {
   final cmd = force ? 'update' : 'get';
   try {
@@ -159,6 +257,8 @@ Future<void> _runGet(List<String> args, {required bool force}) async {
     var modFile = findKlinModFile(cwd);
     var mod = modFile != null ? loadKlinMod(modFile) : KlinMod.empty();
     modFile ??= File('$cwd${Platform.pathSeparator}klin.mod');
+    final lockFile = klinLockFileFor(modFile);
+    var lock = loadKlinLockOrEmpty(lockFile);
 
     final specs = <String>[];
     if (args.isEmpty) {
@@ -191,10 +291,13 @@ Future<void> _runGet(List<String> args, {required bool force}) async {
         remote: effective,
         mod: mod,
         modFile: modFile,
+        lock: lock,
+        lockFile: lockFile,
         force: force,
       );
-      // Reload mod after possible write.
+      // Reload mod/lock after possible write.
       if (modFile.existsSync()) mod = loadKlinMod(modFile);
+      if (lockFile.existsSync()) lock = loadKlinLock(lockFile);
       stdout.writeln('${remote.path}@$ref → $pkgDir');
     }
   } on FormatException catch (e) {
@@ -468,6 +571,8 @@ String _usageText() =>
     '       klin test [--cc gcc|clang|tcc] [-I dir] [-l lib] [-L dir] [path…]\n'
     '       klin get [path[@ref]…]\n'
     '       klin update [path[@ref]…]\n'
+    '       klin outdated [path…]\n'
+    '       klin upgrade [path…]\n'
     '       klin [--cc gcc|clang|tcc] [-I dir] [-l lib] [-L dir] '
     '[--emit-c] [--emit-h] [--emit-pp] <file.kl>\n';
 

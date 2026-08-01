@@ -1742,10 +1742,97 @@ fn main() { printf("%d\\n", o.version()) }
     expect(result.stdout, '1\n');
   });
 
+  test('stdlibCandidatesForInstallRoot Homebrew layout (issue 067)', () {
+    final sep = Platform.pathSeparator;
+    final roots = ['/opt/homebrew/Cellar/klin/0.1.0', '/repo'];
+    final paths = stdlibCandidatesForInstallRoot(roots).toList();
+    expect(paths, contains('/opt/homebrew/Cellar/klin/0.1.0${sep}stdlib'));
+    expect(
+      paths,
+      contains('/opt/homebrew/Cellar/klin/0.1.0${sep}share${sep}klin${sep}stdlib'),
+    );
+    expect(paths, contains('/repo${sep}stdlib'));
+  });
+
   test('klin.mod parse/format round-trip (issue 049)', () {
     final mod = parseKlinMod('klin 1\nrequire github/mrhiden/osa v0.1.0\n');
     expect(mod.requires['github/mrhiden/osa'], 'v0.1.0');
     expect(formatKlinMod(mod), 'klin 1\nrequire github/mrhiden/osa v0.1.0\n');
+  });
+
+  test('klin.lock parse/format round-trip (issue 065)', () {
+    const sha = '0123456789abcdef0123456789abcdef01234567';
+    const hash =
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    final lock = parseKlinLock(
+      'klin lock 1\n'
+      'github/mrhiden/osa v0.1.0 $sha sha256:$hash\n',
+    );
+    expect(lock.packages['github/mrhiden/osa']!.version, 'v0.1.0');
+    expect(lock.packages['github/mrhiden/osa']!.commit, sha);
+    expect(lock.packages['github/mrhiden/osa']!.hash, hash);
+    expect(
+      formatKlinLock(lock),
+      'klin lock 1\n'
+      'github/mrhiden/osa v0.1.0 $sha sha256:$hash\n',
+    );
+  });
+
+  test('cacheSatisfiesRemoteFetch requires lock SHA match (issue 065)', () {
+    const pin = 'v0.1.0';
+    const sha = '0123456789abcdef0123456789abcdef01234567';
+    expect(
+      cacheSatisfiesRemoteFetch(
+        cachedPin: pin,
+        pinValue: pin,
+        cachedCommit: sha,
+        gitRef: pin,
+      ),
+      isTrue,
+    );
+    expect(
+      cacheSatisfiesRemoteFetch(
+        cachedPin: pin,
+        pinValue: pin,
+        cachedCommit: sha,
+        gitRef: sha,
+      ),
+      isTrue,
+    );
+    expect(
+      cacheSatisfiesRemoteFetch(
+        cachedPin: pin,
+        pinValue: pin,
+        cachedCommit: sha,
+        gitRef: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      ),
+      isFalse,
+    );
+    expect(
+      cacheSatisfiesRemoteFetch(
+        cachedPin: pin,
+        pinValue: pin,
+        cachedCommit: null,
+        gitRef: sha,
+      ),
+      isFalse,
+    );
+  });
+
+  test('packageContentHash is stable and order-independent (issue 065)', () {
+    final dir = Directory.systemTemp.createTempSync('klin_hash065_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    File('${dir.path}/b.kl').writeAsStringSync('module x\n');
+    File('${dir.path}/a.kl').writeAsStringSync('module x\nfn f() {}\n');
+    final h1 = packageContentHash(dir.path);
+    // Recreate in opposite write order — hash must match.
+    final dir2 = Directory.systemTemp.createTempSync('klin_hash065b_');
+    addTearDown(() => dir2.deleteSync(recursive: true));
+    File('${dir2.path}/a.kl').writeAsStringSync('module x\nfn f() {}\n');
+    File('${dir2.path}/b.kl').writeAsStringSync('module x\n');
+    expect(packageContentHash(dir2.path), h1);
+    File('${dir2.path}/a.kl').writeAsStringSync('module x\nfn f() { }\n');
+    expect(packageContentHash(dir2.path), isNot(h1));
   });
 
   test('remote import rejects path traversal segments (issue 049)', () {
@@ -1755,6 +1842,44 @@ fn main() { printf("%d\\n", o.version()) }
     );
     expect(
       () => parseRemoteImport('github/foo/bar/../../x'),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
+  test('isUpgradeTarget / collectOutdated (issue 066)', () async {
+    expect(isUpgradeTarget('v0.1.0', 'v0.1.0'), isFalse);
+    expect(isUpgradeTarget('v0.1.0', 'v0.2.0'), isTrue);
+    expect(isUpgradeTarget('v0.2.0', 'v0.1.0'), isFalse);
+    expect(isUpgradeTarget('1.0.0', 'v1.0.1'), isTrue);
+    expect(isUpgradeTarget('main', 'v0.1.0'), isTrue);
+    expect(isUpgradeTarget('main', 'main'), isFalse);
+
+    final mod = KlinMod(requires: {
+      'github/mrhiden/osa': 'v0.1.0',
+      'github/acme/lib': 'v1.0.0',
+    });
+    Future<String> fakeLatest(RemoteImport r) async => switch (r.path) {
+          'github/mrhiden/osa' => 'v0.2.0',
+          'github/acme/lib' => 'v1.0.0',
+          _ => 'v0.0.0',
+        };
+    final rows = await collectOutdated(mod, resolveLatest: fakeLatest);
+    expect(rows.length, 1);
+    expect(rows.single.path, 'github/mrhiden/osa');
+    expect(rows.single.current, 'v0.1.0');
+    expect(rows.single.latest, 'v0.2.0');
+    expect(
+      formatOutdatedReport(rows),
+      'github/mrhiden/osa\tv0.1.0\tv0.2.0\n',
+    );
+    expect(formatOutdatedReport(const []), 'all packages up to date\n');
+
+    await expectLater(
+      collectOutdated(
+        mod,
+        onlyPaths: ['github/missing/pkg'],
+        resolveLatest: fakeLatest,
+      ),
       throwsA(isA<FormatException>()),
     );
   });
@@ -1784,6 +1909,52 @@ fn main() { printf("%d\\n", o.version()) }
     final mod = loadKlinMod(File('${work.path}/klin.mod'));
     expect(mod.requires['github/mrhiden/osa'], 'v0.1.0');
 
+    expect(File('${work.path}/klin.lock').existsSync(), isTrue);
+    final lock = loadKlinLock(File('${work.path}/klin.lock'));
+    final entry = lock.packages['github/mrhiden/osa']!;
+    expect(entry.version, 'v0.1.0');
+    expect(entry.commit, matches(RegExp(r'^[0-9a-f]{40}$')));
+    expect(entry.hash, matches(RegExp(r'^[0-9a-f]{64}$')));
+    final pkgDir = '${cache.path}/pkg/github/mrhiden/osa';
+    expect(packageContentHash(pkgDir), entry.hash);
+    expect(readCommit(pkgDir), entry.commit);
+
+    // Second get prefers lock SHA (offline-capable once cached) and keeps lock.
+    final get2 = await Process.run(
+      'dart',
+      ['run', klinBin, 'get'],
+      workingDirectory: work.path,
+      environment: {
+        ...Platform.environment,
+        'KLIN_CACHE': cache.path,
+      },
+    );
+    expect(get2.exitCode, 0, reason: '${get2.stderr}${get2.stdout}');
+    expect(
+      loadKlinLock(File('${work.path}/klin.lock'))
+          .packages['github/mrhiden/osa']!
+          .commit,
+      entry.commit,
+    );
+
+    // Tampered lock hash must fail.
+    File('${work.path}/klin.lock').writeAsStringSync(
+      'klin lock 1\n'
+      'github/mrhiden/osa v0.1.0 ${entry.commit} '
+      'sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n',
+    );
+    final bad = await Process.run(
+      'dart',
+      ['run', klinBin, 'get'],
+      workingDirectory: work.path,
+      environment: {
+        ...Platform.environment,
+        'KLIN_CACHE': cache.path,
+      },
+    );
+    expect(bad.exitCode, isNot(0));
+    expect('${bad.stderr}', contains('hash mismatch'));
+
     final run = await Process.run(
       'dart',
       ['run', klinBin, 'run', '${work.path}/app.kl'],
@@ -1795,6 +1966,52 @@ fn main() { printf("%d\\n", o.version()) }
     );
     expect(run.exitCode, 0, reason: '${run.stderr}${run.stdout}');
     expect(run.stdout, await File('test/remote_osa.out').readAsString());
+  }, timeout: Timeout(Duration(minutes: 2)));
+
+  test('klin outdated/upgrade with osa@v0.1.0 (issue 066 network)', () async {
+    final cache = Directory.systemTemp.createTempSync('klin_outdated066_');
+    addTearDown(() => cache.deleteSync(recursive: true));
+    final work = Directory.systemTemp.createTempSync('klin_outdatedwork066_');
+    addTearDown(() => work.deleteSync(recursive: true));
+    File('${work.path}/klin.mod').writeAsStringSync(
+      'klin 1\nrequire github/mrhiden/osa v0.1.0\n',
+    );
+    final repoRoot = Directory.current.path;
+    final klinBin = '$repoRoot/bin/klin.dart';
+    final env = {
+      ...Platform.environment,
+      'KLIN_CACHE': cache.path,
+    };
+
+    final get = await Process.run(
+      'dart',
+      ['run', klinBin, 'get'],
+      workingDirectory: work.path,
+      environment: env,
+    );
+    expect(get.exitCode, 0, reason: '${get.stderr}${get.stdout}');
+
+    final outdated = await Process.run(
+      'dart',
+      ['run', klinBin, 'outdated'],
+      workingDirectory: work.path,
+      environment: env,
+    );
+    expect(outdated.exitCode, 0, reason: '${outdated.stderr}${outdated.stdout}');
+    expect(outdated.stdout, 'all packages up to date\n');
+
+    final upgrade = await Process.run(
+      'dart',
+      ['run', klinBin, 'upgrade'],
+      workingDirectory: work.path,
+      environment: env,
+    );
+    expect(upgrade.exitCode, 0, reason: '${upgrade.stderr}${upgrade.stdout}');
+    expect(upgrade.stdout, 'all packages up to date\n');
+    expect(
+      loadKlinMod(File('${work.path}/klin.mod')).requires['github/mrhiden/osa'],
+      'v0.1.0',
+    );
   }, timeout: Timeout(Duration(minutes: 2)));
 
   test('error: conflicting import alias (issue 048)', () {

@@ -1,4 +1,4 @@
-# 070 — Enumy (styl C23, opcjonalny typ bazowy)
+# 072 — Enumy (styl C23, opcjonalny typ bazowy)
 
 **Status:** 💭 do rozważenia
 **Zależy od:** 002 (checker/typy), 005 (metody z receiverem), 014 (`match`)

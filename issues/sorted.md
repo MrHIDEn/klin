@@ -63,7 +63,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [018](018-generators-yield.md) | Generatory / `yield` | 💭 | 004+ |
 | [024](024-rtos.md) | RTOS (FreeRTOS / Zephyr / …) | 💭 | 010+ |
 | [028](028-freertos.md) | Ładna współpraca z FreeRTOS | 💭 | 024, 010, 021 |
-| [029](029-async-event-loop.md) | Event loop / async·await | 💭 | 018?, 028? |
+| [029](029-async-event-loop.md) | Event loop / async·await (duże zwierzę; MVP = lib bez async) | 💭 | 018?, 028?, 049? |
 | [030](030-isr-decorators.md) | Przerwania przez dekoratory | 💭 | 010 |
 | [031](031-biblioteki-hal.md) | Biblioteki HAL (Cube / LL) | 💭 | 010, 021 |
 | [034](034-typy-generyczne.md) | Generyki w gramatyce — nie teraz (D3/`$fn`; ew. cukier później) | 💭 | 026 |
@@ -75,10 +75,11 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [048](048-import-aliases.md) | Aliasy importów (+ string lokalny) | ✅ | 006, 047 |
 | [049](049-remote-imports.md) | Importy zdalne + `klin.mod` + `klin get` / `update` | ✅ | 048, 020, 047, 063 |
 | [063](063-remote-fixture-osa.md) | Fixture zdalny `mrhiden/osa` (e2e 049) | ✅ | 047 |
-| [065](065-project-lockfile.md) | `klin.lock` / sumy (jak go.sum) | 💭 | 049 |
-| [066](066-klin-upgrade-outdated.md) | `klin upgrade` / outdated (nowsze deps) | 💭 | 049 |
-| [067](067-homebrew.md) | Homebrew: `brew install klin` | 💭 | publiczne release’y |
+| [065](065-project-lockfile.md) | `klin.lock` / sumy (jak go.sum) | ✅ | 049 |
+| [066](066-klin-upgrade-outdated.md) | `klin upgrade` / outdated (nowsze deps) | ✅ | 049 |
+| [067](067-homebrew.md) | Homebrew: `brew install klin` (formula + CI) | ✅ | — |
 | [050](050-sqlite-wrapper.md) | Opakowanie SQLite (FFI, niski priorytet) | 💭 | 021 |
+| [070](070-host-orm-sqlite.md) | ORM-like / typed repo nad SQLite (host, niski priorytet) | 💭 | 050, 021 |
 | [051](051-json-wrapper.md) | Opakowanie JSON + ścieżki `$…` (niski priorytet) | 💭 | 021, 026? |
 | [052](052-klinstruct.md) | `klinstruct` — pack/unpack jak cstruct (niski priorytet) | 💭 | 007, 020/047 |
 | [053](053-device-board-assets.md) | `$device` + Go-like fetch SVD (IOC/board) | 💭 | 027, 049? |
@@ -92,7 +93,8 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [064](064-if-cond-struct-literal-parse.md) | Warunek `if`/`while` kończący się nazwą mylony z literałem struktury | ✅ | — |
 | [068](068-shared-type-decl.md) | Wspólna adnotacja typu (`a, b: i32` jak Go; obie formy OK) | 💭 | 002, 004, 005 |
 | [069](069-eventemitter-signals.md) | Observer / EventEmitter / Signals (biblioteka; JS-signals jawnie) | 💭 | 013, 057 |
-| [070](070-enums.md) | Enumy (styl C23, opcjonalny typ bazowy; metody; string-enum do rozważenia) | 💭 | 002, 005, 014 |
+| [071](071-lambda.md) | Lambdy / `fn (…) => expr` (werdykt: nie teraz; po D7) | 💭 | fn-ptr, D7 |
+| [072](072-enums.md) | Enumy (styl C23, opcjonalny typ bazowy; metody; string-enum do rozważenia) | 💭 | 002, 005, 014 |
 
 ---
 

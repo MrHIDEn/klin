@@ -79,11 +79,13 @@ import "github/mrhiden/osa"
 ```
 
 - Pierwszy segment `github` lub `gitlab` → pakiet z cache (`$KLIN_CACHE` / `~/.klin/pkg/…`).
-- Brak w cache → błąd; najpierw `klin get github/mrhiden/osa@v0.1.0` (zapisze `klin.mod`).
+- Brak w cache → błąd; najpierw `klin get github/mrhiden/osa@v0.1.0`
+  (zapisze `klin.mod` + `klin.lock`).
 - `klin run` bez sieci. Manifest: `klin.mod` (`require path ref`).
+- Lock: `klin.lock` — commit SHA + `sha256` źródeł ([065](../issues/065-project-lockfile.md) ✅).
 - Fixture: https://github.com/MrHIDEn/osa ([063](../issues/063-remote-fixture-osa.md)).
 
-Lock/sumy → [065](../issues/065-project-lockfile.md). `upgrade` → [066](../issues/066-klin-upgrade-outdated.md).
+`outdated` / `upgrade` → [066](../issues/066-klin-upgrade-outdated.md) ✅.
 
 ## Poza zakresem
 

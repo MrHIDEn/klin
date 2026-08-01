@@ -11,7 +11,9 @@ dart run bin/klin.dart run examples/hello.kl
 dart run bin/klin.dart examples/hello.kl          # alias for run
 dart run bin/klin.dart fmt -w examples/hello.kl
 dart run bin/klin.dart test examples/
-dart run bin/klin.dart get github/mrhiden/osa@v0.1.0   # remote deps → cache + klin.mod
+dart run bin/klin.dart get github/mrhiden/osa@v0.1.0   # remote deps → cache + klin.mod / klin.lock
+dart run bin/klin.dart outdated                        # report newer remote tags
+dart run bin/klin.dart upgrade                         # bump outdated requires + fetch
 dart run bin/klin.dart --emit-c examples/hello.kl
 dart run bin/klin.dart --emit-h examples/cexport_add/lib.kl
 dart run bin/klin.dart --emit-pp examples/point_macro.kl
@@ -23,7 +25,8 @@ dart run bin/klin.dart --emit-pp examples/point_macro.kl
 | bare path | Same as `run` |
 | `fmt [-w]` | Go-style format ([note/05-fmt.md](note/05-fmt.md)) |
 | `test` | Run `*_test.kl` (`import testing`) |
-| `get` / `update` | Fetch remote `github`/`gitlab` packages into cache (`klin.mod`) |
+| `get` / `update` | Fetch remote `github`/`gitlab` packages (`klin.mod` + `klin.lock`) |
+| `outdated` / `upgrade` | Report / bump to newer remote tags (network) |
 | `--emit-c` | Write generated `.c` only |
 | `--emit-h` | Write C header for `@[cexport]` (`out/<base>.h`) |
 | `--emit-pp` | Write preprocessor output (`.pp.kl`) |
@@ -31,6 +34,7 @@ dart run bin/klin.dart --emit-pp examples/point_macro.kl
 | `-l` / `-L` | Host linker libs / search paths ([note/09-ffi-c.md](note/09-ffi-c.md)) |
 
 CLI summary (PL): [note/06-cli.md](note/06-cli.md).
+Homebrew (`Formula/klin.rb`, tap / `--HEAD`): [note/17-homebrew.md](note/17-homebrew.md).
 
 Optional host I/O, clocks, heap, and slice helpers: [`stdlib/`](stdlib/)
 (`import io`, `import testing`, `import time`, `import mem`, `import slice`,

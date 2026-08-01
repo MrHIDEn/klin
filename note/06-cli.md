@@ -18,10 +18,14 @@ Wejście: `dart run bin/klin.dart <subcommand|plik.kl> …`
 | *(bare path)* | Alias `run` — `klin examples/hello.kl` |
 | `fmt [-w] <plik.kl>` | Canonical printer (4 spacje, K&R). Bez `-w` → stdout; z `-w` → zapis |
 | `test [ścieżka…]` | Szuka `*_test.kl`, uruchamia `test_*` (jak `go test`) |
-| `get [path[@ref]…]` | Pobierz remote (`github`/`gitlab`) do cache + `klin.mod` ([049](../issues/049-remote-imports.md)) |
-| `update [path[@ref]…]` | Force ponowne pobranie (bez args = wszystkie z `klin.mod`) |
+| `get [path[@ref]…]` | Pobierz remote do cache; zapis `klin.mod` + `klin.lock` ([049](../issues/049-remote-imports.md), [065](../issues/065-project-lockfile.md)) |
+| `update [path[@ref]…]` | Force ponowne pobranie (bez args = wszystkie z `klin.mod`); odświeża lock |
+| `outdated [path…]` | Raport: pin z moda vs najnowszy tag/ref na hoście ([066](../issues/066-klin-upgrade-outdated.md); **sieć**) |
+| `upgrade [path…]` | Bump outdated → latest + pobranie ([066](../issues/066-klin-upgrade-outdated.md); **sieć**) |
 
 `run` / `test` **nie** otwierają sieci na remote — tylko cache.
+`get` z obecnym `klin.lock` preferuje commit SHA (reprodukowalne).
+`update` ≠ `upgrade`: update trzyma pin z moda; upgrade szuka nowszego tagu.
 
 ## Flagę przed / przy `run`
 

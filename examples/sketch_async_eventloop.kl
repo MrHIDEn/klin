@@ -1,0 +1,42 @@
+/// SKETCH ONLY — not valid Klin today.
+/// Needs: (1) async/await in the compiler (issue 029 / 018),
+///         (2) remote lib after `klin get github/mrhiden/eventloop@…`
+/// Do not `klin run` this file yet.
+///
+/// Model: Rust-like state machine + explicit executor from a Klin library.
+/// No JS Promise/GC. `await` suspends the state machine; `ex.run()` polls it.
+
+import "github/mrhiden/eventloop"
+import io
+
+/// Timer future from the remote lib — not a heap Promise.
+/// Under the hood: registers a deadline in the executor queue.
+async fn delay_ms(ms: i32) {
+    eventloop.sleep_ms(ms).await
+}
+
+/// App logic as async fn (compiler → struct + poll, like Rust).
+async fn ticker() {
+    while true {
+        io.println("tick")
+        delay_ms(100).await
+    }
+}
+
+fn main() {
+    // Caller-owned buffer for the queue / task slots (zero hidden malloc).
+    let mut queue_buf: [64]u8
+    let mut ex = eventloop.Executor{}
+    ex.init(queue_buf[:])
+
+    // Spawn = store state machine in executor; does not run ticker to end.
+    ex.spawn(ticker)
+
+    // Explicit poll loop (library). This is where progress happens:
+    //   while has_tasks {
+    //       poll ready timers / I/O
+    //       resume async state machines (including ticker after delay)
+    //       optional WFI / sleep until next deadline
+    //   }
+    ex.run()
+}
