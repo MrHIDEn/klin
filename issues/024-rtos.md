@@ -72,7 +72,8 @@ nie jako moduł stdlib.
 - konkretny przykład FreeRTOS jest opisany w [028](028-freertos.md), a
   adnotacje ISR do rozważenia w [030](030-isr-decorators.md)
 - „dekoratory” tasków z lib `klinrtos`: API/makra/`codename` — tak; prawdziwy
-  `@[task]` tylko z kompilatorem — ustalone w [028](028-freertos.md)
+  `@[task]` tylko z kompilatorem — ustalone w [028](028-freertos.md);
+  preferowany cukier: `$rtos_task("blink", 512, 2) { … }` (nie user-`@[…]`)
 
 ## Kryterium (gdy kiedyś wchodzi do prac)
 
