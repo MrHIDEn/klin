@@ -80,7 +80,8 @@ jobs:
           Compress-Archive -Path "${{ matrix.bin }}", stdlib -DestinationPath "..\${{ matrix.asset }}.${{ matrix.ext }}" -Force
           Pop-Location
           $h = (Get-FileHash "${{ matrix.asset }}.${{ matrix.ext }}" -Algorithm SHA256).Hash.ToLower()
-          "$h  ${{ matrix.asset }}.${{ matrix.ext }}" | Out-File -Encoding ascii "${{ matrix.asset }}.sha256"
+          # Write LF (no CRLF/BOM) so the sidecar matches Unix shasum -c format.
+          [System.IO.File]::WriteAllText("${{ matrix.asset }}.sha256", "$h  ${{ matrix.asset }}.${{ matrix.ext }}`n")
 
       - uses: actions/upload-artifact@v4
         with:
