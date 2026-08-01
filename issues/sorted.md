@@ -80,6 +80,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [053](053-device-board-assets.md) | `$device` + Go-like fetch SVD (IOC/board) | 💭 | 027, 049? |
 | [054](054-embedded-project-layout.md) | Wygląd / układ projektu embedded | 💭 | 023, 010 |
 | [056](056-destructuring.md) | Dekonstrukcja (`{}` / `[]` / multi-assign; bez tupli) | ✅ (A+A′+B+C+D; bare `[]=` pominięte) | 005, 007? |
+| [058](058-source-file-split.md) | Podział dużych plików źródłowych kompilatora (dług techn.) | 💭 | — |
 
 ---
 
