@@ -99,6 +99,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [074](074-board-ioc-klin-mod.md) | `board` w `klin.mod` + wąski CubeMX `.ioc` (pinout) | 💭 | 053 |
 | [075](075-board-pack-init-host.md) | Board pack / `klin init` vs host — linker & startup | 💭 | 010, 054, 053 |
 | [076](076-release-windows-arm.md) | Release: cele Windows/ARM + wydanie + sumy kontrolne | 🔨 | 067 |
+| [077](077-string-template.md) | Podmiana w napisach / szablony runtime (`{0}` pozycyjne + `{klucz}` KV) | 💭 | 007, 057, 016, 060 |
 
 ---
 
