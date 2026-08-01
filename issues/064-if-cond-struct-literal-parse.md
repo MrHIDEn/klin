@@ -38,7 +38,7 @@ warunku nadal możliwy w nawiasach: `if (Foo{...}).x { … }` (nawias zeruje fla
 ## Kryteria
 
 - [x] `if a < b { … }` / `while a < b { … }` / `for i in 0..<n { … }`
-- [x] `if (cond) { … }` nadal działa (nawiasy opcjonalne)
+- [x] `if (cond) { … }` / `while (cond) { … }` — nawiasy opcjonalne
 - [x] `if (Point{ x: 3 }).x > 0 { … }` — literał w nawiasach
 - [x] goldeny: `test/if_cond_bare_name.kl`, `test/if_cond_struct_paren.kl`
 
