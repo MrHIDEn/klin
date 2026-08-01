@@ -36,6 +36,67 @@ startupu — tylko MMIO / rejestry. Inna warstwa.
 Cel UX: 95% userów **nigdy nie edytuje** `linker.ld` / `startup.s`; edytuje
 `main.kl` + `$device` + ewent. pinout.
 
+### 1b. Trzy warstwy ulgi na MCU (jak to ma wyglądać)
+
+Nie jedna magia — **trzy osobne rzeczy**. GitHub pasuje do warstw A i C
+(fetch jak `require` / `device`); B to jednorazowy scaffold lokalny.
+
+#### A — Paczka boardu (ld + startup) — z GitHub
+
+Repo / asset np. `github/…/board-nucleo-f411re` zawiera gotowe:
+
+- `startup.s`, `linker.ld`, cienki Makefile / reguły,
+- ewent. proste stałe pinów w `.kl`.
+
+User: `klin get` (albo `require` paczki Klin) → pliki w cache / projekcie.
+**Nie pisze** ld/startup sam. Build ARM nadal jawny (Make + `arm-none-eabi`),
+tylko boilerplate jest **skopiowany / z packa**, nie wymyślony przez kompilator.
+
+#### B — `klin init nucleo-f411` — scaffold (nie ciągły fetch)
+
+Jednorazowo tworzy katalog projektu:
+
+```text
+my_blink/
+  main.kl
+  board/          # startup.s, linker.ld (z szablonu / packa A)
+  Makefile
+  klin.mod        # device … (+ ewent. require board pack)
+  README          # „najpierw klin get”
+```
+
+Źródło szablonu może być **z tego samego GitHub packa (A)** albo z szablonów
+w dystrybucji Klina. Potem pracujesz lokalnie; `get` tylko pinuje wersje —
+init **nie** linkuje magicznie przy każdym buildzie.
+
+#### C — `board` w `klin.mod` + `$board` — pinout z `.ioc` ([074](074-board-ioc-klin-mod.md))
+
+Później, osobno od ld/startup:
+
+```text
+klin.mod:
+  device github/…/stm32f411.svd main
+  board  github/…/nucleo_f411re.ioc v0.1.0   # fetch jak device → asset/
+```
+
+```klin
+$device("github/…/stm32f411.svd", "RCC,GPIOA,STK")  // MMIO z SVD
+$board("github/…/nucleo_f411re.ioc")                 // stałe LED→PA5 itd.
+```
+
+- `klin get` ściąga `.ioc` do cache `asset/`,
+- parser wycina **tylko mapę pinów** → codegen stałych,
+- **nie** generuje `linker.ld` / `startup.s` — te nadal z A (pack) / B (init).
+
+| Warstwa | Skąd | Co daje userowi |
+|---|---|---|
+| A pack | GitHub (paczka / asset) | `startup.s` + `linker.ld` (+ Make) |
+| B init | szablon (często z A) | katalog „od razu da się zbudować” |
+| C `board`/`.ioc` | GitHub (asset, jak SVD) | nazwy pinów — **nie** linkowanie |
+
+**Kolejność prac:** najpierw A+B (blink bez bólu ld), potem C (wygodniejszy
+pinout z Cube). Host (laptop) w ogóle poza tym modelem — patrz §3.
+
 ### 2. `linker.ld` jest inny per MCU (czasem board)
 
 - **Chip** — FLASH/RAM size i origin, czasem regiony (CCM, ITCM, …)

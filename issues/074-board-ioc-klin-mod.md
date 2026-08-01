@@ -13,6 +13,8 @@ Na razie **bez implementacji IOC**. Tu zapisujemy model, żeby nie zgubić decyz
 - jeden plik **`klin.mod`** (nie osobny `klin.hw` / `klin.dev`)
 - dyrektywa **`board`** (nie `hardware`, nie `device`)
 - scope IOC = **tylko mapa pinów**, nie cały Cube
+- ld / startup **nie** z IOC — z board packa / `klin init` (warstwy A+B w
+  [075 §1b](075-board-pack-init-host.md); ten issue = warstwa C)
 
 ## Przykład `klin.mod`
 
