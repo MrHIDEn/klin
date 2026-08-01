@@ -73,4 +73,5 @@ fn main() {
 - [053](053-device-board-assets.md) — `$device` / `device` (chip); IOC świadomie tu, nie w 053
 - [049](049-remote-imports.md) / [065](065-project-lockfile.md) — get / lock
 - [054](054-embedded-project-layout.md) — layout `board/` (startup/ld) osobno od moda
+- [075](075-board-pack-init-host.md) — board pack / `klin init` (ld+startup); host bez tej magii
 - [031](031-biblioteki-hal.md) — HAL osobno
