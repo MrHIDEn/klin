@@ -328,12 +328,36 @@ Iterable<String> _stdlibSearchDirs() sync* {
     dir = parent;
   }
 
+  for (final candidate in stdlibCandidatesForInstallRoot(_installRootHints())) {
+    if (Directory(candidate).existsSync()) yield candidate;
+  }
+}
+
+/// Prefix / repo-root hints for a packaged or source install (Homebrew, `task release`).
+Iterable<String> _installRootHints() sync* {
+  try {
+    final exeDir = File(Platform.resolvedExecutable).parent.path;
+    yield exeDir;
+    yield Directory(exeDir).parent.path; // Cellar/.../bin → formula prefix
+  } catch (_) {}
   if (Platform.script.scheme == 'file') {
     final scriptFile = File.fromUri(Platform.script);
-    final rootStd = Directory(
-      '${scriptFile.parent.parent.path}${Platform.pathSeparator}stdlib',
-    );
-    if (rootStd.existsSync()) yield rootStd.path;
+    yield scriptFile.parent.parent.path; // bin/klin.dart → repo root
+  }
+}
+
+/// Possible `stdlib/` locations under [roots] (repo layout + Homebrew `pkgshare`).
+///
+/// Visible for tests.
+Iterable<String> stdlibCandidatesForInstallRoot(Iterable<String> roots) sync* {
+  final sep = Platform.pathSeparator;
+  final seen = <String>{};
+  for (final root in roots) {
+    if (root.isEmpty) continue;
+    for (final rel in ['stdlib', 'share${sep}klin${sep}stdlib']) {
+      final path = '$root$sep$rel';
+      if (seen.add(path)) yield path;
+    }
   }
 }
 

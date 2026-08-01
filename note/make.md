@@ -11,6 +11,9 @@ Na Windowsie wynik to `build/klin.exe`, na macOS/Linuxie `build/klin`.
 Na start wystarczy `dart run` / `task hello`; `release` gdy narzędzie
 ma trafić do PATH albo być rozdawane bez zainstalowanego SDK.
 
+Homebrew (macOS/Linux): [17-homebrew.md](17-homebrew.md) — `Formula/klin.rb`,
+tag `v*` → workflow `release`.
+
 ## Programy w Klinie → binarka
 
 To jest domyślna ścieżka kompilatora (od kroku 001):

@@ -34,6 +34,7 @@ dart run bin/klin.dart --emit-pp examples/point_macro.kl
 | `-l` / `-L` | Host linker libs / search paths ([note/09-ffi-c.md](note/09-ffi-c.md)) |
 
 CLI summary (PL): [note/06-cli.md](note/06-cli.md).
+Homebrew (`Formula/klin.rb`, tap / `--HEAD`): [note/17-homebrew.md](note/17-homebrew.md).
 
 Optional host I/O, clocks, heap, and slice helpers: [`stdlib/`](stdlib/)
 (`import io`, `import testing`, `import time`, `import mem`, `import slice`,

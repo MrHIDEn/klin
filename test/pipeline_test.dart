@@ -1742,6 +1742,18 @@ fn main() { printf("%d\\n", o.version()) }
     expect(result.stdout, '1\n');
   });
 
+  test('stdlibCandidatesForInstallRoot Homebrew layout (issue 067)', () {
+    final sep = Platform.pathSeparator;
+    final roots = ['/opt/homebrew/Cellar/klin/0.1.0', '/repo'];
+    final paths = stdlibCandidatesForInstallRoot(roots).toList();
+    expect(paths, contains('/opt/homebrew/Cellar/klin/0.1.0${sep}stdlib'));
+    expect(
+      paths,
+      contains('/opt/homebrew/Cellar/klin/0.1.0${sep}share${sep}klin${sep}stdlib'),
+    );
+    expect(paths, contains('/repo${sep}stdlib'));
+  });
+
   test('klin.mod parse/format round-trip (issue 049)', () {
     final mod = parseKlinMod('klin 1\nrequire github/mrhiden/osa v0.1.0\n');
     expect(mod.requires['github/mrhiden/osa'], 'v0.1.0');
