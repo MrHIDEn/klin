@@ -1,7 +1,7 @@
 # 052 — `klinstruct`: pack/unpack buforów (para do `@mrhiden/cstruct`)
 
-**Status:** 💭 do rozważenia (niski priorytet — nieblokujące)
-**Zależy od:** [007](007-wskazniki-tablice-slice.md); mile [020](020-biblioteki-klin.md) / [047](047-directory-modules.md); remote → [049](049-remote-imports.md)
+**Status:** 💭 do rozważenia — MVP atomów w [klinstruct](https://github.com/MrHIDEn/klinstruct); bogatsza deklaracja → [059](059-kstruct-macros.md)
+**Zależy od:** [007](007-wskazniki-tablice-slice.md); mile [020](020-biblioteki-klin.md) / [047](047-directory-modules.md); remote → [049](049-remote-imports.md); deklaracje `$kstruct` → [059](059-kstruct-macros.md)
 
 ## Kontekst
 
@@ -20,8 +20,8 @@ jeden kontrakt binarny.
 - pakiet Klin: model pól → `make` / `read` na `u8[]` / wskaźniku + długość
 - endian LE/BE jak cstruct; zgodność layoutu (kolejność, rozmiary, padding)
 - testy krzyżowe: ten sam hex bufora z cstruct i klinstruct
-- ewent. makra `$…` pod modele ([026](026-preprocessor.md))
-- po [049](049-remote-imports.md): `import "github/mrhiden/klinstruct"`
+- ewent. makra `$…` pod modele → [059](059-kstruct-macros.md) (zależne od [026](026-preprocessor.md))
+- po [049](049-remote-imports.md): `import "github.com/mrhiden/klinstruct" kstruct`
 
 ## Poza zakresem
 

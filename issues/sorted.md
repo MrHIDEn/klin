@@ -81,6 +81,8 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [054](054-embedded-project-layout.md) | Wygląd / układ projektu embedded | 💭 | 023, 010 |
 | [056](056-destructuring.md) | Dekonstrukcja (`{}` / `[]` / multi-assign; bez tupli) | ✅ (A+A′+B+C+D; bare `[]=` pominięte) | 005, 007? |
 | [058](058-source-file-split.md) | Podział dużych plików źródłowych kompilatora (dług techn.) | 💭 | — |
+| [059](059-kstruct-macros.md) | Makra `$kstruct` / `$kstruct_from` (bogatsze klinstruct) | 💭 | 026, 052 |
+| [060](060-map-kv.md) | Mapa KV (hash map) — język / stdlib / C | 💭 | 007, 057? |
 
 ---
 
