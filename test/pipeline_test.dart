@@ -1838,6 +1838,40 @@ fn main() {}
     );
   });
 
+  test(r'$device prefers local github-shaped path (issue 053)', () {
+    final dir = Directory('${tmp.path}/svd_local_github')..createSync();
+    final vendored = Directory(
+      '${dir.path}/github/tinygo-org/stm32-svd/svd',
+    )..createSync(recursive: true);
+    File('${vendored.path}/stm32f411.svd').writeAsStringSync('''
+<device><peripherals>
+  <peripheral><name>RCC</name><baseAddress>0x40023800</baseAddress><registers>
+    <register><name>AHB1ENR</name><addressOffset>0x30</addressOffset><fields>
+      <field><name>GPIOAEN</name><bitOffset>0</bitOffset><bitWidth>1</bitWidth></field>
+    </fields></register>
+  </registers></peripheral>
+</peripherals></device>
+''');
+    final klPath = '${dir.path}/app.kl';
+    File(klPath).writeAsStringSync(r'''
+$device("github/tinygo-org/stm32-svd/svd/stm32f411.svd", "RCC")
+fn main() { RCC.AHB1ENR.GPIOAEN.set(1) }
+''');
+    final cache = Directory.systemTemp.createTempSync('klin_local053_');
+    addTearDown(() => cache.deleteSync(recursive: true));
+    final expanded = preprocess(
+      File(klPath).readAsStringSync(),
+      path: klPath,
+      klinCacheDir: cache.path,
+    );
+    expect(expanded, contains('RCC_AHB1ENR_GPIOAEN_set(1)'));
+    expect(
+      Directory('${cache.path}/asset').existsSync(),
+      isFalse,
+      reason: 'vendored path must not require asset cache',
+    );
+  });
+
   test('klin.lock parse/format round-trip (issue 065)', () {
     const sha = '0123456789abcdef0123456789abcdef01234567';
     const hash =

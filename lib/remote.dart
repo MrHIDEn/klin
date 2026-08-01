@@ -424,7 +424,13 @@ Future<(String assetDir, String commit)> fetchRemoteAsset(
   }
 
   final tmp = Directory.systemTemp.createTempSync('klin_device_');
-  final staging = Directory.systemTemp.createTempSync('klin_devstage_');
+  // Stage under the cache parent so rename stays on one filesystem.
+  final parent = Directory(assetDir).parent;
+  parent.createSync(recursive: true);
+  final staging = Directory(
+    '${parent.path}$sep.klin_devstage_${DateTime.now().microsecondsSinceEpoch}',
+  )..createSync();
+  var swapped = false;
   try {
     final commit = await _gitCheckoutRef(asset.asRepo.gitUrl, gitRef, tmp.path);
     final srcFile = File(
@@ -444,33 +450,60 @@ Future<(String assetDir, String commit)> fetchRemoteAsset(
     File('${staging.path}$sep.commit')
         .writeAsStringSync('${commit.toLowerCase()}\n');
 
-    // Preserve other already-cached .svd files for the same pin when updating
-    // a single chip from an existing install with matching pin.
-    if (Directory(assetDir).existsSync() && readPin(assetDir) == pinValue) {
+    // Keep sibling .svd paths already in cache: same pin → copy old bytes;
+    // pin bump → refresh from the new checkout when the file still exists.
+    if (Directory(assetDir).existsSync()) {
+      final samePin = readPin(assetDir) == pinValue;
       for (final entity in Directory(assetDir).listSync(recursive: true)) {
         if (entity is! File) continue;
         final name = entity.path.split(sep).last;
         if (!name.endsWith('.svd')) continue;
         final rel = entity.path.substring(assetDir.length + 1);
         final staged = File('${staging.path}$sep$rel');
-        if (!staged.existsSync()) {
-          staged.parent.createSync(recursive: true);
+        if (staged.existsSync()) continue;
+        staged.parent.createSync(recursive: true);
+        if (samePin) {
           entity.copySync(staged.path);
+        } else {
+          final fromCheckout = File([tmp.path, ...rel.split(sep)].join(sep));
+          if (fromCheckout.existsSync()) {
+            fromCheckout.copySync(staged.path);
+          }
         }
       }
     }
 
-    final parent = Directory(assetDir).parent;
-    parent.createSync(recursive: true);
-    if (Directory(assetDir).existsSync()) {
-      Directory(assetDir).deleteSync(recursive: true);
-    }
-    staging.renameSync(assetDir);
+    _swapCacheDir(staging.path, assetDir);
+    swapped = true;
     return (assetDir, commit.toLowerCase());
   } finally {
     if (tmp.existsSync()) tmp.deleteSync(recursive: true);
-    if (staging.existsSync()) staging.deleteSync(recursive: true);
+    if (!swapped && staging.existsSync()) {
+      staging.deleteSync(recursive: true);
+    }
   }
+}
+
+/// Atomically replace [destDir] with [stagingDir] (same parent filesystem).
+void _swapCacheDir(String stagingDir, String destDir) {
+  final dest = Directory(destDir);
+  final staging = Directory(stagingDir);
+  if (!dest.existsSync()) {
+    staging.renameSync(destDir);
+    return;
+  }
+  final backup = Directory('$destDir.__klin_old');
+  if (backup.existsSync()) backup.deleteSync(recursive: true);
+  dest.renameSync(backup.path);
+  try {
+    staging.renameSync(destDir);
+  } catch (_) {
+    if (!Directory(destDir).existsSync() && backup.existsSync()) {
+      backup.renameSync(destDir);
+    }
+    rethrow;
+  }
+  backup.deleteSync(recursive: true);
 }
 
 /// Ensure [asset] is installed per [mod] / lock. Updates `device` lines + lock.
@@ -558,19 +591,32 @@ Future<(String filePath, String ref, bool modUpdated)> ensureRemoteDevice({
 
 /// Resolve a `$device` / `$peripherals_from_svd` path to a local SVD file.
 ///
-/// Remote paths use the asset cache (offline). Throws [FileSystemException]
-/// with a `klin get` hint when missing.
+/// Order: existing local file (incl. vendored `github/…/*.svd`) → asset cache
+/// (offline). Throws [FileSystemException] with a `klin get` hint when a
+/// remote-shaped path is missing from cache.
 String resolveSvdPath(
   String svdArg, {
   required String sourcePath,
   String? cacheRoot,
 }) {
+  final sourceFile = File(sourcePath).absolute;
+  final sourceDir = sourceFile.parent;
+  final localFile = File(
+    svdArg.startsWith('/') ||
+            (svdArg.length >= 3 &&
+                svdArg[1] == ':' &&
+                (svdArg[2] == '\\' || svdArg[2] == '/'))
+        ? svdArg
+        : '${sourceDir.path}${Platform.pathSeparator}$svdArg',
+  ).absolute;
+  if (localFile.existsSync()) return localFile.path;
+
   if (isRemoteDevicePath(svdArg)) {
     final asset = parseRemoteAsset(svdArg);
     // Prefer pin from klin.mod when path has no @ref.
     RemoteAsset effective = asset;
     if (asset.ref == null) {
-      final modFile = findKlinModFile(File(sourcePath).parent.path);
+      final modFile = findKlinModFile(sourceDir.path);
       if (modFile != null) {
         final mod = loadKlinMod(modFile);
         final pinned = mod.devices[asset.path];
@@ -587,7 +633,6 @@ String resolveSvdPath(
     }
     final cached = cachedDeviceFilePath(effective, cacheRoot: cacheRoot);
     if (cached != null) {
-      // If mod pin exists, require matching .pin in cache.
       final dir = assetCacheDir(effective, cacheRoot: cacheRoot);
       final pin = readPin(dir);
       if (effective.ref == null || pin == effective.ref) return cached;
@@ -601,20 +646,7 @@ String resolveSvdPath(
     );
   }
 
-  final sourceFile = File(sourcePath).absolute;
-  final sourceDir = sourceFile.parent;
-  final svdFile = File(
-    svdArg.startsWith('/') ||
-            (svdArg.length >= 3 &&
-                svdArg[1] == ':' &&
-                (svdArg[2] == '\\' || svdArg[2] == '/'))
-        ? svdArg
-        : '${sourceDir.path}${Platform.pathSeparator}$svdArg',
-  ).absolute;
-  if (!svdFile.existsSync()) {
-    throw FileSystemException('SVD file not found', svdFile.path);
-  }
-  return svdFile.path;
+  throw FileSystemException('SVD file not found', localFile.path);
 }
 
 // --- klin.lock (issue 065) --------------------------------------------------
