@@ -87,6 +87,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [061](061-micropython-machine-api.md) | API w stylu MicroPython `machine` (PWM, UART, …) | 💭 | 010, 031? |
 | [062](062-targets-esp-rp.md) | Cele MCU: ESP32 / RP2040 / RP2350 | 💭 | 010 |
 | [064](064-if-cond-struct-literal-parse.md) | Warunek `if`/`while` kończący się nazwą mylony z literałem struktury | ✅ | — |
+| [068](068-shared-type-decl.md) | Wspólna adnotacja typu (`a, b: i32` jak Go; obie formy OK) | 💭 | 002, 004, 005 |
 
 ---
 
