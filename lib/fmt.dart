@@ -174,6 +174,10 @@ void _writeStmt(StringBuffer buf, Stmt stmt, int indent) {
       buf.writeln(
         '$pad${_expr(target, indent)} = ${_expr(value, indent)}',
       );
+    case MultiAssignStmt(:final targets, :final values):
+      final lhs = targets.map((t) => _expr(t, indent)).join(', ');
+      final rhs = values.map((v) => _expr(v, indent)).join(', ');
+      buf.writeln('$pad$lhs = $rhs');
     case CallStmt(:final moduleName, :final callee, :final args):
       final name = moduleName == null ? callee : '$moduleName.$callee';
       buf.writeln('$pad$name(${_argList(args, indent)})');

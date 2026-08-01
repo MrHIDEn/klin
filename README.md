@@ -106,10 +106,16 @@ in place (`xs[i]`) and an array-literal source binds element-wise. Slices `[]T`
 Struct fields can be renamed to a different local: `let { x: px, y: py } = p`
 (mixable with plain fields).
 
-Both lower to plain reads, so they disappear in C. No tuples; bare `{ … } = p` /
-`[ … ] = xs` reassignment is not part of these phases. See
+Multi-assignment `a, b = b, a` writes two or more existing targets at once; the
+values are evaluated before any target is written, so swaps and rotations need
+no temporary. Targets follow the usual `mut` rules; `or`/`!`/`match` values must
+be assigned in their own statement.
+
+Both lower to plain reads/writes, so they disappear in C. No tuples; bare
+`{ … } = p` / `[ … ] = xs` reassignment is not part of these phases. See
 [issues/056-destructuring.md](issues/056-destructuring.md),
-[`examples/destructure.kl`](examples/destructure.kl).
+[`examples/destructure.kl`](examples/destructure.kl),
+[`examples/multi_assign.kl`](examples/multi_assign.kl).
 
 ## Test
 

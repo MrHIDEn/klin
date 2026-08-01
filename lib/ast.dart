@@ -264,6 +264,22 @@ final class AssignStmt extends Stmt {
   });
 }
 
+/// Multi-assignment (issue 056, phase B):
+///   a, b = b, a
+/// Two or more assignable targets and an equal number of values. The values
+/// are evaluated into temps before any target is written, so a swap works.
+final class MultiAssignStmt extends Stmt {
+  final List<Expr> targets;
+  final List<Expr> values;
+  final SourcePos pos;
+
+  MultiAssignStmt({
+    required this.targets,
+    required this.values,
+    required this.pos,
+  });
+}
+
 /// call := ident "(" (expr ("," expr)*)? ")"
 final class CallStmt extends Stmt {
   final String? moduleName;

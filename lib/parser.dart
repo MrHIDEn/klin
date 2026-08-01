@@ -274,11 +274,11 @@ final class Parser {
   }
 
   Stmt _stmtFromExpr(Expr expr) {
+    if (_check(TokenKind.comma)) {
+      return _multiAssign(expr);
+    }
     if (_check(TokenKind.equal)) {
-      if (expr is! NameExpr &&
-          expr is! FieldExpr &&
-          expr is! IndexExpr &&
-          !(expr is UnaryExpr && expr.op == '*')) {
+      if (!_isAssignableTarget(expr)) {
         throw ParseError(
             'left side of assignment must be assignable', expr.pos);
       }
@@ -295,6 +295,41 @@ final class Parser {
     }
     if (expr is MethodCallExpr) return MethodCallStmt(expr);
     throw ParseError('expected assignment `=` or call', expr.pos);
+  }
+
+  static bool _isAssignableTarget(Expr expr) =>
+      expr is NameExpr ||
+      expr is FieldExpr ||
+      expr is IndexExpr ||
+      (expr is UnaryExpr && expr.op == '*');
+
+  /// `t0, t1, … = v0, v1, …` — multi-assignment (issue 056, phase B).
+  Stmt _multiAssign(Expr first) {
+    final targets = <Expr>[first];
+    while (_check(TokenKind.comma)) {
+      _advance();
+      targets.add(_expr());
+    }
+    for (final target in targets) {
+      if (!_isAssignableTarget(target)) {
+        throw ParseError(
+            'left side of assignment must be assignable', target.pos);
+      }
+    }
+    _expect(TokenKind.equal, 'expected `=` in multi-assignment');
+    final values = <Expr>[_expr()];
+    while (_check(TokenKind.comma)) {
+      _advance();
+      values.add(_expr());
+    }
+    if (targets.length != values.length) {
+      throw ParseError(
+        'multi-assignment has ${targets.length} targets but '
+        '${values.length} values',
+        first.pos,
+      );
+    }
+    return MultiAssignStmt(targets: targets, values: values, pos: first.pos);
   }
 
   IfStmt _ifStmt() {

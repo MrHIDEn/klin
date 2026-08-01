@@ -322,6 +322,8 @@ bool _stmtCallsStdio(Stmt stmt) => switch (stmt) {
       LetArrayDestructureStmt(:final source) => _exprCallsStdio(source),
       AssignStmt(:final target, :final value) =>
         _exprCallsStdio(target) || _exprCallsStdio(value),
+      MultiAssignStmt(:final targets, :final values) =>
+        targets.any(_exprCallsStdio) || values.any(_exprCallsStdio),
       IfStmt(:final cond, :final thenBlock, :final elseBranch) =>
         _exprCallsStdio(cond) ||
             thenBlock.stmts.any(_stmtCallsStdio) ||
@@ -621,6 +623,7 @@ bool _stmtNeedsTrimFrac(Stmt stmt) => switch (stmt) {
       LetDestructureStmt(:final source) => _exprNeedsTrimFrac(source),
       LetArrayDestructureStmt(:final source) => _exprNeedsTrimFrac(source),
       AssignStmt(:final value) => _exprNeedsTrimFrac(value),
+      MultiAssignStmt(:final values) => values.any(_exprNeedsTrimFrac),
       ReturnStmt(:final value) => value != null && _exprNeedsTrimFrac(value),
       IfStmt(:final thenBlock, :final elseBranch, :final cond) =>
         _exprNeedsTrimFrac(cond) ||
@@ -1218,6 +1221,21 @@ void _emitStmt(
       } else {
         buf.writeln(
             '$pad${_emitExpr(target, ctx)} = ${_emitExpr(value, ctx)};');
+      }
+
+    case MultiAssignStmt(:final targets, :final values, :final pos):
+      _line(buf, pos.line, sourcePath);
+      // Evaluate every value into a fresh temp before writing any target, so a
+      // swap `a, b = b, a` uses the old values.
+      final temps = <String>[];
+      for (var i = 0; i < values.length; i++) {
+        final tmp = state.nextValueTemp();
+        temps.add(tmp);
+        buf.writeln(
+            '$pad${_cDecl(targets[i].resolvedType!, tmp)} = ${_emitExpr(values[i], ctx)};');
+      }
+      for (var i = 0; i < targets.length; i++) {
+        buf.writeln('$pad${_emitExpr(targets[i], ctx)} = ${temps[i]};');
       }
 
     case CallStmt(

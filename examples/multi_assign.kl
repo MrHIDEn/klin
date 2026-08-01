@@ -1,0 +1,27 @@
+// Multi-assignment (issue 056, phase B): `a, b = b, a`.
+// Values are evaluated before any target is written, so swaps work with no
+// temporary in source — it lowers to plain temps + assignments in C.
+
+struct P {
+    x: i32
+    y: i32
+}
+
+fn main() {
+    let mut a: i32 = 1
+    let mut b: i32 = 2
+    a, b = b, a
+    printf("swap: %d %d\n", a, b)
+
+    // Works on any assignable targets: fields, array elements, …
+    let mut p = P{ x: 10, y: 20 }
+    p.x, p.y = p.y, p.x
+    printf("fields: %d %d\n", p.x, p.y)
+
+    // Three-way rotation in one statement.
+    let mut c: i32 = 5
+    let mut d: i32 = 6
+    let mut e: i32 = 7
+    c, d, e = e, c, d
+    printf("rot: %d %d %d\n", c, d, e)
+}
