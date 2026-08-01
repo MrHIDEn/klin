@@ -1,6 +1,6 @@
 # 056 — Dekonstrukcja (`{}` / `[]` / multi-assign)
 
-**Status:** 🔨 w toku — fazy A ✅ (struktury) + B ✅ (multi-assign) + C ✅ (tablice `[N]T`) + D ✅ (rename / `_`)
+**Status:** ✅ — fazy A (struktury) + A′ (bare `{}=`) + B (multi-assign) + C (tablice `[N]T`) + D (rename / `_`). Bare `[]=` świadomie pominięte (patrz niżej).
 **Zależy od:** [005](005-struktury-metody.md) (struct lit/pola ✅); mile [007](007-wskazniki-tablice-slice.md) (tablice stałej długości)
 
 > **Nie mylić z destruktorami RAII.** D6 ([note/01-decyzje.md](../note/01-decyzje.md)):
@@ -96,7 +96,7 @@ jawny indeks / slice — nie cukier `[x]=`.
 | Faza | Co | Zależy | Status |
 |---|---|---|---|
 | A | `let { a, b } = s` (deklaracja) | 005 | ✅ |
-| A′ | bare `{ a, b } = s` (reassign; wymaga lookaheadu) | 005 | ⏳ |
+| A′ | bare `{ a, b } = s` (reassign; wymaga lookaheadu) | 005 | ✅ (struct); `[]=` pominięte |
 | B | `a, b = b, a` (multi-assign, bez multi-return) | parser + checker tmp | ✅ |
 | C | `let [a, b] = xs` dla `[N]T`, `N` znane | 007 | ✅ |
 | D | rename `{ x: px }`, `_` w tablicach (skip) | po A/C | ✅ |
@@ -131,8 +131,19 @@ z polami bez zmiany nazwy) oraz `_` jako skip pozycji w tablicy
 `let [_, b, _, d] = xs` (pełne pokrycie nadal wymagane, min. jedno realne
 wiązanie; indeksy zachowane). Testy w
 [`test/destruct_phase_d.kl`](../test/destruct_phase_d.kl) +
-`test/pipeline_test.dart`. Poza zakresem zostaje już tylko bare reassignment
-(`{ … } = p` / `[ … ] = xs`, faza A′).
+`test/pipeline_test.dart`.
+
+**Faza A′ (zrobione — struktury):** bare `{ x, y } = p` i rename `{ x: cel } = p`
+przypisują pola do istniejących miejsc (zmienne lub dowolne lvalue). Blok vs
+wzorzec rozróżniany ograniczonym lookaheadem (`=` po dopasowanym `}`); źródło
+kopiowane raz, więc cel może bezpiecznie aliasować źródło. Przykład
+[`examples/destructure.kl`](../examples/destructure.kl), testy w
+[`test/struct_assign.kl`](../test/struct_assign.kl) + `test/pipeline_test.dart`.
+
+**Bare `[ … ] = xs` — świadomie pominięte:** przy gramatyce nieczułej na białe
+znaki instrukcja zaczynająca się od `[` skleja się z poprzednim wyrażeniem jako
+postfiksowy indeks (`prev[…]`). Zamiennik: multi-assign fazy B
+(`a, b = xs[0], xs[1]`, swap `a, b = b, a`).
 
 ## Kryterium „issue zamknięte jako decyzja”
 

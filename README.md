@@ -111,8 +111,13 @@ values are evaluated before any target is written, so swaps and rotations need
 no temporary. Targets follow the usual `mut` rules; `or`/`!`/`match` values must
 be assigned in their own statement.
 
-Both lower to plain reads/writes, so they disappear in C. No tuples; bare
-`{ … } = p` / `[ … ] = xs` reassignment is not part of these phases. See
+Bare `{ x, y } = p` (and rename `{ x: target } = p`) assigns struct fields to
+existing places rather than declaring new bindings. Bare array assignment
+`[ … ] = xs` is not provided — with the whitespace-insensitive grammar a
+statement-leading `[` would attach to the previous expression; use
+multi-assignment instead (`a, b = xs[0], xs[1]`).
+
+Everything lowers to plain reads/writes, so it disappears in C. No tuples. See
 [issues/056-destructuring.md](issues/056-destructuring.md),
 [`examples/destructure.kl`](examples/destructure.kl),
 [`examples/multi_assign.kl`](examples/multi_assign.kl).
