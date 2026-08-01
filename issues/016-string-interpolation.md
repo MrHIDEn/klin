@@ -13,5 +13,8 @@
 - **Print-only MVP** — sinki: `puts` / `printf` / `io.print` / `io.println`
 - Bez `n3` / kultury; daty → [037](037-datetime-format.md)
 
+Runtime podmiana wąsów (wzorzec-jako-dane, `{0}` / `{klucz}`) → osobno
+[077](077-string-template.md).
+
 Szczegóły: [note/07-interpolacja.md](../note/07-interpolacja.md).
 Golden: `test/interp.kl`. Demo: `examples/interp.kl`.
