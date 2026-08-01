@@ -28,6 +28,8 @@ Sensowna współpraca z HAL **bez** przepisywania Cubemx do Klina i **bez**
   lub razem (HAL pod spodem i tak często tyka tych samych rejestrów)
 - paczki chip/board i `$device`/`$board` (bez mieszania z HAL):
   [053](053-device-board-assets.md)
+- wyższe API „jak MicroPython `machine`” (PWM/UART/…) osobno:
+  [061](061-micropython-machine-api.md)
 
 ## Rozważania / przykłady myślowe (nie speć)
 
