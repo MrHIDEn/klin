@@ -9,9 +9,9 @@ dart run bin/klin.dart fmt -w examples/hello.kl       # write in place
 dart run bin/klin.dart test examples/                 # *_test.kl
 ```
 
-**Host (laptop):** zwykłe `*.kl` powyżej — **bez** `linker.ld` / `startup.s`
-(CRT + libc systemu). Magia ld/startup tylko w bare-metal
-`stm32/…` ([075](../issues/075-board-pack-init-host.md)).
+**Host (laptop):** zwykłe `*.kl` powyżej — **bez** `linker.ld` / `startup.s` /
+Makefile (`klin run` + CRT/libc systemu). Make + ld + startup tylko w
+bare-metal `stm32/…` ([075](../issues/075-board-pack-init-host.md)).
 
 Style: [note/05-fmt.md](../note/05-fmt.md) (`klin fmt`). Sources with `$…` macros
 are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), not

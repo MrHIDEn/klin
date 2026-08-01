@@ -5,11 +5,11 @@
 
 ## Werdykt w skrócie
 
-**Laptop (host): bez magii linkera/startupu — bez tych plików.**
+**Laptop (host): bez magii — bez `linker.ld`, `startup.s`, zwykle też bez Makefile.**
 
-`klin run examples/hello.kl` nie wymaga `linker.ld` ani `startup.s`. Entry i
-link robi **CRT + libc hosta** (gcc/clang/tcc). Żadnego freestanding, żadnej
-tablicy wektorów. Magia ld/startup dotyczy **tylko bare-metalu** (`examples/stm32/…`).
+`klin run examples/hello.kl` wystarczy: Klin emituje C, woła host `gcc`/`clang`/`tcc`,
+linkuje z **CRT + libc**. Nie trzeba `linker.ld`, `startup.s` ani `make`.
+Makefile / ld / startup to świat **bare-metalu** (`examples/stm32/…`).
 
 ## Problem
 
@@ -52,17 +52,22 @@ link z **systemowym CRT + libc** (crt0, domyślny skrypt linkera OS).
 
 - **Brak** `startup.s` w projekcie hostowym.
 - **Brak** `linker.ld` / `-T …` w typowym `klin run`.
+- **Brak** Makefile — buduje i odpala **`klin run`** (ewent. `klin test`).
 - **Brak** freestanding wektorów przerwań.
 
+(Wyjątki hostowe z własnym Make — np. `ffi_add/` / `asm_add/` pod lib C —
+to FFI, nie wymóg zwykłego programu.)
+
 To nie jest „ten sam problem co Nucleo”. Host ≠ MCU; nie projektować UX
-bare-metalu tak, jakby każdy program Klin wymagał ld/startup.
+bare-metalu tak, jakby każdy program Klin wymagał ld/startup/Make.
 
 | | Host | Bare-metal (STM32, …) |
 |---|---|---|
+| Budowa | `klin run` / `klin test` | Makefile (+ `arm-none-eabi-gcc`) |
 | Entry / CRT | OS + toolchain | `startup.s` (wektory, Reset_Handler) |
 | Skrypt linkera | domyślny hosta | `linker.ld` (`-T`, FLASH/RAM) |
 | User pisze | `.kl` (+ ewent. `@[link]` do `.s`/`.a` FFI) | `.kl` + pack boardu (lub ręczny boilerplate) |
-| `klin init`? | opcjonalnie lekki szablon app (`hello` + `klin.mod`) | **`klin init nucleo-f411`** (itp.) z `board/` |
+| `klin init`? | opcjonalnie lekki szablon app (`hello` + `klin.mod`) | **`klin init nucleo-f411`** (itp.) z `board/` + Make |
 
 ### 4. Dwa sensy `klin init` (nie mylić)
 
@@ -87,7 +92,7 @@ niższy priorytet.
 ## Kryterium (gdy wejdzie implementacja)
 
 - [x] udokumentowany podział: host vs MCU (ten issue + `examples/README`)
-      — laptop: bez magii, bez `linker.ld`/`startup.s`
+      — laptop: bez magii, bez `linker.ld`/`startup.s`/Makefile (`klin run`)
 - [ ] co najmniej jeden board pack / szablon Nucleo-F411 bez edycji ld przez usera
 - [ ] (opcjonalnie) `klin init nucleo-f411` albo równoważny scaffold w repo
 - [ ] (opcjonalnie, niski priorytet) `klin init` host → `hello` + moda
