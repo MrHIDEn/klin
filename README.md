@@ -96,9 +96,16 @@ only; lowers to an `if`/`else if` chain with the subject in one temp, so
 
 `let { x, y } = p` and `let mut { x, y } = p` bind struct fields by name in one
 statement. A subset of fields is allowed and order is irrelevant; the source is
-evaluated once and each binding lowers to a plain field read (`.field`), so it
-disappears in C. No tuples; rename (`{ x: px }`), bare `{ … } = p` reassignment,
-and array patterns are not part of this phase. See
+evaluated once and each binding lowers to a plain field read (`.field`).
+
+`let [a, b] = xs` and `let mut [a, b] = xs` bind a fixed-length array `[N]T`
+positionally, where `N` equals the number of patterns. A named array is indexed
+in place (`xs[i]`) and an array-literal source binds element-wise. Slices `[]T`
+(runtime length) are rejected.
+
+Both lower to plain reads, so they disappear in C. No tuples; rename
+(`{ x: px }`), bare `{ … } = p` / `[ … ] = xs` reassignment, and `_` skips are
+not part of these phases. See
 [issues/056-destructuring.md](issues/056-destructuring.md),
 [`examples/destructure.kl`](examples/destructure.kl).
 

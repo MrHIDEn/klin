@@ -1,5 +1,7 @@
-// Struct destructuring in `let` (issue 056, phase A).
-// `let { x, y } = p` lowers to plain field reads — it disappears in C.
+// Destructuring in `let` (issue 056).
+// Phase A: `let { x, y } = p`  (struct fields, by name)
+// Phase C: `let [a, b] = xs`   (fixed-length array `[N]T`, positional)
+// Both lower to plain reads (`.field` / `xs[i]`) — they disappear in C.
 
 struct Vec2 {
     x: i32
@@ -37,9 +39,24 @@ fn show_expr_source() {
     printf("offset = (%d, %d)\n", x, y)
 }
 
+fn show_array() {
+    // Fixed-length array `[N]T`: one binding per element (N must match).
+    let xs: [3]i32 = [10, 20, 30]
+    let [a, b, c] = xs
+    printf("array = %d %d %d\n", a, b, c)
+}
+
+fn show_array_literal() {
+    // An array-literal source binds element-wise.
+    let [p, q] = [7, 8]
+    printf("literal = %d, %d\n", p, q)
+}
+
 fn main() {
     show_both()
     show_subset()
     show_mut()
     show_expr_source()
+    show_array()
+    show_array_literal()
 }
