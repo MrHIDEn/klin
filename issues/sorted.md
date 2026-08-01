@@ -95,6 +95,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [069](069-eventemitter-signals.md) | Observer / EventEmitter / Signals (biblioteka; JS-signals jawnie) | 💭 | 013, 057 |
 | [071](071-lambda.md) | Lambdy / `fn (…) => expr` (werdykt: nie teraz; po D7) | 💭 | fn-ptr, D7 |
 | [072](072-enums.md) | Enumy (styl C23, opcjonalny typ bazowy; metody; string-enum do rozważenia) | 💭 | 002, 005, 014 |
+| [073](073-mem-leak-detection.md) | Wykrywanie potencjalnych wycieków pamięci (Valgrind/ASan, debug-alokator, lint) | 💭 | 057, 008 |
 
 ---
 
