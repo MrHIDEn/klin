@@ -324,6 +324,8 @@ bool _stmtCallsStdio(Stmt stmt) => switch (stmt) {
         _exprCallsStdio(target) || _exprCallsStdio(value),
       MultiAssignStmt(:final targets, :final values) =>
         targets.any(_exprCallsStdio) || values.any(_exprCallsStdio),
+      StructAssignStmt(:final targets, :final source) =>
+        _exprCallsStdio(source) || targets.any(_exprCallsStdio),
       IfStmt(:final cond, :final thenBlock, :final elseBranch) =>
         _exprCallsStdio(cond) ||
             thenBlock.stmts.any(_stmtCallsStdio) ||
@@ -624,6 +626,7 @@ bool _stmtNeedsTrimFrac(Stmt stmt) => switch (stmt) {
       LetArrayDestructureStmt(:final source) => _exprNeedsTrimFrac(source),
       AssignStmt(:final value) => _exprNeedsTrimFrac(value),
       MultiAssignStmt(:final values) => values.any(_exprNeedsTrimFrac),
+      StructAssignStmt(:final source) => _exprNeedsTrimFrac(source),
       ReturnStmt(:final value) => value != null && _exprNeedsTrimFrac(value),
       IfStmt(:final thenBlock, :final elseBranch, :final cond) =>
         _exprNeedsTrimFrac(cond) ||
@@ -1236,6 +1239,25 @@ void _emitStmt(
       }
       for (var i = 0; i < targets.length; i++) {
         buf.writeln('$pad${_emitExpr(targets[i], ctx)} = ${temps[i]};');
+      }
+
+    case StructAssignStmt(
+        :final fields,
+        :final targets,
+        :final source,
+        :final pos,
+        :final sourceType
+      ):
+      _line(buf, pos.line, sourcePath);
+      // Copy the source once so targets may alias it, then assign each field.
+      final tmp = state.nextValueTemp();
+      final rhs = source is NameExpr && _exprIsPtrReceiver(source)
+          ? '*${_emitExpr(source, ctx)}'
+          : _emitExpr(source, ctx);
+      buf.writeln('$pad${_cDecl(sourceType!, tmp)} = $rhs;');
+      for (var i = 0; i < fields.length; i++) {
+        buf.writeln(
+            '$pad${_emitExpr(targets[i], ctx)} = $tmp.${fields[i]};');
       }
 
     case CallStmt(

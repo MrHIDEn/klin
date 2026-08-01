@@ -248,6 +248,11 @@ final class Parser {
       final t = _advance();
       return ContinueStmt(t.pos);
     }
+    // `{ … } = expr` is a bare struct destructuring assignment (phase A′),
+    // distinguished from a block by a trailing `=` after the matching `}`.
+    if (_check(TokenKind.lBrace) && _looksLikeStructAssign()) {
+      return _structAssign();
+    }
     if (_check(TokenKind.lBrace)) return BlockStmt(_block());
 
     // name := expr  ≡  let mut name = expr
@@ -330,6 +335,80 @@ final class Parser {
       );
     }
     return MultiAssignStmt(targets: targets, values: values, pos: first.pos);
+  }
+
+  /// True when the `{` at the cursor opens a struct destructuring pattern whose
+  /// matching `}` is immediately followed by `=` (bare struct assign, phase A′).
+  bool _looksLikeStructAssign() {
+    var depth = 0;
+    for (var j = _i; j < _tokens.length; j++) {
+      final kind = _tokens[j].kind;
+      if (kind == TokenKind.lBrace) {
+        depth++;
+      } else if (kind == TokenKind.rBrace) {
+        depth--;
+        if (depth == 0) {
+          return j + 1 < _tokens.length &&
+              _tokens[j + 1].kind == TokenKind.equal;
+        }
+      } else if (kind == TokenKind.eof) {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  /// `{ field [: target], … } = source` — bare struct assign (phase A′).
+  Stmt _structAssign() {
+    final open = _expect(TokenKind.lBrace, 'oczekiwano `{`');
+    final fields = <String>[];
+    final targets = <Expr>[];
+    final seenFields = <String>{};
+    if (!_check(TokenKind.rBrace)) {
+      while (true) {
+        final field = _expect(TokenKind.ident, 'expected field name');
+        if (!seenFields.add(field.lexeme)) {
+          throw ParseError(
+            'duplicate field `${field.lexeme}` in destructuring pattern',
+            field.pos,
+          );
+        }
+        Expr target;
+        if (_check(TokenKind.colon)) {
+          _advance();
+          target = _expr();
+          if (!_isAssignableTarget(target)) {
+            throw ParseError(
+                'left side of assignment must be assignable', target.pos);
+          }
+        } else {
+          target = NameExpr(field.lexeme, field.pos);
+        }
+        fields.add(field.lexeme);
+        targets.add(target);
+        if (_check(TokenKind.comma)) {
+          _advance();
+          if (_check(TokenKind.rBrace)) break; // trailing comma
+          continue;
+        }
+        break;
+      }
+    }
+    _expect(TokenKind.rBrace, 'expected `}` after destructuring pattern');
+    if (fields.isEmpty) {
+      throw ParseError(
+        'destructuring pattern needs at least one field',
+        open.pos,
+      );
+    }
+    _expect(TokenKind.equal, 'expected `=` in destructuring assignment');
+    final source = _expr();
+    return StructAssignStmt(
+      fields: fields,
+      targets: targets,
+      source: source,
+      pos: open.pos,
+    );
   }
 
   IfStmt _ifStmt() {

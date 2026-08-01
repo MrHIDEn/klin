@@ -280,6 +280,32 @@ final class MultiAssignStmt extends Stmt {
   });
 }
 
+/// Bare struct destructuring assignment to existing places (issue 056, phase A′):
+///   { x, y } = p
+///   { x: obj.a, y: b } = p
+/// Assigns `source.field` to each target lvalue. The source is copied once, so
+/// a target may safely alias it.
+final class StructAssignStmt extends Stmt {
+  final List<String> fields;
+
+  /// Assignable target per field (defaults to a variable named like the field).
+  final List<Expr> targets;
+  final Expr source;
+  final SourcePos pos;
+
+  /// Filled by the checker.
+  KlinType? sourceType;
+  List<KlinType>? fieldTypes;
+
+  StructAssignStmt({
+    required this.fields,
+    required this.targets,
+    required this.source,
+    required this.pos,
+  });
+}
+
+
 /// call := ident "(" (expr ("," expr)*)? ")"
 final class CallStmt extends Stmt {
   final String? moduleName;

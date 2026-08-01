@@ -1,0 +1,30 @@
+struct P {
+    x: i32
+    y: i32
+}
+
+fn main() {
+    let p = P{ x: 3, y: 4 }
+
+    // Assign fields to existing variables named like the fields.
+    let mut x: i32 = 0
+    let mut y: i32 = 0
+    { x, y } = p
+    printf("vars: %d %d\n", x, y)
+
+    // Rename: assign a field to a differently named existing variable.
+    let mut a: i32 = 0
+    { x: a } = p
+    printf("rename: %d\n", a)
+
+    // The target can be any assignable place, e.g. a struct field.
+    let mut q = P{ x: 0, y: 0 }
+    { x: q.x, y: q.y } = p
+    printf("into-fields: %d %d\n", q.x, q.y)
+
+    // A plain block (no trailing `=`) is still a block, not a pattern.
+    {
+        let z: i32 = 99
+        printf("block: %d\n", z)
+    }
+}
