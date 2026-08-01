@@ -1,0 +1,22 @@
+// Remote SVD via klin.mod `device` + cache (issue 053).
+// Run `klin get` in this directory first (see README).
+$device("github/tinygo-org/stm32-svd/svd/stm32f411.svd", "RCC,GPIOA,STK")
+
+@[codename("SysTick_Handler")]
+fn systick_handler() {
+  GPIOA.ODR.ODR5.toggle()
+}
+
+@[link("startup.s")]
+fn main() {
+  RCC.AHB1ENR.GPIOAEN.set(1)
+  GPIOA.MODER.MODER5.write(.Output)
+  STK.RVR.RELOAD.write(7_999_999)
+  STK.CVR.CURRENT.write(0)
+  STK.CSR.ENABLE.set(1)
+  STK.CSR.TICKINT.set(1)
+  STK.CSR.CLKSOURCE.set(1)
+  while true {
+    asm("wfi")
+  }
+}

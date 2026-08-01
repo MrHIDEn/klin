@@ -99,6 +99,7 @@ $board("…")   // później — wąski .ioc → stałe; nie pełny CubeMX
 - [x] lokalna ścieżka nadal działa (`$device` / `$peripherals_from_svd`)
 - [x] zero-cost jak 027 (ten sam emitter)
 - [x] dokumentacja: `import` = Klin; `$device("github/…")` = artefakt
+- [x] przykład: [`examples/stm32/device_f411/`](../examples/stm32/device_f411/)
 - [ ] (opcjonalnie) paczki `import stm32_…` / `$board` / krótkie ID chipa
 
 ## Powiązane

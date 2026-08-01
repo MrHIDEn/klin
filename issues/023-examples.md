@@ -19,7 +19,8 @@ examples/
   README.md
   hello.kl, vec2.kl, slice_sum.kl, modules/
   stm32/
-    blink_f411/     # Nucleo-F411RE — SysTick → PA5
+    blink_f411/     # Nucleo-F411RE — lokalne SVD
+    device_f411/    # to samo przez $device + klin.mod (053)
 ```
 
 - Host: `klin run examples/…`

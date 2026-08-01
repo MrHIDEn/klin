@@ -39,6 +39,7 @@ are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), n
 | `remote_osa/` | Remote `import "github/mrhiden/osa"` po `klin get` ([049](../issues/049-remote-imports.md)) |
 | `sketch_async_eventloop.kl` | **Szkic** — `async`/`await` + `github/mrhiden/eventloop` ([029](../issues/029-async-event-loop.md)); nie `klin run` |
 | `modules/` | `module` / `import` ([note/12-moduly.md](../note/12-moduly.md)) |
-| `stm32/blink_f411/` | Nucleo-F411RE LED — `$peripherals_from_svd` + `@[link("startup.s")]` → `out/*.link` |
+| `stm32/blink_f411/` | Nucleo-F411RE LED — lokalne `$peripherals_from_svd` + `@[link("startup.s")]` → `out/*.link` |
+| `stm32/device_f411/` | To samo przez `$device` + `klin.mod` / `klin get` ([053](../issues/053-device-board-assets.md)) |
 
 Bare-metal boards go under `stm32/<name>/`.
