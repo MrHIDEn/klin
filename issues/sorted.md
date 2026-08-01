@@ -86,7 +86,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [060](060-map-kv.md) | Mapa KV (hash map) — język / stdlib / C | 💭 | 007, 057? |
 | [061](061-micropython-machine-api.md) | API w stylu MicroPython `machine` (PWM, UART, …) | 💭 | 010, 031? |
 | [062](062-targets-esp-rp.md) | Cele MCU: ESP32 / RP2040 / RP2350 | 💭 | 010 |
-| [063](063-if-cond-struct-literal-parse.md) | Warunek `if`/`while` kończący się nazwą mylony z literałem struktury | 🐞 | — |
+| [064](064-if-cond-struct-literal-parse.md) | Warunek `if`/`while` kończący się nazwą mylony z literałem struktury | ✅ | — |
 
 ---
 

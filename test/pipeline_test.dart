@@ -554,6 +554,25 @@ fn main() {
     );
   });
 
+  test('golden: if/while/for bare-name condition (issue 064)', () async {
+    final result = await _compileAndRun('test/if_cond_bare_name.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(
+      result.stdout,
+      await File('test/if_cond_bare_name.out').readAsString(),
+    );
+  });
+
+  test('golden: struct literal in if-condition needs parens (issue 064)',
+      () async {
+    final result = await _compileAndRun('test/if_cond_struct_paren.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(
+      result.stdout,
+      await File('test/if_cond_struct_paren.out').readAsString(),
+    );
+  });
+
   test('golden: match statement lowers to if/else chains (issue 014)',
       () async {
     final result = await _compileAndRun('test/match_stmt.kl', tmp);
