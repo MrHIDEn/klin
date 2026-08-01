@@ -84,7 +84,8 @@ zegarów / pin mux / błędów; nie obiecywać pełnej przenośności jak µPyth
 ## Szkic (później)
 
 1. Wybrać MVP klas: `Pin`, `PWM`, `Uart` (nazewnictwo Klin).
-2. Jedna płyta referencyjna (np. Nucleo-F411 / RP2040) + przykład blink/PWM/UART.
+2. Jedna płyta referencyjna (np. Nucleo-F411 / RP2040) + przykład blink/PWM/UART
+   — cele poza STM32: [062](062-targets-esp-rp.md).
 3. Decyzja implementacji: czysty MMIO (SVD) vs LL vs mieszanka.
 4. Dokumentacja: „to nie jest port MicroPythona; podobny kształt API”.
 
