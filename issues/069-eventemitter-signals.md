@@ -25,6 +25,16 @@ alokacji / ukrytego runtime (zasada nadrzędna).
   [049](049-remote-imports.md)), nie rdzeń — jak ustalono dla RTOS/loop
   ([024](024-rtos.md), [029](029-async-event-loop.md)).
 
+### Status: bloker checkera usunięty
+
+Wcześniej `on()` nie dało się napisać, bo checker odrzucał zapis do
+zagnieżdżonego miejsca przez `mut` receiver (`self.slots[i] = …`). Analiza
+mutowalności celu przypisania (`_requireMutable*Place` w `lib/checker.dart`)
+przyjmowała jako bazę tylko gołą zmienną. Naprawione: sprawdzanie jest teraz
+rekurencyjne (jak `_isMutablePlace` dla `&`) — dozwolone są pola zagnieżdżone,
+elementy tablic przez `mut` receiver/zmienną i zapis przez `*mut`. Emiter bez
+zmian. Odblokowuje implementację emittera.
+
 ## B. Observer / EventEmitter — tak, biblioteka
 
 `EventEmitter` to po prostu wzorzec obserwatora (subject + wielu listenerów) —
