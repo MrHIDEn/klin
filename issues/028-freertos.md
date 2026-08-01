@@ -49,18 +49,36 @@ ABI — słabo.
 Zasada nadrzędna: dekorator / makro **nie** ukrywa alokacji TCB/stacku ani
 startu schedulera — stack/TCB/prio pozostają jawne.
 
-Szkic (host/board — nie speć API):
+### Preferowany kierunek ergonomii: makro w lib (nie user-`@[…]`)
+
+Cel „lib upraszcza app” jest OK. Otwarte dekoratory jak w Python/TS
+(`@[moj]` zdefiniowany w libce) — **nie**: atrybuty to allowlista kompilatora;
+owijanie fn w runtime nie pasuje do modelu C / zasady nadrzędnej.
+
+Narzędzie w Klinie: **makra `$…` ([026](026-preprocessor.md))** albo jawne API.
+Preferowany szkic składni (ustalenie kierunkowe — nie speć implementacji):
+
+```klin
+$rtos_task("blink", 512, 2) {
+    // ciało taska — expand → fn + codename + rejestracja / tabela
+}
+```
+
+Równoważnie, bez makra (nadal proste, zero magii):
 
 ```klin
 @[codename("blink_task")]
 fn blink_task(arg: *mut u8) { … }
 
 fn main() {
-    // lib klinrtos / freertos bindings:
     rtos.create(blink_task, stack[:], prio)
     rtos.start()
 }
 ```
+
+`@[task(…)]` w kompilatorze — tylko gdy ten sam wzorzec wraca w wielu libkach
+i chcemy jedną składnię atrybutów; domyślnie **nie** budować ogólnego systemu
+user-dekoratorów. Por. ISR: [030](030-isr-decorators.md).
 
 ## Mutexy / dane współdzielone (krytyczne)
 
