@@ -31,6 +31,8 @@ $point(Vec2i, i32)
 - pełny język szablonów / AST-quote jak Nelua
 - `$peripherals_from_svd` → [027](027-svd-ergonomic-api.md)
 - mapowanie pozycji checkerowych z powrotem do ciała makra
+- makra z pakietu + `$kstruct` / `$kstruct_from` → [059](059-kstruct-macros.md)
+
 
 ## Kryterium
 
