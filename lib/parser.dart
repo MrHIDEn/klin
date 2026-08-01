@@ -552,18 +552,33 @@ final class Parser {
   Stmt _structDestructureLet(Token letTok, bool isMut) {
     _expect(TokenKind.lBrace, 'oczekiwano `{`');
     final fields = <String>[];
-    final seen = <String>{};
+    final binds = <String>[];
+    final seenFields = <String>{};
+    final seenBinds = <String>{};
     if (!_check(TokenKind.rBrace)) {
       while (true) {
         final field = _expect(TokenKind.ident, 'expected field name');
-        _rejectCKeyword(field, 'a variable name');
-        if (!seen.add(field.lexeme)) {
+        if (!seenFields.add(field.lexeme)) {
           throw ParseError(
-            'duplicate name `${field.lexeme}` in destructuring pattern',
+            'duplicate field `${field.lexeme}` in destructuring pattern',
             field.pos,
           );
         }
+        // Optional rename: `field: local` (phase D).
+        Token bind = field;
+        if (_check(TokenKind.colon)) {
+          _advance();
+          bind = _expect(TokenKind.ident, 'expected local name after `:`');
+        }
+        _rejectCKeyword(bind, 'a variable name');
+        if (!seenBinds.add(bind.lexeme)) {
+          throw ParseError(
+            'duplicate name `${bind.lexeme}` in destructuring pattern',
+            bind.pos,
+          );
+        }
         fields.add(field.lexeme);
+        binds.add(bind.lexeme);
         if (_check(TokenKind.comma)) {
           _advance();
           if (_check(TokenKind.rBrace)) break; // trailing comma
@@ -584,27 +599,35 @@ final class Parser {
     return LetDestructureStmt(
       isMut: isMut,
       fields: fields,
+      binds: binds,
       source: source,
       pos: letTok.pos,
     );
   }
 
   /// `let [mut] [a, b] = expr` — fixed-array destructuring (issue 056, phase C).
+  /// A `_` pattern skips that position without binding (phase D).
   Stmt _arrayDestructureLet(Token letTok, bool isMut) {
     _expect(TokenKind.lBracket, 'oczekiwano `[`');
-    final names = <String>[];
+    final names = <String?>[];
     final seen = <String>{};
+    var boundCount = 0;
     if (!_check(TokenKind.rBracket)) {
       while (true) {
-        final name = _expect(TokenKind.ident, 'expected binding name');
-        _rejectCKeyword(name, 'a variable name');
-        if (!seen.add(name.lexeme)) {
-          throw ParseError(
-            'duplicate name `${name.lexeme}` in destructuring pattern',
-            name.pos,
-          );
+        final name = _expect(TokenKind.ident, 'expected binding name or `_`');
+        if (name.lexeme == '_') {
+          names.add(null); // skip this position
+        } else {
+          _rejectCKeyword(name, 'a variable name');
+          if (!seen.add(name.lexeme)) {
+            throw ParseError(
+              'duplicate name `${name.lexeme}` in destructuring pattern',
+              name.pos,
+            );
+          }
+          names.add(name.lexeme);
+          boundCount++;
         }
-        names.add(name.lexeme);
         if (_check(TokenKind.comma)) {
           _advance();
           if (_check(TokenKind.rBracket)) break; // trailing comma
@@ -617,6 +640,12 @@ final class Parser {
     if (names.isEmpty) {
       throw ParseError(
         'destructuring pattern needs at least one binding',
+        letTok.pos,
+      );
+    }
+    if (boundCount == 0) {
+      throw ParseError(
+        'destructuring pattern binds nothing (all `_`)',
         letTok.pos,
       );
     }

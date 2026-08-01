@@ -1114,6 +1114,7 @@ void _emitStmt(
 
     case LetDestructureStmt(
         :final fields,
+        :final binds,
         :final source,
         :final pos,
         :final sourceType,
@@ -1122,20 +1123,25 @@ void _emitStmt(
       _line(buf, pos.line, sourcePath);
       final st = sourceType!;
       final fts = fieldTypes!;
-      // Evaluate the source once. A plain name needs no temp; any other
-      // expression is copied into a temp so it is not re-evaluated per field.
+      // Evaluate the source once. A plain name is read in place, unless a
+      // binding shadows it (possible via rename, e.g. `let { x: p } = p`), in
+      // which case — like any non-name source — copy it into a fresh temp so
+      // later field reads do not use a newly declared scalar.
       final String access;
-      if (source is NameExpr) {
+      if (source is NameExpr && !binds.contains(source.name)) {
         access = _emitExpr(source, ctx) +
             (_exprIsPtrReceiver(source) ? '->' : '.');
       } else {
         final tmp = state.nextValueTemp();
-        buf.writeln('$pad${_cDecl(st, tmp)} = ${_emitExpr(source, ctx)};');
+        final rhs = source is NameExpr && _exprIsPtrReceiver(source)
+            ? '*${_emitExpr(source, ctx)}'
+            : _emitExpr(source, ctx);
+        buf.writeln('$pad${_cDecl(st, tmp)} = $rhs;');
         access = '$tmp.';
       }
       for (var i = 0; i < fields.length; i++) {
         buf.writeln(
-            '$pad${_cDecl(fts[i], fields[i])} = $access${fields[i]};');
+            '$pad${_cDecl(fts[i], binds[i])} = $access${fields[i]};');
       }
 
     case LetArrayDestructureStmt(
@@ -1149,6 +1155,8 @@ void _emitStmt(
       if (source is ArrayLitExpr) {
         // Evaluate every element into a fresh temp before binding, so a swap
         // like `let [a, b] = [b, a]` reads the outer values, not new bindings.
+        // `_` positions are still evaluated (side effects are part of the
+        // written literal) but not bound.
         final temps = <String>[];
         for (var i = 0; i < names.length; i++) {
           final t = state.nextValueTemp();
@@ -1157,23 +1165,27 @@ void _emitStmt(
               '$pad${_cDecl(et, t)} = ${_emitExpr(source.elements[i], ctx)};');
         }
         for (var i = 0; i < names.length; i++) {
-          buf.writeln('$pad${_cDecl(et, names[i])} = ${temps[i]};');
+          final name = names[i];
+          if (name == null) continue; // `_` skip: evaluated above, not bound
+          buf.writeln('$pad${_cDecl(et, name)} = ${temps[i]};');
         }
       } else {
         // A plain array variable is indexed in place. If a binding shadows the
         // source name, capture the array via a pointer first so later reads do
         // not index a freshly-declared scalar.
         final base = _emitExpr(source, ctx);
+        final String indexed;
         if (source is NameExpr && names.contains(source.name)) {
           final tmp = state.nextValueTemp();
           buf.writeln('$pad${_cType(et)} *$tmp = $base;');
-          for (var i = 0; i < names.length; i++) {
-            buf.writeln('$pad${_cDecl(et, names[i])} = $tmp[$i];');
-          }
+          indexed = tmp;
         } else {
-          for (var i = 0; i < names.length; i++) {
-            buf.writeln('$pad${_cDecl(et, names[i])} = $base[$i];');
-          }
+          indexed = base;
+        }
+        for (var i = 0; i < names.length; i++) {
+          final name = names[i];
+          if (name == null) continue; // `_` skip
+          buf.writeln('$pad${_cDecl(et, name)} = $indexed[$i];');
         }
       }
 

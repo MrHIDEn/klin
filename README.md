@@ -101,11 +101,13 @@ evaluated once and each binding lowers to a plain field read (`.field`).
 `let [a, b] = xs` and `let mut [a, b] = xs` bind a fixed-length array `[N]T`
 positionally, where `N` equals the number of patterns. A named array is indexed
 in place (`xs[i]`) and an array-literal source binds element-wise. Slices `[]T`
-(runtime length) are rejected.
+(runtime length) are rejected. Use `_` to skip a position: `let [_, b, _, d] = xs`.
 
-Both lower to plain reads, so they disappear in C. No tuples; rename
-(`{ x: px }`), bare `{ … } = p` / `[ … ] = xs` reassignment, and `_` skips are
-not part of these phases. See
+Struct fields can be renamed to a different local: `let { x: px, y: py } = p`
+(mixable with plain fields).
+
+Both lower to plain reads, so they disappear in C. No tuples; bare `{ … } = p` /
+`[ … ] = xs` reassignment is not part of these phases. See
 [issues/056-destructuring.md](issues/056-destructuring.md),
 [`examples/destructure.kl`](examples/destructure.kl).
 

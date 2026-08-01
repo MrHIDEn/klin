@@ -1,0 +1,39 @@
+struct Point {
+    x: i32
+    y: i32
+}
+
+fn noisy(): i32 {
+    puts("noisy ran")
+    return 99
+}
+
+fn main() {
+    let p = Point{ x: 3, y: 4 }
+
+    // Struct field rename `field: local` (phase D).
+    let { x: px, y: py } = p
+    printf("rename: %d %d\n", px, py)
+
+    // Mixed: plain field + renamed field.
+    let { x, y: q } = p
+    printf("mixed: %d %d\n", x, q)
+
+    // Array `_` skips a position (phase D); indices are preserved.
+    let xs: [4]i32 = [10, 20, 30, 40]
+    let [_, b, _, d] = xs
+    printf("skip: %d %d\n", b, d)
+
+    let [_, _, _, last] = xs
+    printf("last: %d\n", last)
+
+    // A `_`-skipped literal element is still evaluated (side effects run).
+    let [_, keep] = [noisy(), 5]
+    printf("keep: %d\n", keep)
+
+    // A renamed binding may shadow the source name (in a nested block).
+    {
+        let { x: p, y: q } = p
+        printf("shadow: %d %d\n", p, q)
+    }
+}
