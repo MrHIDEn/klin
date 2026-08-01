@@ -25,8 +25,8 @@ fn main() {
 |---|---|
 | `mem.heap()` | host libc heap (pusty `Allocator` pod przyszłe arena/vtable) |
 | `a.alloc_bytes(n)` / `a.free_bytes` | `![]u8`; metody na `mut Allocator` |
-| `mem.alloc_i32` / `free_i32` (+ `u8`) | wolne funkcje z `*mut Allocator` |
-| `mem.empty_u8` / `empty_i32` | `{NULL,0}` — fallback w `or`, bezpieczny z `free_*` |
+| `mem.alloc_i32` / `free_i32` (+ `u8`, `i64`, `f64`) | wolne funkcje z `*mut Allocator` |
+| `mem.empty_u8` / `empty_i32` / `empty_i64` / `empty_f64` | `{NULL,0}` — fallback w `or`, bezpieczny z `free_*` |
 
 - `n < 0` → `error(1)`; OOM → `error(2)`; `n == 0` → pusty slice **bez** `malloc`
 - `free_*` na pustym / NULL = no-op (`free(NULL)` w C)
