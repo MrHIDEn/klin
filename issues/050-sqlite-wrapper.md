@@ -19,5 +19,5 @@ Alokacja SQLite = kontrakt C (jawny), nie ukryta magia Klina.
 ## Poza zakresem
 
 - przepisanie SQLite w Klinie
-- ORM / query builder
+- ORM / typed repo / query builder → [070](070-host-orm-sqlite.md) (host, niski priorytet)
 - priorytet względem rdzenia języka / embedded LED / FFI podstaw
