@@ -1748,6 +1748,17 @@ fn main() { printf("%d\\n", o.version()) }
     expect(formatKlinMod(mod), 'klin 1\nrequire github/mrhiden/osa v0.1.0\n');
   });
 
+  test('remote import rejects path traversal segments (issue 049)', () {
+    expect(
+      () => parseRemoteImport('github/../../tmp/evil'),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => parseRemoteImport('github/foo/bar/../../x'),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
   test('klin get fetches osa@v0.1.0 and run works (issue 049 network)', () async {
     final cache = Directory.systemTemp.createTempSync('klin_get049_');
     addTearDown(() => cache.deleteSync(recursive: true));

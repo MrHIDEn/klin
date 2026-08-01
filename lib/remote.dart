@@ -60,12 +60,29 @@ RemoteImport parseRemoteImport(String spec) {
       'remote host `$host` is not allowed (use github or gitlab)',
     );
   }
+  final owner = parts[1];
+  final repo = parts[2];
+  if (!_isSafePathSegment(owner) || !_isSafePathSegment(repo)) {
+    throw FormatException(
+      'remote import `$spec` has an invalid owner or repo segment',
+    );
+  }
+  if (ref != null && (ref.contains('..') || ref.contains('/') || ref.contains('\\'))) {
+    throw FormatException('invalid @ref in remote import `$spec`');
+  }
   return RemoteImport(
     host: host,
-    owner: parts[1],
-    repo: parts[2],
+    owner: owner,
+    repo: repo,
     ref: ref,
   );
+}
+
+bool _isSafePathSegment(String s) {
+  if (s == '.' || s == '..') return false;
+  if (s.contains('..')) return false;
+  // Allow typical GitHub names; reject path separators and NUL.
+  return RegExp(r'^[A-Za-z0-9._-]+$').hasMatch(s);
 }
 
 /// Root of Klin cache (`$KLIN_CACHE` or `~/.klin`), overridable for tests.
@@ -262,74 +279,98 @@ Future<String> fetchRemote(
   }
 
   final tmp = Directory.systemTemp.createTempSync('klin_get_');
+  final staging = Directory.systemTemp.createTempSync('klin_stage_');
   try {
-    final cloneArgs = <String>[
-      'clone',
-      '--depth',
-      '1',
-      '--branch',
-      ref,
-      remote.gitUrl,
-      tmp.path,
-    ];
-    final clone = await Process.run('git', cloneArgs);
-    if (clone.exitCode != 0) {
-      // Retry without --branch for full commits / odd refs.
-      if (tmp.existsSync()) tmp.deleteSync(recursive: true);
-      tmp.createSync(recursive: true);
-      final shallow = await Process.run('git', [
-        'clone',
-        '--depth',
-        '1',
-        remote.gitUrl,
-        tmp.path,
-      ]);
-      if (shallow.exitCode != 0) {
-        throw ProcessException(
-          'git',
-          cloneArgs,
-          '${clone.stderr}'.trim().isEmpty
-              ? 'git clone failed'
-              : '${clone.stderr}'.trim(),
-          clone.exitCode,
-        );
-      }
-      final co = await Process.run(
-        'git',
-        ['-C', tmp.path, 'checkout', ref],
-      );
-      if (co.exitCode != 0) {
-        throw ProcessException(
-          'git',
-          ['checkout', ref],
-          '${co.stderr}'.trim(),
-          co.exitCode,
-        );
-      }
-    }
+    await _gitCheckoutRef(remote.gitUrl, ref, tmp.path);
 
     final sourceDir = _selectPackageSourceDir(tmp.path, remote.repo);
-    if (Directory(pkgDir).existsSync()) {
-      Directory(pkgDir).deleteSync(recursive: true);
-    }
-    Directory(pkgDir).createSync(recursive: true);
+    // Stage into a fresh dir, then swap into place so a failed copy cannot
+    // wipe a previously good cache install.
     for (final entity in Directory(sourceDir).listSync(followLinks: false)) {
       if (entity is! File) continue;
       final name = entity.path.split(Platform.pathSeparator).last;
       if (!name.endsWith('.kl')) continue;
       if (name.endsWith('_test.kl')) continue;
-      entity.copySync('$pkgDir${Platform.pathSeparator}$name');
+      entity.copySync('${staging.path}${Platform.pathSeparator}$name');
     }
-    if (!isPackageInstalled(pkgDir)) {
+    if (!isPackageInstalled(staging.path)) {
       throw FileSystemException(
         'remote package `${remote.path}` has no .kl sources after fetch',
         sourceDir,
       );
     }
-    writePin(pkgDir, ref);
+    File('${staging.path}${Platform.pathSeparator}.pin')
+        .writeAsStringSync('$ref\n');
+
+    final parent = Directory(pkgDir).parent;
+    parent.createSync(recursive: true);
+    if (Directory(pkgDir).existsSync()) {
+      Directory(pkgDir).deleteSync(recursive: true);
+    }
+    staging.renameSync(pkgDir);
     return pkgDir;
   } finally {
     if (tmp.existsSync()) tmp.deleteSync(recursive: true);
+    if (staging.existsSync()) staging.deleteSync(recursive: true);
+  }
+}
+
+Future<void> _gitCheckoutRef(String url, String ref, String dest) async {
+  final isCommit = RegExp(r'^[0-9a-fA-F]{7,40}$').hasMatch(ref);
+  if (!isCommit) {
+    final clone = await Process.run('git', [
+      'clone',
+      '--depth',
+      '1',
+      '--branch',
+      ref,
+      url,
+      dest,
+    ]);
+    if (clone.exitCode == 0) return;
+  }
+
+  if (Directory(dest).existsSync()) {
+    Directory(dest).deleteSync(recursive: true);
+  }
+  Directory(dest).createSync(recursive: true);
+  final init = await Process.run('git', ['-C', dest, 'init']);
+  if (init.exitCode != 0) {
+    throw ProcessException('git', ['init'], '${init.stderr}'.trim(), init.exitCode);
+  }
+  await Process.run('git', ['-C', dest, 'remote', 'add', 'origin', url]);
+  final fetch = await Process.run('git', [
+    '-C',
+    dest,
+    'fetch',
+    '--depth',
+    '1',
+    'origin',
+    ref,
+  ]);
+  if (fetch.exitCode != 0) {
+    throw ProcessException(
+      'git',
+      ['fetch', 'origin', ref],
+      '${fetch.stderr}'.trim().isEmpty
+          ? 'git fetch failed for `$ref`'
+          : '${fetch.stderr}'.trim(),
+      fetch.exitCode,
+    );
+  }
+  final co = await Process.run('git', [
+    '-C',
+    dest,
+    'checkout',
+    'FETCH_HEAD',
+  ]);
+  if (co.exitCode != 0) {
+    throw ProcessException(
+      'git',
+      ['checkout', 'FETCH_HEAD'],
+      '${co.stderr}'.trim(),
+      co.exitCode,
+    );
   }
 }
 
@@ -370,18 +411,14 @@ Future<(String pkgDir, String ref, bool modUpdated)> ensureRemotePackage({
   if (remote.ref != null) {
     ref = remote.ref!;
     if (mod.requires[remote.path] != ref) {
-      mod.requires[remote.path] = ref;
       modUpdated = true;
     }
   } else if (mod.requires.containsKey(remote.path)) {
     ref = mod.requires[remote.path]!;
   } else {
     ref = await resolveLatestRef(remote);
-    mod.requires[remote.path] = ref;
     modUpdated = true;
   }
-
-  if (modUpdated) saveKlinMod(modFile, mod);
 
   final pkgDir = await fetchRemote(
     remote,
@@ -389,5 +426,12 @@ Future<(String pkgDir, String ref, bool modUpdated)> ensureRemotePackage({
     cacheRoot: cacheRoot,
     force: force,
   );
+  // Write klin.mod only after a successful fetch so a failed get cannot
+  // leave a pin that was never installed.
+  if (modUpdated || mod.requires[remote.path] != ref) {
+    mod.requires[remote.path] = ref;
+    saveKlinMod(modFile, mod);
+    modUpdated = true;
+  }
   return (pkgDir, ref, modUpdated);
 }
