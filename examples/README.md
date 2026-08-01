@@ -9,6 +9,10 @@ dart run bin/klin.dart fmt -w examples/hello.kl       # write in place
 dart run bin/klin.dart test examples/                 # *_test.kl
 ```
 
+**Host (laptop):** ordinary `*.kl` demos above — **no** `linker.ld` / `startup.s` /
+Makefile (`klin run` + system CRT/libc). Make + ld + startup only for bare-metal
+`stm32/…` ([075](../issues/075-board-pack-init-host.md)).
+
 Style: [note/05-fmt.md](../note/05-fmt.md) (`klin fmt`). Sources with `$…` macros
 are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), not
 `point_macro.kl` / `stm32/.../blink.kl` as-is.
@@ -35,11 +39,12 @@ are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), n
 | `cexport_add/` | Klin → C via `@[cexport, codename]` ([note/09-ffi-c.md](../note/09-ffi-c.md)) |
 | `asm_add/` | Host `.S` via `@[link]` + `@[cimport]` ([note/10-asm.md](../note/10-asm.md)) |
 | `klin_lib/` | `lib/` + `-I` / `$KLIN_PATH` ([note/11-biblioteki-klin.md](../note/11-biblioteki-klin.md)) |
-| `pkg_geom/` | Katalog = jeden moduł (`geom/*.kl`, [note/11](../note/11-biblioteki-klin.md) / [12](../note/12-moduly.md)) |
-| `remote_osa/` | Remote `import "github/mrhiden/osa"` po `klin get` ([049](../issues/049-remote-imports.md)) |
-| `sketch_async_eventloop.kl` | **Szkic** — `async`/`await` + `github/mrhiden/eventloop` ([029](../issues/029-async-event-loop.md)); nie `klin run` |
+| `pkg_geom/` | Directory = one module (`geom/*.kl`, [note/11](../note/11-biblioteki-klin.md) / [12](../note/12-moduly.md)) |
+| `remote_osa/` | Remote `import "github/mrhiden/osa"` after `klin get` ([049](../issues/049-remote-imports.md)) |
+| `sketch_async_eventloop.kl` | **Sketch** — `async`/`await` + `github/mrhiden/eventloop` ([029](../issues/029-async-event-loop.md)); not `klin run` |
 | `modules/` | `module` / `import` ([note/12-moduly.md](../note/12-moduly.md)) |
-| `stm32/blink_f411/` | Nucleo-F411RE LED — lokalne `$peripherals_from_svd` + `@[link("startup.s")]` → `out/*.link` |
-| `stm32/device_f411/` | To samo przez `$device` + `klin.mod` / `klin get` ([053](../issues/053-device-board-assets.md)) |
+| `stm32/blink_f411/` | Nucleo-F411RE LED — local `$peripherals_from_svd` + `@[link("startup.s")]` → `out/*.link` |
+| `stm32/device_f411/` | Same via `$device` + `klin.mod` / `klin get` ([053](../issues/053-device-board-assets.md)) |
 
-Bare-metal boards go under `stm32/<name>/`.
+Bare-metal boards go under `stm32/<name>/` (`startup.s` + `linker.ld` live here
+— pack/scaffold, not a host requirement; [075](../issues/075-board-pack-init-host.md)).

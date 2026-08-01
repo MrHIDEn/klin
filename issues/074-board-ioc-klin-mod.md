@@ -13,6 +13,8 @@ Na razie **bez implementacji IOC**. Tu zapisujemy model, żeby nie zgubić decyz
 - jeden plik **`klin.mod`** (nie osobny `klin.hw` / `klin.dev`)
 - dyrektywa **`board`** (nie `hardware`, nie `device`)
 - scope IOC = **tylko mapa pinów**, nie cały Cube
+- ld / startup **nie** z IOC — z board packa / `klin init` (warstwy A+B w
+  [075 §1b](075-board-pack-init-host.md); ten issue = warstwa C)
 
 ## Przykład `klin.mod`
 
@@ -73,4 +75,5 @@ fn main() {
 - [053](053-device-board-assets.md) — `$device` / `device` (chip); IOC świadomie tu, nie w 053
 - [049](049-remote-imports.md) / [065](065-project-lockfile.md) — get / lock
 - [054](054-embedded-project-layout.md) — layout `board/` (startup/ld) osobno od moda
+- [075](075-board-pack-init-host.md) — board pack / `klin init` (ld+startup); host bez tej magii
 - [031](031-biblioteki-hal.md) — HAL osobno

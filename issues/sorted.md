@@ -97,6 +97,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [072](072-enums.md) | Enumy (styl C23, opcjonalny typ bazowy; metody; string-enum do rozważenia) | 💭 | 002, 005, 014 |
 | [073](073-mem-leak-detection.md) | Wykrywanie potencjalnych wycieków pamięci (Valgrind/ASan, debug-alokator, lint) | 💭 | 057, 008 |
 | [074](074-board-ioc-klin-mod.md) | `board` w `klin.mod` + wąski CubeMX `.ioc` (pinout) | 💭 | 053 |
+| [075](075-board-pack-init-host.md) | Board pack / `klin init` vs host — linker & startup | 💭 | 010, 054, 053 |
 
 ---
 
