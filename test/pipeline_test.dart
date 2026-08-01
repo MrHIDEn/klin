@@ -149,6 +149,77 @@ fn main() {
     );
   });
 
+  test('golden: fixed-array destructuring `let [ ]` (issue 056)', () async {
+    final result = await _compileAndRun('test/destruct_array.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/destruct_array.out').readAsString());
+
+    final source = File('test/destruct_array.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/destruct_array.kl');
+    // A named array source is indexed in place.
+    expect(c, contains('int32_t a = xs[0];'));
+    expect(c, contains('int32_t c = xs[2];'));
+    // An array-literal source binds element-wise.
+    expect(c, contains('int32_t p = 7;'));
+    expect(c, contains('int32_t q = 8;'));
+  });
+
+  test('error: array destructuring length mismatch (issue 056)', () {
+    const source = '''
+fn main() {
+  let xs: [3]i32 = [1, 2, 3]
+  let [a, b] = xs
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) =>
+            e is CheckError && e.toString().contains('but the pattern binds')),
+      ),
+    );
+  });
+
+  test('error: array destructuring rejects a slice (issue 056)', () {
+    const source = '''
+fn main() {
+  let buf: [3]i32 = [1, 2, 3]
+  let s = buf[:]
+  let [a, b, c] = s
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) =>
+            e is CheckError &&
+            e.toString().contains('requires a fixed-length array')),
+      ),
+    );
+  });
+
+  test('error: array destructuring rejects a non-array source (issue 056)', () {
+    const source = '''
+fn make(): i32 { return 1 }
+fn main() {
+  let [a, b] = make()
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) =>
+            e is CheckError &&
+            e.toString().contains('array variable or literal')),
+      ),
+    );
+  });
+
   test('error: unhandled !T result', () {
     const source = '''
 fn fallible(): !i32 { return error(1) }

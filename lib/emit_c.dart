@@ -319,6 +319,7 @@ bool _stmtCallsStdio(Stmt stmt) => switch (stmt) {
       MethodCallStmt(:final call) => _exprCallsStdio(call),
       LetStmt(:final init) => init != null && _exprCallsStdio(init),
       LetDestructureStmt(:final source) => _exprCallsStdio(source),
+      LetArrayDestructureStmt(:final source) => _exprCallsStdio(source),
       AssignStmt(:final target, :final value) =>
         _exprCallsStdio(target) || _exprCallsStdio(value),
       IfStmt(:final cond, :final thenBlock, :final elseBranch) =>
@@ -618,6 +619,7 @@ bool _stmtNeedsTrimFrac(Stmt stmt) => switch (stmt) {
       CallStmt(:final args) => args.any(_exprNeedsTrimFrac),
       LetStmt(:final init) => init != null && _exprNeedsTrimFrac(init),
       LetDestructureStmt(:final source) => _exprNeedsTrimFrac(source),
+      LetArrayDestructureStmt(:final source) => _exprNeedsTrimFrac(source),
       AssignStmt(:final value) => _exprNeedsTrimFrac(value),
       ReturnStmt(:final value) => value != null && _exprNeedsTrimFrac(value),
       IfStmt(:final thenBlock, :final elseBranch, :final cond) =>
@@ -1134,6 +1136,28 @@ void _emitStmt(
       for (var i = 0; i < fields.length; i++) {
         buf.writeln(
             '$pad${_cDecl(fts[i], fields[i])} = $access${fields[i]};');
+      }
+
+    case LetArrayDestructureStmt(
+        :final names,
+        :final source,
+        :final pos,
+        :final elemType
+      ):
+      _line(buf, pos.line, sourcePath);
+      final et = elemType!;
+      if (source is ArrayLitExpr) {
+        // Bind each element expression directly (each evaluated once).
+        for (var i = 0; i < names.length; i++) {
+          buf.writeln(
+              '$pad${_cDecl(et, names[i])} = ${_emitExpr(source.elements[i], ctx)};');
+        }
+      } else {
+        // A plain array variable is indexed in place (checker guarantees this).
+        final base = _emitExpr(source, ctx);
+        for (var i = 0; i < names.length; i++) {
+          buf.writeln('$pad${_cDecl(et, names[i])} = $base[$i];');
+        }
       }
 
     case AssignStmt(:final target, :final value, :final pos):

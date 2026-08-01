@@ -1,0 +1,15 @@
+fn main() {
+    let xs: [3]i32 = [10, 20, 30]
+
+    let [a, b, c] = xs
+    printf("var: %d %d %d\n", a, b, c)
+
+    let [p, q] = [7, 8]
+    printf("lit: %d %d\n", p, q)
+
+    {
+        let mut [m, n, o] = xs
+        m = m + 100
+        printf("mut: %d %d %d\n", m, n, o)
+    }
+}
