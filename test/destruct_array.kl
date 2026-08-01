@@ -12,4 +12,17 @@ fn main() {
         m = m + 100
         printf("mut: %d %d %d\n", m, n, o)
     }
+
+    // Swap via an array-literal source (shadows outer p, q in a block):
+    // must read the outer values, not the freshly declared bindings.
+    {
+        let [p, q] = [q, p]
+        printf("swap: %d %d\n", p, q)
+    }
+
+    // A binding that shadows the source array name (in a block).
+    {
+        let [xs, y, z] = xs
+        printf("shadow: %d %d %d\n", xs, y, z)
+    }
 }

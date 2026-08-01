@@ -158,12 +158,12 @@ fn main() {
     final program = Parser(Lexer(source).tokenize()).parse();
     Checker().check(program);
     final c = emitC(program, 'test/destruct_array.kl');
-    // A named array source is indexed in place.
+    // A named array source (no shadow) is indexed in place.
     expect(c, contains('int32_t a = xs[0];'));
     expect(c, contains('int32_t c = xs[2];'));
-    // An array-literal source binds element-wise.
-    expect(c, contains('int32_t p = 7;'));
-    expect(c, contains('int32_t q = 8;'));
+    // A binding that shadows the source name captures it via a pointer first.
+    expect(c, contains('int32_t *'));
+    expect(c, contains('int32_t xs = '));
   });
 
   test('error: array destructuring length mismatch (issue 056)', () {

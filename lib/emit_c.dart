@@ -1147,16 +1147,33 @@ void _emitStmt(
       _line(buf, pos.line, sourcePath);
       final et = elemType!;
       if (source is ArrayLitExpr) {
-        // Bind each element expression directly (each evaluated once).
+        // Evaluate every element into a fresh temp before binding, so a swap
+        // like `let [a, b] = [b, a]` reads the outer values, not new bindings.
+        final temps = <String>[];
         for (var i = 0; i < names.length; i++) {
+          final t = state.nextValueTemp();
+          temps.add(t);
           buf.writeln(
-              '$pad${_cDecl(et, names[i])} = ${_emitExpr(source.elements[i], ctx)};');
+              '$pad${_cDecl(et, t)} = ${_emitExpr(source.elements[i], ctx)};');
+        }
+        for (var i = 0; i < names.length; i++) {
+          buf.writeln('$pad${_cDecl(et, names[i])} = ${temps[i]};');
         }
       } else {
-        // A plain array variable is indexed in place (checker guarantees this).
+        // A plain array variable is indexed in place. If a binding shadows the
+        // source name, capture the array via a pointer first so later reads do
+        // not index a freshly-declared scalar.
         final base = _emitExpr(source, ctx);
-        for (var i = 0; i < names.length; i++) {
-          buf.writeln('$pad${_cDecl(et, names[i])} = $base[$i];');
+        if (source is NameExpr && names.contains(source.name)) {
+          final tmp = state.nextValueTemp();
+          buf.writeln('$pad${_cType(et)} *$tmp = $base;');
+          for (var i = 0; i < names.length; i++) {
+            buf.writeln('$pad${_cDecl(et, names[i])} = $tmp[$i];');
+          }
+        } else {
+          for (var i = 0; i < names.length; i++) {
+            buf.writeln('$pad${_cDecl(et, names[i])} = $base[$i];');
+          }
         }
       }
 
