@@ -1,6 +1,6 @@
 # 063 — Publiczna biblioteka-fixture `osa` (remote import)
 
-**Status:** 💭 (repo publiczne jest; treść + tag `v0.1.0` do wypchnięcia)
+**Status:** ✅ zrobione
 **Zależy od:** [047](047-directory-modules.md) (katalog = moduł)
 **Konsumowane przez:** [049](049-remote-imports.md)
 
@@ -48,26 +48,9 @@ osa/                 # root repo
 ## Checklista
 
 - [x] publiczne repo `MrHIDEn/osa`
-- [ ] treść (README, LICENSE, `osa/*.kl`) na `main`
-- [ ] tag `v0.1.0` wypchnięty
+- [x] treść (README, LICENSE, `osa/*.kl`) na `main`
+- [x] tag `v0.1.0` wypchnięty
 - [x] ten issue + wpis w [sorted.md](sorted.md) + link w [049](049-remote-imports.md)
-
-### Wypchnięcie treści (właściciel repo / token z `contents:write`)
-
-Agent cloud ma instalację GitHub App tylko na `klin` — push do `osa`
-kończy się 403. Lokalnie (konto z write):
-
-```bash
-git clone https://github.com/MrHIDEn/osa.git
-cd osa
-# wgraj pliki jak w Layout (treść: README EN, MIT, version/math/math_test)
-git add -A
-git commit -m "Initial osa fixture for Klin remote imports"
-git push -u origin main
-git tag v0.1.0 && git push origin v0.1.0
-```
-
-Po tagu: odznacz checklistę i ustaw **Status:** ✅ w tym pliku.
 
 ## Poza zakresem
 
