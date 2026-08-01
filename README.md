@@ -11,6 +11,7 @@ dart run bin/klin.dart run examples/hello.kl
 dart run bin/klin.dart examples/hello.kl          # alias for run
 dart run bin/klin.dart fmt -w examples/hello.kl
 dart run bin/klin.dart test examples/
+dart run bin/klin.dart get github/mrhiden/osa@v0.1.0   # remote deps → cache + klin.mod
 dart run bin/klin.dart --emit-c examples/hello.kl
 dart run bin/klin.dart --emit-h examples/cexport_add/lib.kl
 dart run bin/klin.dart --emit-pp examples/point_macro.kl
@@ -22,6 +23,7 @@ dart run bin/klin.dart --emit-pp examples/point_macro.kl
 | bare path | Same as `run` |
 | `fmt [-w]` | Go-style format ([note/05-fmt.md](note/05-fmt.md)) |
 | `test` | Run `*_test.kl` (`import testing`) |
+| `get` / `update` | Fetch remote `github`/`gitlab` packages into cache (`klin.mod`) |
 | `--emit-c` | Write generated `.c` only |
 | `--emit-h` | Write C header for `@[cexport]` (`out/<base>.h`) |
 | `--emit-pp` | Write preprocessor output (`.pp.kl`) |
@@ -36,9 +38,11 @@ Optional host I/O, clocks, heap, and slice helpers: [`stdlib/`](stdlib/)
 [note/14-allocator.md](note/14-allocator.md),
 [note/16-slice.md](note/16-slice.md)).
 Klin libraries (`lib/`, `-I`, `$KLIN_PATH`; directory packages; import aliases
-`import geom oso` and string path imports `import "sub/osa"`):
+`import geom oso` and string path imports `import "sub/osa"`; remote
+`import "github/mrhiden/osa"` after `klin get`):
 [note/11-biblioteki-klin.md](note/11-biblioteki-klin.md),
-[`examples/klin_lib/`](examples/klin_lib/), [`examples/pkg_geom/`](examples/pkg_geom/).
+[`examples/klin_lib/`](examples/klin_lib/), [`examples/pkg_geom/`](examples/pkg_geom/),
+[`examples/remote_osa/`](examples/remote_osa/).
 C FFI — import (`@[cimport]` / `@[link]`) **and** export (`@[cexport]`):
 [note/09-ffi-c.md](note/09-ffi-c.md), examples
 [`ffi_add/`](examples/ffi_add/) and [`cexport_add/`](examples/cexport_add/).

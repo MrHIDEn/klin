@@ -36,6 +36,7 @@ are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), n
 | `asm_add/` | Host `.S` via `@[link]` + `@[cimport]` ([note/10-asm.md](../note/10-asm.md)) |
 | `klin_lib/` | `lib/` + `-I` / `$KLIN_PATH` ([note/11-biblioteki-klin.md](../note/11-biblioteki-klin.md)) |
 | `pkg_geom/` | Katalog = jeden moduł (`geom/*.kl`, [note/11](../note/11-biblioteki-klin.md) / [12](../note/12-moduly.md)) |
+| `remote_osa/` | Remote `import "github/mrhiden/osa"` po `klin get` ([049](../issues/049-remote-imports.md)) |
 | `modules/` | `module` / `import` ([note/12-moduly.md](../note/12-moduly.md)) |
 | `stm32/blink_f411/` | Nucleo-F411RE LED — `$peripherals_from_svd` + `@[link("startup.s")]` → `out/*.link` |
 

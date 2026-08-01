@@ -9,6 +9,7 @@ import 'package:klin/link_args.dart';
 import 'package:klin/parser.dart';
 import 'package:klin/preprocess.dart';
 import 'package:klin/project.dart';
+import 'package:klin/remote.dart';
 import 'package:klin/token.dart';
 import 'package:test/test.dart';
 
@@ -1639,6 +1640,152 @@ fn main() {
     expect(result.stdout, '9\n');
   });
 
+  test('remote import from preseeded cache (issue 049)', () async {
+    final cache = Directory.systemTemp.createTempSync('klin_cache049_');
+    addTearDown(() => cache.deleteSync(recursive: true));
+    final pkg = Directory(
+      '${cache.path}/pkg/github/mrhiden/osa',
+    )..createSync(recursive: true);
+    File('${pkg.path}/version.kl').writeAsStringSync('''
+module osa
+pub fn version(): i32 { return 1 }
+''');
+    File('${pkg.path}/math.kl').writeAsStringSync('''
+module osa
+pub fn add(a: i32, b: i32): i32 { return a + b }
+pub fn clamp(v: i32, lo: i32, hi: i32): i32 {
+  if v < lo { return lo }
+  if v > hi { return hi }
+  return v
+}
+''');
+    File('${pkg.path}/.pin').writeAsStringSync('v0.1.0\n');
+
+    final result = await _compileAndRun(
+      'test/remote_osa.kl',
+      tmp,
+      klinCacheDir: cache.path,
+    );
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/remote_osa.out').readAsString());
+  });
+
+  test('remote import missing cache suggests klin get (issue 049)', () {
+    final cache = Directory.systemTemp.createTempSync('klin_nocache049_');
+    addTearDown(() => cache.deleteSync(recursive: true));
+    expect(
+      () => loadProject(
+        'test/remote_osa.kl',
+        klinCacheDir: cache.path,
+      ),
+      throwsA(
+        isA<FileSystemException>().having(
+          (e) => e.message,
+          'message',
+          contains('klin get'),
+        ),
+      ),
+    );
+  });
+
+  test('local github/ directory does not shadow remote import (issue 049)', () {
+    final cache = Directory.systemTemp.createTempSync('klin_shadow049_');
+    addTearDown(() => cache.deleteSync(recursive: true));
+    final work = Directory.systemTemp.createTempSync('klin_work049_');
+    addTearDown(() => work.deleteSync(recursive: true));
+    Directory('${work.path}/github/mrhiden/osa').createSync(recursive: true);
+    File('${work.path}/github/mrhiden/osa/bogus.kl').writeAsStringSync('''
+module osa
+pub fn version(): i32 { return 99 }
+''');
+    File('${work.path}/app.kl').writeAsStringSync('''
+import "github/mrhiden/osa"
+fn main() { printf("%d\\n", osa.version()) }
+''');
+    expect(
+      () => loadProject(
+        '${work.path}/app.kl',
+        klinCacheDir: cache.path,
+      ),
+      throwsA(
+        isA<FileSystemException>().having(
+          (e) => e.message,
+          'message',
+          contains('klin get'),
+        ),
+      ),
+    );
+  });
+
+  test('remote import alias `import "github/…" o` (issue 049)', () async {
+    final cache = Directory.systemTemp.createTempSync('klin_alias049_');
+    addTearDown(() => cache.deleteSync(recursive: true));
+    final pkg = Directory(
+      '${cache.path}/pkg/github/mrhiden/osa',
+    )..createSync(recursive: true);
+    File('${pkg.path}/lib.kl').writeAsStringSync('''
+module osa
+pub fn version(): i32 { return 1 }
+''');
+    final work = Directory.systemTemp.createTempSync('klin_aliasapp049_');
+    addTearDown(() => work.deleteSync(recursive: true));
+    File('${work.path}/app.kl').writeAsStringSync('''
+import "github/mrhiden/osa" o
+fn main() { printf("%d\\n", o.version()) }
+''');
+    final result = await _compileAndRun(
+      '${work.path}/app.kl',
+      tmp,
+      klinCacheDir: cache.path,
+    );
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, '1\n');
+  });
+
+  test('klin.mod parse/format round-trip (issue 049)', () {
+    final mod = parseKlinMod('klin 1\nrequire github/mrhiden/osa v0.1.0\n');
+    expect(mod.requires['github/mrhiden/osa'], 'v0.1.0');
+    expect(formatKlinMod(mod), 'klin 1\nrequire github/mrhiden/osa v0.1.0\n');
+  });
+
+  test('klin get fetches osa@v0.1.0 and run works (issue 049 network)', () async {
+    final cache = Directory.systemTemp.createTempSync('klin_get049_');
+    addTearDown(() => cache.deleteSync(recursive: true));
+    final work = Directory.systemTemp.createTempSync('klin_getwork049_');
+    addTearDown(() => work.deleteSync(recursive: true));
+    File('${work.path}/app.kl').writeAsStringSync(
+      File('test/remote_osa.kl').readAsStringSync(),
+    );
+    final repoRoot = Directory.current.path;
+    final klinBin = '$repoRoot/bin/klin.dart';
+
+    final get = await Process.run(
+      'dart',
+      ['run', klinBin, 'get', 'github/mrhiden/osa@v0.1.0'],
+      workingDirectory: work.path,
+      environment: {
+        ...Platform.environment,
+        'KLIN_CACHE': cache.path,
+      },
+    );
+    expect(get.exitCode, 0, reason: '${get.stderr}${get.stdout}');
+    expect(File('${work.path}/klin.mod').existsSync(), isTrue);
+    final mod = loadKlinMod(File('${work.path}/klin.mod'));
+    expect(mod.requires['github/mrhiden/osa'], 'v0.1.0');
+
+    final run = await Process.run(
+      'dart',
+      ['run', klinBin, 'run', '${work.path}/app.kl'],
+      workingDirectory: repoRoot,
+      environment: {
+        ...Platform.environment,
+        'KLIN_CACHE': cache.path,
+      },
+    );
+    expect(run.exitCode, 0, reason: '${run.stderr}${run.stdout}');
+    expect(run.stdout, await File('test/remote_osa.out').readAsString());
+  }, timeout: Timeout(Duration(minutes: 2)));
+
   test('error: conflicting import alias (issue 048)', () {
     final dir = Directory.systemTemp.createTempSync('klin_aliasdup048_');
     addTearDown(() => dir.deleteSync(recursive: true));
@@ -2880,9 +3027,10 @@ fn main() {
 
 Future<({int exitCode, String stdout, String stderr})> _compileAndRun(
   String klPath,
-  Directory tmp,
-) async {
-  final program = loadProject(klPath);
+  Directory tmp, {
+  String? klinCacheDir,
+}) async {
+  final program = loadProject(klPath, klinCacheDir: klinCacheDir);
   Checker().check(program);
   final base = klPath.split('/').last.replaceAll('.kl', '');
   final cPath = '${tmp.path}/$base.c';
