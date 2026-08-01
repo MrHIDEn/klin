@@ -2,7 +2,8 @@
 
 **Status:** 💭 do rozważenia
 **Zależy od:** [023](023-examples.md) (układ `examples/stm32/`), [010](010-bare-metal.md);
-mile widziane [053](053-device-board-assets.md) (czysty `$device`), [022](022-biblioteki-asm.md)
+mile widziane [053](053-device-board-assets.md) (czysty `$device`), [022](022-biblioteki-asm.md);
+inne rodziny MCU: [062](062-targets-esp-rp.md)
 
 ## Problem
 
