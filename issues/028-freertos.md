@@ -23,6 +23,45 @@ bez własnego schedulera i bez ukrytej alokacji.
 - most do [029](029-async-event-loop.md): event-loop **opcjonalny** na `main`
   i/lub na wybranych taskach
 
+## Biblioteka `klinrtos` a „dekoratory” tasków (ustalone)
+
+Pytanie: czy zewnętrzna lib Klin (wiązania RTOS, nie stdlib — [024](024-rtos.md))
+może dostarczać dekoratory do oznaczania fn/metod jako tasków?
+
+**Atrybuty (`@[…]`) obsługuje kompilator**, nie paczka `.kl`. Sama biblioteka
+**nie** dodaje prawdziwego `@[task]`, jeśli frontend tego nie zna (por. ISR:
+[030](030-isr-decorators.md)).
+
+Co lib **może** (bez magii w rdzeniu):
+
+| Mechanizm | Realizm |
+|---|---|
+| API + fn-pointer: `rtos.create(blink_task, stack[:], prio)` | tak |
+| Makra `$…` (026) generujące entry + rejestrację („dekorator-like”) | tak |
+| `@[codename("…")]` na entry (jak 010) | tak — już w języku |
+| Prawdziwy `@[task(stack=…, prio=…)]` w checkerze/emit | tylko ze wsparciem kompilatora albo ekspandem makra do znanego kodu |
+
+**Metody jako taski:** FreeRTOS zwykle chce `void task(void*)` (prototyp C), nie
+metodę na `self`. Sensowniej: wolna `fn` + kontekst w `arg`, ewentualnie makro
+generujące wrapper. Magiczne `fn (mut app: App) run()` jako task bez wrappera
+ABI — słabo.
+
+Zasada nadrzędna: dekorator / makro **nie** ukrywa alokacji TCB/stacku ani
+startu schedulera — stack/TCB/prio pozostają jawne.
+
+Szkic (host/board — nie speć API):
+
+```klin
+@[codename("blink_task")]
+fn blink_task(arg: *mut u8) { … }
+
+fn main() {
+    // lib klinrtos / freertos bindings:
+    rtos.create(blink_task, stack[:], prio)
+    rtos.start()
+}
+```
+
 ## Mutexy / dane współdzielone (krytyczne)
 
 - wiele tasków + wspólny stan = wyścigi, torn reads, deadlocks, inwersja
