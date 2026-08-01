@@ -604,7 +604,15 @@ final class Checker {
               pos,
             );
           }
-          fieldTypes.add(field.resolvedType!);
+          final fieldType = field.resolvedType!;
+          if (fieldType is ArrayType) {
+            throw CheckError(
+              'cannot destructure array field `$fieldName` '
+              '(bind the struct and index it instead)',
+              pos,
+            );
+          }
+          fieldTypes.add(fieldType);
         }
         stmt.sourceType = sourceType;
         stmt.fieldTypes = fieldTypes;

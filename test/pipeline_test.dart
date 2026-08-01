@@ -97,6 +97,26 @@ fn main() {
     );
   });
 
+  test('error: destructuring a fixed-array field is rejected (issue 056)', () {
+    const source = '''
+struct Box { data: [3]i32
+ n: i32 }
+fn main() {
+  let b = Box{ data: [1, 2, 3], n: 3 }
+  let { data, n } = b
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) =>
+            e is CheckError &&
+            e.toString().contains('cannot destructure array field')),
+      ),
+    );
+  });
+
   test('error: duplicate name in destructuring pattern (issue 056)', () {
     const source = '''
 struct P { x: i32
