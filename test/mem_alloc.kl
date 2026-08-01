@@ -36,4 +36,23 @@ fn main() {
     xs[1] = 2
     xs[2] = 3
     printf("i32=%d\n", xs[0] + xs[1] + xs[2])
+
+    let mut xl = mem.alloc_i64(&a, 3) or {
+        io.println("alloc_i64_fail")
+        mem.empty_i64()
+    }
+    defer mem.free_i64(&a, xl)
+    xl[0] = 100
+    xl[1] = 200
+    xl[2] = 300
+    printf("i64=%lld\n", xl[0] + xl[1] + xl[2])
+
+    let mut xf = mem.alloc_f64(&a, 2) or {
+        io.println("alloc_f64_fail")
+        mem.empty_f64()
+    }
+    defer mem.free_f64(&a, xf)
+    xf[0] = 1.5
+    xf[1] = 2.5
+    printf("f64=%g\n", xf[0] + xf[1])
 }

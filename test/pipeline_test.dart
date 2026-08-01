@@ -862,6 +862,8 @@ fn main() {
     expect(c, contains('klin_mem_alloc_u8'));
     expect(c, contains('klin_mem_free_u8'));
     expect(c, contains('klin_mem_alloc_i32'));
+    expect(c, contains('klin_mem_alloc_i64'));
+    expect(c, contains('klin_mem_alloc_f64'));
     expect(c, contains('malloc'));
     expect(c, contains('free('));
     expect(c, contains('#include <stdlib.h>'));
@@ -900,7 +902,10 @@ fn main() {
     final c = emitC(program, 'test/slice_alloc_ops.kl');
     expect(c, contains('slice_alloc_map_alloc_i32'));
     expect(c, contains('slice_alloc_filter_alloc_i32'));
+    expect(c, contains('slice_alloc_map_alloc_i64'));
+    expect(c, contains('slice_alloc_filter_alloc_f64'));
     expect(c, contains('klin_mem_alloc_i32'));
+    expect(c, contains('klin_mem_alloc_i64'));
     expect(c, contains('malloc'));
     expect(c, contains('#include <stdlib.h>'));
   });

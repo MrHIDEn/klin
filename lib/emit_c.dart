@@ -473,6 +473,64 @@ void _emitMemHostHelpers(StringBuffer buf, Program program) {
       buf.writeln('    free(buf.ptr);');
       buf.writeln('}');
       buf.writeln();
+    } else if (name == 'klin_mem_alloc_i64') {
+      const elem = PrimType(PrimKind.i64);
+      final res = _resultCName(const SliceType(elem));
+      final slice = _sliceCName(elem);
+      final ct = _cType(elem);
+      buf.writeln('$res klin_mem_alloc_i64(int32_t n) {');
+      buf.writeln('    $res r;');
+      buf.writeln('    if (n < 0) { r.is_err = true; r.u.err = 1; return r; }');
+      buf.writeln('    if (n == 0) {');
+      buf.writeln('        r.is_err = false;');
+      buf.writeln('        r.u.ok = ($slice){ NULL, 0 };');
+      buf.writeln('        return r;');
+      buf.writeln('    }');
+      buf.writeln('    if ((size_t)n > SIZE_MAX / sizeof($ct)) {');
+      buf.writeln('        r.is_err = true; r.u.err = 2; return r;');
+      buf.writeln('    }');
+      buf.writeln('    void *p = malloc((size_t)n * sizeof($ct));');
+      buf.writeln('    if (p == NULL) { r.is_err = true; r.u.err = 2; return r; }');
+      buf.writeln('    r.is_err = false;');
+      buf.writeln('    r.u.ok = ($slice){ ($ct *)p, (size_t)n };');
+      buf.writeln('    return r;');
+      buf.writeln('}');
+      buf.writeln();
+    } else if (name == 'klin_mem_free_i64') {
+      final slice = _sliceCName(const PrimType(PrimKind.i64));
+      buf.writeln('void klin_mem_free_i64($slice buf) {');
+      buf.writeln('    free(buf.ptr);');
+      buf.writeln('}');
+      buf.writeln();
+    } else if (name == 'klin_mem_alloc_f64') {
+      const elem = PrimType(PrimKind.f64);
+      final res = _resultCName(const SliceType(elem));
+      final slice = _sliceCName(elem);
+      final ct = _cType(elem);
+      buf.writeln('$res klin_mem_alloc_f64(int32_t n) {');
+      buf.writeln('    $res r;');
+      buf.writeln('    if (n < 0) { r.is_err = true; r.u.err = 1; return r; }');
+      buf.writeln('    if (n == 0) {');
+      buf.writeln('        r.is_err = false;');
+      buf.writeln('        r.u.ok = ($slice){ NULL, 0 };');
+      buf.writeln('        return r;');
+      buf.writeln('    }');
+      buf.writeln('    if ((size_t)n > SIZE_MAX / sizeof($ct)) {');
+      buf.writeln('        r.is_err = true; r.u.err = 2; return r;');
+      buf.writeln('    }');
+      buf.writeln('    void *p = malloc((size_t)n * sizeof($ct));');
+      buf.writeln('    if (p == NULL) { r.is_err = true; r.u.err = 2; return r; }');
+      buf.writeln('    r.is_err = false;');
+      buf.writeln('    r.u.ok = ($slice){ ($ct *)p, (size_t)n };');
+      buf.writeln('    return r;');
+      buf.writeln('}');
+      buf.writeln();
+    } else if (name == 'klin_mem_free_f64') {
+      final slice = _sliceCName(const PrimType(PrimKind.f64));
+      buf.writeln('void klin_mem_free_f64($slice buf) {');
+      buf.writeln('    free(buf.ptr);');
+      buf.writeln('}');
+      buf.writeln();
     } else if (name == 'klin_mem_empty_u8') {
       final slice = _sliceCName(const PrimType(PrimKind.u8));
       buf.writeln('$slice klin_mem_empty_u8(void) {');
@@ -482,6 +540,18 @@ void _emitMemHostHelpers(StringBuffer buf, Program program) {
     } else if (name == 'klin_mem_empty_i32') {
       final slice = _sliceCName(const PrimType(PrimKind.i32));
       buf.writeln('$slice klin_mem_empty_i32(void) {');
+      buf.writeln('    return ($slice){ NULL, 0 };');
+      buf.writeln('}');
+      buf.writeln();
+    } else if (name == 'klin_mem_empty_i64') {
+      final slice = _sliceCName(const PrimType(PrimKind.i64));
+      buf.writeln('$slice klin_mem_empty_i64(void) {');
+      buf.writeln('    return ($slice){ NULL, 0 };');
+      buf.writeln('}');
+      buf.writeln();
+    } else if (name == 'klin_mem_empty_f64') {
+      final slice = _sliceCName(const PrimType(PrimKind.f64));
+      buf.writeln('$slice klin_mem_empty_f64(void) {');
       buf.writeln('    return ($slice){ NULL, 0 };');
       buf.writeln('}');
       buf.writeln();

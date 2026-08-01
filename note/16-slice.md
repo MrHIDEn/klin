@@ -13,7 +13,10 @@ Alokator: [14-allocator.md](14-allocator.md).
 Osobny `slice_alloc`, bo emit nie usuwa nieużywanych `pub`: gdyby `*_alloc`
 siedział w `slice.kl`, każdy `import slice` wciągałby `klin_mem_*` / `malloc`.
 
-Nazwy monomorficzne przez `$fn` (`_i32`, `_u8`) — brak generyków w gramatyce.
+Nazwy monomorficzne przez `$fn` (`_i32`, `_u8`, `_i64`, `_f64`) — brak generyków
+w gramatyce. Operacje dzielą się na dwa szablony: ogólny `slice_ops`
+(arytmetyko-wolny — działa dla dowolnego typu) i liczbowy `slice_num_ops`
+(`+`/`*`/`<`/`==` — instancje tylko dla typów liczbowych).
 
 ## Warstwa 0+1 (`import slice`)
 
@@ -33,6 +36,8 @@ fn main() {
 }
 ```
 
+Ogólne (`$fn slice_ops`, dowolny typ):
+
 | Funkcja | Uwagi |
 |---|---|
 | `each_*` | efekt uboczny |
@@ -41,6 +46,20 @@ fn main() {
 | `reduce_*` | akumulator + `fn(T,T): T` |
 | `map_into_*` | `dst.len == xs.len`; `!i32` (`0` / `error(1)`) |
 | `filter_into_*` | `dst.len >= xs.len`; `!i32` = liczba zapisanych |
+| `copy_into_*` | `dst.len >= xs.len`; `!i32` = `xs.len` |
+| `reverse_into_*` | jw.; kopiuje odwrócone |
+
+Liczbowe (`$fn slice_num_ops`, tylko typy liczbowe):
+
+| Funkcja | Uwagi |
+|---|---|
+| `sum_*` | suma; pusty → `0` |
+| `product_*` | iloczyn; pusty → `1` |
+| `min_*` / `max_*` | `!T`; pusty → `error(1)` |
+| `contains_*` | `bool` (porównanie `==`) |
+
+Instancje: `slice_ops` dla `i32`/`u8`/`i64`/`f64`; `slice_num_ops` dla tych samych
+typów liczbowych.
 
 Zapis `dst[i]` na slice jest dozwolony (nagłówek to wartość; bufor współdzielony
 z callerem — jak Go).
@@ -70,6 +89,8 @@ fn main() {
 |---|---|
 | `map_alloc_*` | `alloc(xs.len)` + mapowanie; `![]T` |
 | `filter_alloc_*` | dwa przebiegi: `count` → `alloc(n)` → kopiowanie; `![]T` |
+
+Instancje dla `i32`/`u8`/`i64`/`f64` (wymagają `mem.alloc_*` danego typu).
 
 - Alokator: `*mut mem.Allocator` (jak `mem.alloc_i32`)
 - Błędy alokacji (`n < 0` / OOM) z `mem` przez `!` / `or`

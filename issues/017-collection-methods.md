@@ -31,7 +31,8 @@ defer mem.free_i32(&a, out)
 
 Bez generyków w gramatyce: `each_i32` / `map_into_u8` (instancje w
 [`stdlib/slice.kl`](../stdlib/slice.kl)); `map_alloc_i32` w
-[`stdlib/slice_alloc.kl`](../stdlib/slice_alloc.kl).
+[`stdlib/slice_alloc.kl`](../stdlib/slice_alloc.kl). Typy elementu: `i32`, `u8`,
+`i64`, `f64` (dla `slice_alloc` alokator z [`stdlib/mem.kl`](../stdlib/mem.kl)).
 
 ### Nazewnictwo
 
@@ -84,6 +85,15 @@ elementów współdzielona z callerem — jak Go).
 | `reduce` | brak | akumulator + funkcja |
 | `map_into` | brak | wymaga `dst.len == xs.len`; zwraca `!i32` (`0` / `error(1)`) |
 | `filter_into` | brak | wymaga `dst.len >= xs.len`; zwraca `!i32` (liczba zapisanych / `error(1)`) |
+| `copy_into` | brak | `dst.len >= xs.len`; zwraca `!i32` = `xs.len` |
+| `reverse_into` | brak | jw.; kopiuje odwrócone |
+| `sum` / `product` | brak | liczbowe; pusty → `0` / `1` |
+| `min` / `max` | brak | liczbowe; `!T`, pusty → `error(1)` |
+| `contains` | brak | liczbowe; `bool` (`==`) |
+
+Rozdział szablonów: ogólne (arytmetyko-wolne) w `$fn slice_ops`, liczbowe
+(`+`/`*`/`<`/`==`) w `$fn slice_num_ops` — żeby ogólny szablon działał też dla
+typów nie-liczbowych.
 
 Poza MVP: `flatMap`, `groupBy`, lazy iteratory (018), sort z
 comparator-domknięciem.
@@ -115,6 +125,21 @@ Examples: `examples/fn_ptr.kl`, `examples/slice_ops.kl`,
 
 `map_into_*` / `filter_into_*` zwracają `!i32` (Klin nie ma `!void`): sukces
 `0` / liczba elementów; błąd długości bufora → `error(1)`.
+
+## Dalsze możliwe rozszerzenia (pomysły, bez implementacji)
+
+- `find_$T` (zwraca element, nie indeks — jak JS `find`), `zip_into`, `chunk`,
+  `dedup_into`.
+- `sort` in-place na `[]T` z comparatorem fn-ptr.
+- `flatMap` / `groupBy` (wymagają alokacji / zagnieżdżenia).
+- kolejne typy elementu: `f32`, `i16`, `i8`, `u16`, `u32`, `u64`, `bool` (dla
+  `any`/`all`) — w `slice`; w `slice_alloc` wymagają alokatora `mem` dla danego
+  typu.
+
+Uwaga (dług techniczny): `min`/`max` w `slice_num_ops` mają warunek zapisany tak,
+by nie kończył się gołą nazwą przed `{` — bo `nazwa {` w warunku jest mylnie
+parsowana jako literał struktury. To ograniczenie parsera warto naprawić
+(warunki `if`/`while` powinny tłumić literały struktur, jak `match`).
 
 ## Non-goals
 

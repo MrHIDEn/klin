@@ -90,7 +90,111 @@ $fn slice_ops(T: type) {
     }
     return n
   }
+
+  /// Copy all of [xs] into [dst]. Requires `dst.len >= xs.len`. Returns count.
+  pub fn copy_into_$T(xs: []$T, dst: []$T): !i32 {
+    if dst.len < xs.len {
+      return error(1)
+    }
+    let mut i: i32 = 0
+    while i < xs.len {
+      dst[i] = xs[i]
+      i = i + 1
+    }
+    return xs.len
+  }
+
+  /// Copy [xs] reversed into [dst]. Requires `dst.len >= xs.len`. Returns count.
+  pub fn reverse_into_$T(xs: []$T, dst: []$T): !i32 {
+    if dst.len < xs.len {
+      return error(1)
+    }
+    let mut i: i32 = 0
+    while i < xs.len {
+      dst[i] = xs[xs.len - 1 - i]
+      i = i + 1
+    }
+    return xs.len
+  }
+}
+
+/// Numeric-only slice helpers (need `+` / `*` / `<` / `==`).
+/// Kept apart so `slice_ops` stays usable for non-numeric element types.
+$fn slice_num_ops(T: type) {
+  pub fn sum_$T(xs: []$T): $T {
+    let mut acc: $T = 0
+    let mut i: i32 = 0
+    while i < xs.len {
+      acc = acc + xs[i]
+      i = i + 1
+    }
+    return acc
+  }
+
+  pub fn product_$T(xs: []$T): $T {
+    let mut acc: $T = 1
+    let mut i: i32 = 0
+    while i < xs.len {
+      acc = acc * xs[i]
+      i = i + 1
+    }
+    return acc
+  }
+
+  // Note: comparisons are written so the condition ends in an index expr,
+  // not a bare name. A condition ending in `name {` is misparsed as a struct
+  // literal (parser limitation, tracked separately).
+
+  /// Smallest element, or `error(1)` when empty.
+  pub fn min_$T(xs: []$T): !$T {
+    if xs.len == 0 {
+      return error(1)
+    }
+    let mut m: $T = xs[0]
+    let mut i: i32 = 1
+    while i < xs.len {
+      if m > xs[i] {
+        m = xs[i]
+      }
+      i = i + 1
+    }
+    return m
+  }
+
+  /// Largest element, or `error(1)` when empty.
+  pub fn max_$T(xs: []$T): !$T {
+    if xs.len == 0 {
+      return error(1)
+    }
+    let mut m: $T = xs[0]
+    let mut i: i32 = 1
+    while i < xs.len {
+      if m < xs[i] {
+        m = xs[i]
+      }
+      i = i + 1
+    }
+    return m
+  }
+
+  pub fn contains_$T(xs: []$T, value: $T): bool {
+    let mut i: i32 = 0
+    while i < xs.len {
+      if value == xs[i] {
+        return true
+      }
+      i = i + 1
+    }
+    return false
+  }
 }
 
 $slice_ops(i32)
 $slice_ops(u8)
+$slice_ops(i64)
+$slice_ops(f64)
+
+$slice_num_ops(i32)
+$slice_num_ops(u8)
+$slice_num_ops(i64)
+$slice_num_ops(f64)

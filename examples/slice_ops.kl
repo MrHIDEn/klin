@@ -9,4 +9,9 @@ fn main() {
     let mut ys: [3]i32 = [0, 0, 0]
     let _ = slice.map_into_i32(xs[:], ys[:], times2) or { 0 }
     printf("%d %d %d\n", ys[0], ys[1], ys[2])
+
+    // Numeric helpers (issue 017 rozszerzenie).
+    printf("sum=%d product=%d\n", slice.sum_i32(xs[:]), slice.product_i32(xs[:]))
+    let mx = slice.max_i32(xs[:]) or { 0 }
+    printf("max=%d has2=%d\n", mx, slice.contains_i32(xs[:], 2))
 }
