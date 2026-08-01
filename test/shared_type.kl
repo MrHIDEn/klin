@@ -1,0 +1,19 @@
+struct Point {
+    x, y: f64
+    label: i32
+}
+
+fn add3(a, b, c: i32): i32 {
+    return a + b + c
+}
+
+fn mixed(a, b: i32, c: f64): f64 {
+    return c
+}
+
+fn main() {
+    let p = Point{ x: 1.5, y: 2.5, label: 7 }
+    printf("point: %g %g %d\n", p.x, p.y, p.label)
+    printf("add3: %d\n", add3(1, 2, 3))
+    printf("mixed: %g\n", mixed(10, 20, 4.5))
+}

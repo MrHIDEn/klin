@@ -31,6 +31,45 @@ void main() {
     expect(result.stdout, expected);
   });
 
+  test('golden: shared type annotation `a, b: T` (issue 068)', () async {
+    final result = await _compileAndRun('test/shared_type.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/shared_type.out').readAsString());
+
+    final source = File('test/shared_type.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/shared_type.kl');
+    // `x, y: f64` expands to two fields; `a, b: i32` to two params.
+    expect(c, contains('double x;'));
+    expect(c, contains('double y;'));
+    expect(c, contains('int32_t a, int32_t b, int32_t c'));
+  });
+
+  test('error: shared-type params without a type (issue 068)', () {
+    const source = '''
+fn add(a, b): i32 { return a }
+fn main() {}
+''';
+    expect(
+      () => Parser(Lexer(source).tokenize()).parse(),
+      throwsA(predicate((e) =>
+          e is ParseError && e.toString().contains('after parameter name'))),
+    );
+  });
+
+  test('error: shared-type struct fields without a type (issue 068)', () {
+    const source = '''
+struct P { x, y }
+fn main() {}
+''';
+    expect(
+      () => Parser(Lexer(source).tokenize()).parse(),
+      throwsA(predicate((e) =>
+          e is ParseError && e.toString().contains('after field name'))),
+    );
+  });
+
   test('golden: !T propagates errors and or handles them', () async {
     final result = await _compileAndRun('test/result_chain.kl', tmp);
     expect(result.exitCode, 0, reason: result.stderr);

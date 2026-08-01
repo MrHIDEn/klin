@@ -176,11 +176,23 @@ final class Parser {
     _expect(TokenKind.lBrace, 'oczekiwano `{`');
     final fields = <FieldDecl>[];
     while (!_check(TokenKind.rBrace) && !_check(TokenKind.eof)) {
-      final field = _expect(TokenKind.ident, 'expected field name');
-      _rejectCKeyword(field, 'a field name');
-      _expect(TokenKind.colon, 'expected `:` after field name');
-      fields.add(
-          FieldDecl(name: field.lexeme, typeName: _typeName(), pos: field.pos));
+      // Shared type: `x, y: T` ≡ `x: T` `y: T` (issue 068). Names accumulate
+      // across commas until a `: type`, which applies to all of them.
+      final pending = <Token>[];
+      while (true) {
+        final field = _expect(TokenKind.ident, 'expected field name');
+        _rejectCKeyword(field, 'a field name');
+        pending.add(field);
+        if (_check(TokenKind.colon)) {
+          _advance();
+          final type = _typeName();
+          for (final f in pending) {
+            fields.add(FieldDecl(name: f.lexeme, typeName: type, pos: f.pos));
+          }
+          break;
+        }
+        _expect(TokenKind.comma, 'expected `,` or `:` after field name');
+      }
     }
     _expect(TokenKind.rBrace, 'oczekiwano `}`');
     return StructDecl(
@@ -219,17 +231,28 @@ final class Parser {
     _expect(TokenKind.lParen, 'oczekiwano `(`');
     final params = <Param>[];
     if (!_check(TokenKind.rParen)) {
-      do {
+      // Shared type: `a, b: T` ≡ `a: T, b: T` (issue 068). Names accumulate
+      // across commas until a `: type`, which applies to all of them.
+      final pending = <Token>[];
+      while (true) {
         final paramName = _expect(TokenKind.ident, 'expected parameter name');
         _rejectCKeyword(paramName, 'a parameter name');
-        _expect(TokenKind.colon, 'expected `:` after parameter name');
-        final type = _typeName();
-        params.add(
-          Param(name: paramName.lexeme, typeName: type, pos: paramName.pos),
-        );
-        if (!_check(TokenKind.comma)) break;
-        _advance();
-      } while (true);
+        pending.add(paramName);
+        if (_check(TokenKind.colon)) {
+          _advance();
+          final type = _typeName();
+          for (final p in pending) {
+            params.add(Param(name: p.lexeme, typeName: type, pos: p.pos));
+          }
+          pending.clear();
+          if (_check(TokenKind.comma)) {
+            _advance();
+            continue;
+          }
+          break;
+        }
+        _expect(TokenKind.comma, 'expected `,` or `:` after parameter name');
+      }
     }
     _expect(TokenKind.rParen, 'oczekiwano `)`');
 
