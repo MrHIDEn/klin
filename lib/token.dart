@@ -25,6 +25,7 @@ enum TokenKind {
   // keywords
   fn,
   struct,
+  enum_,
   pub,
   module,
   import,

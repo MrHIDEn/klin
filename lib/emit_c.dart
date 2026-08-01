@@ -18,6 +18,7 @@ String emitC(Program program, String sourcePath) {
   buf.writeln('#include <stddef.h>');
   buf.writeln('#include <stdbool.h>');
   buf.writeln();
+  _emitEnums(buf, program, sourcePath);
   final sliceTypes = <PrimType>{};
   for (final struct in program.structs) {
     for (final field in struct.fields) {
@@ -139,6 +140,31 @@ String emitC(Program program, String sourcePath) {
   return buf.toString();
 }
 
+/// Emits each enum as a portable `typedef <base>; enum { … }` pair (issue 072):
+/// the typedef gives a distinct storage type (respecting `: T`) and an anonymous
+/// enum supplies integer constants usable in `switch`/comparisons. This avoids
+/// C23 `enum E : T` (unsupported by tcc) while keeping zero runtime cost.
+void _emitEnums(StringBuffer buf, Program program, String sourcePath) {
+  for (final decl in program.enums) {
+    _line(buf, decl.pos.line, decl.sourcePath ?? sourcePath);
+    final base = decl.baseType ?? const PrimType(PrimKind.i32);
+    buf.writeln(
+        'typedef ${base.kind.cType} ${_enumCName(decl.moduleName, decl.name)};');
+    final parts = <String>[];
+    for (final variant in decl.variants) {
+      final name = _enumConstCName(decl.moduleName, decl.name, variant.name);
+      final value = variant.value;
+      if (value is IntLit) {
+        parts.add('$name = ${value.lexeme.replaceAll('_', '')}');
+      } else {
+        parts.add(name);
+      }
+    }
+    buf.writeln('enum { ${parts.join(', ')} };');
+    buf.writeln();
+  }
+}
+
 /// Emits a C header with prototypes for `@[cexport]` functions (`--emit-h`).
 String emitH(Program program, String sourcePath) {
   final exports =
@@ -153,6 +179,7 @@ String emitH(Program program, String sourcePath) {
   buf.writeln('#include <stddef.h>');
   buf.writeln('#include <stdbool.h>');
   buf.writeln();
+  _emitEnums(buf, program, sourcePath);
 
   final sliceTypes = <PrimType>{};
   final resultTypes = <ResultType>{};

@@ -30,7 +30,8 @@ String _emitExprRaw(Expr expr, _ExprCtx ctx) {
     StringLit(:final value) => '"${_escapeC(value)}"',
     NameExpr(:final name, :final resolvedFnCName) =>
       resolvedFnCName ?? name,
-    FieldExpr(:final object, :final name) => () {
+    FieldExpr(:final object, :final name, :final enumConstCName) => () {
+        if (enumConstCName != null) return enumConstCName;
         final objectType = object.resolvedType;
         if (name == 'len' && objectType is ArrayType) {
           return objectType.len.toString();
@@ -82,10 +83,14 @@ String _emitExprRaw(Expr expr, _ExprCtx ctx) {
     ArrayLitExpr(:final elements) =>
       '{ ${elements.map((element) => _emitExpr(element, ctx)).join(', ')} }',
     CastExpr(:final resolvedType, :final expr) => () {
-        if (resolvedType is! PtrType) {
-          throw StateError('emit: cast without pointer type');
+        final target = resolvedType;
+        if (target == null) throw StateError('emit: cast without type');
+        // Pointer casts round-trip through uintptr_t; enum/integer casts are
+        // a plain C cast (issue 072).
+        if (target is PtrType) {
+          return '(${_cType(target)})(uintptr_t)(${_emitExpr(expr, ctx)})';
         }
-        return '(${_cType(resolvedType)})(uintptr_t)(${_emitExpr(expr, ctx)})';
+        return '(${_cType(target)})(${_emitExpr(expr, ctx)})';
       }(),
     BinaryExpr(:final left, :final op, :final right) =>
       '(${_emitExpr(left, ctx)} $op ${_emitExpr(right, ctx)})',
@@ -147,6 +152,12 @@ String _emitExprRaw(Expr expr, _ExprCtx ctx) {
 
 String _structCName(String module, String name) =>
     module.isEmpty ? name : '${module}_$name';
+
+String _enumCName(String module, String name) =>
+    module.isEmpty ? name : '${module}_$name';
+
+String _enumConstCName(String module, String name, String variant) =>
+    module.isEmpty ? '${name}_$variant' : '${module}_${name}_$variant';
 
 String _freeCName(String module, String name) =>
     module.isEmpty ? name : '${module}_$name';

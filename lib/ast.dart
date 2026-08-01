@@ -1,10 +1,11 @@
 import 'token.dart';
 import 'type.dart';
 
-/// program := (struct | func)+
+/// program := (struct | enum | func)+
 final class Program {
   final List<StructDecl> structs;
   final List<FuncDecl> funcs;
+  final List<EnumDecl> enums;
   final SourcePos pos;
 
   /// Per module: maps an `import X` alias to the loaded file’s actual `module` name.
@@ -14,6 +15,7 @@ final class Program {
     this.structs,
     this.funcs,
     this.pos, {
+    this.enums = const [],
     this.importAliases = const {},
   });
 }
@@ -62,9 +64,10 @@ final class ModuleUnit {
   final String? declaredName;
   final List<ImportSpec> imports;
   final List<StructDecl> structs;
+  final List<EnumDecl> enums;
   final List<FuncDecl> funcs;
 
-  /// Top-level declarations in source order (`StructDecl` / `FuncDecl`).
+  /// Top-level declarations in source order (`StructDecl` / `EnumDecl` / `FuncDecl`).
   final List<Object> decls;
   final SourcePos pos;
 
@@ -72,6 +75,7 @@ final class ModuleUnit {
     required this.declaredName,
     required this.imports,
     required this.structs,
+    required this.enums,
     required this.funcs,
     required this.decls,
     required this.pos,
@@ -103,6 +107,52 @@ final class StructDecl {
     this.isPub = false,
     this.moduleName = '',
     this.sourcePath,
+  });
+}
+
+/// enum Name [: BaseType] { Variant [= value], … }  (issue 072)
+///
+/// A C-like enum: a distinct named type over an integer base. Variants get
+/// values 0,1,2,… unless an explicit `= value` restarts the sequence (C rules).
+final class EnumDecl {
+  final String name;
+  final List<EnumVariant> variants;
+
+  /// Base type spelling (e.g. `u8`), or `null` for the default `i32`.
+  final String? baseTypeName;
+  final List<Attr> attrs;
+  final SourcePos pos;
+  bool isPub;
+  String moduleName;
+  String? sourcePath;
+
+  /// Filled by the checker.
+  KlinType? resolvedType;
+  PrimType? baseType;
+
+  EnumDecl({
+    required this.name,
+    required this.variants,
+    required this.baseTypeName,
+    this.attrs = const [],
+    required this.pos,
+    this.isPub = false,
+    this.moduleName = '',
+    this.sourcePath,
+  });
+}
+
+final class EnumVariant {
+  final String name;
+
+  /// Optional `= value` expression (integer literal in MVP).
+  final Expr? value;
+  final SourcePos pos;
+
+  EnumVariant({
+    required this.name,
+    required this.value,
+    required this.pos,
   });
 }
 
@@ -623,6 +673,10 @@ final class FieldExpr extends Expr {
   final Expr object;
   final String name;
   final SourcePos pos;
+
+  /// Filled by the checker when `object.name` is an enum constant
+  /// (`Color.Red`): the C constant to emit instead of a field access.
+  String? enumConstCName;
 
   FieldExpr({
     required this.object,
