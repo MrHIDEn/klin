@@ -104,6 +104,61 @@ fn main() {
 
 Porównanie `$…` vs `@[meta]` / `@[task]`: tabela w [028](028-freertos.md).
 
+Wykonanie callbacka jest **wewnątrz** `run()` (gdy timer/zdarzenie dojrzeje),
+nie w linii `every_ms`. `every_ms` tylko rejestruje fn-pointer. W tym modelu
+**nie ma** `async`/`await` — sama kooperacyjna pętla + zwykłe `fn`.
+
+## Werdykt: lib vs rdzeń vs Promise (ustalone kierunkowo)
+
+### Event loop — część Klina czy user?
+
+**Pętla = opcjonalna biblioteka, nie cecha języka.**
+
+| | Gdzie |
+|---|---|
+| `eloop.init` / `every_ms` / `run` / kolejka | lib (stdlib opcjonalna *albo* paczka usera / [049](049-remote-imports.md)) |
+| `$event_loop { … }` | makro w tej libce |
+| Obowiązkowy loop w każdym programie | **nie** |
+
+User **może napisać własną** implementację (inny poll, WFI, host `select`).
+Oficjalna lib (gdy powstanie) to domyślny prosty wariant — styl [012](012-stdlib-io.md),
+nie runtime jak GC.
+
+### `async` / `await` — część Klina?
+
+**Jeśli w ogóle — feature rdzenia** (parser + emit → maszyna stanów). Lib sama
+nie doda prawdziwego `await`.
+
+**Nie jest wymagane** do event-loopa. Najpierw lib z callbackami; `async`/`await`
+to osobna, późna decyzja (też [018](018-generators-yield.md)).
+
+```
+opcjonalnie:  [ lib eloop ]     ← bez zmian języka
+później?:     [ async/await ]   ← tylko kompilator
+```
+
+### Czy `async`/`await` wymaga Promise/Future (jak JS)?
+
+**Nie.** Sensowny model pod Klin (bliżej Rust / desugar, nie Node):
+
+- `async fn` → kompilator robi **struct stanu** + `poll` / resume (albo switch),
+- `await` → zapisz stan, wróć do loopa, wznów potem,
+- executor = **jawna** pętla (`eloop.run` / task RTOS) — nie ukryty runtime,
+- **bez** heapowego `Promise` na każdą metodę / bez GC microtasków.
+
+Metody mogą być `async`, ale to nie znaczy „każda metoda zwraca Promise”.
+Wynik to zwykły typ / `!T` + maszyna stanów; stan na stosie / w buforze
+callera, nie magiczny Future w runtime.
+
+| Model JS | Model bliższy Klinowi |
+|---|---|
+| `Promise` na stercie | stan na stosie / w buforze callera |
+| domyślny event loop runtime | `eloop.run()` / task — jawne |
+| każda async metoda = Promise | desugar → state machine |
+
+Taski RTOS / ticki event-loop **nie** wymagają zamiany metod w Promise/Future —
+wystarczą wolne `fn` (+ opcjonalnie `$rtos_task` / `$event_loop`).
+
 ## Hipotezy techniczne (nie zobowiązanie)
 
 - **A)** opcjonalny moduł + jawny executor / `Allocator` (raczej host)
@@ -115,4 +170,5 @@ Wejścia (warianty z 028): `main` + dekorowane `fn` **lub** `main_N` / `task_N`.
 ## Czego nie robić na start
 
 Promise GC, ukryty scheduler, async jako domyślny bare-metal, **wymuszenie**
-loopa na każdym tasku, ukryte automatyczne mutexy.
+loopa na każdym tasku, ukryte automatyczne mutexy, wymuszanie Promise/Future
+na metodach jak w JS.
