@@ -1148,20 +1148,20 @@ void _emitStmt(
       _line(buf, pos.line, sourcePath);
       final et = elemType!;
       if (source is ArrayLitExpr) {
-        // Evaluate each bound element into a fresh temp before binding, so a
-        // swap like `let [a, b] = [b, a]` reads the outer values, not new
-        // bindings. `_` positions are skipped (not evaluated, not bound).
-        final temps = List<String?>.filled(names.length, null);
+        // Evaluate every element into a fresh temp before binding, so a swap
+        // like `let [a, b] = [b, a]` reads the outer values, not new bindings.
+        // `_` positions are still evaluated (side effects are part of the
+        // written literal) but not bound.
+        final temps = <String>[];
         for (var i = 0; i < names.length; i++) {
-          if (names[i] == null) continue;
           final t = state.nextValueTemp();
-          temps[i] = t;
+          temps.add(t);
           buf.writeln(
               '$pad${_cDecl(et, t)} = ${_emitExpr(source.elements[i], ctx)};');
         }
         for (var i = 0; i < names.length; i++) {
           final name = names[i];
-          if (name == null) continue;
+          if (name == null) continue; // `_` skip: evaluated above, not bound
           buf.writeln('$pad${_cDecl(et, name)} = ${temps[i]};');
         }
       } else {

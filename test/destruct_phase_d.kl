@@ -3,6 +3,11 @@ struct Point {
     y: i32
 }
 
+fn noisy(): i32 {
+    puts("noisy ran")
+    return 99
+}
+
 fn main() {
     let p = Point{ x: 3, y: 4 }
 
@@ -21,4 +26,8 @@ fn main() {
 
     let [_, _, _, last] = xs
     printf("last: %d\n", last)
+
+    // A `_`-skipped literal element is still evaluated (side effects run).
+    let [_, keep] = [noisy(), 5]
+    printf("keep: %d\n", keep)
 }

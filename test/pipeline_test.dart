@@ -238,6 +238,8 @@ fn main() {
     expect(c, contains('int32_t b = xs[1];'));
     expect(c, contains('int32_t d = xs[3];'));
     expect(c, contains('int32_t last = xs[3];'));
+    // A `_`-skipped literal element is still evaluated (side effects run).
+    expect(c, contains('= noisy();'));
   });
 
   test('error: duplicate renamed binding in struct pattern (issue 056)', () {
