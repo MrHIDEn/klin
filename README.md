@@ -101,6 +101,14 @@ only; lowers to an `if`/`else if` chain with the subject in one temp, so
 [note/14-short-decl.md](note/14-short-decl.md),
 [`examples/short_decl.kl`](examples/short_decl.kl).
 
+### Shared type annotation
+
+Function parameters and struct fields may share one type across a comma list
+(Go-style): `fn add(a, b: i32)` ≡ `fn add(a: i32, b: i32)`, and
+`struct Point { x, y: f64 }`. Mixing is fine (`a, b: i32, c: f64`). It is pure
+parser sugar — the same C is emitted as the expanded form
+([issues/068-shared-type-decl.md](issues/068-shared-type-decl.md)).
+
 ### Destructuring
 
 `let { x, y } = p` and `let mut { x, y } = p` bind struct fields by name in one

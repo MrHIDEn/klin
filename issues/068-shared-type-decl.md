@@ -1,6 +1,6 @@
 # 068 — Wspólna adnotacja typu (`a, b: i32`)
 
-**Status:** 💭 do rozważenia
+**Status:** ✅ (parametry + pola struktur; `let` poza zakresem)
 **Zależy od:** [002](002-tablica-symboli-checker.md), [004](004-funkcje.md), [005](005-struktury-metody.md)
 
 ## Motywacja
@@ -53,7 +53,14 @@ następnej grupy z adnotacją.
 
 ## Kryterium ukończenia
 
-- [ ] parser: `a, b: T` w parametrach (i ewent. polach struct)
-- [ ] checker / emisja: jak przy rozwinięciu do osobnych `name: T`
-- [ ] złoty test + błąd przy `a, b` bez `: typ`
-- [ ] wpis w `note/` / README (składnia)
+- [x] parser: `a, b: T` w parametrach i polach struct (nazwy kumulują się do
+  `: typ`; mieszanie `a, b: i32, c: f64` OK)
+- [x] checker / emisja: identyczne jak przy rozwinięciu do osobnych `name: T`
+  (czysty cukier parsera — ten sam AST)
+- [x] złoty test [`test/shared_type.kl`](../test/shared_type.kl) + błędy przy
+  `a, b` bez `: typ` (params i pola)
+- [x] wpis w README (składnia)
+
+`let` / `let mut`: poza zakresem (brak multi-deklaracji w jednym zdaniu).
+`klin fmt` normalizuje do formy rozwiniętej (`a: T, b: T`) — AST nie przechowuje
+grupowania.
