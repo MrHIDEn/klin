@@ -988,7 +988,6 @@ fn main() {
     final program = loadProject(file.path);
     Checker().check(program);
     final c = emitC(program, file.path);
-    final outer = c.indexOf('typedef');
     // Inner fn(i32):i32 typedef must appear before any that mention it as return.
     final innerName = 'klin_fn_i32__i32';
     final outerRet = c.indexOf('(*klin_fn_void_');
