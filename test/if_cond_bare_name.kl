@@ -26,6 +26,11 @@ fn main() {
         a = a + 1
     }
     printf("%d\n", a)
+    let mut c = 0
+    while (c < b) {
+        c = c + 1
+    }
+    printf("%d\n", c)
     for i in 0..<b {
         printf("%d\n", i)
     }
