@@ -573,6 +573,55 @@ final class Checker {
           _Symbol(name: name, type: resolved, isMut: isMut, pos: pos),
         );
 
+      case LetDestructureStmt(
+          :final isMut,
+          :final fields,
+          :final source,
+          :final pos
+        ):
+        final sourceType =
+            _defaultConcrete(_inferLetOrAssignValue(source), source.pos);
+        if (sourceType is! StructType) {
+          throw CheckError(
+            'destructuring requires a struct, got `${sourceType.displayName}`',
+            source.pos,
+          );
+        }
+        _materialize(source, sourceType);
+        final decl = _structs[_key(sourceType.moduleName, sourceType.name)]!;
+        final fieldTypes = <KlinType>[];
+        for (final fieldName in fields) {
+          FieldDecl? field;
+          for (final candidate in decl.fields) {
+            if (candidate.name == fieldName) {
+              field = candidate;
+              break;
+            }
+          }
+          if (field == null) {
+            throw CheckError(
+              'struct `${sourceType.name}` has no field `$fieldName`',
+              pos,
+            );
+          }
+          final fieldType = field.resolvedType!;
+          if (fieldType is ArrayType) {
+            throw CheckError(
+              'cannot destructure array field `$fieldName` '
+              '(bind the struct and index it instead)',
+              pos,
+            );
+          }
+          fieldTypes.add(fieldType);
+        }
+        stmt.sourceType = sourceType;
+        stmt.fieldTypes = fieldTypes;
+        for (var i = 0; i < fields.length; i++) {
+          _scope.define(
+            _Symbol(name: fields[i], type: fieldTypes[i], isMut: isMut, pos: pos),
+          );
+        }
+
       case AssignStmt(:final target, :final value, :final pos):
         final targetType = _checkAssignableTarget(target, pos);
         if (targetType is ArrayType) {

@@ -1,0 +1,45 @@
+// Struct destructuring in `let` (issue 056, phase A).
+// `let { x, y } = p` lowers to plain field reads — it disappears in C.
+
+struct Vec2 {
+    x: i32
+    y: i32
+}
+
+fn origin_offset(): Vec2 {
+    return Vec2{ x: 10, y: 20 }
+}
+
+fn show_both() {
+    let p = Vec2{ x: 3, y: 4 }
+    let { x, y } = p
+    printf("p = (%d, %d)\n", x, y)
+}
+
+fn show_subset() {
+    let p = Vec2{ x: 3, y: 4 }
+    // A subset of fields is fine; order does not matter.
+    let { y } = p
+    printf("just y = %d\n", y)
+}
+
+fn show_mut() {
+    let p = Vec2{ x: 3, y: 4 }
+    // `let mut` makes the bindings mutable.
+    let mut { x } = p
+    x = x + 100
+    printf("x + 100 = %d\n", x)
+}
+
+fn show_expr_source() {
+    // Any expression works as the source; it is evaluated once.
+    let { x, y } = origin_offset()
+    printf("offset = (%d, %d)\n", x, y)
+}
+
+fn main() {
+    show_both()
+    show_subset()
+    show_mut()
+    show_expr_source()
+}

@@ -514,12 +514,15 @@ final class Parser {
         _ => false,
       };
 
-  LetStmt _letStmt() {
+  Stmt _letStmt() {
     final letTok = _expect(TokenKind.let, 'oczekiwano `let`');
     var isMut = false;
     if (_check(TokenKind.mut)) {
       _advance();
       isMut = true;
+    }
+    if (_check(TokenKind.lBrace)) {
+      return _structDestructureLet(letTok, isMut);
     }
     final name = _expect(TokenKind.ident, 'expected variable name');
     _rejectCKeyword(name, 'a variable name');
@@ -538,6 +541,47 @@ final class Parser {
       name: name.lexeme,
       typeName: typeName,
       init: init,
+      pos: letTok.pos,
+    );
+  }
+
+  /// `let [mut] { a, b } = expr` — struct destructuring (issue 056, phase A).
+  Stmt _structDestructureLet(Token letTok, bool isMut) {
+    _expect(TokenKind.lBrace, 'oczekiwano `{`');
+    final fields = <String>[];
+    final seen = <String>{};
+    if (!_check(TokenKind.rBrace)) {
+      while (true) {
+        final field = _expect(TokenKind.ident, 'expected field name');
+        _rejectCKeyword(field, 'a variable name');
+        if (!seen.add(field.lexeme)) {
+          throw ParseError(
+            'duplicate name `${field.lexeme}` in destructuring pattern',
+            field.pos,
+          );
+        }
+        fields.add(field.lexeme);
+        if (_check(TokenKind.comma)) {
+          _advance();
+          if (_check(TokenKind.rBrace)) break; // trailing comma
+          continue;
+        }
+        break;
+      }
+    }
+    _expect(TokenKind.rBrace, 'expected `}` after destructuring pattern');
+    if (fields.isEmpty) {
+      throw ParseError(
+        'destructuring pattern needs at least one field',
+        letTok.pos,
+      );
+    }
+    _expect(TokenKind.equal, 'expected `=` in destructuring `let`');
+    final source = _expr();
+    return LetDestructureStmt(
+      isMut: isMut,
+      fields: fields,
+      source: source,
       pos: letTok.pos,
     );
   }

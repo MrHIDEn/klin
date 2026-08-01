@@ -318,6 +318,7 @@ bool _stmtCallsStdio(Stmt stmt) => switch (stmt) {
             args.any(_exprCallsStdio),
       MethodCallStmt(:final call) => _exprCallsStdio(call),
       LetStmt(:final init) => init != null && _exprCallsStdio(init),
+      LetDestructureStmt(:final source) => _exprCallsStdio(source),
       AssignStmt(:final target, :final value) =>
         _exprCallsStdio(target) || _exprCallsStdio(value),
       IfStmt(:final cond, :final thenBlock, :final elseBranch) =>
@@ -616,6 +617,7 @@ bool _blockNeedsTrimFrac(Block block) {
 bool _stmtNeedsTrimFrac(Stmt stmt) => switch (stmt) {
       CallStmt(:final args) => args.any(_exprNeedsTrimFrac),
       LetStmt(:final init) => init != null && _exprNeedsTrimFrac(init),
+      LetDestructureStmt(:final source) => _exprNeedsTrimFrac(source),
       AssignStmt(:final value) => _exprNeedsTrimFrac(value),
       ReturnStmt(:final value) => value != null && _exprNeedsTrimFrac(value),
       IfStmt(:final thenBlock, :final elseBranch, :final cond) =>
@@ -1106,6 +1108,32 @@ void _emitStmt(
           _ => throw StateError('emit: missing default value for `$name`'),
         };
         buf.writeln('$pad${_cDecl(ty, name)} = $zero;');
+      }
+
+    case LetDestructureStmt(
+        :final fields,
+        :final source,
+        :final pos,
+        :final sourceType,
+        :final fieldTypes
+      ):
+      _line(buf, pos.line, sourcePath);
+      final st = sourceType!;
+      final fts = fieldTypes!;
+      // Evaluate the source once. A plain name needs no temp; any other
+      // expression is copied into a temp so it is not re-evaluated per field.
+      final String access;
+      if (source is NameExpr) {
+        access = _emitExpr(source, ctx) +
+            (_exprIsPtrReceiver(source) ? '->' : '.');
+      } else {
+        final tmp = state.nextValueTemp();
+        buf.writeln('$pad${_cDecl(st, tmp)} = ${_emitExpr(source, ctx)};');
+        access = '$tmp.';
+      }
+      for (var i = 0; i < fields.length; i++) {
+        buf.writeln(
+            '$pad${_cDecl(fts[i], fields[i])} = $access${fields[i]};');
       }
 
     case AssignStmt(:final target, :final value, :final pos):

@@ -44,6 +44,111 @@ void main() {
     expect(c, contains('.u.ok ='));
   });
 
+  test('golden: struct destructuring `let { }` (issue 056)', () async {
+    final result = await _compileAndRun('test/destruct_struct.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/destruct_struct.out').readAsString());
+
+    final source = File('test/destruct_struct.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/destruct_struct.kl');
+    // A plain-name source lowers to direct field reads, no temp copy.
+    expect(c, contains('int32_t x = p.x;'));
+    expect(c, contains('int32_t y = p.y;'));
+    // A call source is evaluated once into a temp, then read per field.
+    expect(c, contains('klin_val_0 = make();'));
+    expect(c, contains('int32_t x = klin_val_0.x;'));
+  });
+
+  test('error: destructuring a non-struct value (issue 056)', () {
+    const source = '''
+fn main() {
+  let n = 5
+  let { x } = n
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) =>
+            e is CheckError && e.toString().contains('requires a struct')),
+      ),
+    );
+  });
+
+  test('error: destructuring an unknown field (issue 056)', () {
+    const source = '''
+struct P { x: i32
+ y: i32 }
+fn main() {
+  let p = P{ x: 1, y: 2 }
+  let { z } = p
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate(
+            (e) => e is CheckError && e.toString().contains('has no field `z`')),
+      ),
+    );
+  });
+
+  test('error: destructuring a fixed-array field is rejected (issue 056)', () {
+    const source = '''
+struct Box { data: [3]i32
+ n: i32 }
+fn main() {
+  let b = Box{ data: [1, 2, 3], n: 3 }
+  let { data, n } = b
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) =>
+            e is CheckError &&
+            e.toString().contains('cannot destructure array field')),
+      ),
+    );
+  });
+
+  test('error: duplicate name in destructuring pattern (issue 056)', () {
+    const source = '''
+struct P { x: i32
+ y: i32 }
+fn main() {
+  let p = P{ x: 1, y: 2 }
+  let { x, x } = p
+}
+''';
+    expect(
+      () => Parser(Lexer(source).tokenize()).parse(),
+      throwsA(
+        predicate((e) => e is ParseError && e.toString().contains('duplicate')),
+      ),
+    );
+  });
+
+  test('error: destructuring `let` requires `=` (issue 056)', () {
+    const source = '''
+struct P { x: i32
+ y: i32 }
+fn main() {
+  let p = P{ x: 1, y: 2 }
+  let { x } p
+}
+''';
+    expect(
+      () => Parser(Lexer(source).tokenize()).parse(),
+      throwsA(isA<ParseError>()),
+    );
+  });
+
   test('error: unhandled !T result', () {
     const source = '''
 fn fallible(): !i32 { return error(1) }
