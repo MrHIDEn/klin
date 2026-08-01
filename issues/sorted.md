@@ -91,6 +91,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [062](062-targets-esp-rp.md) | Cele MCU: ESP32 / RP2040 / RP2350 | 💭 | 010 |
 | [064](064-if-cond-struct-literal-parse.md) | Warunek `if`/`while` kończący się nazwą mylony z literałem struktury | ✅ | — |
 | [068](068-shared-type-decl.md) | Wspólna adnotacja typu (`a, b: i32` jak Go; obie formy OK) | 💭 | 002, 004, 005 |
+| [069](069-eventemitter-signals.md) | Observer / EventEmitter / Signals (biblioteka; JS-signals jawnie) | 💭 | 013, 057 |
 
 ---
 
