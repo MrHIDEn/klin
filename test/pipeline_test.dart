@@ -1862,8 +1862,8 @@ fn main() { printf("%d\\n", o.version()) }
     );
     expect(formatOutdatedReport(const []), 'all packages up to date\n');
 
-    expect(
-      () => collectOutdated(
+    await expectLater(
+      collectOutdated(
         mod,
         onlyPaths: ['github/missing/pkg'],
         resolveLatest: fakeLatest,
