@@ -1,28 +1,43 @@
 # 067 — Homebrew: `brew install klin`
 
-**Status:** 💭 do rozważenia (zablokowane na razie)
-**Zależy od:** publiczne release’y kompilatora (repo **`klin` celowo private**)
+**Status:** ✅ zrobione (formula + CI; publiczny tap/release = krok operatorski)
+**Zależy od:** — (publiczne release’y odblokowują *stable*; HEAD działa z dostępem do repo)
 
 ## Nazwa
 
 `klin` **wolne** w homebrew-core (brak formula/cask). Podobne, ale inne:
 `kin`, `klim`.
 
-## Czy łatwo?
+## Dostarczone w repo
 
-| Ścieżka | Trudność | Uwagi |
-|---|---|---|
-| Własny tap `MrHIDEn/homebrew-klin` | łatwe | `Formula/klin.rb` + URL + sha256 + test `--version` |
-| Prebuilt z GitHub Releases | wygodne dla usera | CI artefakty macOS/Linux |
-| Build from source (Dart SDK) | średie | `depends_on` + `dart compile exe` |
-| homebrew-core | trudniejsze | review, popularność, bottles |
+| Artefakt | Sens |
+|---|---|
+| [`Formula/klin.rb`](../Formula/klin.rb) | build from source (`dart compile exe`) + `pkgshare` stdlib |
+| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | tag `v*` → binarki macOS/Linux + GitHub Release |
+| [`note/17-homebrew.md`](../note/17-homebrew.md) | instalacja / tap / sha256 |
 
-**Zalecenie:** najpierw tap (`brew install mrhiden/klin/klin`), core później.
+Odkrywanie stdlib przy binarke / Homebrew `share/klin`: `lib/project.dart`.
+
+```sh
+brew tap dart-lang/dart
+brew install --HEAD --formula Formula/klin.rb
+```
+
+**Zalecenie na stałe:** tap `MrHIDEn/homebrew-klin` → `brew install mrhiden/klin/klin`.
+homebrew-core później.
 
 `brew upgrade klin` = upgrade **kompilatora**, nie pakietów `.kl`
 ([066](066-klin-upgrade-outdated.md)).
 
-## Blokada
+## Checklista
 
-Dopóki `klin` jest private — bez publicznego źródła/release’ów formula
-nie ma sensu. Issue zostaje w backlogu.
+- [x] `Formula/klin.rb` (HEAD + miejsce na stable url/sha256)
+- [x] workflow release przy tagu `v*`
+- [x] stdlib obok instalacji (pkgshare + search paths)
+- [x] nota + README
+- [ ] operatorsko: publiczne repo i/lub `homebrew-klin` + tag `v0.1.0` + wypełnienie sha256
+
+## Poza zakresem
+
+- PR do homebrew-core
+- Windows (Homebrew nie jest ścieżką; `task release` / scoop później)

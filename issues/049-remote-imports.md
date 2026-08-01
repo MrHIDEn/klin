@@ -46,5 +46,5 @@ Po pobraniu: katalog-pakiet jak [047](047-directory-modules.md).
 
 - lock/sumy → [065](065-project-lockfile.md) ✅
 - `klin upgrade` / outdated → [066](066-klin-upgrade-outdated.md) ✅
-- Homebrew kompilatora → [067](067-homebrew.md)
+- Homebrew kompilatora → [067](067-homebrew.md) ✅
 - artefakty SVD → [053](053-device-board-assets.md)

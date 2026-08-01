@@ -1,0 +1,74 @@
+# Build Klin release binaries and publish a GitHub Release (issue 067).
+# Trigger: push tag v* (e.g. v0.1.0). Repo should be public for Homebrew users.
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            asset: klin-macos-arm64
+          - os: macos-13
+            asset: klin-macos-amd64
+          - os: ubuntu-22.04
+            asset: klin-linux-amd64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Build
+        run: |
+          dart pub get
+          dart compile exe bin/klin.dart -o klin
+          mkdir -p dist/stdlib
+          cp -R stdlib/. dist/stdlib/
+          cp klin dist/
+          tar -C dist -czf "${{ matrix.asset }}.tar.gz" klin stdlib
+          shasum -a 256 "${{ matrix.asset }}.tar.gz" | tee "${{ matrix.asset }}.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: |
+            ${{ matrix.asset }}.tar.gz
+            ${{ matrix.asset }}.sha256
+
+  source-checksum:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checksum GitHub-style source archive note
+        run: |
+          # Homebrew stable url uses GitHub's tag archive. After the release
+          # exists, compute: curl -sL "$URL" | shasum -a 256
+          ver="${GITHUB_REF_NAME#v}"
+          echo "After publish, fill Formula/klin.rb sha256 from:"
+          echo "  https://github.com/MrHIDEn/klin/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
+          echo "version: ${ver}"
+
+  publish:
+    needs: [build, source-checksum]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: artifacts/**/*
