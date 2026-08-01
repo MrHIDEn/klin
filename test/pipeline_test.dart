@@ -1748,6 +1748,40 @@ fn main() { printf("%d\\n", o.version()) }
     expect(formatKlinMod(mod), 'klin 1\nrequire github/mrhiden/osa v0.1.0\n');
   });
 
+  test('klin.lock parse/format round-trip (issue 065)', () {
+    const sha = '0123456789abcdef0123456789abcdef01234567';
+    const hash =
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    final lock = parseKlinLock(
+      'klin lock 1\n'
+      'github/mrhiden/osa v0.1.0 $sha sha256:$hash\n',
+    );
+    expect(lock.packages['github/mrhiden/osa']!.version, 'v0.1.0');
+    expect(lock.packages['github/mrhiden/osa']!.commit, sha);
+    expect(lock.packages['github/mrhiden/osa']!.hash, hash);
+    expect(
+      formatKlinLock(lock),
+      'klin lock 1\n'
+      'github/mrhiden/osa v0.1.0 $sha sha256:$hash\n',
+    );
+  });
+
+  test('packageContentHash is stable and order-independent (issue 065)', () {
+    final dir = Directory.systemTemp.createTempSync('klin_hash065_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    File('${dir.path}/b.kl').writeAsStringSync('module x\n');
+    File('${dir.path}/a.kl').writeAsStringSync('module x\nfn f() {}\n');
+    final h1 = packageContentHash(dir.path);
+    // Recreate in opposite write order — hash must match.
+    final dir2 = Directory.systemTemp.createTempSync('klin_hash065b_');
+    addTearDown(() => dir2.deleteSync(recursive: true));
+    File('${dir2.path}/a.kl').writeAsStringSync('module x\nfn f() {}\n');
+    File('${dir2.path}/b.kl').writeAsStringSync('module x\n');
+    expect(packageContentHash(dir2.path), h1);
+    File('${dir2.path}/a.kl').writeAsStringSync('module x\nfn f() { }\n');
+    expect(packageContentHash(dir2.path), isNot(h1));
+  });
+
   test('remote import rejects path traversal segments (issue 049)', () {
     expect(
       () => parseRemoteImport('github/../../tmp/evil'),
@@ -1783,6 +1817,52 @@ fn main() { printf("%d\\n", o.version()) }
     expect(File('${work.path}/klin.mod').existsSync(), isTrue);
     final mod = loadKlinMod(File('${work.path}/klin.mod'));
     expect(mod.requires['github/mrhiden/osa'], 'v0.1.0');
+
+    expect(File('${work.path}/klin.lock').existsSync(), isTrue);
+    final lock = loadKlinLock(File('${work.path}/klin.lock'));
+    final entry = lock.packages['github/mrhiden/osa']!;
+    expect(entry.version, 'v0.1.0');
+    expect(entry.commit, matches(RegExp(r'^[0-9a-f]{40}$')));
+    expect(entry.hash, matches(RegExp(r'^[0-9a-f]{64}$')));
+    final pkgDir = '${cache.path}/pkg/github/mrhiden/osa';
+    expect(packageContentHash(pkgDir), entry.hash);
+    expect(readCommit(pkgDir), entry.commit);
+
+    // Second get prefers lock SHA (offline-capable once cached) and keeps lock.
+    final get2 = await Process.run(
+      'dart',
+      ['run', klinBin, 'get'],
+      workingDirectory: work.path,
+      environment: {
+        ...Platform.environment,
+        'KLIN_CACHE': cache.path,
+      },
+    );
+    expect(get2.exitCode, 0, reason: '${get2.stderr}${get2.stdout}');
+    expect(
+      loadKlinLock(File('${work.path}/klin.lock'))
+          .packages['github/mrhiden/osa']!
+          .commit,
+      entry.commit,
+    );
+
+    // Tampered lock hash must fail.
+    File('${work.path}/klin.lock').writeAsStringSync(
+      'klin lock 1\n'
+      'github/mrhiden/osa v0.1.0 ${entry.commit} '
+      'sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n',
+    );
+    final bad = await Process.run(
+      'dart',
+      ['run', klinBin, 'get'],
+      workingDirectory: work.path,
+      environment: {
+        ...Platform.environment,
+        'KLIN_CACHE': cache.path,
+      },
+    );
+    expect(bad.exitCode, isNot(0));
+    expect('${bad.stderr}', contains('hash mismatch'));
 
     final run = await Process.run(
       'dart',

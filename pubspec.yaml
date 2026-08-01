@@ -12,4 +12,5 @@ executables:
 dev_dependencies:
   test: ^1.25.0
 dependencies:
+  crypto: ^3.0.7
   xml: ^7.0.1

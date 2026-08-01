@@ -151,7 +151,7 @@ Future<void> main(List<String> args) async {
   exit(run.exitCode);
 }
 
-/// `klin get` / `klin update` — fetch remote packages into cache (issue 049).
+/// `klin get` / `klin update` — fetch remote packages; write klin.mod + klin.lock.
 Future<void> _runGet(List<String> args, {required bool force}) async {
   final cmd = force ? 'update' : 'get';
   try {
@@ -159,6 +159,8 @@ Future<void> _runGet(List<String> args, {required bool force}) async {
     var modFile = findKlinModFile(cwd);
     var mod = modFile != null ? loadKlinMod(modFile) : KlinMod.empty();
     modFile ??= File('$cwd${Platform.pathSeparator}klin.mod');
+    final lockFile = klinLockFileFor(modFile);
+    var lock = loadKlinLockOrEmpty(lockFile);
 
     final specs = <String>[];
     if (args.isEmpty) {
@@ -191,10 +193,13 @@ Future<void> _runGet(List<String> args, {required bool force}) async {
         remote: effective,
         mod: mod,
         modFile: modFile,
+        lock: lock,
+        lockFile: lockFile,
         force: force,
       );
-      // Reload mod after possible write.
+      // Reload mod/lock after possible write.
       if (modFile.existsSync()) mod = loadKlinMod(modFile);
+      if (lockFile.existsSync()) lock = loadKlinLock(lockFile);
       stdout.writeln('${remote.path}@$ref → $pkgDir');
     }
   } on FormatException catch (e) {

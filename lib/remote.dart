@@ -1,4 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:crypto/crypto.dart';
 
 /// Reserved first path segments for remote imports (issue 049).
 const remoteHosts = {'github', 'gitlab'};
@@ -129,6 +133,49 @@ void writePin(String pkgDir, String ref) {
   File('$pkgDir${Platform.pathSeparator}.pin').writeAsStringSync('$ref\n');
 }
 
+String? readCommit(String pkgDir) {
+  final f = File('$pkgDir${Platform.pathSeparator}.commit');
+  if (!f.existsSync()) return null;
+  final text = f.readAsStringSync().trim().toLowerCase();
+  if (text.isEmpty || !RegExp(r'^[0-9a-f]{7,40}$').hasMatch(text)) {
+    return null;
+  }
+  return text;
+}
+
+void writeCommit(String pkgDir, String commit) {
+  Directory(pkgDir).createSync(recursive: true);
+  File('$pkgDir${Platform.pathSeparator}.commit')
+      .writeAsStringSync('${commit.toLowerCase()}\n');
+}
+
+/// SHA-256 of installed package `.kl` sources (sorted by basename).
+///
+/// Format is stable: for each file, `name\0` + bytes + `\0`.
+String packageContentHash(String pkgDir) {
+  final files = <File>[];
+  for (final entity in Directory(pkgDir).listSync(followLinks: false)) {
+    if (entity is! File) continue;
+    final name = entity.path.split(Platform.pathSeparator).last;
+    if (!name.endsWith('.kl') || name.endsWith('_test.kl')) continue;
+    files.add(entity);
+  }
+  files.sort((a, b) {
+    final an = a.path.split(Platform.pathSeparator).last;
+    final bn = b.path.split(Platform.pathSeparator).last;
+    return an.compareTo(bn);
+  });
+  final bytes = BytesBuilder(copy: false);
+  for (final f in files) {
+    final name = f.path.split(Platform.pathSeparator).last;
+    bytes.add(utf8.encode(name));
+    bytes.addByte(0);
+    bytes.add(f.readAsBytesSync());
+    bytes.addByte(0);
+  }
+  return sha256.convert(bytes.takeBytes()).toString();
+}
+
 // --- klin.mod ---------------------------------------------------------------
 
 final class KlinMod {
@@ -190,6 +237,92 @@ KlinMod loadKlinMod(File file) => parseKlinMod(file.readAsStringSync());
 void saveKlinMod(File file, KlinMod mod) {
   file.parent.createSync(recursive: true);
   file.writeAsStringSync(formatKlinMod(mod));
+}
+
+// --- klin.lock (issue 065) --------------------------------------------------
+
+/// One locked remote: mod version pin → resolved commit + content hash.
+final class KlinLockEntry {
+  final String version;
+  final String commit;
+  final String hash; // sha256 hex of package .kl sources
+
+  const KlinLockEntry({
+    required this.version,
+    required this.commit,
+    required this.hash,
+  });
+}
+
+final class KlinLock {
+  final int version;
+  final Map<String, KlinLockEntry> packages; // path → entry
+
+  KlinLock({this.version = 1, Map<String, KlinLockEntry>? packages})
+      : packages = Map<String, KlinLockEntry>.from(packages ?? {});
+
+  static KlinLock empty() => KlinLock();
+}
+
+/// `klin.lock` beside [modFile], if present.
+File klinLockFileFor(File modFile) =>
+    File('${modFile.parent.path}${Platform.pathSeparator}klin.lock');
+
+KlinLock parseKlinLock(String content) {
+  final packages = <String, KlinLockEntry>{};
+  var version = 1;
+  for (final rawLine in content.split('\n')) {
+    final line = rawLine.trim();
+    if (line.isEmpty || line.startsWith('//') || line.startsWith('#')) {
+      continue;
+    }
+    final parts = line.split(RegExp(r'\s+'));
+    if (parts.length == 3 && parts[0] == 'klin' && parts[1] == 'lock') {
+      version = int.tryParse(parts[2]) ?? 1;
+      continue;
+    }
+    // path version commit sha256:<hex>
+    if (parts.length == 4 && parts[3].startsWith('sha256:')) {
+      final commit = parts[2].toLowerCase();
+      if (!RegExp(r'^[0-9a-f]{7,40}$').hasMatch(commit)) {
+        throw FormatException('invalid klin.lock commit: `$rawLine`');
+      }
+      final hash = parts[3].substring('sha256:'.length);
+      if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(hash)) {
+        throw FormatException('invalid klin.lock hash: `$rawLine`');
+      }
+      packages[parts[0]] = KlinLockEntry(
+        version: parts[1],
+        commit: commit,
+        hash: hash,
+      );
+      continue;
+    }
+    throw FormatException('invalid klin.lock line: `$rawLine`');
+  }
+  return KlinLock(version: version, packages: packages);
+}
+
+String formatKlinLock(KlinLock lock) {
+  final buf = StringBuffer('klin lock ${lock.version}\n');
+  final keys = lock.packages.keys.toList()..sort();
+  for (final path in keys) {
+    final e = lock.packages[path]!;
+    buf.writeln('$path ${e.version} ${e.commit} sha256:${e.hash}');
+  }
+  return buf.toString();
+}
+
+KlinLock loadKlinLock(File file) => parseKlinLock(file.readAsStringSync());
+
+void saveKlinLock(File file, KlinLock lock) {
+  file.parent.createSync(recursive: true);
+  file.writeAsStringSync(formatKlinLock(lock));
+}
+
+KlinLock loadKlinLockOrEmpty(File file) {
+  if (!file.existsSync()) return KlinLock.empty();
+  return loadKlinLock(file);
 }
 
 /// Resolve "latest" ref for a remote: newest `v*` semver tag, else main/master.
@@ -259,29 +392,37 @@ Future<List<String>> _gitLsRemote(String url, String mode) async {
       .toList();
 }
 
-/// Fetch [remote] at [ref] into the package cache. Returns package dir.
+/// Fetch [remote] at [gitRef] into the package cache.
 ///
-/// [force] replaces an existing install. Writes `.pin`.
-Future<String> fetchRemote(
+/// Returns `(pkgDir, commitSha)`. [pin] is written to `.pin` (klin.mod version);
+/// defaults to [gitRef]. [force] replaces an existing install.
+Future<(String pkgDir, String commit)> fetchRemote(
   RemoteImport remote, {
-  required String ref,
+  required String gitRef,
+  String? pin,
   String? cacheRoot,
   bool force = false,
 }) async {
+  final pinValue = pin ?? gitRef;
   final pkgDir = packageCacheDir(remote, cacheRoot: cacheRoot);
   if (!force && isPackageInstalled(pkgDir)) {
-    final pin = readPin(pkgDir);
-    if (pin == ref) return pkgDir;
-    throw StateError(
-      'package `${remote.path}` is already installed at `$pin`; '
-      'use `klin update ${remote.path}@$ref` to change',
-    );
+    final existing = readPin(pkgDir);
+    if (existing == pinValue) {
+      final commit = readCommit(pkgDir);
+      if (commit != null) return (pkgDir, commit);
+      // Legacy cache without `.commit` — fall through and refresh metadata.
+    } else {
+      throw StateError(
+        'package `${remote.path}` is already installed at `$existing`; '
+        'use `klin update ${remote.path}@$pinValue` to change',
+      );
+    }
   }
 
   final tmp = Directory.systemTemp.createTempSync('klin_get_');
   final staging = Directory.systemTemp.createTempSync('klin_stage_');
   try {
-    await _gitCheckoutRef(remote.gitUrl, ref, tmp.path);
+    final commit = await _gitCheckoutRef(remote.gitUrl, gitRef, tmp.path);
 
     final sourceDir = _selectPackageSourceDir(tmp.path, remote.repo);
     // Stage into a fresh dir, then swap into place so a failed copy cannot
@@ -300,7 +441,9 @@ Future<String> fetchRemote(
       );
     }
     File('${staging.path}${Platform.pathSeparator}.pin')
-        .writeAsStringSync('$ref\n');
+        .writeAsStringSync('$pinValue\n');
+    File('${staging.path}${Platform.pathSeparator}.commit')
+        .writeAsStringSync('${commit.toLowerCase()}\n');
 
     final parent = Directory(pkgDir).parent;
     parent.createSync(recursive: true);
@@ -308,14 +451,15 @@ Future<String> fetchRemote(
       Directory(pkgDir).deleteSync(recursive: true);
     }
     staging.renameSync(pkgDir);
-    return pkgDir;
+    return (pkgDir, commit.toLowerCase());
   } finally {
     if (tmp.existsSync()) tmp.deleteSync(recursive: true);
     if (staging.existsSync()) staging.deleteSync(recursive: true);
   }
 }
 
-Future<void> _gitCheckoutRef(String url, String ref, String dest) async {
+/// Checkout [ref] into [dest]; returns full commit SHA.
+Future<String> _gitCheckoutRef(String url, String ref, String dest) async {
   final isCommit = RegExp(r'^[0-9a-fA-F]{7,40}$').hasMatch(ref);
   if (!isCommit) {
     final clone = await Process.run('git', [
@@ -327,7 +471,9 @@ Future<void> _gitCheckoutRef(String url, String ref, String dest) async {
       url,
       dest,
     ]);
-    if (clone.exitCode == 0) return;
+    if (clone.exitCode == 0) {
+      return _gitRevParseHead(dest);
+    }
   }
 
   if (Directory(dest).existsSync()) {
@@ -372,6 +518,28 @@ Future<void> _gitCheckoutRef(String url, String ref, String dest) async {
       co.exitCode,
     );
   }
+  return _gitRevParseHead(dest);
+}
+
+Future<String> _gitRevParseHead(String repo) async {
+  final result = await Process.run('git', ['-C', repo, 'rev-parse', 'HEAD']);
+  if (result.exitCode != 0) {
+    throw ProcessException(
+      'git',
+      ['rev-parse', 'HEAD'],
+      '${result.stderr}'.trim(),
+      result.exitCode,
+    );
+  }
+  final sha = '${result.stdout}'.trim().toLowerCase();
+  if (!RegExp(r'^[0-9a-f]{40}$').hasMatch(sha)) {
+    throw ProcessException(
+      'git',
+      ['rev-parse', 'HEAD'],
+      'unexpected HEAD sha `$sha`',
+    );
+  }
+  return sha;
 }
 
 /// Prefer `<repo>/*.kl` inside the clone; else root `*.kl`.
@@ -396,42 +564,87 @@ bool _hasKlSources(String dir) {
   return false;
 }
 
-/// Ensure [remote] is installed per [mod] / [requestedRef] policy.
+/// Ensure [remote] is installed per [mod] / lock policy.
 ///
-/// Returns `(pkgDir, ref used, modWasUpdated)`.
+/// Returns `(pkgDir, version pin, modWasUpdated)`.
+/// When [lock] has a matching version entry and [force] is false, fetches by
+/// locked commit SHA and verifies the content hash (issue 065).
 Future<(String pkgDir, String ref, bool modUpdated)> ensureRemotePackage({
   required RemoteImport remote,
   required KlinMod mod,
   required File modFile,
+  KlinLock? lock,
+  File? lockFile,
   String? cacheRoot,
   bool force = false,
 }) async {
   var modUpdated = false;
-  String ref;
+  String version;
   if (remote.ref != null) {
-    ref = remote.ref!;
-    if (mod.requires[remote.path] != ref) {
+    version = remote.ref!;
+    if (mod.requires[remote.path] != version) {
       modUpdated = true;
     }
   } else if (mod.requires.containsKey(remote.path)) {
-    ref = mod.requires[remote.path]!;
+    version = mod.requires[remote.path]!;
   } else {
-    ref = await resolveLatestRef(remote);
+    version = await resolveLatestRef(remote);
     modUpdated = true;
   }
 
-  final pkgDir = await fetchRemote(
+  final lockEntry = lock?.packages[remote.path];
+  final useLock = !force &&
+      lockEntry != null &&
+      lockEntry.version == version &&
+      RegExp(r'^[0-9a-f]{7,40}$').hasMatch(lockEntry.commit);
+  final gitRef = useLock ? lockEntry.commit : version;
+
+  final (pkgDir, commit) = await fetchRemote(
     remote,
-    ref: ref,
+    gitRef: gitRef,
+    pin: version,
     cacheRoot: cacheRoot,
     force: force,
   );
-  // Write klin.mod only after a successful fetch so a failed get cannot
-  // leave a pin that was never installed.
-  if (modUpdated || mod.requires[remote.path] != ref) {
-    mod.requires[remote.path] = ref;
+
+  final hash = packageContentHash(pkgDir);
+  if (useLock) {
+    if (lockEntry.hash != hash) {
+      throw StateError(
+        'klin.lock hash mismatch for `${remote.path}@$version` '
+        '(expected sha256:${lockEntry.hash}, got sha256:$hash)',
+      );
+    }
+    if (!commit.startsWith(lockEntry.commit) &&
+        !lockEntry.commit.startsWith(commit)) {
+      throw StateError(
+        'klin.lock commit mismatch for `${remote.path}@$version` '
+        '(expected ${lockEntry.commit}, got $commit)',
+      );
+    }
+  }
+
+  // Write klin.mod / klin.lock only after a successful fetch so a failed get
+  // cannot leave a pin that was never installed.
+  if (modUpdated || mod.requires[remote.path] != version) {
+    mod.requires[remote.path] = version;
     saveKlinMod(modFile, mod);
     modUpdated = true;
   }
-  return (pkgDir, ref, modUpdated);
+
+  final outLock = lock ?? KlinLock.empty();
+  final prev = outLock.packages[remote.path];
+  if (prev == null ||
+      prev.version != version ||
+      prev.commit != commit ||
+      prev.hash != hash) {
+    outLock.packages[remote.path] = KlinLockEntry(
+      version: version,
+      commit: commit,
+      hash: hash,
+    );
+    final outFile = lockFile ?? klinLockFileFor(modFile);
+    saveKlinLock(outFile, outLock);
+  }
+  return (pkgDir, version, modUpdated);
 }
