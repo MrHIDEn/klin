@@ -1,6 +1,6 @@
 # 056 — Dekonstrukcja (`{}` / `[]` / multi-assign)
 
-**Status:** 🔨 w toku — fazy A ✅ (struktury) + C ✅ (tablice `[N]T`) + D ✅ (rename / `_`)
+**Status:** 🔨 w toku — fazy A ✅ (struktury) + B ✅ (multi-assign) + C ✅ (tablice `[N]T`) + D ✅ (rename / `_`)
 **Zależy od:** [005](005-struktury-metody.md) (struct lit/pola ✅); mile [007](007-wskazniki-tablice-slice.md) (tablice stałej długości)
 
 > **Nie mylić z destruktorami RAII.** D6 ([note/01-decyzje.md](../note/01-decyzje.md)):
@@ -97,7 +97,7 @@ jawny indeks / slice — nie cukier `[x]=`.
 |---|---|---|---|
 | A | `let { a, b } = s` (deklaracja) | 005 | ✅ |
 | A′ | bare `{ a, b } = s` (reassign; wymaga lookaheadu) | 005 | ⏳ |
-| B | `a, b = b, a` (multi-assign, bez multi-return) | parser + checker tmp | ⏳ |
+| B | `a, b = b, a` (multi-assign, bez multi-return) | parser + checker tmp | ✅ |
 | C | `let [a, b] = xs` dla `[N]T`, `N` znane | 007 | ✅ |
 | D | rename `{ x: px }`, `_` w tablicach (skip) | po A/C | ✅ |
 
@@ -118,13 +118,21 @@ zmienna/literał tablicy, zagnieżdżony element tablicowy. Przykład
 w [`test/destruct_array.kl`](../test/destruct_array.kl) +
 `test/pipeline_test.dart`.
 
+**Faza B (zrobione):** multi-assign `a, b = b, a` — ≥2 przypisywalne cele i tyle
+samo wartości. Wartości liczone do tymczasowych przed jakimkolwiek zapisem, więc
+swap/rotacja działają bez tymczasowej w źródle. Cele podlegają zwykłym regułom
+lvalue/`mut`; odrzucane: cały-tablicowy cel oraz wartości `or`/`!`/`match`
+(przypisz je osobną instrukcją). Przykład
+[`examples/multi_assign.kl`](../examples/multi_assign.kl), testy w
+[`test/multi_assign.kl`](../test/multi_assign.kl) + `test/pipeline_test.dart`.
+
 **Faza D (zrobione):** rename pól struktury `let { x: px, y: py } = p` (mieszalne
 z polami bez zmiany nazwy) oraz `_` jako skip pozycji w tablicy
 `let [_, b, _, d] = xs` (pełne pokrycie nadal wymagane, min. jedno realne
 wiązanie; indeksy zachowane). Testy w
 [`test/destruct_phase_d.kl`](../test/destruct_phase_d.kl) +
-`test/pipeline_test.dart`. Poza zakresem zostaje bare reassignment
-(`{ … } = p` / `[ … ] = xs`, faza A′) i multi-assign (faza B).
+`test/pipeline_test.dart`. Poza zakresem zostaje już tylko bare reassignment
+(`{ … } = p` / `[ … ] = xs`, faza A′).
 
 ## Kryterium „issue zamknięte jako decyzja”
 

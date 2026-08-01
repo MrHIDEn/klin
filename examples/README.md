@@ -25,6 +25,7 @@ are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), n
 | `slice_alloc_demo.kl` | `stdlib/slice_alloc` + explicit `Allocator` ([017](../issues/017-collection-methods.md), [note/16](../note/16-slice.md)) |
 | `short_decl.kl` | `:=` sugar for `let mut` ([055](../issues/055-short-decl.md), [note/14](../note/14-short-decl.md)) |
 | `destructure.kl` | Destructuring `let { x, y } = p` / `let [a, b] = xs` (+ rename / `_`) ([056](../issues/056-destructuring.md)) |
+| `multi_assign.kl` | Multi-assignment / swap `a, b = b, a` ([056](../issues/056-destructuring.md)) |
 | `match.kl` | `match` stmt + expr, no fallthrough ([014](../issues/014-match.md), [note/15](../note/15-match.md)) |
 | `add_test.kl` | Sample `klin test` (`import testing`) |
 | `interp.kl` | String interpolation → `printf` ([note/07-interpolacja.md](../note/07-interpolacja.md)) |
