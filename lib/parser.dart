@@ -68,16 +68,13 @@ final class Parser {
     final structs = <StructDecl>[];
     final decls = <Object>[];
     String? declaredName;
-    final imports = <String>[];
+    final imports = <ImportSpec>[];
     if (_check(TokenKind.module)) {
       _advance();
       declaredName = _expect(TokenKind.ident, 'expected module name').lexeme;
     }
     while (_check(TokenKind.import)) {
-      _advance();
-      final name = _expect(TokenKind.ident, 'expected imported module name');
-      imports.add(name.lexeme);
-      _importedModules.add(name.lexeme);
+      imports.add(_importSpec());
     }
     while (!_check(TokenKind.eof)) {
       final attrs = _attrs();
@@ -116,6 +113,38 @@ final class Parser {
       decls: decls,
       pos: pos,
     );
+  }
+
+  /// `import <ident|"path"> [alias]` (issue 048).
+  ImportSpec _importSpec() {
+    final keyword = _expect(TokenKind.import, 'oczekiwano `import`');
+    final String spec;
+    final bool isPath;
+    if (_check(TokenKind.string)) {
+      spec = _advance().lexeme;
+      isPath = true;
+    } else {
+      spec = _expect(TokenKind.ident, 'expected imported module name or path')
+          .lexeme;
+      isPath = false;
+    }
+    String? alias;
+    if (_check(TokenKind.ident)) {
+      final aliasTok = _advance();
+      _rejectCKeyword(aliasTok, 'an import alias');
+      alias = aliasTok.lexeme;
+    }
+    final imp = ImportSpec(
+      spec: spec,
+      isPath: isPath,
+      alias: alias,
+      pos: keyword.pos,
+    );
+    if (imp.qualifier.isEmpty) {
+      throw ParseError('import needs a module name', keyword.pos);
+    }
+    _importedModules.add(imp.qualifier);
+    return imp;
   }
 
   List<Attr> _attrs() {

@@ -18,10 +18,46 @@ final class Program {
   });
 }
 
+/// One `import` in a source unit (issue 048).
+///   import geom              → spec `geom`,        qualifier `geom`
+///   import geom oso          → spec `geom`,        qualifier `oso`
+///   import "path/to/osa"     → spec `path/to/osa`, qualifier `osa`
+///   import "path/to/osa" oso → spec `path/to/osa`, qualifier `oso`
+final class ImportSpec {
+  /// Resolution key: a module name (ident) or a relative path (string form).
+  final String spec;
+
+  /// True when written as `import "..."` (a path, may contain `/`).
+  final bool isPath;
+
+  /// Explicit local alias, if given.
+  final String? alias;
+  final SourcePos pos;
+
+  const ImportSpec({
+    required this.spec,
+    required this.isPath,
+    required this.alias,
+    required this.pos,
+  });
+
+  /// Last path segment of [spec] without a trailing `.kl`.
+  String get defaultQualifier {
+    var last = spec;
+    final slash = last.lastIndexOf('/');
+    if (slash >= 0) last = last.substring(slash + 1);
+    if (last.endsWith('.kl')) last = last.substring(0, last.length - 3);
+    return last;
+  }
+
+  /// The identifier used to qualify references in source.
+  String get qualifier => alias ?? defaultQualifier;
+}
+
 /// One source unit before the project loader combines it.
 final class ModuleUnit {
   final String? declaredName;
-  final List<String> imports;
+  final List<ImportSpec> imports;
   final List<StructDecl> structs;
   final List<FuncDecl> funcs;
 

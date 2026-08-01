@@ -1543,6 +1543,98 @@ fn main() {
     expect(c, isNot(contains('file_a_answer')));
   });
 
+  test('explicit import alias `import geom oso` (issue 048)', () async {
+    final dir = Directory.systemTemp.createTempSync('klin_alias048_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    File('${dir.path}/geom.kl').writeAsStringSync('''
+module geom
+pub fn answer(): i32 { return 42 }
+''');
+    File('${dir.path}/app.kl').writeAsStringSync('''
+module app
+import geom oso
+fn main() {
+  printf("%d\\n", oso.answer())
+}
+''');
+    final result = await _compileAndRun('${dir.path}/app.kl', dir);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, '42\n');
+
+    final program = loadProject('${dir.path}/app.kl');
+    Checker().check(program);
+    final c = emitC(program, '${dir.path}/app.kl');
+    // The alias is frontend-only; C uses the real module name.
+    expect(c, contains('geom_answer'));
+  });
+
+  test('string path import `import "sub/osa"` with optional alias (issue 048)',
+      () async {
+    final dir = Directory.systemTemp.createTempSync('klin_pathimp048_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    Directory('${dir.path}/sub').createSync();
+    File('${dir.path}/sub/osa.kl').writeAsStringSync('''
+module osa
+pub fn answer(): i32 { return 7 }
+''');
+    File('${dir.path}/app.kl').writeAsStringSync('''
+module app
+import "sub/osa"
+import "sub/osa" aa
+fn main() {
+  printf("%d %d\\n", osa.answer(), aa.answer())
+}
+''');
+    final result = await _compileAndRun('${dir.path}/app.kl', dir);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, '7 7\n');
+
+    final program = loadProject('${dir.path}/app.kl');
+    Checker().check(program);
+    final c = emitC(program, '${dir.path}/app.kl');
+    expect(c, contains('osa_answer'));
+  });
+
+  test('error: conflicting import alias (issue 048)', () {
+    final dir = Directory.systemTemp.createTempSync('klin_aliasdup048_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    File('${dir.path}/geom.kl').writeAsStringSync('''
+module geom
+pub fn a(): i32 { return 1 }
+''');
+    File('${dir.path}/util.kl').writeAsStringSync('''
+module util
+pub fn a(): i32 { return 2 }
+''');
+    File('${dir.path}/app.kl').writeAsStringSync('''
+module app
+import geom x
+import util x
+fn main() { printf("%d\\n", x.a()) }
+''');
+    expect(
+      () => loadProject('${dir.path}/app.kl'),
+      throwsA(
+        predicate(
+            (e) => e is ParseError && e.toString().contains('already bound')),
+      ),
+    );
+  });
+
+  test('error: C keyword as an import alias (issue 048)', () {
+    const source = '''
+module app
+import geom int
+fn main() {}
+''';
+    expect(
+      () => Parser(Lexer(source).tokenize()).parseUnit(),
+      throwsA(
+        predicate((e) => e is ParseError && e.toString().contains('C keyword')),
+      ),
+    );
+  });
+
   test('import resolves from lib/ next to the importer (issue 020)', () async {
     final dir = Directory.systemTemp.createTempSync('klin_lib_dir_');
     addTearDown(() => dir.deleteSync(recursive: true));
