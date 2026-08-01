@@ -147,17 +147,26 @@ void _writeStmt(StringBuffer buf, Stmt stmt, int indent) {
         buf.write(_expr(init, indent));
       }
       buf.writeln();
-    case LetDestructureStmt(:final isMut, :final fields, :final source):
+    case LetDestructureStmt(
+        :final isMut,
+        :final fields,
+        :final binds,
+        :final source
+      ):
       buf.write(pad);
       buf.write(isMut ? 'let mut { ' : 'let { ');
-      buf.write(fields.join(', '));
+      final parts = <String>[];
+      for (var i = 0; i < fields.length; i++) {
+        parts.add(fields[i] == binds[i] ? fields[i] : '${fields[i]}: ${binds[i]}');
+      }
+      buf.write(parts.join(', '));
       buf.write(' } = ');
       buf.write(_expr(source, indent));
       buf.writeln();
     case LetArrayDestructureStmt(:final isMut, :final names, :final source):
       buf.write(pad);
       buf.write(isMut ? 'let mut [' : 'let [');
-      buf.write(names.join(', '));
+      buf.write(names.map((n) => n ?? '_').join(', '));
       buf.write('] = ');
       buf.write(_expr(source, indent));
       buf.writeln();

@@ -1114,6 +1114,7 @@ void _emitStmt(
 
     case LetDestructureStmt(
         :final fields,
+        :final binds,
         :final source,
         :final pos,
         :final sourceType,
@@ -1135,7 +1136,7 @@ void _emitStmt(
       }
       for (var i = 0; i < fields.length; i++) {
         buf.writeln(
-            '$pad${_cDecl(fts[i], fields[i])} = $access${fields[i]};');
+            '$pad${_cDecl(fts[i], binds[i])} = $access${fields[i]};');
       }
 
     case LetArrayDestructureStmt(
@@ -1147,33 +1148,39 @@ void _emitStmt(
       _line(buf, pos.line, sourcePath);
       final et = elemType!;
       if (source is ArrayLitExpr) {
-        // Evaluate every element into a fresh temp before binding, so a swap
-        // like `let [a, b] = [b, a]` reads the outer values, not new bindings.
-        final temps = <String>[];
+        // Evaluate each bound element into a fresh temp before binding, so a
+        // swap like `let [a, b] = [b, a]` reads the outer values, not new
+        // bindings. `_` positions are skipped (not evaluated, not bound).
+        final temps = List<String?>.filled(names.length, null);
         for (var i = 0; i < names.length; i++) {
+          if (names[i] == null) continue;
           final t = state.nextValueTemp();
-          temps.add(t);
+          temps[i] = t;
           buf.writeln(
               '$pad${_cDecl(et, t)} = ${_emitExpr(source.elements[i], ctx)};');
         }
         for (var i = 0; i < names.length; i++) {
-          buf.writeln('$pad${_cDecl(et, names[i])} = ${temps[i]};');
+          final name = names[i];
+          if (name == null) continue;
+          buf.writeln('$pad${_cDecl(et, name)} = ${temps[i]};');
         }
       } else {
         // A plain array variable is indexed in place. If a binding shadows the
         // source name, capture the array via a pointer first so later reads do
         // not index a freshly-declared scalar.
         final base = _emitExpr(source, ctx);
+        final String indexed;
         if (source is NameExpr && names.contains(source.name)) {
           final tmp = state.nextValueTemp();
           buf.writeln('$pad${_cType(et)} *$tmp = $base;');
-          for (var i = 0; i < names.length; i++) {
-            buf.writeln('$pad${_cDecl(et, names[i])} = $tmp[$i];');
-          }
+          indexed = tmp;
         } else {
-          for (var i = 0; i < names.length; i++) {
-            buf.writeln('$pad${_cDecl(et, names[i])} = $base[$i];');
-          }
+          indexed = base;
+        }
+        for (var i = 0; i < names.length; i++) {
+          final name = names[i];
+          if (name == null) continue; // `_` skip
+          buf.writeln('$pad${_cDecl(et, name)} = $indexed[$i];');
         }
       }
 

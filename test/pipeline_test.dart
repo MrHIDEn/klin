@@ -220,6 +220,59 @@ fn main() {
     );
   });
 
+  test('golden: destructuring rename and `_` skip (issue 056 phase D)',
+      () async {
+    final result = await _compileAndRun('test/destruct_phase_d.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(
+        result.stdout, await File('test/destruct_phase_d.out').readAsString());
+
+    final source = File('test/destruct_phase_d.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/destruct_phase_d.kl');
+    // Rename binds the local name from the named field.
+    expect(c, contains('int32_t px = p.x;'));
+    expect(c, contains('int32_t py = p.y;'));
+    // `_` skips positions but keeps the original indices.
+    expect(c, contains('int32_t b = xs[1];'));
+    expect(c, contains('int32_t d = xs[3];'));
+    expect(c, contains('int32_t last = xs[3];'));
+  });
+
+  test('error: duplicate renamed binding in struct pattern (issue 056)', () {
+    const source = '''
+struct P { x: i32
+ y: i32 }
+fn main() {
+  let p = P{ x: 1, y: 2 }
+  let { x: a, y: a } = p
+}
+''';
+    expect(
+      () => Parser(Lexer(source).tokenize()).parse(),
+      throwsA(
+        predicate((e) =>
+            e is ParseError && e.toString().contains('duplicate name `a`')),
+      ),
+    );
+  });
+
+  test('error: array pattern that binds nothing (all `_`) (issue 056)', () {
+    const source = '''
+fn main() {
+  let xs: [2]i32 = [1, 2]
+  let [_, _] = xs
+}
+''';
+    expect(
+      () => Parser(Lexer(source).tokenize()).parse(),
+      throwsA(
+        predicate((e) => e is ParseError && e.toString().contains('binds nothing')),
+      ),
+    );
+  });
+
   test('error: unhandled !T result', () {
     const source = '''
 fn fallible(): !i32 { return error(1) }

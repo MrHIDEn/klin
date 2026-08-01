@@ -576,6 +576,7 @@ final class Checker {
       case LetDestructureStmt(
           :final isMut,
           :final fields,
+          :final binds,
           :final source,
           :final pos
         ):
@@ -616,9 +617,9 @@ final class Checker {
         }
         stmt.sourceType = sourceType;
         stmt.fieldTypes = fieldTypes;
-        for (var i = 0; i < fields.length; i++) {
+        for (var i = 0; i < binds.length; i++) {
           _scope.define(
-            _Symbol(name: fields[i], type: fieldTypes[i], isMut: isMut, pos: pos),
+            _Symbol(name: binds[i], type: fieldTypes[i], isMut: isMut, pos: pos),
           );
         }
 
@@ -663,6 +664,7 @@ final class Checker {
         _materialize(source, sourceType);
         stmt.elemType = elemType;
         for (final name in names) {
+          if (name == null) continue; // `_` skip
           _scope.define(
             _Symbol(name: name, type: elemType, isMut: isMut, pos: pos),
           );

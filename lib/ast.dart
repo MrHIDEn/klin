@@ -189,15 +189,20 @@ final class LetStmt extends Stmt {
   });
 }
 
-/// Struct destructuring declaration (issue 056, phase A):
+/// Struct destructuring declaration (issue 056, phase A + D rename):
 ///   let { x, y } = expr
 ///   let mut { x, y } = expr
+///   let { x: px, y: py } = expr   // rename (phase D)
 /// Lowers to a sequence of plain field reads (`.field`) — no hidden cost.
 final class LetDestructureStmt extends Stmt {
   final bool isMut;
 
-  /// Field/binding names in declaration order (phase A: name == field name).
+  /// Struct field names to read, in declaration order.
   final List<String> fields;
+
+  /// Local binding names, parallel to [fields] (equal to the field name unless
+  /// renamed with `field: local`).
+  final List<String> binds;
 
   /// The struct value being destructured; evaluated once.
   final Expr source;
@@ -210,22 +215,25 @@ final class LetDestructureStmt extends Stmt {
   LetDestructureStmt({
     required this.isMut,
     required this.fields,
+    required this.binds,
     required this.source,
     required this.pos,
   });
 }
 
-/// Fixed-array destructuring declaration (issue 056, phase C):
+/// Fixed-array destructuring declaration (issue 056, phase C + D skip):
 ///   let [a, b] = xs        // xs : [2]T
 ///   let mut [a, b] = xs
+///   let [_, _, c] = xs     // `_` skips a position (phase D)
 /// Only fixed-length arrays `[N]T` with `N` == number of patterns. Lowers to
 /// positional reads (`xs[i]`) or, for an array literal source, element-wise
 /// binds — no hidden cost.
 final class LetArrayDestructureStmt extends Stmt {
   final bool isMut;
 
-  /// Binding names in positional order (index i binds element i).
-  final List<String> names;
+  /// Binding names in positional order (index i binds element i). A `null`
+  /// entry is a `_` skip — that element is not bound.
+  final List<String?> names;
 
   /// The array value being destructured; a name is indexed in place, an array
   /// literal binds element-wise.
