@@ -41,6 +41,22 @@ zawiedzie.
 - Windows: brak Homebrew — na teraz `.zip` z Release; kanały Scoop/WinGet =
   przyszłość (osobno).
 
+## Możliwe automatyzacje (przyszłość, opcjonalne)
+
+Pipeline już buduje i publikuje wszystkie 6 wersji z jednego tagu (matryca,
+`fail-fast: false`, job `publish`). Do domknięcia „jeden przycisk":
+
+- **Auto-`sha256` w Homebrew**: po release policzyć sumę źródła i zaktualizować
+  `sha256` w [`Formula/klin.rb`](../Formula/klin.rb) (commit/PR do tapu),
+  zamiast ręcznego kroku z `source-checksum`.
+- **Smoke po buildzie**: na każdym runnerze po kompilacji uruchomić
+  `klin --version` i skompilować `examples/hello.kl` (gdzie jest host C), by
+  release nie wypuścił zepsutej binarki. Uwaga: na Windows wymaga C-kompilatora
+  na runnerze (MSVC/clang/mingw) — do rozważenia, czy smoke tylko tam, gdzie
+  `cc` jest dostępny.
+- **Weryfikacja `.sha256`**: krok `shasum -c` / `Get-FileHash` sprawdzający
+  spójność sidecarów przed publikacją.
+
 ## Uwaga
 
 Wydana binarka to **frontend** Klina; do `klin run` nadal potrzebny hostowy
