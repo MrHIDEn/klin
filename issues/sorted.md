@@ -72,7 +72,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [042](042-time-format-luxon.md) | Dialekt formatu `yyyy-MM-dd` w `time` | 💭 | 037 |
 | [043](043-rtc.md) | RTC → `Instant` (osobny moduł) | 💭 | 010, 031? |
 | [044](044-cpu-cycles.md) | Cykle CPU / SysTick → `Duration` | 💭 | 010 |
-| [048](048-import-aliases.md) | Aliasy importów (+ string lokalny) | 💭 | 006, 047 |
+| [048](048-import-aliases.md) | Aliasy importów (+ string lokalny) | ✅ | 006, 047 |
 | [049](049-remote-imports.md) | Importy zdalne + `klin get` / `update` | 💭 | 048, 020, 047 |
 | [050](050-sqlite-wrapper.md) | Opakowanie SQLite (FFI, niski priorytet) | 💭 | 021 |
 | [051](051-json-wrapper.md) | Opakowanie JSON + ścieżki `$…` (niski priorytet) | 💭 | 021, 026? |

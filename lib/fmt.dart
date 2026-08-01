@@ -27,8 +27,10 @@ String formatUnit(ModuleUnit unit) {
     buf.writeln('module ${unit.declaredName}');
     first = false;
   }
-  for (final name in unit.imports) {
-    buf.writeln('import $name');
+  for (final imp in unit.imports) {
+    final spec = imp.isPath ? '"${imp.spec}"' : imp.spec;
+    final alias = imp.alias == null ? '' : ' ${imp.alias}';
+    buf.writeln('import $spec$alias');
     first = false;
   }
   if (unit.declaredName != null || unit.imports.isNotEmpty) {

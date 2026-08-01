@@ -116,28 +116,40 @@ Program loadProject(
     loaded[packageKey] = moduleName;
 
     final aliases = importAliases.putIfAbsent(moduleName, () => {});
-    final pendingImports = <String>{};
+    // Group imports by their source qualifier (alias or default). The same
+    // qualifier bound to two different specs is a conflict.
+    final byQualifier = <String, ImportSpec>{};
     for (final u in units) {
-      for (final importName in u.unit.imports) {
-        pendingImports.add(importName);
+      for (final imp in u.unit.imports) {
+        final existing = byQualifier[imp.qualifier];
+        if (existing != null &&
+            existing.resolutionKey != imp.resolutionKey) {
+          throw ParseError(
+            'import alias `${imp.qualifier}` is already bound to '
+            '`${existing.spec}`',
+            imp.pos,
+          );
+        }
+        byQualifier[imp.qualifier] = imp;
       }
     }
     // Resolve imports relative to the package directory (parent of files).
     final fromDir = File(absFiles.first).parent.path;
-    for (final importName in pendingImports.toList()..sort()) {
+    for (final qualifier in byQualifier.keys.toList()..sort()) {
+      final imp = byQualifier[qualifier]!;
       final target = _resolveImportTarget(
         fromDir,
-        importName,
+        imp.resolutionKey,
         klinPathDirs: klinPathDirs,
       );
       final childModule = switch (target) {
         _FileImport(:final path) => loadPackageFiles([path]),
         _DirImport(:final path) => loadPackageFiles(
             _packageKlFiles(path),
-            requiredModule: importName,
+            requiredModule: imp.defaultQualifier,
           ),
       };
-      aliases[importName] = childModule;
+      aliases[qualifier] = childModule;
     }
 
     loading.remove(packageKey);

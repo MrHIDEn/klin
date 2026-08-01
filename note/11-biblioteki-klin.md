@@ -28,6 +28,24 @@ siblings z tym samym `module`.
 
 `$KLIN_STDLIB` zostaje override’em stdlib; nie łączyć z `$KLIN_PATH`.
 
+## Aliasy i import ścieżkowy (048)
+
+```klin
+import geom                      // qualifier = geom
+import geom oso                  // lokalny alias: qualifier = oso (geom niedostępne)
+import "sub/osa"                 // string; qualifier = ostatni segment (osa)
+import "sub/osa" aa              // string + alias: qualifier = aa
+```
+
+- Alias/qualifier to pojęcie **frontendu** — mangling C używa realnej nazwy
+  `module` (np. `oso.f()` → `geom_f`).
+- Alias zastępuje domyślny qualifier (po `import geom oso` nie ma już `geom.…`).
+- String to **ścieżka względna** (może zawierać `/`), resolwowana jak wyżej
+  (`lib/`, `-I`, `$KLIN_PATH`, plik lub katalog). Domyślny qualifier = ostatni
+  segment bez `.kl`. Katalog-pakiet: pliki muszą deklarować `module <segment>`.
+- Ten sam qualifier związany z dwoma różnymi specyfikatorami = błąd. Słowo
+  kluczowe C jako alias = błąd.
+
 ## Przykłady
 
 Single-file w `lib/` ([020](../issues/020-biblioteki-klin.md)):
@@ -56,7 +74,7 @@ Emisja nadal **jeden** `.c`. Moduły: [12-moduly.md](12-moduly.md).
 
 ## Poza zakresem
 
-Manifest / wersje / rejestr, nested `import a/b`, osobne `.a` z lib Klin.
-Aliasy / string: [048](../issues/048-import-aliases.md). Remote GitHub:
-[049](../issues/049-remote-imports.md).
+Manifest / wersje / rejestr, osobne `.a` z lib Klin. Aliasy / import
+ścieżkowy: [048](../issues/048-import-aliases.md) ✅ (patrz wyżej). Remote
+GitHub: [049](../issues/049-remote-imports.md).
 FFI C: [09-ffi-c.md](09-ffi-c.md). CLI: [06-cli.md](06-cli.md).

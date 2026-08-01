@@ -1,9 +1,10 @@
 module app
 import geom
-import util
+import util calc
 
 fn main() {
     let p = geom.Vec2{ x: 3, y: 4 }
     printf("len_sq=%d\n", p.len_sq())
-    printf("2+3=%d\n", util.add(2, 3))
+    // `calc` is a local alias for module `util` (issue 048).
+    printf("2+3=%d\n", calc.add(2, 3))
 }

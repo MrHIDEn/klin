@@ -35,7 +35,8 @@ Optional host I/O, clocks, heap, and slice helpers: [`stdlib/`](stdlib/)
 `import slice_alloc` — see [note/08-time.md](note/08-time.md),
 [note/14-allocator.md](note/14-allocator.md),
 [note/16-slice.md](note/16-slice.md)).
-Klin libraries (`lib/`, `-I`, `$KLIN_PATH`; directory packages):
+Klin libraries (`lib/`, `-I`, `$KLIN_PATH`; directory packages; import aliases
+`import geom oso` and string path imports `import "sub/osa"`):
 [note/11-biblioteki-klin.md](note/11-biblioteki-klin.md),
 [`examples/klin_lib/`](examples/klin_lib/), [`examples/pkg_geom/`](examples/pkg_geom/).
 C FFI — import (`@[cimport]` / `@[link]`) **and** export (`@[cexport]`):

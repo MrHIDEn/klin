@@ -1,6 +1,6 @@
 # 048 — Aliasy importów (+ string lokalny)
 
-**Status:** 💭 do rozważenia
+**Status:** ✅ zrobione (`import geom oso`, `import "path" [alias]`)
 **Zależy od:** [006](006-moduly.md), [047](047-directory-modules.md)
 
 ## Kontekst
@@ -20,11 +20,18 @@ import "path/to/osa" oso             // string + alias
 Resolucja ścieżek jak 020/047 (`lib/`, `-I`, `KLIN_PATH`, plik lub katalog).
 `pub` / private bez zmian.
 
-## Zakres MVP (gdy robione)
+## Zakres MVP (zrobione)
 
-- parser: opcjonalny alias po `import`
-- ewent. `import "względna/ścieżka"` **lokalnie** (bez sieci)
-- testy + krótka nota w [note/11](../note/11-biblioteki-klin.md)
+- parser: opcjonalny alias po `import` (ident lub string) ✅
+- `import "względna/ścieżka" [alias]` **lokalnie** (bez sieci) ✅
+- testy + nota w [note/11](../note/11-biblioteki-klin.md) ✅
+
+Implementacja: qualifier (alias lub domyślny = ostatni segment) kluczuje
+`importAliases` i jest używany w źródle; mangling C używa realnej nazwy
+`module`. Kolizja aliasu i alias będący słowem kluczowym C są odrzucane.
+Węzeł `ImportSpec` w `lib/ast.dart`, parsowanie w `lib/parser.dart`
+(`_importSpec`), resolucja/kluczowanie w `lib/project.dart`, round-trip w
+`lib/fmt.dart`. Testy w `test/pipeline_test.dart` (issue 048).
 
 ## Poza zakresem
 
