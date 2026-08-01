@@ -1,12 +1,16 @@
-# 029 — Event loop / `async`·`await` (styl JS)
+# 029 — Event loop / `async`·`await` (duże zwierzę)
 
-**Status:** 💭 do rozważenia
-**Zależy od:** decyzji D1/D3; prawdopodobnie 018, 026, 028
+**Status:** 💭 do rozważenia (szeroki zakres — fazować; nie blokuje rdzenia)
+**Zależy od:** decyzji D1/D3; prawdopodobnie 018, 026, 028; remote lib → 049
 
 ## Pytanie
 
-Czy (i jak) da się mieć wygodę w stylu JS — event loop + `async`/`await` —
-**bez** ukrytej alokacji / ukrytego runtime, które łamie zasadę nadrzędną.
+Czy (i jak) da się mieć wygodę w stylu JS/Rust — event loop + opcjonalnie
+`async`/`await` — **bez** ukrytej alokacji / ukrytego runtime, które łamie
+zasadę nadrzędną.
+
+To **duże zwierzę**: nie jeden PR. Najpierw lib z callbackami; `async`/`await`
+w języku dopiero gdy lib i model executora są jasne.
 
 Pokrewne: [018](018-generators-yield.md), [024](024-rtos.md), [028](028-freertos.md).
 
@@ -201,7 +205,107 @@ Gdzie co się dzieje:
 | `eventloop.Executor` / `run` | **biblioteka zdalna** — jawna pętla |
 | `queue_buf` | pamięć callera — zero ukrytego malloc |
 
-Bez `async` ten sam efekt = callbacki + `every_ms` + `run` (sekcja wyżej).
+### Obok: ten sam efekt **bez** `async`/`await` (to działa koncepcyjnie dziś)
+
+Kompilator **nie** musi znać `async`. Wystarczy lib + zwykłe `fn` (fn-pointer):
+
+```klin
+import "github/mrhiden/eventloop"
+import io
+
+fn on_tick() {
+    io.println("tick")
+}
+
+fn main() {
+    let mut queue_buf: [64]u8
+    let mut ex = eventloop.Executor{}
+    ex.init(queue_buf[:])
+    ex.every_ms(100, on_tick)   // tylko rejestracja — jeszcze nie woła
+    ex.run()                    // tu życie: … → on_tick() → …
+}
+```
+
+| | Bez async (MVP lib) | Ze szkicu async |
+|---|---|---|
+| Słowa `async` / `await` | nie | tak |
+| API lib | `every_ms` + `run` | `spawn` + `run` (+ `sleep_ms`) |
+| Gdzie „tick” | `on_tick()` z wewnątrz `run()` | ciało `ticker` po `.await` |
+| Zmiana języka Klin | nie | tak |
+
+**MVP ekosystemu = kolumna lewa.** Szkic z `async` = „później, jeśli kiedyś”.
+
+### Składnia `async`/`await` (gdy kiedyś w rdzeniu) — styl Rust, nie JS
+
+- `async` jest przy **funkcji**: `async fn ticker() { … }`
+- `await` jest **postfix** na końcu wyrażenia: `delay_ms(100).await`
+- **nie** styl JS: `await delay_ms(100)`
+
+```klin
+// Rust-style (cel):
+delay_ms(100).await
+
+// NIE JS:
+// await delay_ms(100)
+```
+
+### Stan dziś w kompilatorze / IDE
+
+| | Obecny Klin |
+|---|---|
+| Parser `async` / `.await` | **nie** |
+| Desugar → state machine | **nie** |
+| Paczka `github/mrhiden/eventloop` | **nie** (szkic) |
+| `klin run` na `sketch_async_eventloop.kl` | **nie przejdzie** |
+
+Wtyczka IntelliJ (highlight / parser) musiałaby znać `async` / `.await` **dopiero
+gdy** wejdą do języka — to nie „wtyczka eventloop”; lib sama nie uczy IDE
+słów kluczowych. Do tego czasu IDE ich nie potrzebuje.
+
+### Wiele loopów: taski RTOS i rdzenie CPU (SMP)
+
+Podejście z **jawnym** `Executor` / `run()` **umożliwia** osobne pętle — to
+cel warstwy 3, nie wypadek.
+
+Na taskach RTOS ([028](028-freertos.md)):
+
+```klin
+$rtos_task("net", 1024, 3) {
+    let mut buf_net: [64]u8
+    let mut ex = eventloop.Executor{}
+    ex.init(buf_net[:])
+    ex.every_ms(10, on_net)
+    ex.run()    // tylko w tasku "net"
+}
+
+$rtos_task("blink", 512, 2) {
+    // bez event-loop
+}
+```
+
+Na rdzeniach (SMP) — ten sam wzorzec: **jeden executor na rdzeń / wątek**,
+osobny bufor kolejki; nie jeden ukryty loop systemowy.
+
+```klin
+// rdzeń 0
+ex0.init(buf0[:]); ex0.run()
+// rdzeń 1
+ex1.init(buf1[:]); ex1.run()
+```
+
+Dane współdzielone między taskami/rdzeniami → nadal jawny mutex / queue RTOS
+([028](028-freertos.md)). `await` **nie** jest lockiem między rdzeniami.
+
+Unikać: jednego globalnego Node-loop na cały firmware.
+
+### Fazy (żeby nie pożreć roadmapy)
+
+1. **Docs / model** (ten issue) — ✅ kierunek spisany  
+2. **Lib callback** (`every_ms` / `run`, remote lub lokalna) — bez zmian języka  
+3. **Przykład z RTOS** — loop w jednym tasku, drugi bez  
+4. **Opcjonalnie później:** `async`/`await` w rdzeniu + IDE + szkic → prawdziwy example  
+
+Kroki 2–3 nie czekają na async. Krok 4 = osobne, duże zwierzę.
 
 ## Hipotezy techniczne (nie zobowiązanie)
 
