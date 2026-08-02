@@ -31,6 +31,9 @@ fn main() {
     if math.pi() > 3.0 {
         printf("pi_ok\n")
     }
+    if math.di() > 6.0 {
+        printf("di_ok\n")
+    }
     if math.e() > 2.0 {
         printf("e_ok\n")
     }

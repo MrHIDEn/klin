@@ -26,7 +26,7 @@ Thin `@[cimport]` over `<math.h>` + `@[link("-lm")]`. Cost is a call (libm).
 | `floor` / `ceil` | `floor` / `ceil` |
 | `pow` | `pow` |
 | `min` / `max` | `fmin` / `fmax` |
-| `pi()` / `e()` | Klin literals (no module-level `const`) |
+| `pi()` / `di()` / `e()` | Klin literals (`di` = 2π; no module-level `const`) |
 
 ## Delivered
 

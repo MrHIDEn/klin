@@ -35,6 +35,11 @@ pub fn pi(): f64 {
     return 3.141592653589793
 }
 
+/// Full turn in radians (2π), sometimes called τ.
+pub fn di(): f64 {
+    return 6.283185307179586
+}
+
 pub fn e(): f64 {
     return 2.718281828459045
 }
