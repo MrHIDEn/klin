@@ -5,6 +5,9 @@ ceil_ok
 min_ok
 max_ok
 pow_ok
+log_ok
+log10_ok
+log2_ok
 sin_ok
 cos_ok
 pi_ok

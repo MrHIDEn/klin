@@ -60,8 +60,9 @@ import math
 
 let y = math.sin(x)
 let a = math.abs(-2.5)
+let n = math.log(x)     // natural (ln)
 let p = math.pi()
-let t = math.di()   // 2π
+let t = math.di()       // 2π
 ```
 
 Links with `-lm`. Do **not** import on bare metal without libm.

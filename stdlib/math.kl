@@ -25,6 +25,16 @@ pub fn ceil(x: f64): f64
 @[cinclude("<math.h>"), cimport, codename("pow")]
 pub fn pow(x, y: f64): f64
 
+/// Natural logarithm (base *e*).
+@[cinclude("<math.h>"), cimport, codename("log")]
+pub fn log(x: f64): f64
+
+@[cinclude("<math.h>"), cimport, codename("log10")]
+pub fn log10(x: f64): f64
+
+@[cinclude("<math.h>"), cimport, codename("log2")]
+pub fn log2(x: f64): f64
+
 @[cinclude("<math.h>"), cimport, codename("fmin")]
 pub fn min(a, b: f64): f64
 
