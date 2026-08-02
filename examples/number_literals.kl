@@ -7,6 +7,10 @@ fn main() {
     let mask: u32 = 0b1111
     printf("flags: %u  mask: %u\n", flags, mask)
 
+    // Modern octal (0o…), never C's leading-zero form.
+    let perm: u32 = 0o755
+    printf("perm: %u\n", perm)
+
     // Float exponent form, with or without a fractional part and a sign.
     let avogadro: f64 = 6.022e23
     let milli: f64 = 1e-3

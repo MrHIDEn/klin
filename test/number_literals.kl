@@ -4,6 +4,10 @@ fn main() {
     let bit: u32 = 0b101
     printf("bin: %u %u\n", mask, bit)
 
+    // Modern octal (0o…), never C's leading-zero form.
+    let perm: u32 = 0o755
+    printf("oct: %u\n", perm)
+
     // Float exponent literals: with and without a fractional part, signs.
     let big: f64 = 1e9
     let small: f64 = 1.5e-3

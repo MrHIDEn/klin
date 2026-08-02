@@ -1,15 +1,18 @@
 # 081 — Literały liczbowe i znakowe (binarne, wykładnik float, znakowe, ósemkowe?)
 
-**Status:** 🔨 w toku — **Grupa 1 zrobiona** (`0b` + wykładnik float); Grupa 2/ósemkowe do rozważenia
+**Status:** 🔨 w toku — zrobione: `0b`, `0o`, wykładnik float; zostaje tylko Grupa 2 (znakowe `'A'`)
 **Zależy od:** [002](002-tablica-symboli-checker.md) (lekser/typy); powiązane z [078](078-bitwise-ops.md) (maski)
 
-## Zrobione (Grupa 1)
+## Zrobione (Grupa 1 + ósemkowe)
 
-- Binarne `0b1010` / `0B…` (z `_`), oraz wykładnik float `1e9` / `1.5e-3` / `2.5E+2`
-  (z kropką i bez). Lekser: walidacja cyfry po `0b`; wykładnik konsumowany tylko
-  gdy po `e`/`E` (opcjonalny znak) jest cyfra, więc `1end` = `1` + `end`.
-- Emisja przenośna: `0b…` → `0x…` (ten sam wzorzec bitów; brak `0b` w wyjściu →
-  gcc/clang/tcc OK); wykładniki wprost. Długość tablicy akceptuje `0b…`.
+- Binarne `0b1010` / `0B…`, **ósemkowe `0o755` / `0O…`** (oba z `_`), oraz
+  wykładnik float `1e9` / `1.5e-3` / `2.5E+2` (z kropką i bez). Lekser: walidacja
+  cyfry po `0b`/`0o`; wykładnik konsumowany tylko gdy po `e`/`E` (opcjonalny znak)
+  jest cyfra, więc `1end` = `1` + `end`.
+- Emisja przenośna: `0b…`/`0o…` → `0x…` (ta sama wartość; brak `0b`/`0o` w
+  wyjściu → gcc/clang/tcc OK); wykładniki wprost. Długość tablicy akceptuje
+  `0b…`/`0o…`. **Nie** przejmujemy C‑owej ósemkowej z zerem wiodącym (`010` u nas
+  to dziesiętne `10`).
 - `fmt` zachowuje pisownię źródłową. Przykład: `examples/number_literals.kl`,
   golden: `test/number_literals.kl`.
 
@@ -47,8 +50,9 @@
 
 - **Grupa 1 — ✅ zrobiona:** binarne `0b` + wykładnik float `1e…`. Pokrywa realne
   potrzeby (bity + f64), emisja przenośna.
+- **Ósemkowe `0o` — ✅ zrobione:** jawny prefiks `0o755`, emisja → `0x…`
+  (bez C‑owej formy z zerem wiodącym).
 - **Grupa 2 — 💭:** literały znakowe `'A'` (większa zmiana leksera) → osobno.
-- **Ósemkowe `0o` — 💭:** niski priorytet; dodać przy okazji albo pominąć.
 
 ## Punkty implementacji
 
