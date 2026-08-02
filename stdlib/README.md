@@ -18,6 +18,7 @@ User libraries / directory packages: [docs/11-klin-libraries.md](../docs/11-klin
 |---|---|
 | [`io`](io.kl) | Host `print` / `println` (thin libc wrappers) |
 | [`str`](str.kl) | Host `eq` / `len` (thin `strcmp` / `strlen`; no `==` on `str`) |
+| [`math`](math.kl) | Host `sin` / `sqrt` / … (thin libm; `@[link("-lm")]`) |
 | [`testing`](testing.kl) | `assert` / `assert_eq_i32` for `klin test` |
 | [`time`](time.kl) | Wall / monotonic clocks, `Duration`, format, UTC calendar `add_*` |
 | [`mem`](mem.kl) | Explicit host heap `Allocator` (`malloc`/`free`) |
@@ -48,6 +49,23 @@ let n = str.len(s)
 ```
 
 Do **not** import on bare metal (pulls `string.h`).
+
+## `math`
+
+Floating-point helpers via libm ([issue 083](../issues/083-stdlib-math.md)).
+Klin module style (`math.sin`), not a global JS `Math`:
+
+```klin
+import math
+
+let y = math.sin(x)
+let a = math.abs(-2.5)
+let n = math.log(x)     // natural (ln)
+let p = math.pi()
+let t = math.di()       // 2π
+```
+
+Links with `-lm`. Do **not** import on bare metal without libm.
 
 ## `testing`
 

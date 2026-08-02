@@ -1,0 +1,49 @@
+import math
+
+fn main() {
+    if math.abs(-2.0) == 2.0 {
+        printf("abs_ok\n")
+    }
+    if math.sqrt(9.0) == 3.0 {
+        printf("sqrt_ok\n")
+    }
+    if math.floor(3.7) == 3.0 {
+        printf("floor_ok\n")
+    }
+    if math.ceil(3.2) == 4.0 {
+        printf("ceil_ok\n")
+    }
+    if math.min(1.0, 2.0) == 1.0 {
+        printf("min_ok\n")
+    }
+    if math.max(1.0, 2.0) == 2.0 {
+        printf("max_ok\n")
+    }
+    if math.pow(2.0, 3.0) == 8.0 {
+        printf("pow_ok\n")
+    }
+    if math.log(math.e()) == 1.0 {
+        printf("log_ok\n")
+    }
+    if math.log10(1000.0) == 3.0 {
+        printf("log10_ok\n")
+    }
+    if math.log2(8.0) == 3.0 {
+        printf("log2_ok\n")
+    }
+    if math.sin(0.0) == 0.0 {
+        printf("sin_ok\n")
+    }
+    if math.cos(0.0) == 1.0 {
+        printf("cos_ok\n")
+    }
+    if math.pi() > 3.0 {
+        printf("pi_ok\n")
+    }
+    if math.di() > 6.0 {
+        printf("di_ok\n")
+    }
+    if math.e() > 2.0 {
+        printf("e_ok\n")
+    }
+}
