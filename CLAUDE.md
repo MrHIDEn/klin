@@ -3,7 +3,7 @@
 A systems language compiled to C. The backend produces one readable `.c` file,
 then uses gcc, clang, or tcc. The compiler is written in Dart.
 
-The project context, decisions, architecture, and roadmap are Polish design
+The project context, decisions, architecture, and roadmap are English design
 documents:
 
 - Context: @docs/00-idea.md
