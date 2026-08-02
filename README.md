@@ -1,5 +1,19 @@
 # Klin
 
+```
+              ▲
+             ╱ ╲
+            ╱   ╲
+           ╱  K  ╲
+          ╱   L   ╲
+         ╱    I    ╲
+        ╱     N     ╲
+       ╱_____________╲
+          klin → C
+```
+
+A wedge between you and C — thin layer, zero hidden cost.
+
 > **Experimental 0.1.0** — the language and toolchain work for real programs
 > (host + STM32 demos), but the public packaging surface is still settling.
 > Expect breaking changes before 1.0.
