@@ -39,7 +39,8 @@ building the core from scratch.
 | [021](021-c-libraries.md) | C libraries (FFI / link) | ✅ | 006, 010 |
 | [022](022-asm-libraries.md) | ASM units (`.s` via `@[link]`) | ✅ | 021 |
 | [023](023-examples.md) | `examples/` catalog (+ `stm32/`) | ✅ | 001+ |
-| [025](025-english-project.md) | English project (except `issues/` + `docs/` — superseded by 082) | ✅ | — |
+| [025](025-english-project.md) | English project (PL design/roadmap exception superseded by 082) | ✅ | — |
+| [082](082-english-issues-docs.md) | English `docs/` + `issues/` (`note/` → `docs/`, EN slugs) | ✅ | 025 |
 | [026](026-preprocessor.md) | Preprocessor (`$fn`…, D3) | ✅ | 010+ |
 | [027](027-svd-ergonomic-api.md) | Ergonomic SVD API (`$peripherals_from_svd`) | ✅ | 011, 026 |
 | [032](032-klin-run.md) | CLI: `klin run <file.kl>` | ✅ | 001 |

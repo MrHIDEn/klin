@@ -4,6 +4,12 @@ Klin is a systems programming language that compiles to C. Its Dart frontend
 parses and checks Klin source, then emits one readable `.c` file for
 `gcc`, `clang`, or `tcc`.
 
+Design docs (English): [`docs/`](docs/) — start with
+[docs/00-idea.md](docs/00-idea.md),
+[docs/01-decisions.md](docs/01-decisions.md),
+[docs/02-architecture.md](docs/02-architecture.md).
+Roadmap: [`issues/sorted.md`](issues/sorted.md).
+
 ## Toolchain
 
 ```sh
@@ -33,7 +39,7 @@ dart run bin/klin.dart --emit-pp examples/point_macro.kl
 | `-I` | Klin source search dirs (`import` → `name.kl`; [docs/11-klin-libraries.md](docs/11-klin-libraries.md)) |
 | `-l` / `-L` | Host linker libs / search paths ([docs/09-ffi-c.md](docs/09-ffi-c.md)) |
 
-CLI summary (PL): [docs/06-cli.md](docs/06-cli.md).
+CLI summary: [docs/06-cli.md](docs/06-cli.md).
 Homebrew (`Formula/klin.rb`, tap / `--HEAD`): [docs/17-homebrew.md](docs/17-homebrew.md).
 
 Optional host I/O, clocks, heap, and slice helpers: [`stdlib/`](stdlib/)

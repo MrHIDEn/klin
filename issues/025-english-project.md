@@ -1,29 +1,29 @@
 # 025 — English project (except pl-PL)
 
-**Status:** ✅ done
+**Status:** ✅ done (PL exception for design/roadmap **superseded by [082](082-english-issues-docs.md)**)
 **Depends on:** —
 
 ## Goal
 
 Review the repo and move to English **everything except the Polish corpus**.
 
-## PL stayed (pl-PL) — superseded
+## PL stayed (pl-PL) — superseded by 082
 
-Originally `issues/` and `docs/` were the official PL corpus (roadmap, decisions,
-architecture) and were not translated in 025. **That exception is being superseded:**
-issues and docs are moving to English (full migration tracked in [082](082-english-issues-docs.md)).
-Do not translate to `docs/pl-PL/{issues,note}` unless link breakage is avoided — out of
-025 scope or a separate micro-step.
+Originally `issues/` and `note/` (later `docs/`) were the official PL corpus
+(roadmap, decisions, architecture) and were not translated in 025.
+**[082](082-english-issues-docs.md)** completed the migration: `note/` → `docs/`,
+and both `docs/` and `issues/` are English (including English file slugs).
 
-## Moved to English
+## Moved to English (025)
 
 - [x] frontend / CLI messages (`lib/*`, `bin/*`, `svd2klin`)
 - [x] tests: assertions on error text, `test(...)` descriptions, comments in `test/`
 - [x] `README.md`, `pubspec.yaml` description, CLI help
-- [x] `CLAUDE.md` / agent rules: EN + links to pl-PL `docs/` / `issues/` (links updated as corpus migrates)
+- [x] `CLAUDE.md` / agent rules: EN
 - [x] compiler code comments (eventually all EN; when editing a file — EN)
 
 ## Criteria
 
-Contributor without Polish can handle build/test/diagnostics; design is read from
-`issues/` + `docs/` (now migrating to EN per 082).
+Contributor without Polish can handle build/test/diagnostics **and** read
+design (`docs/`) + roadmap (`issues/`) — see 082.
+
