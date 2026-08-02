@@ -16,9 +16,11 @@ class Klin < Formula
   desc "Systems language that compiles to C"
   homepage "https://github.com/MrHIDEn/klin"
   license "MIT"
-  url "https://github.com/MrHIDEn/klin/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "fde0ce144cdbe31b865efc29141e275ec7e0837497a65edeab2de688a9ae1556"
-  version "0.1.0"
+  # Pin the version-bump commit: GitHub may serve a stale
+  # refs/tags/v0.1.1.tar.gz after the tag was moved.
+  url "https://github.com/MrHIDEn/klin/archive/0ea3216c03ce496aa11a8b5877f907dca99c1424.tar.gz"
+  sha256 "dcf378b733e4cb7ba8d6d5fbe92c3f370c354592898a245b1eefb5df31221151"
+  version "0.1.1"
 
   head "https://github.com/MrHIDEn/klin.git", branch: "main"
 

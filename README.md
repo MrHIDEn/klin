@@ -1,6 +1,6 @@
 # Klin
 
-> **Experimental 0.1.0** — the language and toolchain work for real programs
+> **Experimental 0.1.1** — the language and toolchain work for real programs
 > (host + STM32 demos), but the public packaging surface is still settling.
 > Expect breaking changes before 1.0.
 
@@ -31,7 +31,7 @@ git clone https://github.com/MrHIDEn/klin.git
 cd klin
 dart pub get
 dart run bin/klin.dart run examples/hello.kl
-dart run bin/klin.dart --version   # → klin 0.1.0
+dart run bin/klin.dart --version   # → klin 0.1.1
 ```
 
 Use `dart run bin/klin.dart …` while developing. Details:
