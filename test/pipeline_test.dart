@@ -2668,6 +2668,29 @@ fn main() {
     expect(c, contains('geom_Vec2_len_sq('));
   });
 
+  test('remote eventloop: every_ms + run + stop (issue 029 MVP)', () async {
+    final cache = Directory.systemTemp.createTempSync('klin_cache_eloop_');
+    addTearDown(() => cache.deleteSync(recursive: true));
+    final pkg = Directory('${cache.path}/pkg/github/mrhiden/eventloop')
+      ..createSync(recursive: true);
+    // Preseed cache from fixture mirroring github/mrhiden/eventloop@v0.1.0.
+    File('${pkg.path}/version.kl').writeAsStringSync(
+      await File('test/fixtures/mrhiden_eventloop/version.kl').readAsString(),
+    );
+    File('${pkg.path}/executor.kl').writeAsStringSync(
+      await File('test/fixtures/mrhiden_eventloop/executor.kl').readAsString(),
+    );
+    File('${pkg.path}/.pin').writeAsStringSync('v0.1.0\n');
+
+    final result = await _compileAndRun(
+      'examples/remote_eventloop/app.kl',
+      tmp,
+      klinCacheDir: cache.path,
+    );
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, 'tick\ntick\ntick\nticks=3 version=1\n');
+  });
+
   test('entry loads same-module sibling files (issue 047)', () async {
     final dir = Directory.systemTemp.createTempSync('klin_pkg_entry_');
     addTearDown(() => dir.deleteSync(recursive: true));

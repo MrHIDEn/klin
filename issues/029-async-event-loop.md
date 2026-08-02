@@ -1,6 +1,7 @@
 # 029 — Event loop / `async`·`await` (big beast)
 
-**Status:** 💭 to consider (broad scope — phase; does not block core)
+**Status:** 🔨 phase 2 MVP lib published (`github/mrhiden/eventloop@v0.1.0`);
+async / `$event_loop` / RTOS still open
 **Depends on:** D1/D3 decisions; probably 018, 026, 028; remote lib → 049
 
 ## Question
@@ -205,35 +206,52 @@ What happens where:
 | `eventloop.Executor` / `run` | **remote library** — explicit loop |
 | `queue_buf` | caller memory — zero hidden malloc |
 
-### Alongside: same effect **without** `async`/`await` (conceptually works today)
+### Alongside: same effect **without** `async`/`await` (works today)
 
-Compiler **does not** need to know `async`. Lib + plain `fn` (fn-pointer) suffice:
+Compiler **does not** need to know `async`. Lib + plain `fn` (fn-pointer) suffice.
+Remote package: [`github/mrhiden/eventloop@v0.1.0`](https://github.com/MrHIDEn/eventloop);
+consumer example: [`examples/remote_eventloop/`](../examples/remote_eventloop/).
 
 ```klin
 import "github/mrhiden/eventloop"
 import io
 
-fn on_tick() {
+struct App {
+    ticks: i32
+    ex: *mut u8
+}
+
+fn on_tick(ctx: *mut u8) {
+    let app = cast(*mut App, ctx)
+    (*app).ticks = (*app).ticks + 1
     io.println("tick")
+    if (*app).ticks >= 3 {
+        eventloop.stop(cast(*mut eventloop.Executor, (*app).ex))
+    }
 }
 
 fn main() {
-    let mut queue_buf: [64]u8
-    let mut ex = eventloop.Executor{}
-    ex.init(queue_buf[:])
-    ex.every_ms(100, on_tick)   // registration only — does not call yet
-    ex.run()                    // life here: … → on_tick() → …
+    let mut ex: eventloop.Executor
+    let mut app = App{ ticks: 0, ex: cast(*mut u8, &ex) }
+    let _ = eventloop.init(&ex) or { 1 }
+    let _ = eventloop.every_ms(&ex, 100, on_tick, cast(*mut u8, &app)) or { 0 }
+    eventloop.run(&ex)
 }
 ```
+
+Notes vs early sketch: Klin has no globals/closures → callback is
+`fn(*mut u8): void` + `ctx`; slices are primitive-element only → 16 slots
+live inside `Executor` (not a caller `[]u8` buffer); public API is free
+functions on `*mut Executor` (nested mut methods double the pointer in emit).
 
 | | Without async (lib MVP) | With async sketch |
 |---|---|---|
 | Words `async` / `await` | no | yes |
 | Lib API | `every_ms` + `run` | `spawn` + `run` (+ `sleep_ms`) |
-| Where "tick" | `on_tick()` from inside `run()` | `ticker` body after `.await` |
+| Where "tick" | `on_tick(ctx)` from inside `run()` | `ticker` body after `.await` |
 | Klin language change | no | yes |
 
-**Ecosystem MVP = left column.** Async sketch = "later, if ever".
+**Ecosystem MVP = left column** — implemented. Async sketch = "later, if ever".
 
 ### `async`/`await` syntax (if ever in core) — Rust style, not JS
 
@@ -255,7 +273,8 @@ delay_ms(100).await
 |---|---|
 | Parser `async` / `.await` | **no** |
 | Desugar → state machine | **no** |
-| Package `github/mrhiden/eventloop` | **no** (sketch) |
+| Callback lib | **yes** — [`MrHIDEn/eventloop@v0.1.0`](https://github.com/MrHIDEn/eventloop) |
+| Example | [`examples/remote_eventloop/`](../examples/remote_eventloop/) after `klin get` |
 | `klin run` on `sketch_async_eventloop.kl` | **will not pass** |
 
 IntelliJ plugin (highlight / parser) would need to know `async` / `.await` **only
@@ -301,7 +320,9 @@ Avoid: one global Node-loop for entire firmware.
 ### Phases (so roadmap is not eaten)
 
 1. **Docs / model** (this issue) — ✅ direction written  
-2. **Callback lib** (`every_ms` / `run`, remote or local) — no language change  
+2. **Callback lib** (`every_ms` / `run`, remote or local) — ✅
+   `github/mrhiden/eventloop@v0.1.0`  
+
 3. **RTOS example** — loop in one task, second without  
 4. **Optionally later:** `async`/`await` in core + IDE + sketch → real example  
 

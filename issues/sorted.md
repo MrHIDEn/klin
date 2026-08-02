@@ -65,7 +65,7 @@ building the core from scratch.
 | [018](018-generators-yield.md) | Generators / `yield` | 💭 | 004+ |
 | [024](024-rtos.md) | RTOS (FreeRTOS / Zephyr / …) | 💭 | 010+ |
 | [028](028-freertos.md) | Clean FreeRTOS cooperation | 💭 | 024, 010, 021 |
-| [029](029-async-event-loop.md) | Event loop / async·await (large; MVP = lib without async) | 💭 | 018?, 028?, 049? |
+| [029](029-async-event-loop.md) | Event loop / async·await (MVP: `github/mrhiden/eventloop@v0.1.0`; async later) | 🔨 | 018?, 028?, 049? |
 | [030](030-isr-decorators.md) | Interrupts via decorators | 💭 | 010 |
 | [031](031-hal-libraries.md) | HAL libraries (Cube / LL) | 💭 | 010, 021 |
 | [034](034-generic-types.md) | Generics in the grammar — not now (D3/`$fn`; maybe sugar later) | 💭 | 026 |
