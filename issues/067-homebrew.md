@@ -35,7 +35,7 @@ homebrew-core later.
 - [x] release workflow on tag `v*`
 - [x] stdlib next to install (pkgshare + search paths)
 - [x] note + README
-- [x] operator step: public repo + tag `v0.1.0` + fill in sha256 (tap `homebrew-klin` optional)
+- [x] operator step: public repo + tag `v0.1.0` + fill in sha256 + tap [`homebrew-klin`](https://github.com/MrHIDEn/homebrew-klin)
 
 ## Out of scope
 

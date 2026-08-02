@@ -37,35 +37,23 @@ dart run bin/klin.dart --version   # → klin 0.1.0
 Use `dart run bin/klin.dart …` while developing. Details:
 [docs/06-cli.md](docs/06-cli.md), [docs/make.md](docs/make.md).
 
-### Homebrew (HEAD)
+### Homebrew
 
-Builds the compiler from `main` (needs the Dart tap):
+Tap: [`MrHIDEn/homebrew-klin`](https://github.com/MrHIDEn/homebrew-klin)
+(needs the [Dart tap](https://github.com/dart-lang/homebrew-dart) to build):
 
 ```sh
 brew tap dart-lang/dart
-git clone https://github.com/MrHIDEn/klin.git && cd klin
-brew install --HEAD --formula Formula/klin.rb
+brew tap mrhiden/klin
+brew install klin
 klin --version
 klin run examples/hello.kl
 ```
 
-Long-term: copy [`Formula/klin.rb`](Formula/klin.rb) into a personal tap
-(`mrhiden/homebrew-klin`) and `brew install --HEAD mrhiden/klin/klin`.
-See [docs/17-homebrew.md](docs/17-homebrew.md).
+Latest `main`: `brew install --HEAD klin`. Upgrade: `brew upgrade klin`.
 
-### Homebrew (stable)
-
-Tag [`v0.1.0`](https://github.com/MrHIDEn/klin/releases/tag/v0.1.0) is
-published; [`Formula/klin.rb`](Formula/klin.rb) has `url` / `sha256`. From a
-clone (with the Dart tap):
-
-```sh
-brew tap dart-lang/dart
-brew install --formula Formula/klin.rb
-```
-
-Or copy the formula into `mrhiden/homebrew-klin` and
-`brew install mrhiden/klin/klin`.
+Formula source of truth in this repo: [`Formula/klin.rb`](Formula/klin.rb)
+(keep in sync with the tap). Details: [docs/17-homebrew.md](docs/17-homebrew.md).
 
 ## License
 
