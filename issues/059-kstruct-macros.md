@@ -1,7 +1,7 @@
 # 059 — Macros / codegen for richer `klinstruct` (`$kstruct`)
 
 **Status:** 💭 under consideration (low priority — non-blocking)
-**Depends on:** [026](026-preprocessor.md); [052](052-klinstruct.md); nice to have stronger `$fn` (export via `import`, better diagnostics); not [034](034-typy-generyczne.md)
+**Depends on:** [026](026-preprocessor.md); [052](052-klinstruct.md); nice to have stronger `$fn` (export via `import`, better diagnostics); not [034](034-generic-types.md)
 
 ## Context
 
@@ -46,13 +46,13 @@ Expand → `struct` + `pack`/`unpack` calling atoms. C emission monomorphic.
 | Step | Where | What |
 |---|---|---|
 | A1 | `lib/preprocess.dart` (+ tests) | Macros visible via `import` / package (today expand per file) |
-| A2 | `lib/preprocess.dart`, `docs/04-makra.md` | “Field block” argument / list `(name, type)` or variadic |
+| A2 | `lib/preprocess.dart`, `docs/04-macros.md` | “Field block” argument / list `(name, type)` or variadic |
 | A3 | preprocess or builtin like `027` | Iterate fields in expand → `write_*` / `read_*` text |
 | A4 | checker / preprocess | Diagnostics mapped to `$kstruct` call site |
 | A5 | optional `lib/…` builtin | `$kstruct_from("….kspec")` — model file parser → same expand as A3 |
 | A6 | [048](048-import-aliases.md) / [049](049-remote-imports.md) | `import "github.com/mrhiden/klinstruct" kstruct` |
 
-**Not:** generics in grammar ([034](034-typy-generyczne.md)), runtime reflection.
+**Not:** generics in grammar ([034](034-generic-types.md)), runtime reflection.
 
 ### B. `klinstruct` repo — library
 

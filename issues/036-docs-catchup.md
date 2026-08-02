@@ -13,7 +13,7 @@ picture of what already works — without rewriting `issues/` to EN.
 - README: toolchain (`run` / `fmt` / `test` / `--emit-c` / `--emit-pp`), macros,
   SVD fluent, interpolation
 - `docs/06-cli.md` — subcommands and flags
-- `docs/07-interpolacja.md` — 016 syntax
+- `docs/07-interpolation.md` — 016 syntax
 - `stdlib/README.md` — `io` + `testing`
 - `examples/README.md` — sync with files on disk
 

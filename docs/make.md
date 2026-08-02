@@ -24,7 +24,7 @@ file.kl → out/file.c → gcc/clang/tcc → out/file
 
 On Windows the result is `.exe`, on macOS/Linux a normal executable.
 Flag `--cc` selects C backend (`tcc` for iteration, `gcc`/`clang` for
-release — see `02-architektura.md`, Z6).
+release — see `02-architecture.md`, Z6).
 
 ---
 

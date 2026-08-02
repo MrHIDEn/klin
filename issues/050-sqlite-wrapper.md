@@ -1,7 +1,7 @@
 # 050 — SQLite wrapper in a Klin module
 
 **Status:** 💭 under consideration (low priority — non-blocking)
-**Depends on:** [021](021-biblioteki-c.md); nice to have [020](020-biblioteki-klin.md) / [047](047-directory-modules.md)
+**Depends on:** [021](021-c-libraries.md); nice to have [020](020-klin-libraries.md) / [047](047-directory-modules.md)
 
 ## Context
 

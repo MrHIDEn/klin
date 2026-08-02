@@ -1,7 +1,7 @@
 # 060 — KV map (hash map)
 
 **Status:** 💭 under consideration (low priority — non-blocking)
-**Depends on:** [007](007-wskazniki-tablice-slice.md); with heap: [057](057-allocator.md); nice to have [021](021-biblioteki-c.md)
+**Depends on:** [007](007-pointers-arrays-slices.md); with heap: [057](057-allocator.md); nice to have [021](021-c-libraries.md)
 
 ## Context (conversation notes)
 

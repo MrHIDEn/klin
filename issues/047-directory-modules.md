@@ -1,7 +1,7 @@
 # 047 — Directory = one module (like Go/V)
 
 **Status:** ✅ done
-**Depends on:** [006](006-moduly.md), [020](020-biblioteki-klin.md)
+**Depends on:** [006](006-modules.md), [020](020-klin-libraries.md)
 
 ## Context
 
@@ -17,8 +17,8 @@ Go/V: package = directory, many files in one namespace.
 - `*_test.kl` in package directory: **skipped** on load (like Go `_test.go`)
 - search as in 020 (sibling / `lib/` / `-I` / `KLIN_PATH` / stdlib)
 - one `.c`; example [`examples/pkg_geom/`](../examples/pkg_geom/)
-- search note: [`docs/11-biblioteki-klin.md`](../docs/11-biblioteki-klin.md);
-  modules: [`docs/12-moduly.md`](../docs/12-moduly.md)
+- search note: [`docs/11-klin-libraries.md`](../docs/11-klin-libraries.md);
+  modules: [`docs/12-modules.md`](../docs/12-modules.md)
 
 ## Out of scope
 

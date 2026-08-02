@@ -1,6 +1,6 @@
 # 000 — Three fundamental decisions
 
-**Status:** ✅ resolved (see `docs/01-decyzje.md`)
+**Status:** ✅ resolved (see `docs/01-decisions.md`)
 **Blocks:** everything
 
 ## Description
@@ -14,4 +14,4 @@ the symbol table, checker, and codegen. Changing them later means rewriting.
 
 ## Completion criteria
 
-Recorded in `docs/01-decyzje.md` with justification for each rejection.
+Recorded in `docs/01-decisions.md` with justification for each rejection.

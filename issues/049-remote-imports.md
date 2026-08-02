@@ -1,7 +1,7 @@
 # 049 — Remote imports (GitHub / path like Go)
 
 **Status:** ✅ done (MVP)
-**Depends on:** [048](048-import-aliases.md), [020](020-biblioteki-klin.md), [047](047-directory-modules.md);
+**Depends on:** [048](048-import-aliases.md), [020](020-klin-libraries.md), [047](047-directory-modules.md);
 e2e fixture: [063](063-remote-fixture-osa.md) (`github/mrhiden/osa`, tag `v0.1.0`)
 
 ## Syntax

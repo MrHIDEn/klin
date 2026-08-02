@@ -65,7 +65,7 @@ Zero hidden cost; `off`/`once` optional (explicit).
    glitch-free propagation. That is hidden control + cost on every read +
    dynamic graph (heap). Only feasible as an **explicit variant** (below).
 3. **System signal** (POSIX / RTOS event flags): FFI to C — different topic
-   ([024](024-rtos.md)/[031](031-biblioteki-hal.md)).
+   ([024](024-rtos.md)/[031](031-hal-libraries.md)).
 
 ## D. “JS Signals” the Klin way — explicit signals (proposal)
 

@@ -7,16 +7,16 @@ components exist.
 
 | # | Task | Status | Depends on |
 |---|---|---|---|
-| [000](000-decyzje-fundamentalne.md) | Three fundamental decisions | ✅ | — |
-| [001](001-pusty-przelot.md) | **Empty pass: hello world** | ✅ | 000 |
-| [002](002-tablica-symboli-checker.md) | Symbol table and type checker | ✅ | 001 |
-| [003](003-przeplyw-sterowania.md) | Control flow | ✅ | 002 |
-| [004](004-funkcje.md) | Functions | ✅ | 003 |
-| [005](005-struktury-metody.md) | Structs and methods | ✅ | 004 |
-| [006](006-moduly.md) | Modules | ✅ | 005 |
-| [007](007-wskazniki-tablice-slice.md) | Pointers, arrays, slices | ✅ | 006 |
+| [000](000-fundamental-decisions.md) | Three fundamental decisions | ✅ | — |
+| [001](001-empty-pass.md) | **Empty pass: hello world** | ✅ | 000 |
+| [002](002-symbol-table-checker.md) | Symbol table and type checker | ✅ | 001 |
+| [003](003-control-flow.md) | Control flow | ✅ | 002 |
+| [004](004-functions.md) | Functions | ✅ | 003 |
+| [005](005-structs-methods.md) | Structs and methods | ✅ | 004 |
+| [006](006-modules.md) | Modules | ✅ | 005 |
+| [007](007-pointers-arrays-slices.md) | Pointers, arrays, slices | ✅ | 006 |
 | [008](008-defer.md) | `defer` | ✅ | 007 |
-| [009](009-bledy.md) | Errors as values | ✅ | 008 |
+| [009](009-errors.md) | Errors as values | ✅ | 008 |
 | [010](010-bare-metal.md) | **Bare metal: LED on STM32** | ✅ | 009 |
 | [011](011-svd.md) | SVD generator (`svd2klin`) | ✅ | 010 |
 
@@ -35,9 +35,9 @@ building the core from scratch.
 | [016](016-string-interpolation.md) | Interpolated strings | ✅ | 012 |
 | [017](017-collection-methods.md) | Collection methods (`slice` + `slice_alloc`; +i64/f64 types, +ops) | ✅ | 007, 057 |
 | [019](019-default-int-types.md) | Default types (`int` / `float` → `i32` / `f64`) | ✅ | 002 |
-| [020](020-biblioteki-klin.md) | Klin libraries (`lib/` / `-I` / `KLIN_PATH`) | ✅ | 006 |
-| [021](021-biblioteki-c.md) | C libraries (FFI / link) | ✅ | 006, 010 |
-| [022](022-biblioteki-asm.md) | ASM units (`.s` via `@[link]`) | ✅ | 021 |
+| [020](020-klin-libraries.md) | Klin libraries (`lib/` / `-I` / `KLIN_PATH`) | ✅ | 006 |
+| [021](021-c-libraries.md) | C libraries (FFI / link) | ✅ | 006, 010 |
+| [022](022-asm-libraries.md) | ASM units (`.s` via `@[link]`) | ✅ | 021 |
 | [023](023-examples.md) | `examples/` catalog (+ `stm32/`) | ✅ | 001+ |
 | [025](025-english-project.md) | English project (except `issues/` + `docs/` — superseded by 082) | ✅ | — |
 | [026](026-preprocessor.md) | Preprocessor (`$fn`…, D3) | ✅ | 010+ |
@@ -66,8 +66,8 @@ building the core from scratch.
 | [028](028-freertos.md) | Clean FreeRTOS cooperation | 💭 | 024, 010, 021 |
 | [029](029-async-event-loop.md) | Event loop / async·await (large; MVP = lib without async) | 💭 | 018?, 028?, 049? |
 | [030](030-isr-decorators.md) | Interrupts via decorators | 💭 | 010 |
-| [031](031-biblioteki-hal.md) | HAL libraries (Cube / LL) | 💭 | 010, 021 |
-| [034](034-typy-generyczne.md) | Generics in the grammar — not now (D3/`$fn`; maybe sugar later) | 💭 | 026 |
+| [031](031-hal-libraries.md) | HAL libraries (Cube / LL) | 💭 | 010, 021 |
+| [034](034-generic-types.md) | Generics in the grammar — not now (D3/`$fn`; maybe sugar later) | 💭 | 026 |
 | [040](040-time-zones.md) | IANA zones + DST | 💭 | 037 |
 | [041](041-time-locale-relative.md) | Date locales + relative strings | 💭 | 037 |
 | [042](042-time-format-luxon.md) | `yyyy-MM-dd` format dialect in `time` | 💭 | 037 |
@@ -110,7 +110,7 @@ building the core from scratch.
 
 ## Rules (always)
 
-Details in `docs/02-architektura.md`.
+Details in `docs/02-architecture.md`.
 
 1. **Golden tests** — `.kl` + expected output.
 2. **`#line` in emission** — every token carries a position.

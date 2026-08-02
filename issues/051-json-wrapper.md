@@ -1,7 +1,7 @@
 # 051 — JSON wrapper in a Klin module (+ `$…` paths)
 
 **Status:** 💭 under consideration (low priority — non-blocking)
-**Depends on:** [021](021-biblioteki-c.md); nice to have [020](020-biblioteki-klin.md) / [047](047-directory-modules.md); `$` paths → [026](026-preprocessor.md)
+**Depends on:** [021](021-c-libraries.md); nice to have [020](020-klin-libraries.md) / [047](047-directory-modules.md); `$` paths → [026](026-preprocessor.md)
 
 ## Context
 

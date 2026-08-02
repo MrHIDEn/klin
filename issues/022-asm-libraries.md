@@ -1,7 +1,7 @@
 # 022 — ASM libraries / units
 
 **Status:** ✅ done
-**Depends on:** [021](021-biblioteki-c.md) (`@[link]` / `cimport` / `codename`)
+**Depends on:** [021](021-c-libraries.md) (`@[link]` / `cimport` / `codename`)
 
 ## MVP scope
 

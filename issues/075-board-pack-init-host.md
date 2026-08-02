@@ -150,7 +150,7 @@ lower priority.
 - promise “Klin writes linker from chip by itself"
 - mix host CRT with freestanding in one “magic" mode without explicit target
 - full CubeMX → project ([074](074-board-ioc-klin-mod.md))
-- HAL via pack — [031](031-biblioteki-hal.md)
+- HAL via pack — [031](031-hal-libraries.md)
 
 ## Criteria (when implementation lands)
 
@@ -163,7 +163,7 @@ lower priority.
 ## Related
 
 - [010](010-bare-metal.md) — startup stays `.s`; no magic in language
-- [022](022-biblioteki-asm.md) — `@[link]`; `-T linker.ld` stays in Make
+- [022](022-asm-libraries.md) — `@[link]`; `-T linker.ld` stays in Make
 - [053](053-device-board-assets.md) — SVD / `$device` ≠ ld
 - [054](054-embedded-project-layout.md) — `board/` layout + init sketch
 - [074](074-board-ioc-klin-mod.md) — pinout / `.ioc`, not linker

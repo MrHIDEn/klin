@@ -1,7 +1,7 @@
 # 057 — `Allocator` (explicit allocator)
 
 **Status:** ✅ completed
-**Depends on:** [007](007-wskazniki-tablice-slice.md), [008](008-defer.md); D1 in [docs/01-decyzje.md](../docs/01-decyzje.md)
+**Depends on:** [007](007-pointers-arrays-slices.md), [008](008-defer.md); D1 in [docs/01-decisions.md](../docs/01-decisions.md)
 
 ## Context
 
@@ -32,7 +32,7 @@ fn main() {
   example `examples/mem_heap.kl`
 
 **No** `a.alloc(u8, n)` in grammar — **do not promise** in MVP (no type
-argument in call; D3/`$fn`, possibly [034](034-typy-generyczne.md) later).
+argument in call; D3/`$fn`, possibly [034](034-generic-types.md) later).
 Details: [docs/14-allocator.md](../docs/14-allocator.md) § “Do not promise”.
 
 ## Done outside 057 (consumers)

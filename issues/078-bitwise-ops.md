@@ -1,7 +1,7 @@
 # 078 — Bitwise operators (`| & ^ ~ << >>`)
 
 **Status:** ✅ done (MVP)
-**Depends on:** [002](002-tablica-symboli-checker.md) (types/checker), [019](019-default-int-types.md) (integer types)
+**Depends on:** [002](002-symbol-table-checker.md) (types/checker), [019](019-default-int-types.md) (integer types)
 
 ## Goal
 
@@ -31,7 +31,7 @@ Semantic rules:
 
 ## Precedence (settled — like Rust, not C)
 
-Design decision: [docs/01-decyzje.md](../docs/01-decyzje.md) **D8**.
+Design decision: [docs/01-decisions.md](../docs/01-decisions.md) **D8**.
 
 ```
 * / %  →  + -  →  << >>  →  &  →  ^  →  |  →  comparisons  →  == !=
@@ -55,7 +55,7 @@ like `*` (multiply vs dereference).
 
 - Unblocks “bitflags" for enums ([072](072-enums.md)) — `Flags.A | Flags.B`
   needs these operators (and enum bitflag semantics — separately).
-- Useful for HAL/registers ([031](031-biblioteki-hal.md), [011](011-svd.md))
+- Useful for HAL/registers ([031](031-hal-libraries.md), [011](011-svd.md))
   on Klin source side.
 
 ## Out of scope

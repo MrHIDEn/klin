@@ -16,5 +16,5 @@
 Runtime mustache substitution (pattern-as-data, `{0}` / `{key}`) → separately
 [077](077-string-template.md).
 
-Details: [docs/07-interpolacja.md](../docs/07-interpolacja.md).
+Details: [docs/07-interpolation.md](../docs/07-interpolation.md).
 Golden: `test/interp.kl`. Demo: `examples/interp.kl`.

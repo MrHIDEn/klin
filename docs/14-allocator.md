@@ -1,6 +1,6 @@
 # `Allocator` — explicit heap (stdlib `mem`)
 
-D1 model ([01-decyzje.md](01-decyzje.md)): manual + `defer` + allocator as
+D1 model ([01-decisions.md](01-decisions.md)): manual + `defer` + allocator as
 **explicit** argument. No GC / autofree / hidden `malloc` in the language core.
 
 ## MVP (`import mem`)
@@ -48,7 +48,7 @@ Caller always: `defer mem.free_i32(&a, out)` (or `free_u8` / `free_bytes`).
 
 D1 sketch `a.alloc(u8, n)` requires a **type argument** in a method call.
 Klin does not have that in the grammar (D3 = `$fn` / monomorphization, not generics —
-[034](../issues/034-typy-generyczne.md)). **Do not promise** `a.alloc(u8, n)`
+[034](../issues/034-generic-types.md)). **Do not promise** `a.alloc(u8, n)`
 as public API until there is sugar or generics.
 
 Today instead:

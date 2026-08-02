@@ -1,7 +1,7 @@
 # 080 — `stdlib/str` — comparisons and string helpers
 
 **Status:** 💭 under consideration
-**Depends on:** [012](012-stdlib-io.md) (stdlib module pattern), [021](021-biblioteki-c.md) (FFI/libc); related to [016](016-string-interpolation.md), [077](077-string-template.md)
+**Depends on:** [012](012-stdlib-io.md) (stdlib module pattern), [021](021-c-libraries.md) (FFI/libc); related to [016](016-string-interpolation.md), [077](077-string-template.md)
 
 ## Problem
 

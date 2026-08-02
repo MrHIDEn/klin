@@ -1,7 +1,7 @@
 # 068 — Shared type annotation (`a, b: i32`)
 
 **Status:** ✅ (parameters + struct fields; `let` out of scope)
-**Depends on:** [002](002-tablica-symboli-checker.md), [004](004-funkcje.md), [005](005-struktury-metody.md)
+**Depends on:** [002](002-symbol-table-checker.md), [004](004-functions.md), [005](005-structs-methods.md)
 
 ## Motivation
 
@@ -48,7 +48,7 @@ the next annotated group.
 ## Out of scope
 
 - changing type semantics / default values
-- generics / shared type as a “type parameter” ([034](034-typy-generyczne.md))
+- generics / shared type as a “type parameter” ([034](034-generic-types.md))
 - mandating one form — both remain
 
 ## Completion criteria

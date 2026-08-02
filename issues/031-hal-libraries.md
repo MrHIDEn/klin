@@ -19,7 +19,7 @@ header translator.
 Sensible HAL cooperation **without** rewriting CubeMX to Klin and **without**
 breaking the prime rule:
 
-- link HAL sources / `.a` like [021](021-biblioteki-c.md)
+- link HAL sources / `.a` like [021](021-c-libraries.md)
 - thin `@[cimport]` / `@[cinclude]` only on used API (not entire HAL)
 - example on known chip (e.g. F411): init GPIO / UART via HAL **or**
   via LL (lower level, closer to registers)

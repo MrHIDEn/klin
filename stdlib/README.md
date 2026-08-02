@@ -12,7 +12,7 @@ directory `io/` — both at once is an error):
 5. `$KLIN_STDLIB/…` if set
 6. `<repo>/stdlib/…` (package root with `pubspec.yaml`)
 
-User libraries / directory packages: [docs/11-biblioteki-klin.md](../docs/11-biblioteki-klin.md).
+User libraries / directory packages: [docs/11-klin-libraries.md](../docs/11-klin-libraries.md).
 
 | Module | Role |
 |---|---|

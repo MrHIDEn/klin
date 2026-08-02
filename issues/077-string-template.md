@@ -1,7 +1,7 @@
 # 077 — String substitution / runtime templates (`format` / `template`)
 
 **Status:** 💭 under consideration (low priority — non-blocking)
-**Depends on:** [007](007-wskazniki-tablice-slice.md) (slice/buffers), [057](057-allocator.md) (heap explicit); contrast [016](016-string-interpolation.md); KV like [060](060-map-kv.md); placement/API like [017](017-collection-methods.md), [012](012-stdlib-io.md)
+**Depends on:** [007](007-pointers-arrays-slices.md) (slice/buffers), [057](057-allocator.md) (heap explicit); contrast [016](016-string-interpolation.md); KV like [060](060-map-kv.md); placement/API like [017](017-collection-methods.md), [012](012-stdlib-io.md)
 
 ## Idea (from discussion)
 

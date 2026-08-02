@@ -39,7 +39,7 @@ Entry: `dart run bin/klin.dart <subcommand|file.kl> …`
 | `-l <name>` / `-lname` | Link `-lname` (like cc; C FFI) |
 | `-L <dir>` / `-Ldir` | Search C libs in `dir` |
 
-Klin paths (`lib/`, `-I`, `$KLIN_PATH`): [11-biblioteki-klin.md](11-biblioteki-klin.md).
-Modules (`module` / `import` / `pub`): [12-moduly.md](12-moduly.md).
-fmt details: [05-fmt.md](05-fmt.md). Macros / SVD: [04-makra.md](04-makra.md).
+Klin paths (`lib/`, `-I`, `$KLIN_PATH`): [11-klin-libraries.md](11-klin-libraries.md).
+Modules (`module` / `import` / `pub`): [12-modules.md](12-modules.md).
+fmt details: [05-fmt.md](05-fmt.md). Macros / SVD: [04-macros.md](04-macros.md).
 FFI (import `@[cimport]`/`@[link]` and export `@[cexport]`): [09-ffi-c.md](09-ffi-c.md).

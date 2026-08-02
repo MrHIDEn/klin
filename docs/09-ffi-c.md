@@ -7,7 +7,7 @@ Interop with C is **explicit declarations** in Klin, not a header parser.
 | **Import** C→Klin | `@[cimport]`, `@[cheader]`, `@[cinclude]`, `@[link]`, CLI `-l`/`-L` | [`examples/ffi_add/`](../examples/ffi_add/) |
 | **Export** Klin→C | `@[cexport, codename("…")]`; `codename` alone = ISR | [`examples/cexport_add/`](../examples/cexport_add/), STM32 blink |
 
-Issues: [021](../issues/021-biblioteki-c.md) (import/link), [045](../issues/045-cexport.md) (export).
+Issues: [021](../issues/021-c-libraries.md) (import/link), [045](../issues/045-cexport.md) (export).
 
 ## Import (C → Klin)
 
@@ -84,5 +84,5 @@ Example: [`examples/cexport_add/`](../examples/cexport_add/). Issue:
 ## Contract
 
 FFI **does not** hide allocation or ownership — that is the user's agreement with C code.
-Bare-metal: same declaration path; other libs (HAL → [031](../issues/031-biblioteki-hal.md)).
-`.s` units → [docs/10-asm.md](10-asm.md) / [022](../issues/022-biblioteki-asm.md).
+Bare-metal: same declaration path; other libs (HAL → [031](../issues/031-hal-libraries.md)).
+`.s` units → [docs/10-asm.md](10-asm.md) / [022](../issues/022-asm-libraries.md).

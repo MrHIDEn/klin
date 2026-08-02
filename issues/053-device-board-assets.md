@@ -90,7 +90,7 @@ $board("…")   // later — narrow .ioc → constants; not full CubeMX
 - full CubeMX `.ioc` → Klin — pinout / `$board` / `board` directive → [074](074-board-ioc-klin-mod.md)
 - silent download on `run` / compile
 - raw ST SVD by default (errors — [011](011-svd.md)); mirror with patches
-- HAL through this mechanism — [031](031-biblioteki-hal.md)
+- HAL through this mechanism — [031](031-hal-libraries.md)
 
 ## Criteria
 
@@ -109,7 +109,7 @@ $board("…")   // later — narrow .ioc → constants; not full CubeMX
 - [011](011-svd.md) / [027](027-svd-ergonomic-api.md) — generator and fluent API
 - [023](023-examples.md) — `examples/stm32/`
 - [054](054-embedded-project-layout.md) — directory layout / scaffold (separate from SVD)
-- [031](031-biblioteki-hal.md) — HAL separately
+- [031](031-hal-libraries.md) — HAL separately
 - [048](048-import-aliases.md) / [049](049-remote-imports.md) — string/remote for
   **Klin modules**; this issue = same *fetch style* for **artifacts** `$device`
 - [074](074-board-ioc-klin-mod.md) — `board` in `klin.mod` + narrow `.ioc` (after 053)

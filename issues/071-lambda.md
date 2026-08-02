@@ -2,7 +2,7 @@
 
 **Status:** 💭 under consideration (low priority — **not now**)
 **Depends on:** fn-pointer ✅ ([docs/13-fn-ptr.md](../docs/13-fn-ptr.md));
-  real closures → [D7](../docs/01-decyzje.md); optionally [055](055-short-decl.md) (`:=`)
+  real closures → [D7](../docs/01-decisions.md); optionally [055](055-short-decl.md) (`:=`)
 
 ## Summary
 

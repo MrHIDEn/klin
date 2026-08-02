@@ -1,7 +1,7 @@
 # 074 — `board` in `klin.mod` + narrow CubeMX `.ioc` (pinout)
 
 **Status:** 💭 under consideration (after MVP [053](053-device-board-assets.md))
-**Depends on:** [053](053-device-board-assets.md) (`$device` + `device` in mod + `asset/` cache); optionally [054](054-embedded-project-layout.md); **not** [031](031-biblioteki-hal.md)
+**Depends on:** [053](053-device-board-assets.md) (`$device` + `device` in mod + `asset/` cache); optionally [054](054-embedded-project-layout.md); **not** [031](031-hal-libraries.md)
 
 ## Context
 
@@ -95,7 +95,7 @@ Line `board github/…` in mod = pin **upstream** (seed version), not
 - confuse with `device` (SVD) or `require` (`.kl` lib)
 - silent download on `run`
 - **`klin get`/`update` overwriting** local, edited `.ioc` in project
-- HAL via IOC — [031](031-biblioteki-hal.md)
+- HAL via IOC — [031](031-hal-libraries.md)
 
 ## Related
 
@@ -103,4 +103,4 @@ Line `board github/…` in mod = pin **upstream** (seed version), not
 - [049](049-remote-imports.md) / [065](065-project-lockfile.md) — get / lock
 - [054](054-embedded-project-layout.md) — `board/` layout (startup/ld) separate from mod
 - [075](075-board-pack-init-host.md) — board pack / `klin init` (ld+startup); host without this magic
-- [031](031-biblioteki-hal.md) — HAL separately
+- [031](031-hal-libraries.md) — HAL separately

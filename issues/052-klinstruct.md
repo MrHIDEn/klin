@@ -1,7 +1,7 @@
 # 052 — `klinstruct`: pack/unpack buffers (pair to `@mrhiden/cstruct`)
 
 **Status:** 💭 under consideration — MVP atoms in [klinstruct](https://github.com/MrHIDEn/klinstruct); richer declaration → [059](059-kstruct-macros.md)
-**Depends on:** [007](007-wskazniki-tablice-slice.md); nice to have [020](020-biblioteki-klin.md) / [047](047-directory-modules.md); remote → [049](049-remote-imports.md); `$kstruct` declarations → [059](059-kstruct-macros.md)
+**Depends on:** [007](007-pointers-arrays-slices.md); nice to have [020](020-klin-libraries.md) / [047](047-directory-modules.md); remote → [049](049-remote-imports.md); `$kstruct` declarations → [059](059-kstruct-macros.md)
 
 ## Context
 

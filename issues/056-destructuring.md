@@ -1,9 +1,9 @@
 # 056 — Destructuring (`{}` / `[]` / multi-assign)
 
 **Status:** ✅ — phases A (structs) + A′ (bare `{}=`) + B (multi-assign) + C (arrays `[N]T`) + D (rename / `_`). Bare `[]=` deliberately skipped (see below).
-**Depends on:** [005](005-struktury-metody.md) (struct lit/fields ✅); nice to have [007](007-wskazniki-tablice-slice.md) (fixed-length arrays)
+**Depends on:** [005](005-structs-methods.md) (struct lit/fields ✅); nice to have [007](007-pointers-arrays-slices.md) (fixed-length arrays)
 
-> **Do not confuse with RAII destructors.** D6 ([docs/01-decyzje.md](../docs/01-decyzje.md)):
+> **Do not confuse with RAII destructors.** D6 ([docs/01-decisions.md](../docs/01-decisions.md)):
 > no constructors/destructors. Here we mean **destructuring** —
 > unpacking a value into multiple names in one statement.
 

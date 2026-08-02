@@ -1,7 +1,7 @@
 # 045 — Klin → C export (`@[cexport]`)
 
 **Status:** ✅ done
-**Depends on:** [021](021-biblioteki-c.md)
+**Depends on:** [021](021-c-libraries.md)
 
 ## Context
 

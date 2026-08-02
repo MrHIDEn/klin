@@ -27,7 +27,7 @@ MVP host: [`stdlib/mem`](../stdlib/mem.kl) (`heap`, `alloc_bytes`, `alloc_i32`) 
 [docs/14-allocator.md](14-allocator.md), issue [057](../issues/057-allocator.md).
 
 **Do not promise** `a.alloc(u8, n)` until there is a type argument in the call
-(generics [034](../issues/034-typy-generyczne.md) / D3 sugar). Today: `alloc_bytes`
+(generics [034](../issues/034-generic-types.md) / D3 sugar). Today: `alloc_bytes`
 + explicit `alloc_i32` / `alloc_u8`. `slice_alloc.map_alloc_*` —
 [017](../issues/017-collection-methods.md) / [docs/16-slice.md](16-slice.md).
 Arena, vtable — later (see docs/14 § "Do not promise / later").
@@ -84,14 +84,14 @@ strategy with a C backend.
 
 Risk: compile time, error messages from expanded macros.
 
-**MVP (026):** [04-makra.md](04-makra.md) — before/after expand + example
+**MVP (026):** [04-macros.md](04-macros.md) — before/after expand + example
 [`examples/point.kl`](../examples/point.kl) /
 [`point_macro.kl`](../examples/point_macro.kl).
 
 **After 017 / 057:** `$fn` in stdlib is enough (`slice` / `slice_alloc`,
 `mem.alloc_i32` / `alloc_u8`). Generics in the grammar — **not now**;
 eventual thin sugar → same expand (variant 2) only when the pain is real.
-Details: [034](../issues/034-typy-generyczne.md). Still do not promise
+Details: [034](../issues/034-generic-types.md). Still do not promise
 `a.alloc(T, n)`.
 
 ---

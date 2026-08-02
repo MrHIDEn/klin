@@ -1,7 +1,7 @@
 # 061 — MicroPython `machine`-style API (PWM, UART, …)
 
 **Status:** 💭 under consideration (low priority — non-blocking)
-**Depends on:** [010](010-bare-metal.md); nice to have [031](031-biblioteki-hal.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
+**Depends on:** [010](010-bare-metal.md); nice to have [031](031-hal-libraries.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
 
 ## Context
 
@@ -11,7 +11,7 @@ many ports (STM32, RP2, ESP, …). Programmer calls PWM/UART without manual
 MMIO or CubeMX.
 
 Klin today: SVD / registers ([011](011-svd.md) / [027](027-svd-ergonomic-api.md))
-or vendor HAL via FFI ([031](031-biblioteki-hal.md)). No
+or vendor HAL via FFI ([031](031-hal-libraries.md)). No
 “like `machine.PWM`” layer in stdlib.
 
 This issue = **inspiration catalog + decision** whether Klin wants a thin, explicit
@@ -74,7 +74,7 @@ uart.write(b"hi\n")
 | Approach | Meaning |
 |---|---|
 | **A. SVD + examples only** | status quo; zero “machine” |
-| **B. FFI to vendor HAL/LL** | [031](031-biblioteki-hal.md) — C alongside, thin `@[cimport]` |
+| **B. FFI to vendor HAL/LL** | [031](031-hal-libraries.md) — C alongside, thin `@[cimport]` |
 | **C. Thin `stdlib` / Klin `machine` package** | Pin/PWM/UART… as explicit API over MMIO or HAL; **no** GC, no hidden heap; init/clock still explicit (startup / board pack [053](053-device-board-assets.md)) |
 
 Preference aligned with overarching rule: if C, then **explicit** clock tuning
@@ -99,5 +99,5 @@ Preference aligned with overarching rule: if C, then **explicit** clock tuning
 ## Links
 
 - MicroPython `machine`: https://docs.micropython.org/en/latest/library/machine.html  
-- Klin vendor HAL: [031](031-biblioteki-hal.md)  
+- Klin vendor HAL: [031](031-hal-libraries.md)  
 - Embedded project layout: [054](054-embedded-project-layout.md)  

@@ -35,7 +35,7 @@ Separate two things:
    stdlib module.
 
 Why external library (via remote import [049](049-remote-imports.md),
-after [048](048-import-aliases.md)/[047](047-directory-modules.md)/[020](020-biblioteki-klin.md)),
+after [048](048-import-aliases.md)/[047](047-directory-modules.md)/[020](020-klin-libraries.md)),
 not stdlib:
 
 - RTOS is **vendor/board/config-specific** (port, `FreeRTOSConfig.h`,

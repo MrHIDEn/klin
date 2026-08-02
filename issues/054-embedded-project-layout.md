@@ -2,7 +2,7 @@
 
 **Status:** 💭 under consideration
 **Depends on:** [023](023-examples.md) (`examples/stm32/` layout), [010](010-bare-metal.md);
-nice to have [053](053-device-board-assets.md) (clean `$device`), [022](022-biblioteki-asm.md);
+nice to have [053](053-device-board-assets.md) (clean `$device`), [022](022-asm-libraries.md);
 other MCU families: [062](062-targets-esp-rp.md)
 
 ## Problem
@@ -59,7 +59,7 @@ Startup can still be raw `.s` ([010](010-bare-metal.md)) — the point is
 - full IDE / CubeMX plugin / graphical wizard
 - wrapping the vector table in “magic” Klin ([010](010-bare-metal.md))
 - changing `import` / FFI semantics just to hide files
-- promising HAL through layout — that is [031](031-biblioteki-hal.md)
+- promising HAL through layout — that is [031](031-hal-libraries.md)
 
 ## Criteria (when work starts)
 
@@ -71,7 +71,7 @@ Startup can still be raw `.s` ([010](010-bare-metal.md)) — the point is
 ## Related
 
 - [010](010-bare-metal.md) / [023](023-examples.md) — bare metal + `examples/stm32/`
-- [022](022-biblioteki-asm.md) — `@[link]` / `out/*.link`
+- [022](022-asm-libraries.md) — `@[link]` / `out/*.link`
 - [053](053-device-board-assets.md) — clean device / SVD
 - [075](075-board-pack-init-host.md) — board pack / init vs host (linker & startup)
 - [028](028-freertos.md) — further demos under this convention too

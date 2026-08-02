@@ -1,7 +1,7 @@
 # 070 — ORM-like / typed repo over SQLite (host)
 
 **Status:** 💭 under consideration (low priority — non-blocking)
-**Depends on:** [050](050-sqlite-wrapper.md) (thin FFI), [021](021-biblioteki-c.md);
+**Depends on:** [050](050-sqlite-wrapper.md) (thin FFI), [021](021-c-libraries.md);
   optionally [026](026-preprocessor.md) / [057](057-allocator.md)
 
 ## Context

@@ -1,7 +1,7 @@
 # Modules (issue 006)
 
 `module` / `import` / `pub` — encapsulation instead of flat C linkage.
-Search paths (`lib/`, `-I`, directory package): [11-biblioteki-klin.md](11-biblioteki-klin.md).
+Search paths (`lib/`, `-I`, directory package): [11-klin-libraries.md](11-klin-libraries.md).
 
 ## Syntax
 
@@ -34,7 +34,7 @@ fn main() {
 
 ## C emission
 
-- mangling: `module_Type_method` (e.g. `geom_Vec2_len_sq`) — [01-decyzje.md](01-decyzje.md)
+- mangling: `module_Type_method` (e.g. `geom_Vec2_len_sq`) — [01-decisions.md](01-decisions.md)
 - private symbols → `static` in generated `.c`
 - whole program still **one** `.c`
 
@@ -46,7 +46,7 @@ fn main() {
 | `name/*.kl` | **one** module (issue [047](../issues/047-directory-modules.md)); `*_test.kl` skipped |
 
 Entry (`klin run app.kl`) also loads siblings with the same `module`.
-Resolution details: [11-biblioteki-klin.md](11-biblioteki-klin.md).
+Resolution details: [11-klin-libraries.md](11-klin-libraries.md).
 
 ## Examples
 

@@ -1,8 +1,8 @@
 # Klin libraries (issues 020 / 047)
 
 Reusable `.kl` without copying sources — search paths for
-`import name`. `module` / `pub` semantics: [12-moduly.md](12-moduly.md)
-([006](../issues/006-moduly.md)). No package manager.
+`import name`. `module` / `pub` semantics: [12-modules.md](12-modules.md)
+([006](../issues/006-modules.md)). No package manager.
 
 ## `import name` resolution
 
@@ -48,7 +48,7 @@ import "sub/osa" aa              // string + alias: qualifier = aa
 
 ## Examples
 
-Single-file in `lib/` ([020](../issues/020-biblioteki-klin.md)):
+Single-file in `lib/` ([020](../issues/020-klin-libraries.md)):
 
 ```sh
 dart run bin/klin.dart run examples/klin_lib/app.kl
@@ -70,7 +70,7 @@ examples/pkg_geom/
     len_test.kl   # skipped on run
 ```
 
-Emission is still **one** `.c`. Modules: [12-moduly.md](12-moduly.md).
+Emission is still **one** `.c`. Modules: [12-modules.md](12-modules.md).
 
 ## Remote (`github` / `gitlab`) — issue 049
 

@@ -1,7 +1,7 @@
 # Function pointers (no capture)
 
 Type `fn(T1, T2): Ret` — pointer to a top-level function (emission = C fn pointer).
-No closures / capture ([D7](01-decyzje.md)).
+No closures / capture ([D7](01-decisions.md)).
 
 ```klin
 fn is_pos(x: i32): bool {

@@ -7,8 +7,8 @@ The project context, decisions, architecture, and roadmap are English design
 documents:
 
 - Context: @docs/00-idea.md
-- Design decisions: @docs/01-decyzje.md
-- Architecture and rules: @docs/02-architektura.md
+- Design decisions: @docs/01-decisions.md
+- Architecture and rules: @docs/02-architecture.md
 - Roadmap: @issues/sorted.md
 
 ## Rules that always apply

@@ -6,7 +6,7 @@
 ## Verdict (after 017 / 057)
 
 **We are not implementing generics in grammar.** Staying with **D3**
-([docs/01-decyzje.md](../docs/01-decyzje.md)): monomorphization via `$fn`
+([docs/01-decisions.md](../docs/01-decisions.md)): monomorphization via `$fn`
 before parse.
 
 Full type system with `T` in symbol table (variant 3) is large frontend cost
@@ -49,5 +49,5 @@ Then plan **variant 2**, not variant 3.
 ## Decision checklist
 
 - [x] Verdict: staying with D3; reopening topic = variant 2 after criteria above
-- [x] Short addendum in D3 ([docs/01-decyzje.md](../docs/01-decyzje.md))
+- [x] Short addendum in D3 ([docs/01-decisions.md](../docs/01-decisions.md))
 - [ ] Collect 2–3 hard `$fn` pain points (start condition for implementation — not now)

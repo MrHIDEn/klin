@@ -1,7 +1,7 @@
 # 062 — MCU targets beyond STM32: ESP32, RP2040, RP2350
 
 **Status:** 💭 under consideration (low priority — non-blocking)
-**Depends on:** [010](010-bare-metal.md); nice to have [022](022-biblioteki-asm.md), [027](027-svd-ergonomic-api.md), [031](031-biblioteki-hal.md), [053](053-device-board-assets.md), [054](054-embedded-project-layout.md)
+**Depends on:** [010](010-bare-metal.md); nice to have [022](022-asm-libraries.md), [027](027-svd-ergonomic-api.md), [031](031-hal-libraries.md), [053](053-device-board-assets.md), [054](054-embedded-project-layout.md)
 
 ## Context (conversation notes)
 
@@ -47,5 +47,5 @@ target **ESP32**, **RP2040**, **RP2350**?
 - Bare-metal STM32: [010](010-bare-metal.md)  
 - Project layout: [054](054-embedded-project-layout.md)  
 - Device/board assets: [053](053-device-board-assets.md)  
-- Vendor HAL: [031](031-biblioteki-hal.md)  
+- Vendor HAL: [031](031-hal-libraries.md)  
 - `machine`-style API: [061](061-micropython-machine-api.md)  

@@ -1,7 +1,7 @@
 # 048 — Import aliases (+ local string)
 
 **Status:** ✅ done (`import geom oso`, `import "path" [alias]`)
-**Depends on:** [006](006-moduly.md), [047](047-directory-modules.md)
+**Depends on:** [006](006-modules.md), [047](047-directory-modules.md)
 
 ## Context
 
@@ -24,7 +24,7 @@ Path resolution as in 020/047 (`lib/`, `-I`, `KLIN_PATH`, file or directory).
 
 - parser: optional alias after `import` (ident or string) ✅
 - `import "relative/path" [alias]` **locally** (no network) ✅
-- tests + note in [docs/11](../docs/11-biblioteki-klin.md) ✅
+- tests + note in [docs/11](../docs/11-klin-libraries.md) ✅
 
 Implementation: qualifier (alias or default = last segment) keys
 `importAliases` and is used in source; C mangling uses the real

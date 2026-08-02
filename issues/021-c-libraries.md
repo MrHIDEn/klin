@@ -12,7 +12,7 @@
 - `@[link("…")]` passed to host `cc` on `klin run` / `klin test`
   - string starting with `-` → flag as-is (`-lm`, `-L…`)
   - otherwise → path `.a` / `.o` / `.so` / `.s` / `.S` relative to `.kl` directory
-    (ASM → [022](022-biblioteki-asm.md))
+    (ASM → [022](022-asm-libraries.md))
 - CLI: `-l <name>`, `-L <dir>` (also glued `-lm`, `-L/path`)
 - unknown calls = checker error, **except** host builtins `puts` / `printf`
 - example: [`examples/ffi_add/`](../examples/ffi_add/)
@@ -21,13 +21,13 @@
 Prime rule test: FFI does not hide allocation or ownership — user's
 contract with C.
 
-HAL (STM32Cube / LL) → [031](031-biblioteki-hal.md).
+HAL (STM32Cube / LL) → [031](031-hal-libraries.md).
 
 ## Out of scope / later
 
 - Full C header parser
-- Klin libraries → [020](020-biblioteki-klin.md) ✅
-- ASM units (`.s` via `@[link]`) → [022](022-biblioteki-asm.md) ✅
+- Klin libraries → [020](020-klin-libraries.md) ✅
+- ASM units (`.s` via `@[link]`) → [022](022-asm-libraries.md) ✅
 - Project manifest (JSON/toml) instead of attrs + CLI
 - `cexport` → [045](045-cexport.md) ✅
 - rpath / `LD_LIBRARY_PATH`

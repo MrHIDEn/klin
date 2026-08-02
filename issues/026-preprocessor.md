@@ -5,7 +5,7 @@
 
 ## Goal
 
-Implementation of decision D3 ([docs/01-decyzje.md](../docs/01-decyzje.md)): compile-time
+Implementation of decision D3 ([docs/01-decisions.md](../docs/01-decisions.md)): compile-time
 macros, **not** generics in grammar.
 
 ## MVP

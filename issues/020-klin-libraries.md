@@ -1,7 +1,7 @@
 # 020 — Klin libraries
 
 **Status:** ✅ done
-**Depends on:** [006](006-moduly.md)
+**Depends on:** [006](006-modules.md)
 
 ## MVP scope
 
@@ -10,7 +10,7 @@
 - CLI `-I <dir>` (also `-Idir`); `$KLIN_PATH` (PATH-style)
 - emission: single `.c` (like 006); `pub` = library API
 - example: [`examples/klin_lib/`](../examples/klin_lib/)
-- note: [`docs/11-biblioteki-klin.md`](../docs/11-biblioteki-klin.md)
+- note: [`docs/11-klin-libraries.md`](../docs/11-klin-libraries.md)
 
 ## What we are not doing
 

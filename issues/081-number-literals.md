@@ -1,7 +1,7 @@
 # 081 — Numeric and character literals (binary, float exponent, character, octal?)
 
 **Status:** 🔨 in progress — done: `0b`, `0o`, float exponent; Group 2 remains (character `'A'`)
-**Depends on:** [002](002-tablica-symboli-checker.md) (lexer/types); related to [078](078-bitwise-ops.md) (masks)
+**Depends on:** [002](002-symbol-table-checker.md) (lexer/types); related to [078](078-bitwise-ops.md) (masks)
 
 ## Done (Group 1 + octal)
 

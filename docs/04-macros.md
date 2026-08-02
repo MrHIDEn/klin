@@ -1,6 +1,6 @@
 # Compile-time macros (`$fn`, D3)
 
-Decision: [01-decyzje.md](01-decyzje.md) § D3. Issue: [026](../issues/026-preprocessor.md).
+Decision: [01-decisions.md](01-decisions.md) § D3. Issue: [026](../issues/026-preprocessor.md).
 Example: [`point.kl`](../examples/point.kl) (plain Klin) and
 [`point_macro.kl`](../examples/point_macro.kl) (same via `$fn`).
 

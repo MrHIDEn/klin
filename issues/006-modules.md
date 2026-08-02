@@ -28,7 +28,7 @@ hidden naming convention.
 
 ## Note
 
-[`docs/12-moduly.md`](../docs/12-moduly.md). Examples: [`examples/modules/`](../examples/modules/),
+[`docs/12-modules.md`](../docs/12-modules.md). Examples: [`examples/modules/`](../examples/modules/),
 directory package: [`examples/pkg_geom/`](../examples/pkg_geom/).
 
 ## Completion criteria

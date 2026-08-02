@@ -30,7 +30,7 @@ dart run bin/klin.dart --emit-pp examples/point_macro.kl
 | `--emit-c` | Write generated `.c` only |
 | `--emit-h` | Write C header for `@[cexport]` (`out/<base>.h`) |
 | `--emit-pp` | Write preprocessor output (`.pp.kl`) |
-| `-I` | Klin source search dirs (`import` → `name.kl`; [docs/11-biblioteki-klin.md](docs/11-biblioteki-klin.md)) |
+| `-I` | Klin source search dirs (`import` → `name.kl`; [docs/11-klin-libraries.md](docs/11-klin-libraries.md)) |
 | `-l` / `-L` | Host linker libs / search paths ([docs/09-ffi-c.md](docs/09-ffi-c.md)) |
 
 CLI summary (PL): [docs/06-cli.md](docs/06-cli.md).
@@ -44,7 +44,7 @@ Optional host I/O, clocks, heap, and slice helpers: [`stdlib/`](stdlib/)
 Klin libraries (`lib/`, `-I`, `$KLIN_PATH`; directory packages; import aliases
 `import geom oso` and string path imports `import "sub/osa"`; remote
 `import "github/mrhiden/osa"` after `klin get`):
-[docs/11-biblioteki-klin.md](docs/11-biblioteki-klin.md),
+[docs/11-klin-libraries.md](docs/11-klin-libraries.md),
 [`examples/klin_lib/`](examples/klin_lib/), [`examples/pkg_geom/`](examples/pkg_geom/),
 [`examples/remote_osa/`](examples/remote_osa/).
 C FFI — import (`@[cimport]` / `@[link]`) **and** export (`@[cexport]`):
@@ -58,7 +58,7 @@ Bare-metal programs omit host stdlib imports. STM32 demos:
 ### Macros and SVD
 
 `$fn` macros and `$peripherals_from_svd(...)` expand before parsing
-([docs/04-makra.md](docs/04-makra.md)). Inspect with `--emit-pp`.
+([docs/04-macros.md](docs/04-macros.md)). Inspect with `--emit-pp`.
 Fluent MMIO (`RCC.AHB1ENR.GPIOAEN.set(1)`) lowers to zero-cost
 `static inline` accessors (same as `svd2klin`).
 
@@ -68,7 +68,7 @@ Ordinary `"…"` strings may contain `$name` / `${expr}` / `${expr:format}`
 and lower to `printf` (no hidden allocation). Formats: native printf
 (`%d`, `%.2f`), masks (`0.00`, `0.###`), `s8` truncate, `hex` / `sci`.
 **Print-only MVP** — use as the sole argument to `puts` / `printf` /
-`io.print` / `io.println`. Details: [docs/07-interpolacja.md](docs/07-interpolacja.md),
+`io.print` / `io.println`. Details: [docs/07-interpolation.md](docs/07-interpolation.md),
 example: [`examples/interp.kl`](examples/interp.kl).
 
 ### Function pointers
@@ -123,7 +123,7 @@ Integers only: `& | ^ ~ << >>` (map 1:1 to C). Precedence is Rust-like, not C
 (`* / %` → `+ -` → `<< >>` → `&` → `^` → `|` → comparisons → `==`):
 `flags & mask == bit` means `(flags & mask) == bit`, not C’s
 `flags & (mask == bit)`. Signed `>>` is arithmetic; unsigned is logical.
-Decision: [docs/01-decyzje.md](docs/01-decyzje.md) D8; also
+Decision: [docs/01-decisions.md](docs/01-decisions.md) D8; also
 [issues/078-bitwise-ops.md](issues/078-bitwise-ops.md),
 [`examples/bitwise.kl`](examples/bitwise.kl).
 
