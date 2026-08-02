@@ -133,6 +133,29 @@ final class StructType extends KlinType {
   int get hashCode => Object.hash(moduleName, name);
 }
 
+/// A C-like enum: a distinct named type over an integer base (issue 072).
+final class EnumType extends KlinType {
+  final String moduleName;
+  final String name;
+
+  /// Underlying integer type (default `i32`). Not part of identity/equality.
+  final PrimType base;
+
+  const EnumType(this.moduleName, this.name, this.base);
+
+  @override
+  String get displayName => moduleName.isEmpty ? name : '$moduleName.$name';
+
+  @override
+  bool operator ==(Object other) =>
+      other is EnumType &&
+      other.moduleName == moduleName &&
+      other.name == name;
+
+  @override
+  int get hashCode => Object.hash('enum', moduleName, name);
+}
+
 final class PtrType extends KlinType {
   final KlinType pointee;
   final bool isMut;

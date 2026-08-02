@@ -23,6 +23,7 @@ Program loadProject(
   String? klinCacheDir,
 }) {
   final structs = <StructDecl>[];
+  final enums = <EnumDecl>[];
   final funcs = <FuncDecl>[];
   final importAliases = <String, Map<String, String>>{};
   final loading = <String>{};
@@ -109,6 +110,11 @@ Program loadProject(
         struct.moduleName = moduleName;
         struct.sourcePath = u.path;
         structs.add(struct);
+      }
+      for (final enumDecl in u.unit.enums) {
+        enumDecl.moduleName = moduleName;
+        enumDecl.sourcePath = u.path;
+        enums.add(enumDecl);
       }
       for (final func in u.unit.funcs) {
         func.moduleName = moduleName;
@@ -206,6 +212,7 @@ Program loadProject(
     structs,
     funcs,
     firstPos ?? const SourcePos(1, 1),
+    enums: enums,
     importAliases: importAliases,
   );
 }

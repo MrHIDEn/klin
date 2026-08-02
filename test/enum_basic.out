@@ -1,0 +1,5 @@
+name: green
+is green
+warn as int: 5
+roundtrip ok
+green

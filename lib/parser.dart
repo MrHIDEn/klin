@@ -48,7 +48,7 @@ final class Parser {
 
   Program parse() {
     final unit = parseUnit();
-    return Program(unit.structs, unit.funcs, unit.pos);
+    return Program(unit.structs, unit.funcs, unit.pos, enums: unit.enums);
   }
 
   /// Parse a single expression (used for `${…}` interpolation slots).
@@ -66,6 +66,7 @@ final class Parser {
   ModuleUnit parseUnit() {
     final funcs = <FuncDecl>[];
     final structs = <StructDecl>[];
+    final enums = <EnumDecl>[];
     final decls = <Object>[];
     String? declaredName;
     final imports = <ImportSpec>[];
@@ -87,28 +88,35 @@ final class Parser {
         final decl = _struct(isPub, attrs);
         structs.add(decl);
         decls.add(decl);
+      } else if (_check(TokenKind.enum_)) {
+        final decl = _enum(isPub, attrs);
+        enums.add(decl);
+        decls.add(decl);
       } else if (_check(TokenKind.fn)) {
         final decl = _func(isPub, attrs);
         funcs.add(decl);
         decls.add(decl);
       } else {
         throw ParseError(
-            'expected struct or function declaration', _current.pos);
+            'expected struct, enum or function declaration', _current.pos);
       }
     }
-    if (funcs.isEmpty && structs.isEmpty) {
+    if (funcs.isEmpty && structs.isEmpty && enums.isEmpty) {
       throw ParseError('expected declaration', _current.pos);
     }
     _expect(TokenKind.eof, 'expected end of file');
     final pos = structs.isNotEmpty
         ? structs.first.pos
-        : funcs.isNotEmpty
-            ? funcs.first.pos
-            : _current.pos;
+        : enums.isNotEmpty
+            ? enums.first.pos
+            : funcs.isNotEmpty
+                ? funcs.first.pos
+                : _current.pos;
     return ModuleUnit(
       declaredName: declaredName,
       imports: imports,
       structs: structs,
+      enums: enums,
       funcs: funcs,
       decls: decls,
       pos: pos,
@@ -198,6 +206,47 @@ final class Parser {
     return StructDecl(
       name: name.lexeme,
       fields: fields,
+      attrs: attrs,
+      pos: keyword.pos,
+      isPub: isPub,
+    );
+  }
+
+  EnumDecl _enum(bool isPub, List<Attr> attrs) {
+    final keyword = _expect(TokenKind.enum_, 'oczekiwano `enum`');
+    final name = _expect(TokenKind.ident, 'expected enum name');
+    _rejectCKeyword(name, 'an enum name');
+    String? baseTypeName;
+    if (_check(TokenKind.colon)) {
+      _advance();
+      baseTypeName = _typeName();
+    }
+    _expect(TokenKind.lBrace, 'oczekiwano `{`');
+    final variants = <EnumVariant>[];
+    while (!_check(TokenKind.rBrace) && !_check(TokenKind.eof)) {
+      final variant = _expect(TokenKind.ident, 'expected enum variant name');
+      _rejectCKeyword(variant, 'an enum variant');
+      Expr? value;
+      if (_check(TokenKind.equal)) {
+        _advance();
+        value = _expr();
+      }
+      variants.add(
+        EnumVariant(name: variant.lexeme, value: value, pos: variant.pos),
+      );
+      // The separator is optional: `A, B` (one line) and newline-separated
+      // `A` / `B` (canonical fmt style, like struct fields) both parse.
+      if (_check(TokenKind.comma)) _advance();
+    }
+    _expect(TokenKind.rBrace, 'oczekiwano `}`');
+    if (variants.isEmpty) {
+      throw ParseError(
+          'enum `${name.lexeme}` must have at least one variant', keyword.pos);
+    }
+    return EnumDecl(
+      name: name.lexeme,
+      variants: variants,
+      baseTypeName: baseTypeName,
       attrs: attrs,
       pos: keyword.pos,
       isPub: isPub,

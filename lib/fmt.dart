@@ -43,6 +43,8 @@ String formatUnit(ModuleUnit unit) {
     switch (decl) {
       case StructDecl():
         _writeStruct(buf, decl, 0);
+      case EnumDecl():
+        _writeEnum(buf, decl, 0);
       case FuncDecl():
         _writeFunc(buf, decl, 0);
       default:
@@ -73,6 +75,22 @@ void _writeStruct(StringBuffer buf, StructDecl decl, int indent) {
   buf.writeln('struct ${decl.name} {');
   for (final field in decl.fields) {
     buf.writeln('$pad$indentUnit${field.name}: ${field.typeName}');
+  }
+  buf.writeln('$pad}');
+}
+
+void _writeEnum(StringBuffer buf, EnumDecl decl, int indent) {
+  _writeAttrs(buf, decl.attrs, indent);
+  final pad = indentUnit * indent;
+  buf.write(pad);
+  if (decl.isPub) buf.write('pub ');
+  buf.write('enum ${decl.name}');
+  if (decl.baseTypeName != null) buf.write(': ${decl.baseTypeName}');
+  buf.writeln(' {');
+  for (final variant in decl.variants) {
+    final value = variant.value;
+    final suffix = value is IntLit ? ' = ${value.lexeme}' : '';
+    buf.writeln('$pad$indentUnit${variant.name}$suffix');
   }
   buf.writeln('$pad}');
 }

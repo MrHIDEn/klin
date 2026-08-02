@@ -194,6 +194,7 @@ void _emitStmt(
           ArrayType() => '{0}',
           SliceType() => '{ NULL, 0 }',
           StructType() => '{0}',
+          EnumType() => '0',
           StrType() => 'NULL',
           ResultType() => '{0}',
           _ => throw StateError('emit: missing default value for `$name`'),

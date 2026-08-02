@@ -1,0 +1,36 @@
+// Enums (issue 072): a distinct named type over an integer base. They vanish in
+// C emission (a typedef plus integer constants) — zero hidden cost.
+
+enum Color { Red, Green, Blue }
+
+// Optional base type and explicit values (like C23 `enum E : uint8_t`).
+enum Status: u8 { Ok, Warn = 5, Err }
+
+// Methods with a receiver work on enums, just like on structs.
+fn (c: Color) name(): str {
+    match c {
+        Color.Red { return "red" }
+        Color.Green { return "green" }
+        else { return "blue" }
+    }
+}
+
+fn main() {
+    let c: Color = Color.Green
+    printf("color: %s\n", c.name())
+
+    // Enums compare with `==` / `!=` and drive `match`.
+    match c {
+        Color.Red { printf("stop\n") }
+        Color.Green { printf("go\n") }
+        else { printf("slow\n") }
+    }
+
+    // Explicit conversion to/from the integer base — never implicit.
+    let s: Status = Status.Warn
+    printf("status code: %d\n", cast(i32, s))
+    let s2: Status = cast(Status, 5)
+    if s2 == Status.Warn {
+        printf("roundtrip ok\n")
+    }
+}

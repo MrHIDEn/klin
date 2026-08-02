@@ -83,6 +83,7 @@ final class Checker {
   int _deferDepth = 0;
   final Map<String, _FuncSignature> _functions = {};
   final Map<String, StructDecl> _structs = {};
+  final Map<String, EnumDecl> _enums = {};
   final Map<String, _FuncSignature> _methods = {};
   final List<FuncDecl> _allFunctions = [];
   Map<String, Map<String, String>> _importAliases = {};
@@ -97,6 +98,7 @@ final class Checker {
   void check(Program program) {
     _functions.clear();
     _structs.clear();
+    _enums.clear();
     _methods.clear();
     _allFunctions
       ..clear()
@@ -104,6 +106,7 @@ final class Checker {
     _importAliases = program.importAliases;
     _checkAttrs(program);
     _registerStructs(program);
+    _registerEnums(program);
     _registerFunctions(program);
     final main = program.funcs
         .where((func) => func.receiver == null && func.name == 'main')
@@ -287,8 +290,9 @@ final class Checker {
       final receiver = func.receiver;
       if (receiver != null) {
         final receiverType = _resolveType(receiver.typeName, receiver.pos);
-        if (receiverType is! StructType) {
-          throw CheckError('method receiver must be a struct', receiver.pos);
+        if (receiverType is! StructType && receiverType is! EnumType) {
+          throw CheckError(
+              'method receiver must be a struct or enum', receiver.pos);
         }
         receiver.resolvedType = receiverType;
       }
@@ -319,6 +323,42 @@ final class Checker {
           throw CheckError('duplicate field `${field.name}`', field.pos);
         }
         field.resolvedType = _resolveType(field.typeName, field.pos);
+      }
+    }
+  }
+
+  void _registerEnums(Program program) {
+    for (final decl in program.enums) {
+      final key = _key(decl.moduleName, decl.name);
+      if (_enums.containsKey(key) || _structs.containsKey(key)) {
+        throw CheckError('redeclaration of type `${decl.name}`', decl.pos);
+      }
+      _enums[key] = decl;
+    }
+    for (final decl in program.enums) {
+      _currentModule = decl.moduleName;
+      final base = decl.baseTypeName == null
+          ? const PrimType(PrimKind.i32)
+          : _resolveType(decl.baseTypeName!, decl.pos);
+      if (base is! PrimType || !base.kind.isInteger) {
+        throw CheckError(
+          'enum base type must be an integer type, got `${base.displayName}`',
+          decl.pos,
+        );
+      }
+      decl.baseType = base;
+      decl.resolvedType = EnumType(decl.moduleName, decl.name, base);
+      final names = <String>{};
+      for (final variant in decl.variants) {
+        if (!names.add(variant.name)) {
+          throw CheckError(
+              'duplicate enum variant `${variant.name}`', variant.pos);
+        }
+        final value = variant.value;
+        if (value != null && value is! IntLit) {
+          throw CheckError(
+              'enum value must be an integer literal', value.pos);
+        }
       }
     }
   }
@@ -394,8 +434,21 @@ final class Checker {
       }
       return StructType(module, struct.name);
     }
+    final enumDecl = _enums[_key(module, typeName)];
+    if (enumDecl != null) {
+      if (module != _currentModule && !enumDecl.isPub) {
+        final shown = qualifier ?? module;
+        throw CheckError('enum `$shown.$typeName` is private', pos);
+      }
+      return enumDecl.resolvedType ??
+          EnumType(
+            module,
+            enumDecl.name,
+            enumDecl.baseType ?? const PrimType(PrimKind.i32),
+          );
+    }
     if (qualifier != null) {
-      throw CheckError('unknown struct `$qualifier.$typeName`', pos);
+      throw CheckError('unknown type `$qualifier.$typeName`', pos);
     }
     return _resolvePrimType(name, pos);
   }
@@ -499,6 +552,39 @@ final class Checker {
   }
 
   String _key(String module, String name) => '$module.$name';
+
+  /// Resolves `Enum.Variant` to an enum constant when [object] is an enum type
+  /// name (in the current module) rather than a variable. Returns the enum type
+  /// and annotates [node] with the C constant to emit, or `null` when this is a
+  /// plain field access.
+  KlinType? _tryEnumConstant(
+    FieldExpr node,
+    Expr object,
+    String variant,
+    SourcePos pos,
+  ) {
+    if (object is! NameExpr) return null;
+    if (_scope.lookup(object.name) != null) return null; // it is a variable
+    final decl = _enums[_key(_currentModule, object.name)];
+    if (decl == null) return null;
+    if (!decl.variants.any((v) => v.name == variant)) {
+      throw CheckError(
+          'enum `${object.name}` has no variant `$variant`', pos);
+    }
+    node.enumConstCName =
+        _enumConstCName(decl.moduleName, decl.name, variant);
+    return decl.resolvedType ??
+        EnumType(
+          decl.moduleName,
+          decl.name,
+          decl.baseType ?? const PrimType(PrimKind.i32),
+        );
+  }
+
+  static String _enumConstCName(String module, String name, String variant) =>
+      module.isEmpty
+          ? '${name}_$variant'
+          : '${module}_${name}_$variant';
 
   /// Maps an `import X` alias to the file module name.
   String _resolveModuleQualifier(String qualifier, SourcePos pos) {
@@ -1298,20 +1384,32 @@ final class Checker {
 
   KlinType _checkMethodCall(MethodCallExpr call) {
     final receiverType = _inferExpr(call.receiver);
-    if (receiverType is! StructType) {
+    if (receiverType is! StructType && receiverType is! EnumType) {
       throw CheckError(
-          'method requires a struct, got `${receiverType.displayName}`',
+          'method requires a struct or enum, got `${receiverType.displayName}`',
           call.pos);
+    }
+    final String receiverModule;
+    final String receiverName;
+    switch (receiverType) {
+      case StructType(:final moduleName, :final name):
+        receiverModule = moduleName;
+        receiverName = name;
+      case EnumType(:final moduleName, :final name):
+        receiverModule = moduleName;
+        receiverName = name;
+      default:
+        throw StateError('unreachable: receiver is struct or enum');
     }
     final signature = _methods['${receiverType.displayName}.${call.name}'];
     if (signature == null) {
       throw CheckError(
-          'struct `${receiverType.name}` has no method `${call.name}`',
+          'type `$receiverName` has no method `${call.name}`',
           call.pos);
     }
-    if (receiverType.moduleName != _currentModule && !signature.isPub) {
+    if (receiverModule != _currentModule && !signature.isPub) {
       throw CheckError(
-        'method `${receiverType.moduleName}.${receiverType.name}.${call.name}` is private',
+        'method `$receiverModule.$receiverName.${call.name}` is private',
         call.pos,
       );
     }
@@ -1340,8 +1438,9 @@ final class Checker {
       _expectAssignable(expected, _inferExpr(arg), arg.pos);
       _materialize(arg, expected);
     }
-    call.mangledName =
-        '${receiverType.moduleName}_${receiverType.name}_${call.name}';
+    call.mangledName = receiverModule.isEmpty
+        ? '${receiverName}_${call.name}'
+        : '${receiverModule}_${receiverName}_${call.name}';
     call.receiverByRef = signature.isMutReceiver;
     return signature.returnType;
   }
@@ -1519,6 +1618,9 @@ final class Checker {
               'nieznana zmienna `${nameExpr.name}`', nameExpr.pos);
         }(),
       FieldExpr(:final object, :final name, :final pos) => () {
+          // `Enum.Variant`: a type name (not a variable) followed by a variant.
+          final enumConst = _tryEnumConstant(expr, object, name, pos);
+          if (enumConst != null) return enumConst;
           final objectType = _inferExpr(object);
           if (name == 'len' && objectType is ArrayType) {
             return const PrimType(PrimKind.i32);
@@ -1606,17 +1708,32 @@ final class Checker {
         }(),
       CastExpr(:final typeName, :final expr, :final pos) => () {
           final target = _resolveType(typeName, pos);
-          if (target is! PtrType) {
-            throw CheckError('MVP cast supports only pointer types', pos);
-          }
           final source = _inferExpr(expr);
-          if (source is! UntypedInt &&
-              source is! PrimType &&
-              source is! PtrType) {
-            throw CheckError(
-                'pointer cast requires an integer or pointer', pos);
+          if (target is PtrType) {
+            if (source is! UntypedInt &&
+                source is! PrimType &&
+                source is! PtrType) {
+              throw CheckError(
+                  'pointer cast requires an integer or pointer', pos);
+            }
+            return target;
           }
-          return target;
+          // Explicit enum <-> integer conversion (issue 072).
+          if (target is EnumType) {
+            final concrete = _defaultConcrete(source, expr.pos);
+            if (concrete is! PrimType || !concrete.kind.isInteger) {
+              throw CheckError('cast to enum requires an integer', pos);
+            }
+            _materialize(expr, concrete);
+            return target;
+          }
+          if (target is PrimType &&
+              target.kind.isInteger &&
+              source is EnumType) {
+            return target;
+          }
+          throw CheckError(
+              'MVP cast supports pointer or enum/integer conversions', pos);
         }(),
       MethodCallExpr() => _checkMethodCall(expr),
       StructLitExpr(
@@ -1794,6 +1911,7 @@ final class Checker {
     if (type is PrimType ||
         type is StrType ||
         type is StructType ||
+        type is EnumType ||
         type is PtrType ||
         type is ArrayType ||
         type is SliceType ||
@@ -1864,6 +1982,23 @@ final class Checker {
       if (op != '==' && op != '!=') {
         throw CheckError(
           'operator `$op` is not allowed for type `bool`',
+          pos,
+        );
+      }
+      return const PrimType(PrimKind.bool_);
+    }
+
+    // enum == enum / != (same type only); ordering is not defined for enums.
+    if (lt is EnumType || rt is EnumType) {
+      if (lt != rt) {
+        throw CheckError(
+          'cannot compare `${lt.displayName}` with `${rt.displayName}`',
+          pos,
+        );
+      }
+      if (op != '==' && op != '!=') {
+        throw CheckError(
+          'operator `$op` is not allowed for enum `${lt.displayName}`',
           pos,
         );
       }
@@ -1996,9 +2131,14 @@ final class Checker {
   void _checkMatchSubject(Expr subject) {
     final subjectType = _inferExpr(subject);
     final concrete = _defaultConcrete(subjectType, subject.pos);
+    if (concrete is EnumType) {
+      _materialize(subject, concrete);
+      return;
+    }
     if (concrete is! PrimType || !concrete.kind.isInteger) {
       throw CheckError(
-        '`match` requires an integer subject, got `${concrete.displayName}`',
+        '`match` requires an integer or enum subject, '
+        'got `${concrete.displayName}`',
         subject.pos,
       );
     }
@@ -2028,6 +2168,12 @@ final class Checker {
           _materialize(value, subjectType);
         }
       case RangePattern(:final start, :final endInclusive):
+        if (subjectType is EnumType) {
+          throw CheckError(
+            'range patterns are not allowed for enum `${subjectType.displayName}`',
+            start.pos,
+          );
+        }
         final startType = _inferExpr(start);
         final endType = _inferExpr(endInclusive);
         _expectAssignable(subjectType, startType, start.pos);
@@ -2131,6 +2277,7 @@ final class Checker {
       UntypedFloat() => const PrimType(PrimKind.f64),
       PrimType() => type,
       StructType() => type,
+      EnumType() => type,
       PtrType() => type,
       ArrayType() => type,
       SliceType() => type,

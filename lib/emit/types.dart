@@ -50,6 +50,8 @@ String _cType(KlinType type) => switch (type) {
       StrType() => 'const char*',
       StructType(:final moduleName, :final name) =>
         _structCName(moduleName, name),
+      EnumType(:final moduleName, :final name) =>
+        _enumCName(moduleName, name),
       PtrType(:final pointee, :final isVolatile) =>
         '${isVolatile ? 'volatile ' : ''}${_cType(pointee)} *',
       ArrayType(:final elem) => _cType(elem),
@@ -141,6 +143,8 @@ String _typeToken(KlinType type) => switch (type) {
       VoidType() => 'void',
       StructType(:final moduleName, :final name) =>
         _structCName(moduleName, name),
+      EnumType(:final moduleName, :final name) =>
+        _enumCName(moduleName, name),
       SliceType(:final elem) => _sliceCName(elem),
       PtrType(:final pointee, :final isMut, :final isVolatile) =>
         '${isMut ? 'mut_' : ''}${isVolatile ? 'volatile_' : ''}ptr_${_typeToken(pointee)}',

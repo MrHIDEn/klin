@@ -1,7 +1,23 @@
 # 072 — Enumy (styl C23, opcjonalny typ bazowy)
 
-**Status:** 💭 do rozważenia
+**Status:** ✅ zrobione (MVP: rdzeń + metody + jawna konwersja; bez string/kv-enum)
 **Zależy od:** 002 (checker/typy), 005 (metody z receiverem), 014 (`match`)
+
+## Zrobione (MVP)
+
+- `enum E { … }` (bazowy `i32`) oraz `enum E: T { … }` (całkowity typ bazowy,
+  jawne wartości `= N`) — lekser/parser/checker/emisja/fmt.
+- Enum to osobny typ; `==`/`!=` tylko między tym samym enumem (bez porządku);
+  użycie w `match` (wzorce `Enum.Variant`, bez zakresów).
+- Metody z receiverem na enumie (`fn (c: Color) name(): str`).
+- Jawna konwersja enum↔liczba przez `cast` (bez ukrytej koercji).
+- Emisja przenośna: `typedef <baza>;` + anonimowy `enum { … }` ze stałymi
+  (bez C23 `enum E : T`, więc gcc/clang/tcc), z `#line`.
+
+Przykład: `examples/enums.kl`. Goldeny: `test/enum_basic.kl`.
+
+**Poza tym MVP** (dalej „do rozważenia”, sekcje niżej): string-enum, kv-enum,
+wymuszona wyczerpalność `match`, bitflagi (wymagają [078](078-bitwise-ops.md)).
 
 ## Cel
 
@@ -122,8 +138,8 @@ value(): T` + `match` już to pokrywa bez nowej cechy.
 
 ## Kryteria (gdy wchodzi do prac)
 
-- [ ] `enum E { … }` i `enum E: T { … }` (jawne wartości) — parser + checker.
-- [ ] Enum jako osobny typ; użycie w `match`; jawna konwersja do liczby.
-- [ ] Metody z receiverem na enumie (jak na strukturze) + golden.
-- [ ] Emisja przenośna (gcc/clang/tcc), `#line`, „gcc nie krzyczy".
-- [ ] Decyzja: string-enum (TS) — pominąć czy dodać jako `str`-stałe.
+- [x] `enum E { … }` i `enum E: T { … }` (jawne wartości) — parser + checker.
+- [x] Enum jako osobny typ; użycie w `match`; jawna konwersja do liczby.
+- [x] Metody z receiverem na enumie (jak na strukturze) + golden.
+- [x] Emisja przenośna (gcc/clang/tcc), `#line`, „gcc nie krzyczy".
+- [x] Decyzja: string-enum (TS) — pominięty w MVP (patrz sekcje wyżej).

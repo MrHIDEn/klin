@@ -154,6 +154,7 @@ final class Lexer {
     return switch (lexeme) {
       'fn' => Token(TokenKind.fn, lexeme, start),
       'struct' => Token(TokenKind.struct, lexeme, start),
+      'enum' => Token(TokenKind.enum_, lexeme, start),
       'pub' => Token(TokenKind.pub, lexeme, start),
       'module' => Token(TokenKind.module, lexeme, start),
       'import' => Token(TokenKind.import, lexeme, start),
