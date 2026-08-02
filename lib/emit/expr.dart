@@ -45,10 +45,17 @@ String _emitExprRaw(Expr expr, _ExprCtx ctx) {
       :final args,
       :final mangledName,
       :final receiverByRef,
+      :final isAssociated,
     ) =>
-      '${mangledName ?? (throw StateError('emit: method without mangling'))}'
-          '(${receiverByRef ? '&' : ''}${_emitExpr(receiver, ctx)}'
-          '${args.isEmpty ? '' : ', ${args.map((arg) => _emitExpr(arg, ctx)).join(', ')}'})',
+      () {
+        final callee =
+            mangledName ?? (throw StateError('emit: method without mangling'));
+        final argList = args.map((arg) => _emitExpr(arg, ctx)).join(', ');
+        // Associated (static) call `Type.func(...)` — no receiver argument.
+        if (isAssociated) return '$callee($argList)';
+        final recv = '${receiverByRef ? '&' : ''}${_emitExpr(receiver, ctx)}';
+        return args.isEmpty ? '$callee($recv)' : '$callee($recv, $argList)';
+      }(),
     StructLitExpr(
       :final resolvedType,
       :final typeName,
