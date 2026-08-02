@@ -78,6 +78,15 @@ final class Lexer {
       case '&':
         _advance();
         return Token(TokenKind.ampersand, '&', start);
+      case '|':
+        _advance();
+        return Token(TokenKind.pipe, '|', start);
+      case '^':
+        _advance();
+        return Token(TokenKind.caret, '^', start);
+      case '~':
+        _advance();
+        return Token(TokenKind.tilde, '~', start);
       case '@':
         _advance();
         return Token(TokenKind.atSign, '@', start);
@@ -110,6 +119,10 @@ final class Lexer {
         return Token(TokenKind.bang, '!', start);
       case '<':
         _advance();
+        if (!_atEnd && _peek == '<') {
+          _advance();
+          return Token(TokenKind.lessLess, '<<', start);
+        }
         if (!_atEnd && _peek == '=') {
           _advance();
           return Token(TokenKind.lessEqual, '<=', start);
@@ -117,6 +130,10 @@ final class Lexer {
         return Token(TokenKind.less, '<', start);
       case '>':
         _advance();
+        if (!_atEnd && _peek == '>') {
+          _advance();
+          return Token(TokenKind.greaterGreater, '>>', start);
+        }
         if (!_atEnd && _peek == '=') {
           _advance();
           return Token(TokenKind.greaterEqual, '>=', start);

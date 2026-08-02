@@ -367,7 +367,7 @@ String _expr(Expr expr, [int indent = 0]) {
         return '$name(${_argList(args, indent)})';
       }(),
     UnaryExpr(:final op, :final operand) =>
-      op == '*' || op == '&' || op == '-' || op == '!'
+      op == '*' || op == '&' || op == '-' || op == '!' || op == '~'
           ? '$op${_expr(operand, indent)}'
           : '$op(${_expr(operand, indent)})',
     IndexExpr(:final object, :final index) =>

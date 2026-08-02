@@ -1,21 +1,15 @@
 # 078 — Operatory bitowe (`| & ^ ~ << >>`)
 
-**Status:** 💭 do rozważenia
+**Status:** ✅ zrobione (MVP)
 **Zależy od:** [002](002-tablica-symboli-checker.md) (typy/checker), [019](019-default-int-types.md) (typy całkowite)
 
 ## Cel
 
-Dodać do Klina operatory bitowe na typach całkowitych. Dziś ich **nie ma**:
-lekser nie tokenizuje `| ^ ~ << >>`, a binarny `&` nie istnieje (`&` jest tylko
-unarne — branie adresu). Dostępne operatory to arytmetyka `+ - * / %`,
-porównania `== != < <= > >=` oraz unarne `- ! * &`.
+Dodać do Klina operatory bitowe na typach całkowitych. Manipulacja bitami
+występowała wcześniej wyłącznie w **generowanym C** dla rejestrów SVD
+(`lib/svd/emit.dart`) — nie w kodzie źródłowym Klina.
 
-Manipulacja bitami występuje obecnie wyłącznie w **generowanym C** dla rejestrów
-SVD (`lib/svd/emit.dart` wypluwa `<< & ~ | ^`) — nie w kodzie źródłowym Klina.
-
-## Zakres (MVP)
-
-Operatory (mapują się 1:1 na C, zero ukrytego kosztu — zasada nadrzędna):
+## Zakres (MVP) — zrobione
 
 | Klin | Znaczenie | C |
 |---|---|---|
@@ -30,42 +24,38 @@ Zasady semantyczne:
 - **Tylko typy całkowite** (`i8..u64`, `usize`/`isize`); błąd na `bool`/`float`/
   wskaźnikach (checker), tak jak dla `%`.
 - `>>` na typach ze znakiem = przesunięcie arytmetyczne (jak w C dla
-  implementacji dwójkowych); na bez znaku — logiczne. Zapisać jako założenie.
-- Operand przesunięcia (`b` w `a << b`) — całkowity; ujemny/za duży count to UB
-  w C — do rozważenia ostrzeżenie/lint, ale nie w MVP.
+  implementacji dwójkowych); na bez znaku — logiczne.
+- Operand przesunięcia (`b` w `a << b`) — całkowity; wynik ma typ lewego
+  operandu. Ujemny/za duży count to UB w C — bez lintu w MVP.
+- Emisja 1:1 do C (w tym promocje całkowite C w „gołych” wyrażeniach);
+  przypisanie do węższego typu obcina jak w C.
 
-## Precedencja (do ustalenia przy realizacji)
+## Precedencja (ustalone — jak Rust, nie C)
 
-C ma niesławnie „dziwną” precedencję bitowych (poniżej porównań). Klin ma dziś:
-`==`/`!=` → `< <= > >=` → `+ -` → `* / %` → unarne (`lib/parser.dart`). Do
-decyzji, gdzie wstawić nowe warstwy. Bezpieczna, czytelna opcja (nie kopiować
-pułapek C):
-- `<<` / `>>` obok/tuż nad `* / %` (przesunięcie ~ mnożenie/dzielenie przez 2^n),
-- `&`, potem `^`, potem `|` — każdy jako osobna warstwa **poniżej** porównań,
-  lub **powyżej** — do rozstrzygnięcia; w razie wątpliwości wymagać nawiasów.
+```
+* / %  →  + -  →  << >>  →  &  →  ^  →  |  →  porównania  →  == !=
+```
 
-Uwaga: binarny `&` koliduje wizualnie z unarnym `&` (adres). Parser rozróżnia
-je po pozycji (prefiks vs infiks), jak `*` (mnożenie vs dereferencja) —
-`_termMul` już to robi dla `*`.
+Dzięki temu `a & b == c` to `(a & b) == c`, a nie pułapka C
+`a & (b == c)`. Binarny `&` vs unarny `&` (adres) — rozróżnienie po pozycji,
+jak `*` (mnożenie vs dereferencja).
 
 ## Punkty implementacji
 
-- `lib/token.dart` + `lib/lexer.dart`: nowe tokeny `pipe |`, `caret ^`,
-  `tilde ~`, `shl <<`, `shr >>` (uwaga: `<<`/`>>` vs `<`/`>` — dłuższy pierwszy).
-- `lib/parser.dart`: nowe warstwy precedencji (binarny `&`/`^`/`|`, `<<`/`>>`) +
-  `~` w `_unary`.
-- `lib/checker.dart`: rozszerzyć `_arithOps`/logikę o bitowe z ograniczeniem do
-  typów całkowitych (osobny zbiór, np. `_bitOps`); `~` w inferencji unarnej.
-- `lib/emit/*`: emisja wprost (nawiasowanie jak istniejące `BinaryExpr`
-  `(a op b)`), `~` jak `UnaryExpr`.
-- `lib/fmt.dart`: druk nowych operatorów.
+- `lib/token.dart` + `lib/lexer.dart`: `pipe |`, `caret ^`, `tilde ~`,
+  `lessLess <<`, `greaterGreater >>`.
+- `lib/parser.dart`: warstwy `_shift` / `_bitAnd` / `_bitXor` / `_bitOr` + `~`
+  w `_unary`.
+- `lib/checker.dart`: `_bitOps` / `_inferShift`; `~` w inferencji unarnej.
+- Emisja: istniejący `BinaryExpr` / `UnaryExpr` (nawiasowanie `(a op b)`).
+- `lib/fmt.dart`: `~` jak pozostałe unarne prefiksy.
 
 ## Relacja do innych issue
 
 - Odblokowuje „bitflagi” dla enumów ([072](072-enums.md)) — `Flags.A | Flags.B`
-  wymaga tych operatorów; obecnie „poza zakresem” tam.
+  wymaga tych operatorów (oraz semantyki bitflagów na enumach — osobno).
 - Przydatne dla HAL/rejestrów ([031](031-biblioteki-hal.md), [011](011-svd.md))
-  po stronie kodu Klina, nie tylko generowanego C.
+  po stronie kodu Klina.
 
 ## Poza zakresem
 
@@ -74,10 +64,11 @@ je po pozycji (prefiks vs infiks), jak `*` (mnożenie vs dereferencja) —
 - Bitflagi jako cecha enuma — należą do [072](072-enums.md).
 - Ostrzeżenia o UB przesunięć (ujemny/za duży count) — ewentualnie z lintem.
 
-## Kryteria (gdy wchodzi do prac)
+## Kryteria
 
-- [ ] Tokeny + parser (precedencja, `~` unarny, infiks `&`).
-- [ ] Checker: ograniczenie do typów całkowitych; błędy na `bool`/`float`/ptr.
-- [ ] Emisja przenośna (gcc/clang/tcc), `#line`; goldeny (wartości + `objdump`
-      vs ręczny C wg zasady 5).
-- [ ] `fmt` drukuje operatory idempotentnie.
+- [x] Tokeny + parser (precedencja Rust-like, `~` unarny, infiks `&`).
+- [x] Checker: ograniczenie do typów całkowitych; błędy na `bool`/`float`.
+- [x] Emisja przenośna (gcc/clang/tcc), `#line`; goldeny.
+- [x] `fmt` drukuje operatory idempotentnie.
+
+Zob. [`examples/bitwise.kl`](../examples/bitwise.kl), `test/bitwise.kl`.

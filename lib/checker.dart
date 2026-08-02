@@ -2034,6 +2034,18 @@ final class Checker {
             }
             return const PrimType(PrimKind.bool_);
           }
+          if (op == '~') {
+            final t = _inferExpr(operand);
+            final concrete = _defaultConcrete(t, operand.pos);
+            if (concrete is! PrimType || !concrete.kind.isInteger) {
+              throw CheckError(
+                'operator `~` requires an integer type, got `${concrete.displayName}`',
+                pos,
+              );
+            }
+            _materialize(operand, concrete);
+            return concrete;
+          }
           if (op != '-') {
             throw CheckError('unknown unary operator `$op`', pos);
           }
@@ -2087,10 +2099,18 @@ final class Checker {
 
   static const _cmpOps = {'==', '!=', '<', '<=', '>', '>='};
   static const _arithOps = {'+', '-', '*', '/', '%'};
+  static const _bitOps = {'&', '|', '^'};
+  static const _shiftOps = {'<<', '>>'};
 
   KlinType _inferBinary(Expr left, String op, Expr right, SourcePos pos) {
     if (_cmpOps.contains(op)) {
       return _inferComparison(left, op, right, pos);
+    }
+    if (_bitOps.contains(op)) {
+      return _inferBitwise(left, op, right, pos);
+    }
+    if (_shiftOps.contains(op)) {
+      return _inferShift(left, op, right, pos);
     }
     if (!_arithOps.contains(op)) {
       throw CheckError('unknown operator `$op`', pos);
@@ -2121,6 +2141,49 @@ final class Checker {
     _materialize(left, concrete);
     _materialize(right, concrete);
     return concrete;
+  }
+
+  /// Bitwise `&` / `|` / `^` — integers only (issue 078).
+  KlinType _inferBitwise(Expr left, String op, Expr right, SourcePos pos) {
+    final lt = _inferExpr(left);
+    final rt = _inferExpr(right);
+    final unified = _unifyNumeric(lt, rt, pos);
+    final concrete = unified is UntypedInt || unified is UntypedFloat
+        ? _defaultConcrete(unified, pos)
+        : unified;
+    if (concrete is! PrimType || !concrete.kind.isInteger) {
+      throw CheckError(
+        'operator `$op` requires integer types, got `${concrete.displayName}`',
+        pos,
+      );
+    }
+    _materialize(left, concrete);
+    _materialize(right, concrete);
+    return concrete;
+  }
+
+  /// Shifts `<<` / `>>` — both sides integers; result type is the left side.
+  /// Signed `>>` is arithmetic (two's complement C); unsigned is logical.
+  KlinType _inferShift(Expr left, String op, Expr right, SourcePos pos) {
+    final lt = _inferExpr(left);
+    final rt = _inferExpr(right);
+    final leftConcrete = _defaultConcrete(lt, left.pos);
+    final rightConcrete = _defaultConcrete(rt, right.pos);
+    if (leftConcrete is! PrimType || !leftConcrete.kind.isInteger) {
+      throw CheckError(
+        'operator `$op` requires an integer left operand, got `${leftConcrete.displayName}`',
+        pos,
+      );
+    }
+    if (rightConcrete is! PrimType || !rightConcrete.kind.isInteger) {
+      throw CheckError(
+        'operator `$op` requires an integer shift count, got `${rightConcrete.displayName}`',
+        pos,
+      );
+    }
+    _materialize(left, leftConcrete);
+    _materialize(right, rightConcrete);
+    return leftConcrete;
   }
 
   KlinType _inferComparison(Expr left, String op, Expr right, SourcePos pos) {

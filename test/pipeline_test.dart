@@ -561,6 +561,75 @@ fn main() {
     expect(c, contains('y = (y + 1);'));
   });
 
+  test('golden: bitwise ops | & ^ ~ << >> (issue 078)', () async {
+    final result = await _compileAndRun('test/bitwise.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/bitwise.out').readAsString());
+
+    final source = File('test/bitwise.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/bitwise.kl');
+    expect(c, contains('(a & b)'));
+    expect(c, contains('(a | b)'));
+    expect(c, contains('(a ^ b)'));
+    expect(c, contains('~(a)'));
+    expect(c, contains('(1 << 3)'));
+    expect(c, contains('(0x8 >> 2)'));
+    // Rust-like: `&` binds tighter than `==`.
+    expect(c, contains('((flags & 0x4) == 0x4)'));
+  });
+
+  test('lexer: bitwise tokens << >> | ^ ~ (issue 078)', () {
+    final tokens = Lexer('a<<b>>c|d^e~f&g').tokenize();
+    expect(
+      tokens.map((t) => t.kind).toList(),
+      [
+        TokenKind.ident,
+        TokenKind.lessLess,
+        TokenKind.ident,
+        TokenKind.greaterGreater,
+        TokenKind.ident,
+        TokenKind.pipe,
+        TokenKind.ident,
+        TokenKind.caret,
+        TokenKind.ident,
+        TokenKind.tilde,
+        TokenKind.ident,
+        TokenKind.ampersand,
+        TokenKind.ident,
+        TokenKind.eof,
+      ],
+    );
+  });
+
+  test('error: bitwise op rejects float (issue 078)', () {
+    const source = 'fn main() { let x = 1.5 & 2.0 }';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError && e.toString().contains('requires integer'))),
+    );
+  });
+
+  test('error: bitwise not rejects bool (issue 078)', () {
+    const source = 'fn main() { let x = ~true }';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError && e.toString().contains('requires an integer'))),
+    );
+  });
+
+  test('klin fmt: bitwise operators (issue 078)', () {
+    const ugly = 'fn main(){let x=1<<2|3&4^~5}';
+    final once = formatSource(ugly);
+    expect(once, contains('1 << 2 | 3 & 4 ^ ~5'));
+    expect(formatSource(once), once);
+  });
+
   test('golden: short_decl.kl — := sugar for let mut (issue 055)', () async {
     final result = await _compileAndRun('test/short_decl.kl', tmp);
     expect(result.exitCode, 0, reason: result.stderr);
