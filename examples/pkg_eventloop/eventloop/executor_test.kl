@@ -1,0 +1,57 @@
+module eventloop
+
+import testing
+
+struct Tap {
+    n: i32
+    ex: *mut u8
+}
+
+fn on_once(ctx: *mut u8) {
+    let t = cast(*mut Tap, ctx)
+    (*t).n = (*t).n + 1
+}
+
+fn on_repeat(ctx: *mut u8) {
+    let t = cast(*mut Tap, ctx)
+    (*t).n = (*t).n + 1
+    if (*t).n >= 2 {
+        stop(cast(*mut Executor, (*t).ex))
+    }
+}
+
+fn test_once_ms_fires() {
+    let mut ex: Executor
+    let mut tap = Tap{ n: 0, ex: cast(*mut u8, &ex) }
+    let init_rc = init(&ex) or { 1 }
+    testing.assert_eq_i32(init_rc, 0)
+    let id = once_ms(&ex, 20, on_once, cast(*mut u8, &tap)) or { 0 }
+    testing.assert(id > 0)
+    run(&ex)
+    testing.assert_eq_i32(tap.n, 1)
+}
+
+fn test_every_ms_stop() {
+    let mut ex: Executor
+    let mut tap = Tap{ n: 0, ex: cast(*mut u8, &ex) }
+    let init_rc = init(&ex) or { 1 }
+    testing.assert_eq_i32(init_rc, 0)
+    let id = every_ms(&ex, 20, on_repeat, cast(*mut u8, &tap)) or { 0 }
+    testing.assert(id > 0)
+    run(&ex)
+    testing.assert_eq_i32(tap.n, 2)
+}
+
+fn test_full_queue() {
+    let mut ex: Executor
+    let mut tap = Tap{ n: 0, ex: cast(*mut u8, 0) }
+    let _ = init(&ex) or { 1 }
+    let mut i: i32 = 0
+    while i < 16 {
+        let id = once_ms(&ex, 1000, on_once, cast(*mut u8, &tap)) or { 0 }
+        testing.assert(id > 0)
+        i = i + 1
+    }
+    let overflow = once_ms(&ex, 1000, on_once, cast(*mut u8, &tap)) or { 0 - 1 }
+    testing.assert_eq_i32(overflow, 0 - 1)
+}

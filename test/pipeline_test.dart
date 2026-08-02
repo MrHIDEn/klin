@@ -2668,6 +2668,12 @@ fn main() {
     expect(c, contains('geom_Vec2_len_sq('));
   });
 
+  test('eventloop package: every_ms + run + stop (issue 029 MVP)', () async {
+    final result = await _compileAndRun('examples/pkg_eventloop/app.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, 'tick\ntick\ntick\nticks=3 version=1\n');
+  });
+
   test('entry loads same-module sibling files (issue 047)', () async {
     final dir = Directory.systemTemp.createTempSync('klin_pkg_entry_');
     addTearDown(() => dir.deleteSync(recursive: true));

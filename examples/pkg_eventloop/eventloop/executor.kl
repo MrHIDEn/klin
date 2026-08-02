@@ -1,0 +1,181 @@
+/// Cooperative timer executor (host). Fixed 16-slot capacity — no hidden malloc.
+/// Issue 029 MVP: callbacks + explicit `run()`, no async/await.
+/// API uses `*mut Executor` (free functions) so helpers compose without
+/// double-pointer issues from nested mut methods.
+/// Callbacks take an explicit `ctx` pointer (no closures / no globals in Klin).
+module eventloop
+
+import time
+
+struct Slot {
+    id: i32
+    active: bool
+    repeating: bool
+    interval_ms: i64
+    deadline_ns: i64
+    cb: fn(*mut u8): void
+    ctx: *mut u8
+}
+
+pub struct Executor {
+    slots: [16]Slot
+    running: bool
+    next_id: i32
+}
+
+fn _clear_slots(ex: *mut Executor) {
+    let mut i: i32 = 0
+    while i < 16 {
+        (*ex).slots[i].id = 0
+        (*ex).slots[i].active = false
+        (*ex).slots[i].repeating = false
+        (*ex).slots[i].interval_ms = 0
+        (*ex).slots[i].deadline_ns = 0
+        (*ex).slots[i].ctx = cast(*mut u8, 0)
+        i = i + 1
+    }
+}
+
+fn _alloc_slot(ex: *mut Executor): !i32 {
+    let mut i: i32 = 0
+    while i < 16 {
+        if !((*ex).slots[i].active) {
+            return i
+        }
+        i = i + 1
+    }
+    return error(1)
+}
+
+fn _has_active(ex: *Executor): bool {
+    let mut i: i32 = 0
+    while i < 16 {
+        if (*ex).slots[i].active {
+            return true
+        }
+        i = i + 1
+    }
+    return false
+}
+
+fn _next_deadline_ns(ex: *Executor): i64 {
+    let mut best: i64 = 0
+    let mut have: bool = false
+    let mut i: i32 = 0
+    while i < 16 {
+        if (*ex).slots[i].active {
+            let d = (*ex).slots[i].deadline_ns
+            if !(have) {
+                best = d
+                have = true
+            } else if d < best {
+                best = d
+            }
+        }
+        i = i + 1
+    }
+    return best
+}
+
+fn _arm(ex: *mut Executor, ms: i64, repeating: bool, cb: fn(*mut u8): void, ctx: *mut u8): !i32 {
+    if ms < 1 {
+        return error(2)
+    }
+    let idx = _alloc_slot(ex)!
+    let id = (*ex).next_id
+    (*ex).next_id = (*ex).next_id + 1
+    let now = time.mono()
+    let deadline = now.add(time.milliseconds(ms))
+    (*ex).slots[idx].id = id
+    (*ex).slots[idx].active = true
+    (*ex).slots[idx].repeating = repeating
+    (*ex).slots[idx].interval_ms = ms
+    (*ex).slots[idx].deadline_ns = deadline.ns
+    (*ex).slots[idx].cb = cb
+    (*ex).slots[idx].ctx = ctx
+    return id
+}
+
+/// Reset all slots. Returns `0`.
+pub fn init(ex: *mut Executor): !i32 {
+    (*ex).running = false
+    (*ex).next_id = 1
+    _clear_slots(ex)
+    return 0
+}
+
+/// Register a repeating timer. Returns slot id. Does not call `cb` yet.
+pub fn every_ms(ex: *mut Executor, ms: i64, cb: fn(*mut u8): void, ctx: *mut u8): !i32 {
+    return _arm(ex, ms, true, cb, ctx)
+}
+
+/// Register a one-shot timer. Returns slot id. Does not call `cb` yet.
+pub fn once_ms(ex: *mut Executor, ms: i64, cb: fn(*mut u8): void, ctx: *mut u8): !i32 {
+    return _arm(ex, ms, false, cb, ctx)
+}
+
+pub fn cancel(ex: *mut Executor, id: i32) {
+    let mut i: i32 = 0
+    while i < 16 {
+        if (*ex).slots[i].active {
+            if (*ex).slots[i].id == id {
+                (*ex).slots[i].active = false
+                (*ex).slots[i].id = 0
+                (*ex).slots[i].ctx = cast(*mut u8, 0)
+                return
+            }
+        }
+        i = i + 1
+    }
+}
+
+/// Stop a running executor (safe to call from a callback).
+pub fn stop(ex: *mut Executor) {
+    (*ex).running = false
+}
+
+/// Poll ready timers and invoke callbacks. Explicit loop — this is where progress happens.
+pub fn run(ex: *mut Executor) {
+    (*ex).running = true
+    while (*ex).running {
+        if !(_has_active(cast(*Executor, ex))) {
+            (*ex).running = false
+            return
+        }
+        let now = time.mono()
+        let mut i: i32 = 0
+        while i < 16 {
+            if (*ex).slots[i].active {
+                if (*ex).slots[i].deadline_ns <= now.ns {
+                    let cb = (*ex).slots[i].cb
+                    let ctx = (*ex).slots[i].ctx
+                    if (*ex).slots[i].repeating {
+                        let next = now.add(time.milliseconds((*ex).slots[i].interval_ms))
+                        (*ex).slots[i].deadline_ns = next.ns
+                    } else {
+                        (*ex).slots[i].active = false
+                        (*ex).slots[i].id = 0
+                        (*ex).slots[i].ctx = cast(*mut u8, 0)
+                    }
+                    cb(ctx)
+                    if !((*ex).running) {
+                        return
+                    }
+                }
+            }
+            i = i + 1
+        }
+        if !(_has_active(cast(*Executor, ex))) {
+            (*ex).running = false
+            return
+        }
+        let target = _next_deadline_ns(cast(*Executor, ex))
+        // Host idle MVP: busy-wait on monotonic clock (no nanosleep yet).
+        while (*ex).running {
+            let t = time.mono()
+            if t.ns >= target {
+                break
+            }
+        }
+    }
+}

@@ -41,6 +41,7 @@ are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), n
 | `klin_lib/` | `lib/` + `-I` / `$KLIN_PATH` ([docs/11-klin-libraries.md](../docs/11-klin-libraries.md)) |
 | `pkg_geom/` | Directory = one module (`geom/*.kl`, [docs/11](../docs/11-klin-libraries.md) / [12](../docs/12-modules.md)) |
 | `remote_osa/` | Remote `import "github/mrhiden/osa"` after `klin get` ([049](../issues/049-remote-imports.md)) |
+| `pkg_eventloop/` | Event-loop callback MVP (`every_ms` / `run`; [029](../issues/029-async-event-loop.md)) — local package; remote publish pending |
 | `sketch_async_eventloop.kl` | **Sketch** — `async`/`await` + `github/mrhiden/eventloop` ([029](../issues/029-async-event-loop.md)); not `klin run` |
 | `modules/` | `module` / `import` ([docs/12-modules.md](../docs/12-modules.md)) |
 | `stm32/blink_f411/` | Nucleo-F411RE LED — local `$peripherals_from_svd` + `@[link("startup.s")]` → `out/*.link` |
