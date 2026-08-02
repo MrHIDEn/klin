@@ -55,9 +55,17 @@ See [docs/17-homebrew.md](docs/17-homebrew.md).
 
 ### Homebrew (stable)
 
-Stable bottles/tarball install needs a published GitHub Release tag
-(`v0.1.0`) and `url` / `sha256` filled in the formula. Until then use
-**HEAD** or the clone/`dart run` path above.
+Tag [`v0.1.0`](https://github.com/MrHIDEn/klin/releases/tag/v0.1.0) is
+published; [`Formula/klin.rb`](Formula/klin.rb) has `url` / `sha256`. From a
+clone (with the Dart tap):
+
+```sh
+brew tap dart-lang/dart
+brew install --formula Formula/klin.rb
+```
+
+Or copy the formula into `mrhiden/homebrew-klin` and
+`brew install mrhiden/klin/klin`.
 
 ## License
 
