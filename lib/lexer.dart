@@ -77,12 +77,24 @@ final class Lexer {
         return Token(TokenKind.percent, '%', start);
       case '&':
         _advance();
+        if (!_atEnd && _peek == '=') {
+          _advance();
+          return Token(TokenKind.ampEqual, '&=', start);
+        }
         return Token(TokenKind.ampersand, '&', start);
       case '|':
         _advance();
+        if (!_atEnd && _peek == '=') {
+          _advance();
+          return Token(TokenKind.pipeEqual, '|=', start);
+        }
         return Token(TokenKind.pipe, '|', start);
       case '^':
         _advance();
+        if (!_atEnd && _peek == '=') {
+          _advance();
+          return Token(TokenKind.caretEqual, '^=', start);
+        }
         return Token(TokenKind.caret, '^', start);
       case '~':
         _advance();
@@ -121,6 +133,10 @@ final class Lexer {
         _advance();
         if (!_atEnd && _peek == '<') {
           _advance();
+          if (!_atEnd && _peek == '=') {
+            _advance();
+            return Token(TokenKind.lessLessEqual, '<<=', start);
+          }
           return Token(TokenKind.lessLess, '<<', start);
         }
         if (!_atEnd && _peek == '=') {
@@ -132,6 +148,10 @@ final class Lexer {
         _advance();
         if (!_atEnd && _peek == '>') {
           _advance();
+          if (!_atEnd && _peek == '=') {
+            _advance();
+            return Token(TokenKind.greaterGreaterEqual, '>>=', start);
+          }
           return Token(TokenKind.greaterGreater, '>>', start);
         }
         if (!_atEnd && _peek == '=') {

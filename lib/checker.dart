@@ -860,7 +860,7 @@ final class Checker {
           );
         }
 
-      case AssignStmt(:final target, :final value, :final pos):
+      case AssignStmt(:final target, :final value, :final pos, :final compoundOp):
         final targetType = _checkAssignableTarget(target, pos);
         if (targetType is ArrayType) {
           throw CheckError(
@@ -871,6 +871,18 @@ final class Checker {
         // The target place carries its own type: emission of `or {}` / `!` /
         // `match` assignments reads it to declare the temporaries.
         target.resolvedType = targetType;
+        if (compoundOp != null) {
+          if (value is OrExpr || value is PropagateExpr || value is MatchExpr) {
+            throw CheckError(
+              'compound assignment values must be plain expressions',
+              value.pos,
+            );
+          }
+          // Type-check as `target = target op value` (issue 078).
+          final resultType = _inferBinary(target, compoundOp, value, pos);
+          _expectAssignable(targetType, resultType, value.pos);
+          break;
+        }
         final valueType = _inferLetOrAssignValue(value);
         _expectAssignable(targetType, valueType, value.pos);
         _materialize(value, targetType);

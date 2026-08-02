@@ -346,16 +346,22 @@ final class LetArrayDestructureStmt extends Stmt {
   });
 }
 
-/// target = expr, where target is NameExpr or FieldExpr.
+/// `target = expr` or bitwise compound `target op= expr` (`&=` `|=` `^=`
+/// `<<=` `>>=`, issue 078). Target is a NameExpr / FieldExpr / IndexExpr / …
 final class AssignStmt extends Stmt {
   final Expr target;
   final Expr value;
   final SourcePos pos;
 
+  /// Binary operator without `=` when this is a compound assign (`&`, `|`,
+  /// `^`, `<<`, `>>`); `null` for plain `=`.
+  final String? compoundOp;
+
   AssignStmt({
     required this.target,
     required this.value,
     required this.pos,
+    this.compoundOp,
   });
 }
 

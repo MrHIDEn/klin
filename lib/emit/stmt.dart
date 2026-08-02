@@ -279,9 +279,14 @@ void _emitStmt(
         }
       }
 
-    case AssignStmt(:final target, :final value, :final pos):
+    case AssignStmt(:final target, :final value, :final pos, :final compoundOp):
       _line(buf, pos.line, sourcePath);
-      if (value is OrExpr || value is PropagateExpr) {
+      if (compoundOp != null) {
+        // 1:1 C compound assign — LHS evaluated once.
+        buf.writeln(
+          '$pad${_emitExpr(target, ctx)} $compoundOp= ${_emitExpr(value, ctx)};',
+        );
+      } else if (value is OrExpr || value is PropagateExpr) {
         _emitValueAssignment(
           buf,
           target: _emitExpr(target, ctx),

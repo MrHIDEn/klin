@@ -8,4 +8,13 @@ fn main() {
   if flags & 0b0100 == 0b0100 {
     printf("ok\n")
   }
+
+  let mut f: u32 = 0
+  f |= 0b0001
+  f |= 0b0100
+  f &= 0b0101
+  f ^= 0b0001
+  f <<= 1
+  f >>= 1
+  printf("%d\n", f)
 }

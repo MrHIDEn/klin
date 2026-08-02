@@ -19,6 +19,7 @@ występowała wcześniej wyłącznie w **generowanym C** dla rejestrów SVD
 | `~a` | NOT bitowy (unarny) | `~a` |
 | `a << b` | przesunięcie w lewo | `a << b` |
 | `a >> b` | przesunięcie w prawo | `a >> b` |
+| `a &= b` itd. | złożone przypisanie | `a &= b` … (`\|= ^= <<= >>=`) |
 
 Zasady semantyczne:
 - **Tylko typy całkowite** (`i8..u64`, `usize`/`isize`); błąd na `bool`/`float`/
@@ -59,7 +60,7 @@ jak `*` (mnożenie vs dereferencja).
 
 ## Poza zakresem
 
-- Operatory przypisania złożonego (`|=`, `&=`, `<<=`, …) — osobno/później.
+- Arytmetyczne złożone (`+=`, `-=`, `*=`, `/=`, `%=`) — osobno.
 - Rotacje bitów, `popcount`/`clz` itp. (to funkcje/`@cimport`, nie operatory).
 - Bitflagi jako cecha enuma — należą do [072](072-enums.md).
 - Ostrzeżenia o UB przesunięć (ujemny/za duży count) — ewentualnie z lintem.
@@ -70,5 +71,6 @@ jak `*` (mnożenie vs dereferencja).
 - [x] Checker: ograniczenie do typów całkowitych; błędy na `bool`/`float`.
 - [x] Emisja przenośna (gcc/clang/tcc), `#line`; goldeny.
 - [x] `fmt` drukuje operatory idempotentnie.
+- [x] Złożone bitowe `&= |= ^= <<= >>=` (emisja 1:1 C `op=`).
 
 Zob. [`examples/bitwise.kl`](../examples/bitwise.kl), `test/bitwise.kl`.
