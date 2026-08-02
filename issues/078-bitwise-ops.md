@@ -60,10 +60,12 @@ jak `*` (mnożenie vs dereferencja).
 
 ## Poza zakresem
 
-- Arytmetyczne złożone (`+=`, `-=`, `*=`, `/=`, `%=`) — osobno.
 - Rotacje bitów, `popcount`/`clz` itp. (to funkcje/`@cimport`, nie operatory).
 - Bitflagi jako cecha enuma — należą do [072](072-enums.md).
 - Ostrzeżenia o UB przesunięć (ujemny/za duży count) — ewentualnie z lintem.
+
+Arytmetyczne złożone (`+= -= *= /= %=`) używają tego samego `AssignStmt.compoundOp`
+co bitowe — osobny follow-up PR, nie część semantyki bitowej.
 
 ## Kryteria
 

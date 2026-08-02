@@ -649,6 +649,71 @@ fn main() {
     expect(formatSource(once), once);
   });
 
+  test('golden: arithmetic compound assigns += -= *= /= %=', () async {
+    final dir = Directory.systemTemp.createTempSync('klin_arith_comp_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    File('${dir.path}/app.kl').writeAsStringSync('''
+fn main() {
+  let mut x: i32 = 10
+  x += 5
+  x -= 3
+  x *= 2
+  x /= 4
+  x %= 3
+  printf("%d\\n", x)
+
+  let mut f: f64 = 2.0
+  f *= 1.5
+  f += 0.5
+  printf("%.1f\\n", f)
+}
+''');
+    final result = await _compileAndRun('${dir.path}/app.kl', dir);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, '0\n3.5\n');
+
+    final program = loadProject('${dir.path}/app.kl');
+    Checker().check(program);
+    final c = emitC(program, '${dir.path}/app.kl');
+    expect(c, contains('x += 5;'));
+    expect(c, contains('x -= 3;'));
+    expect(c, contains('x *= 2;'));
+    expect(c, contains('x /= 4;'));
+    expect(c, contains('x %= 3;'));
+    expect(c, contains('f *= 1.5;'));
+  });
+
+  test('lexer: arithmetic compound assign tokens', () {
+    final tokens = Lexer('a+=b-=c*=d/=e%=f').tokenize();
+    expect(
+      tokens.map((t) => t.kind).toList(),
+      [
+        TokenKind.ident,
+        TokenKind.plusEqual,
+        TokenKind.ident,
+        TokenKind.minusEqual,
+        TokenKind.ident,
+        TokenKind.starEqual,
+        TokenKind.ident,
+        TokenKind.slashEqual,
+        TokenKind.ident,
+        TokenKind.percentEqual,
+        TokenKind.ident,
+        TokenKind.eof,
+      ],
+    );
+  });
+
+  test('error: %= rejects float', () {
+    const source = 'fn main() { let mut x: f64 = 1.0\n x %= 2.0 }';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError && e.toString().contains('requires integer'))),
+    );
+  });
+
   test('golden: short_decl.kl — := sugar for let mut (issue 055)', () async {
     final result = await _compileAndRun('test/short_decl.kl', tmp);
     expect(result.exitCode, 0, reason: result.stderr);
