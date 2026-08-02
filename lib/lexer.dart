@@ -209,6 +209,19 @@ final class Lexer {
       }
       return Token(TokenKind.intLit, buf.toString(), start);
     }
+    if (_peek == '0' &&
+        _i + 1 < source.length &&
+        (source[_i + 1] == 'o' || source[_i + 1] == 'O')) {
+      buf.write(_advance());
+      buf.write(_advance());
+      if (_atEnd || !_isOctalDigit(_peek)) {
+        throw LexError('expected octal digit after `0o`', start);
+      }
+      while (!_atEnd && (_isOctalDigit(_peek) || _peek == '_')) {
+        buf.write(_advance());
+      }
+      return Token(TokenKind.intLit, buf.toString(), start);
+    }
     while (!_atEnd && (_isDigit(_peek) || _peek == '_')) {
       buf.write(_advance());
     }
@@ -323,6 +336,11 @@ final class Lexer {
   }
 
   static bool _isBinaryDigit(String c) => c == '0' || c == '1';
+
+  static bool _isOctalDigit(String c) {
+    final u = c.codeUnitAt(0);
+    return u >= 48 && u <= 55; // 0-7
+  }
 
   /// True when the `e`/`E` at the cursor is a float exponent: optional sign then
   /// at least one digit.

@@ -163,13 +163,17 @@ String _structCName(String module, String name) =>
 String _enumCName(String module, String name) =>
     module.isEmpty ? name : '${module}_$name';
 
-/// Emits an integer literal portably. Binary `0b…` is not standard C (and tcc
-/// support is unreliable), so it is rewritten to `0x…` with the same bit
-/// pattern; decimal and `0x…` pass through. `_` separators are stripped.
+/// Emits an integer literal portably. Binary `0b…` and octal `0o…` are not C
+/// syntax (`0o` at all; and we avoid C's leading-zero octal), so both are
+/// rewritten to `0x…` with the same value; decimal and `0x…` pass through.
+/// `_` separators are stripped.
 String _cIntLiteral(String lexeme) {
   final s = lexeme.replaceAll('_', '');
   if (s.startsWith('0b') || s.startsWith('0B')) {
     return '0x${BigInt.parse(s.substring(2), radix: 2).toRadixString(16)}';
+  }
+  if (s.startsWith('0o') || s.startsWith('0O')) {
+    return '0x${BigInt.parse(s.substring(2), radix: 8).toRadixString(16)}';
   }
   return s;
 }
