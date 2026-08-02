@@ -46,7 +46,7 @@ Expand → `struct` + `pack`/`unpack` wołające atomy. Emisja C monomorficzna.
 | Krok | Gdzie | Co |
 |---|---|---|
 | A1 | `lib/preprocess.dart` (+ testy) | Makra widoczne przez `import` / pakiet (dziś expand per plik) |
-| A2 | `lib/preprocess.dart`, `note/04-makra.md` | Argument „blok pól” / lista `(name, type)` albo variadic |
+| A2 | `lib/preprocess.dart`, `docs/04-makra.md` | Argument „blok pól” / lista `(name, type)` albo variadic |
 | A3 | preprocess lub builtin jak `027` | Iteracja po polach w expandzie → tekst `write_*` / `read_*` |
 | A4 | checker / preprocess | Diagnostyki zmapowane na wywołanie `$kstruct` |
 | A5 | opcjonalnie `lib/…` builtin | `$kstruct_from("….kspec")` — parser pliku modelu → ten sam expand co A3 |

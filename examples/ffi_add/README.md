@@ -16,4 +16,4 @@ Equivalent CLI without `@[link]` on the function:
 dart run ../../bin/klin.dart run -L. -ladd main.kl
 ```
 
-(still needs `@[cimport]` for `add`). Details: [note/09-ffi-c.md](../../note/09-ffi-c.md).
+(still needs `@[cimport]` for `add`). Details: [docs/09-ffi-c.md](../../docs/09-ffi-c.md).

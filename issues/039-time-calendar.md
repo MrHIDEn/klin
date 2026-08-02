@@ -12,7 +12,7 @@ Go-style UTC civil calendar add na wall `Instant`:
 - Host: `klin_time_add_date` (`gmtime_r` + `timegm`, zachowany ułamek ns)
 - Bez typu `Interval` (nadal dwa `Instant` + `between`)
 
-Golden: `test/time_calendar.kl`. Docs: [note/08-time.md](../note/08-time.md).
+Golden: `test/time_calendar.kl`. Docs: [docs/08-time.md](../docs/08-time.md).
 
 ## Poza zakresem
 

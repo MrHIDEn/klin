@@ -26,7 +26,7 @@ fn add(a: i32, b: i32): i32 {
 - Nie łączyć z `@[cimport]`
 
 Przykład: [`examples/cexport_add/`](../examples/cexport_add/).
-Nota: [`note/09-ffi-c.md`](../note/09-ffi-c.md) (import **i** export).
+Nota: [`docs/09-ffi-c.md`](../docs/09-ffi-c.md) (import **i** export).
 
 ## Poza zakresem / później
 

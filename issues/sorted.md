@@ -38,7 +38,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [021](021-biblioteki-c.md) | Biblioteki C (FFI / link) | ✅ | 006, 010 |
 | [022](022-biblioteki-asm.md) | Jednostki ASM (`.s` via `@[link]`) | ✅ | 021 |
 | [023](023-examples.md) | Katalog `examples/` (+ `stm32/`) | ✅ | 001+ |
-| [025](025-english-project.md) | English project (except `issues/` + `note/`) | ✅ | — |
+| [025](025-english-project.md) | English project (except `issues/` + `docs/`) | ✅ | — |
 | [026](026-preprocessor.md) | Preprocessor (`$fn`…, D3) | ✅ | 010+ |
 | [027](027-svd-ergonomic-api.md) | Ładne API SVD (`$peripherals_from_svd`) | ✅ | 011, 026 |
 | [032](032-klin-run.md) | CLI: `klin run <plik.kl>` | ✅ | 001 |
@@ -109,7 +109,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 
 ## Zasady (zawsze)
 
-Szczegóły w `note/02-architektura.md`.
+Szczegóły w `docs/02-architektura.md`.
 
 1. **Testy złote** — `.kl` + oczekiwane wyjście.
 2. **`#line` w emisji** — każdy token nosi pozycję.

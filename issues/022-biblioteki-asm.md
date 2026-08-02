@@ -10,7 +10,7 @@
 - host: `klin run` + test + [`examples/asm_add/`](../examples/asm_add/)
 - bare-metal: blink `@[link("startup.s")]`; Makefile czyta `out/*.link`
   (bez przenoszenia `-T linker.ld` do Klina)
-- nota: [`note/10-asm.md`](../note/10-asm.md)
+- nota: [`docs/10-asm.md`](../docs/10-asm.md)
 
 ## Czego nie robimy
 

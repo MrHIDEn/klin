@@ -18,4 +18,4 @@ KLIN_PATH=examples/klin_lib/lib dart run bin/klin.dart run examples/klin_lib/app
 ```
 
 (When `lib/mathx.kl` exists beside `app.kl`, sibling/`lib/` win over `-I` /
-`$KLIN_PATH`.) Details: [note/11-biblioteki-klin.md](../../note/11-biblioteki-klin.md).
+`$KLIN_PATH`.) Details: [docs/11-biblioteki-klin.md](../../docs/11-biblioteki-klin.md).

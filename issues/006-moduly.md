@@ -28,7 +28,7 @@ ukryte w konwencji nazewniczej.
 
 ## Nota
 
-[`note/12-moduly.md`](../note/12-moduly.md). Przykłady: [`examples/modules/`](../examples/modules/),
+[`docs/12-moduly.md`](../docs/12-moduly.md). Przykłady: [`examples/modules/`](../examples/modules/),
 katalog-pakiet: [`examples/pkg_geom/`](../examples/pkg_geom/).
 
 ## Kryterium ukończenia

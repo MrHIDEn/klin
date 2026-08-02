@@ -5,7 +5,7 @@
 
 ## Cel
 
-Implementacja decyzji D3 ([note/01-decyzje.md](../note/01-decyzje.md)): makra
+Implementacja decyzji D3 ([docs/01-decyzje.md](../docs/01-decyzje.md)): makra
 czasu kompilacji, **nie** generyki w gramatyce.
 
 ## MVP

@@ -6,9 +6,9 @@ then uses gcc, clang, or tcc. The compiler is written in Dart.
 The project context, decisions, architecture, and roadmap are Polish design
 documents:
 
-- Context: @note/00-idea.md
-- Design decisions: @note/01-decyzje.md
-- Architecture and rules: @note/02-architektura.md
+- Context: @docs/00-idea.md
+- Design decisions: @docs/01-decyzje.md
+- Architecture and rules: @docs/02-architektura.md
 - Roadmap: @issues/sorted.md
 
 ## Rules that always apply
@@ -23,5 +23,5 @@ documents:
 - The frontend catches every error; gcc must never report an error in generated
   code.
 - Do not expand the scope of the current step in `issues/sorted.md`.
-- Feature workflow (always): sync/`checkout` from `origin/main` → new branch → implement (code + tests) → update docs (`note/`, `issues/`, README/stdlib README as needed) and `examples/` → push + PR → skill `rcfix` (Bugbot, fixes, scoreboard). Never commit on `main`/`develop`.
+- Feature workflow (always): sync/`checkout` from `origin/main` → new branch → implement (code + tests) → update docs (`docs/`, `issues/`, README/stdlib README as needed) and `examples/` → push + PR → skill `rcfix` (Bugbot, fixes, scoreboard). Never commit on `main`/`develop`.
 - Skill `pmain` (`.cursor/skills/pmain/SKILL.md`): shorthand for "sync main" — `git checkout main && git pull origin main` (update only; never work/commit on `main`).

@@ -12,7 +12,7 @@ Dopisanie metod (zero FFI, zero alokacji):
 - `Duration.abs` / `mul`
 - Rename `as_sec` → `as_s`
 
-Golden: `test/time_basic.kl`. Docs: [note/08-time.md](../note/08-time.md).
+Golden: `test/time_basic.kl`. Docs: [docs/08-time.md](../docs/08-time.md).
 
 ## Poza zakresem
 

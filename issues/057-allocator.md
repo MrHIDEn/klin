@@ -1,7 +1,7 @@
 # 057 — `Allocator` (jawny alokator)
 
 **Status:** ✅ ukończone
-**Zależy od:** [007](007-wskazniki-tablice-slice.md), [008](008-defer.md); D1 w [note/01-decyzje.md](../note/01-decyzje.md)
+**Zależy od:** [007](007-wskazniki-tablice-slice.md), [008](008-defer.md); D1 w [docs/01-decyzje.md](../docs/01-decyzje.md)
 
 ## Kontekst
 
@@ -28,17 +28,17 @@ fn main() {
   `alloc_i32` (+ `free_*`); `empty_u8` / `empty_i32` do bezpiecznych `or`
 - Emisja: `klin_mem_*` → `malloc` / `free` tylko przy `import mem`
 - `n < 0` / OOM → `!T`; `n == 0` → pusty slice bez `malloc`
-- Docs: [note/14-allocator.md](../note/14-allocator.md); golden `test/mem_alloc.kl`;
+- Docs: [docs/14-allocator.md](../docs/14-allocator.md); golden `test/mem_alloc.kl`;
   example `examples/mem_heap.kl`
 
 **Bez** `a.alloc(u8, n)` w gramatyce — **nie obiecywać** w MVP (brak argumentu
 typu w wywołaniu; D3/`$fn`, ewentualnie [034](034-typy-generyczne.md) później).
-Szczegóły: [note/14-allocator.md](../note/14-allocator.md) § „Nie obiecywać”.
+Szczegóły: [docs/14-allocator.md](../docs/14-allocator.md) § „Nie obiecywać”.
 
 ## Zrobione poza 057 (konsumenci)
 
 - [017](017-collection-methods.md) warstwa 2 — [`slice_alloc`](../stdlib/slice_alloc.kl)
-  (`map_alloc_*` / `filter_alloc_*`); note: [16-slice.md](../note/16-slice.md)
+  (`map_alloc_*` / `filter_alloc_*`); note: [16-slice.md](../docs/16-slice.md)
 
 ## Follow-up (później)
 

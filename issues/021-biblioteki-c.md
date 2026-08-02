@@ -16,7 +16,7 @@
 - CLI: `-l <name>`, `-L <dir>` (także sklejone `-lm`, `-L/path`)
 - nieznane wywołania = błąd checkera, **oprócz** host builtins `puts` / `printf`
 - przykład: [`examples/ffi_add/`](../examples/ffi_add/)
-- nota: [`note/09-ffi-c.md`](../note/09-ffi-c.md)
+- nota: [`docs/09-ffi-c.md`](../docs/09-ffi-c.md)
 
 Test zasady nadrzędnej: FFI nie ukrywa alokacji ani ownership — kontrakt
 użytkownika z C.

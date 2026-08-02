@@ -11,7 +11,7 @@
 - Host helpers w emisji C: `klin_time_*` (`clock_gettime`, `gmtime_r`, `strftime`, `timegm`)
 - Zero `malloc` na ścieżce bibliotecznej
 
-Docs: [note/08-time.md](../note/08-time.md). Golden: `test/time_basic.kl`.
+Docs: [docs/08-time.md](../docs/08-time.md). Golden: `test/time_basic.kl`.
 Demo: `examples/time_demo.kl`.
 
 ## Poza zakresem / później (Luxon-like)

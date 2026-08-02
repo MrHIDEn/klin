@@ -14,7 +14,7 @@ o tabach, nawiasach i łamaniu linii.
 - CLI: `klin fmt [-w] <plik.kl…>` — domyślnie stdout, `-w` zapis na miejscu
 - `lib/fmt.dart`: lex → `parseUnit` → pretty-print (4 spacje, K&R, spacje przy op)
 - Kolejność deklaracji zachowana (`ModuleUnit.decls`)
-- Styl: [note/05-fmt.md](../note/05-fmt.md)
+- Styl: [docs/05-fmt.md](../docs/05-fmt.md)
 - Golden: `test/fmt_ugly.kl` → `test/fmt_ugly.fmt.kl` + idempotencja
 
 ## Poza MVP (na później)
@@ -27,5 +27,5 @@ o tabach, nawiasach i łamaniu linii.
 ## Kryterium
 
 - [x] `klin fmt` na przykładach bez `$` daje powtarzalny wynik
-- [x] dokument stylu w `note/05-fmt.md`
+- [x] dokument stylu w `docs/05-fmt.md`
 - [x] golden brzydki → sformatowany

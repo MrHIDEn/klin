@@ -1,6 +1,6 @@
 # 000 — Trzy decyzje fundamentalne
 
-**Status:** ✅ rozstrzygnięte (patrz `note/01-decyzje.md`)
+**Status:** ✅ rozstrzygnięte (patrz `docs/01-decyzje.md`)
 **Blokuje:** wszystko
 
 ## Opis
@@ -14,4 +14,4 @@ tablicę symboli, checker i codegen. Zmiana później = przepisywanie.
 
 ## Kryterium ukończenia
 
-Zapisane w `note/01-decyzje.md` z uzasadnieniem każdego odrzucenia.
+Zapisane w `docs/01-decyzje.md` z uzasadnieniem każdego odrzucenia.

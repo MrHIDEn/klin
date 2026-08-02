@@ -27,4 +27,4 @@ gcc -I out caller.c out/lib.c -o add_demo
 `lib.kl` uses `@[cexport, codename("klin_add")]`. `--emit-h` writes
 `out/lib.h` with the C prototype. ISR-style exports can still use
 `@[codename("…")]` alone (see `examples/stm32/`). Details:
-[note/09-ffi-c.md](../../note/09-ffi-c.md).
+[docs/09-ffi-c.md](../../docs/09-ffi-c.md).

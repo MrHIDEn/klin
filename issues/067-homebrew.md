@@ -14,7 +14,7 @@
 |---|---|
 | [`Formula/klin.rb`](../Formula/klin.rb) | build from source (`dart compile exe`) + `pkgshare` stdlib |
 | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | tag `v*` → binarki macOS/Linux + GitHub Release |
-| [`note/17-homebrew.md`](../note/17-homebrew.md) | instalacja / tap / sha256 |
+| [`docs/17-homebrew.md`](../docs/17-homebrew.md) | instalacja / tap / sha256 |
 
 Odkrywanie stdlib przy binarke / Homebrew `share/klin`: `lib/project.dart`.
 

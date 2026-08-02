@@ -24,7 +24,7 @@ Resolucja ścieżek jak 020/047 (`lib/`, `-I`, `KLIN_PATH`, plik lub katalog).
 
 - parser: opcjonalny alias po `import` (ident lub string) ✅
 - `import "względna/ścieżka" [alias]` **lokalnie** (bez sieci) ✅
-- testy + nota w [note/11](../note/11-biblioteki-klin.md) ✅
+- testy + nota w [docs/11](../docs/11-biblioteki-klin.md) ✅
 
 Implementacja: qualifier (alias lub domyślny = ostatni segment) kluczuje
 `importAliases` i jest używany w źródle; mangling C używa realnej nazwy

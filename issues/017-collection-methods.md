@@ -3,8 +3,8 @@
 **Status:** ✅
 **Zależy od:** 007 (slice ✅); fn-pointer (faza 2 ✅); warstwa 2: `Allocator` ([057](057-allocator.md) ✅)
 
-Note: [16-slice.md](../note/16-slice.md) · fn-ptr: [13-fn-ptr.md](../note/13-fn-ptr.md) ·
-alokator: [14-allocator.md](../note/14-allocator.md)
+Note: [16-slice.md](../docs/16-slice.md) · fn-ptr: [13-fn-ptr.md](../docs/13-fn-ptr.md) ·
+alokator: [14-allocator.md](../docs/14-allocator.md)
 
 ## Kontekst
 
@@ -70,7 +70,7 @@ slice_alloc.map_alloc_i32(&a, xs, f)
 
 ### Callback
 
-Wskaźniki na funkcje bez capture ([note/13-fn-ptr.md](../note/13-fn-ptr.md)).
+Wskaźniki na funkcje bez capture ([docs/13-fn-ptr.md](../docs/13-fn-ptr.md)).
 
 Zapis przez `dst[i]` na slice: dozwolony (nagłówek slice to wartość; pamięć
 elementów współdzielona z callerem — jak Go).
@@ -101,7 +101,7 @@ comparator-domknięciem.
 ## Warstwa 2 (`*_alloc`) — ✅
 
 Typ `Allocator`: [`stdlib/mem`](../stdlib/mem.kl)
-([note/14-allocator.md](../note/14-allocator.md)).
+([docs/14-allocator.md](../docs/14-allocator.md)).
 
 Moduł [`stdlib/slice_alloc.kl`](../stdlib/slice_alloc.kl):
 

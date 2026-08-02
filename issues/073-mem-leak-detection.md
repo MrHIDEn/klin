@@ -1,7 +1,7 @@
 # 073 — Wykrywanie potencjalnych wycieków pamięci
 
 **Status:** 💭 do rozważenia
-**Zależy od:** 055/057 (`Allocator`, [note/14](../note/14-allocator.md)), 008 (`defer`)
+**Zależy od:** 055/057 (`Allocator`, [docs/14](../docs/14-allocator.md)), 008 (`defer`)
 
 ## Pytanie
 
@@ -21,7 +21,7 @@ brak GC i ukrytej alokacji.
 1. **Zewnętrzne narzędzia na emitowanym C** — Klin emituje czytelny `.c`/binarkę,
    więc Valgrind / ASan+LSan działają wprost na hostowych buildach. Zero kosztu
    językowego. Najsilniejsza pragmatyczna ścieżka; wystarczy udokumentować wzorzec
-   (np. w CI / `note/`).
+   (np. w CI / `docs/`).
 2. **Debug-alokator (opcjonalny, host)** — wariant `mem`, który liczy
    `alloc`/`free`, taguje miejsce alokacji i na końcu raportuje niezwolnione
    bloki. Biblioteka / opt-in (jak `slice_alloc`); bare-metal bez heapu go nie

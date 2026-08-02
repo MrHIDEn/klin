@@ -10,7 +10,7 @@
 - CLI `-I <dir>` (także `-Idir`); `$KLIN_PATH` (PATH-style)
 - emisja: jeden `.c` (jak 006); `pub` = API biblioteki
 - przykład: [`examples/klin_lib/`](../examples/klin_lib/)
-- nota: [`note/11-biblioteki-klin.md`](../note/11-biblioteki-klin.md)
+- nota: [`docs/11-biblioteki-klin.md`](../docs/11-biblioteki-klin.md)
 
 ## Czego nie robimy
 

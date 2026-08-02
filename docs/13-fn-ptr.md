@@ -25,4 +25,4 @@ Część [issue 017](../issues/017-collection-methods.md) (faza 2). Example:
 Moduły [`stdlib/slice.kl`](../stdlib/slice.kl) (warstwa 0+1) i
 [`stdlib/slice_alloc.kl`](../stdlib/slice_alloc.kl) (warstwa 2) używają tych
 typów jako callbacków (`map_into_i32`, `map_alloc_i32`, …) —
-szczegóły: [note/16-slice.md](16-slice.md).
+szczegóły: [docs/16-slice.md](16-slice.md).

@@ -6,7 +6,7 @@
 ## Werdykt (po 017 / 057)
 
 **Nie wdrażamy generyków w gramatyce.** Zostajemy przy **D3**
-([note/01-decyzje.md](../note/01-decyzje.md)): monomorfizacja przez `$fn`
+([docs/01-decyzje.md](../docs/01-decyzje.md)): monomorfizacja przez `$fn`
 przed parse.
 
 Pełny system typów z `T` w tablicy symboli (wariant 3) to duży koszt frontendu
@@ -17,12 +17,12 @@ Po [017](017-collection-methods.md) / [057](057-allocator.md) `$fn` w stdlib
 wystarcza: `slice` / `slice_alloc` (`_i32` / `_u8`), `mem.alloc_i32` /
 `alloc_u8`. Ból jest nazewniczy (`map_into_i32` vs `map_into[T]`), nie
 semantyczny. **`a.alloc(T, n)` nadal nie obiecywać**
-([note/14-allocator.md](../note/14-allocator.md)).
+([docs/14-allocator.md](../docs/14-allocator.md)).
 
 ## Kontekst
 
 D3: generyki **nie** w gramatyce — makra czasu kompilacji. MVP działa
-(`point_macro`, SVD fluent, slice helpers — [note/16-slice.md](../note/16-slice.md)).
+(`point_macro`, SVD fluent, slice helpers — [docs/16-slice.md](../docs/16-slice.md)).
 
 ## Warianty (gdy wrócimy)
 
@@ -49,5 +49,5 @@ Wtedy planować **wariant 2**, nie wariant 3.
 ## Checklist decyzji
 
 - [x] Werdykt: zostajemy przy D3; otwarcie tematu = wariant 2 po kryteriach powyżej
-- [x] Krótki dopisek w D3 ([note/01-decyzje.md](../note/01-decyzje.md))
+- [x] Krótki dopisek w D3 ([docs/01-decyzje.md](../docs/01-decyzje.md))
 - [ ] Zebrać 2–3 twarde miejsca bólu `$fn` (warunek startu implementacji — nie teraz)

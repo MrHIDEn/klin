@@ -1,8 +1,8 @@
 # 071 — Lambdy / cukier `fn (…) => expr`
 
 **Status:** 💭 do rozważenia (niski priorytet — **nie teraz**)
-**Zależy od:** fn-pointer ✅ ([note/13-fn-ptr.md](../note/13-fn-ptr.md));
-  prawdziwe domknięcia → [D7](../note/01-decyzje.md); mile [055](055-short-decl.md) (`:=`)
+**Zależy od:** fn-pointer ✅ ([docs/13-fn-ptr.md](../docs/13-fn-ptr.md));
+  prawdziwe domknięcia → [D7](../docs/01-decyzje.md); mile [055](055-short-decl.md) (`:=`)
 
 ## Podsumowanie
 

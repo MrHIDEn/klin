@@ -1,7 +1,7 @@
 # 069 — Observer / EventEmitter / Signals (biblioteka)
 
 **Status:** 💭 do rozważenia
-**Zależy od:** fn-ptr ([note/13](../note/13-fn-ptr.md)), `Allocator` ([057](057-allocator.md) / [note/14](../note/14-allocator.md)), wzorce z [017](017-collection-methods.md); miejsce jak [024](024-rtos.md)/[029](029-async-event-loop.md)
+**Zależy od:** fn-ptr ([docs/13](../docs/13-fn-ptr.md)), `Allocator` ([057](057-allocator.md) / [docs/14](../docs/14-allocator.md)), wzorce z [017](017-collection-methods.md); miejsce jak [024](024-rtos.md)/[029](029-async-event-loop.md)
 
 ## Pytanie
 
@@ -11,7 +11,7 @@ alokacji / ukrytego runtime (zasada nadrzędna).
 
 ## A. Ograniczenia z rdzenia (kształtują całe API)
 
-- **Brak capture** (D7, [note/13](../note/13-fn-ptr.md)): callback to `fn(...)`
+- **Brak capture** (D7, [docs/13](../docs/13-fn-ptr.md)): callback to `fn(...)`
   top-level, nie domyka stanu. Kontekst przenosimy **jawnym wskaźnikiem**:
   listener = para `{ cb: fn(*mut u8, Ev): void, ctx: *mut u8 }`.
 - **Brak ukrytej alokacji/kontroli/kosztu**: `emit`/`notify` to jawna pętla po

@@ -59,7 +59,7 @@ let a = match x {
   pierwszej klasy (przykład z `"abc"` z wczesnego szkicu nie przechodzi
   checkera również poza `match`)
 
-Szczegóły: [note/15-match.md](../note/15-match.md).
+Szczegóły: [docs/15-match.md](../docs/15-match.md).
 
 ## Kryterium ukończenia
 

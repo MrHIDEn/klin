@@ -8,4 +8,4 @@ dart run ../../bin/klin.dart run main.kl
 
 `add.S` is a raw assembly unit (`.S` so the host cc can `#if` Apple vs ELF
 symbol names). No Klin ASM DSL. Symbols use `@[cimport, codename("asm_add")]`.
-Details: [note/10-asm.md](../../note/10-asm.md).
+Details: [docs/10-asm.md](../../docs/10-asm.md).

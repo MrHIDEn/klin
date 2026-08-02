@@ -3,7 +3,7 @@
 **Status:** ✅ — fazy A (struktury) + A′ (bare `{}=`) + B (multi-assign) + C (tablice `[N]T`) + D (rename / `_`). Bare `[]=` świadomie pominięte (patrz niżej).
 **Zależy od:** [005](005-struktury-metody.md) (struct lit/pola ✅); mile [007](007-wskazniki-tablice-slice.md) (tablice stałej długości)
 
-> **Nie mylić z destruktorami RAII.** D6 ([note/01-decyzje.md](../note/01-decyzje.md)):
+> **Nie mylić z destruktorami RAII.** D6 ([docs/01-decyzje.md](../docs/01-decyzje.md)):
 > brak konstruktorów/destruktorów. Tu chodzi o **destructuring** —
 > rozpakowanie wartości do wielu nazw w jednym zdaniu.
 

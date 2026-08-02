@@ -16,5 +16,5 @@
 Runtime podmiana wąsów (wzorzec-jako-dane, `{0}` / `{klucz}`) → osobno
 [077](077-string-template.md).
 
-Szczegóły: [note/07-interpolacja.md](../note/07-interpolacja.md).
+Szczegóły: [docs/07-interpolacja.md](../docs/07-interpolacja.md).
 Golden: `test/interp.kl`. Demo: `examples/interp.kl`.

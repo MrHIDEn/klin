@@ -21,7 +21,7 @@ klin --emit-c --emit-h foo.kl     # → out/foo.c + out/foo.h
 - nie zastępuje pack `.a` / `.so`
 
 Przykład: [`examples/cexport_add/`](../examples/cexport_add/).
-Nota: [`note/09-ffi-c.md`](../note/09-ffi-c.md), CLI: [`note/06-cli.md`](../note/06-cli.md).
+Nota: [`docs/09-ffi-c.md`](../docs/09-ffi-c.md), CLI: [`docs/06-cli.md`](../docs/06-cli.md).
 
 ## Poza zakresem
 

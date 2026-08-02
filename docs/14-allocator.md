@@ -40,7 +40,7 @@ Issue: [057](../issues/057-allocator.md). Example: [`examples/mem_heap.kl`](../e
 
 | Moduł | Uwagi |
 |---|---|
-| [`slice_alloc`](../stdlib/slice_alloc.kl) | `map_alloc_*` / `filter_alloc_*` — [017](../issues/017-collection-methods.md), [note/16-slice.md](16-slice.md) |
+| [`slice_alloc`](../stdlib/slice_alloc.kl) | `map_alloc_*` / `filter_alloc_*` — [017](../issues/017-collection-methods.md), [docs/16-slice.md](16-slice.md) |
 
 Caller zawsze: `defer mem.free_i32(&a, out)` (lub `free_u8` / `free_bytes`).
 
