@@ -119,9 +119,11 @@ as a plain C function (`Type_name(…)`), zero hidden cost. See
 
 ### Bitwise operators
 
-Integers only: `& | ^ ~ << >>` (map 1:1 to C). Precedence is Rust-like, not C —
-shifts, then `&`, `^`, `|`, then comparisons — so `flags & mask == bit` means
-`(flags & mask) == bit`. Signed `>>` is arithmetic; unsigned is logical. See
+Integers only: `& | ^ ~ << >>` (map 1:1 to C). Precedence is Rust-like, not C
+(`* / %` → `+ -` → `<< >>` → `&` → `^` → `|` → comparisons → `==`):
+`flags & mask == bit` means `(flags & mask) == bit`, not C’s
+`flags & (mask == bit)`. Signed `>>` is arithmetic; unsigned is logical.
+Decision: [note/01-decyzje.md](note/01-decyzje.md) D8; also
 [issues/078-bitwise-ops.md](issues/078-bitwise-ops.md),
 [`examples/bitwise.kl`](examples/bitwise.kl).
 
