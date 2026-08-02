@@ -1,30 +1,30 @@
-# 052 — `klinstruct`: pack/unpack buforów (para do `@mrhiden/cstruct`)
+# 052 — `klinstruct`: pack/unpack buffers (pair to `@mrhiden/cstruct`)
 
-**Status:** 💭 do rozważenia — MVP atomów w [klinstruct](https://github.com/MrHIDEn/klinstruct); bogatsza deklaracja → [059](059-kstruct-macros.md)
-**Zależy od:** [007](007-wskazniki-tablice-slice.md); mile [020](020-biblioteki-klin.md) / [047](047-directory-modules.md); remote → [049](049-remote-imports.md); deklaracje `$kstruct` → [059](059-kstruct-macros.md)
+**Status:** 💭 under consideration — MVP atoms in [klinstruct](https://github.com/MrHIDEn/klinstruct); richer declaration → [059](059-kstruct-macros.md)
+**Depends on:** [007](007-wskazniki-tablice-slice.md); nice to have [020](020-biblioteki-klin.md) / [047](047-directory-modules.md); remote → [049](049-remote-imports.md); `$kstruct` declarations → [059](059-kstruct-macros.md)
 
-## Kontekst
+## Context
 
-[`@mrhiden/cstruct`](https://github.com/MrHIDEn/cstruct) (TS/JS) pakuje/odpakowuje
-binarne bufory (Buffer ⇔ obiekt) wg modelu typów (LE/BE, atomy, offsety).
+[`@mrhiden/cstruct`](https://github.com/MrHIDEn/cstruct) (TS/JS) packs/unpacks
+binary buffers (Buffer ⇔ object) per a type model (LE/BE, atoms, offsets).
 
-Cel: osobna biblioteka **Klin** — roboczo `klinstruct` / repo
-`github/mrhiden/klinstruct` — **to samo podejście po stronie Klina**, żeby
-JS (cstruct) i Klin mówiły wspólnym wire formatem.
+Goal: separate **Klin** library — working name `klinstruct` / repo
+`github/mrhiden/klinstruct` — **the same approach on the Klin side**, so
+JS (cstruct) and Klin speak a common wire format.
 
-To **nie** jest FFI do npm ani port TypeScriptu do Klina. Dwie implementacje,
-jeden kontrakt binarny.
+This is **not** FFI to npm nor a TypeScript port to Klin. Two implementations,
+one binary contract.
 
-## Szkic (później)
+## Sketch (later)
 
-- pakiet Klin: model pól → `make` / `read` na `u8[]` / wskaźniku + długość
-- endian LE/BE jak cstruct; zgodność layoutu (kolejność, rozmiary, padding)
-- testy krzyżowe: ten sam hex bufora z cstruct i klinstruct
-- ewent. makra `$…` pod modele → [059](059-kstruct-macros.md) (zależne od [026](026-preprocessor.md))
-- po [049](049-remote-imports.md): `import "github.com/mrhiden/klinstruct" kstruct`
+- Klin package: field model → `make` / `read` on `u8[]` / pointer + length
+- endian LE/BE like cstruct; layout compatibility (order, sizes, padding)
+- cross tests: same buffer hex from cstruct and klinstruct
+- optional `$…` macros for models → [059](059-kstruct-macros.md) (depends on [026](026-preprocessor.md))
+- after [049](049-remote-imports.md): `import "github.com/mrhiden/klinstruct" kstruct`
 
-## Poza zakresem
+## Out of scope
 
-- zależność runtime od Node / `@mrhiden/cstruct`
-- generowanie TS z Klina w MVP (osobna decyzja / narzędzie)
-- priorytet względem rdzenia języka / embedded
+- runtime dependency on Node / `@mrhiden/cstruct`
+- generating TS from Klin in MVP (separate decision / tool)
+- priority relative to language core / embedded

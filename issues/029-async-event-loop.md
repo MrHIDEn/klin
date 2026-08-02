@@ -1,82 +1,82 @@
-# 029 — Event loop / `async`·`await` (duże zwierzę)
+# 029 — Event loop / `async`·`await` (big beast)
 
-**Status:** 💭 do rozważenia (szeroki zakres — fazować; nie blokuje rdzenia)
-**Zależy od:** decyzji D1/D3; prawdopodobnie 018, 026, 028; remote lib → 049
+**Status:** 💭 to consider (broad scope — phase; does not block core)
+**Depends on:** D1/D3 decisions; probably 018, 026, 028; remote lib → 049
 
-## Pytanie
+## Question
 
-Czy (i jak) da się mieć wygodę w stylu JS/Rust — event loop + opcjonalnie
-`async`/`await` — **bez** ukrytej alokacji / ukrytego runtime, które łamie
-zasadę nadrzędną.
+Can (and how) we have JS/Rust-style convenience — event loop + optionally
+`async`/`await` — **without** hidden allocation / hidden runtime that breaks
+the prime rule.
 
-To **duże zwierzę**: nie jeden PR. Najpierw lib z callbackami; `async`/`await`
-w języku dopiero gdy lib i model executora są jasne.
+This is a **big beast**: not one PR. Lib with callbacks first; `async`/`await`
+in the language only when lib and executor model are clear.
 
-Pokrewne: [018](018-generators-yield.md), [024](024-rtos.md), [028](028-freertos.md).
+Related: [018](018-generators-yield.md), [024](024-rtos.md), [028](028-freertos.md).
 
-## Model warstw (pełna elastyczność, nie wymuszenie)
+## Layer model (full flexibility, not forced)
 
-1. **samo `main`** — bare metal / pętla ręczna / WFI; bez event-loopa i bez RTOS
-2. **`main` + event-loop** — jeden opcjonalny loop w `main` (makro / API lib),
-   bez RTOS
-3. **`main` + taski RTOS + event-loopy gdzie chcemy** — makro/API na `main`
-   i/lub na wybranym tasku; loop tylko tam, gdzie go założono.
-   Nie „jeden globalny Node-loop na cały firmware”.
+1. **`main` only** — bare metal / manual loop / WFI; no event-loop and no RTOS
+2. **`main` + event-loop** — one optional loop in `main` (macro / lib API),
+   without RTOS
+3. **`main` + RTOS tasks + event-loops where we want** — macro/API on `main`
+   and/or on selected task; loop only where we set it up.
+   Not "one global Node-loop for entire firmware".
 
-## Współdzielenie danych vs loop
+## Shared data vs loop
 
-Single-threaded event-loop w jednym tasku może serializować pracę *w tym*
-tasku; **nie** chroni przed innym taskiem / ISR — tam nadal mutex / queue /
-critical section z [028](028-freertos.md). `await` nie jest domyślnym lockiem.
+Single-threaded event-loop in one task can serialize work *in that*
+task; **does not** protect from another task / ISR — there still mutex / queue /
+critical section from [028](028-freertos.md). `await` is not a default lock.
 
-## Podsumowanie: co biblioteka, a co rdzeń
+## Summary: what is library, what is core
 
-W odróżnieniu od RTOS ([024](024-rtos.md), gdzie silnik to zawsze biblioteka C),
-event loop rozpada się na dwie części o różnym statusie:
+Unlike RTOS ([024](024-rtos.md), where engine is always C library),
+event loop splits into two parts with different status:
 
-1. **Mechanizm pętli** (loop + kolejka tasków/timerów, poll → uruchom gotowe →
-   WFI) — **biblioteka** i **może być napisany w Klinie** (kooperacyjna pętla
-   jest zero-cost, bez ukrytego runtime). Wariant bez alokacji (statyczne
-   bufory) jak `slice`; wariant z kolejką na stercie osobno, z jawnym
-   `Allocator` (jak `slice_alloc`, warstwa 2). Nie jest vendor-specyficzny, więc
-   może być opcjonalnym modułem stdlib (styl 012) **albo** biblioteką zewnętrzną
-   (import zdalny [049](049-remote-imports.md)).
-2. **Cukier `async`/`await` (i generatory)** — to **feature rdzenia**
-   (parser/emit, desugar do jawnej maszyny stanów, hipoteza B poniżej), nie da
-   się dostarczyć jako `.kl`. Spięte z [018](018-generators-yield.md) i decyzją
-   D1/D3. Cukier zakładający loop na `main`/tasku: **makra lib** (jak
-   `$rtos_task` w [028](028-freertos.md)), nie user-`@[…]` ani obowiązkowy
-   atrybut w rdzeniu.
+1. **Loop mechanism** (loop + task/timer queue, poll → run ready →
+   WFI) — **library** and **can be written in Klin** (cooperative loop
+   is zero-cost, no hidden runtime). Variant without allocation (static
+   buffers) like `slice`; variant with heap queue separately, with explicit
+   `Allocator` (like `slice_alloc`, layer 2). Not vendor-specific, so
+   can be optional stdlib module (012 style) **or** external library
+   (remote import [049](049-remote-imports.md)).
+2. **Sugar `async`/`await` (and generators)** — **core feature**
+   (parser/emit, desugar to explicit state machine, hypothesis B below), cannot
+   be delivered as `.kl`. Tied to [018](018-generators-yield.md) and
+   D1/D3 decision. Sugar assuming loop on `main`/task: **lib macros** (like
+   `$rtos_task` in [028](028-freertos.md)), not user-`@[…]` or mandatory
+   core attribute.
 
-Wniosek: sam runtime pętli → biblioteka (najlepiej w Klinie); `async`/`await` →
-rdzeń, jeśli w ogóle. „Raczej jako biblioteka" dotyczy tylko punktu 1.
+Conclusion: loop runtime alone → library (best in Klin); `async`/`await` →
+core, if at all. "Rather as library" applies only to point 1.
 
-## Preferowany cukier: `$event_loop` (makro lib)
+## Preferred sugar: `$event_loop` (lib macro)
 
-Ten sam kierunek co `$rtos_task` w 028 — ergonomia w bibliotece, expand jawny,
-bez ukrytego schedulera / alokacji kolejki.
+Same direction as `$rtos_task` in 028 — ergonomics in library, explicit expand,
+no hidden scheduler / queue allocation.
 
-### Samo `main` + loop (bez RTOS)
+### `main` only + loop (no RTOS)
 
 ```klin
 $event_loop() {
     fn main() {
-        // init; rejestracja timerów / fd / IRQ → kolejka
+        // init; register timers / fd / IRQ → queue
     }
     fn on_tick() { … }
 }
 ```
 
-Albo ciaśniej (ciało ≈ setup + run):
+Or tighter (body ≈ setup + run):
 
 ```klin
 $event_loop() {
     eloop.every_ms(100, on_tick)
-    // expand → main z while { eloop.poll(); wfi() } / jawnym run()
+    // expand → main with while { eloop.poll(); wfi() } / explicit run()
 }
 ```
 
-### Z RTOS — loop tylko na wybranym tasku
+### With RTOS — loop only on selected task
 
 ```klin
 $rtos_task("net", 1024, 3) {
@@ -86,88 +86,88 @@ $rtos_task("net", 1024, 3) {
 }
 
 $rtos_task("blink", 512, 2) {
-    // bez loopa — delay / toggle
+    // no loop — delay / toggle
 }
 ```
 
 | | `$event_loop` (lib / 026) | `async` / `await` |
 |---|---|---|
-| Pętla poll + kolejka + WFI | tak | — |
-| Jawne bufory / `Allocator` | tak | — |
-| Cukier `await foo()` | nie | feature rdzenia (018 / tu) |
+| Poll loop + queue + WFI | yes | — |
+| Explicit buffers / `Allocator` | yes | — |
+| Sugar `await foo()` | no | core feature (018 / here) |
 
-Minimalny obraz po expandzie (idea):
+Minimal picture after expand (idea):
 
 ```klin
 fn main() {
     eloop.init(queue_buf[:])
     eloop.every_ms(100, on_tick)
-    eloop.run()   // while { poll(); } — jawne, w lib
+    eloop.run()   // while { poll(); } — explicit, in lib
 }
 ```
 
-Porównanie `$…` vs `@[meta]` / `@[task]`: tabela w [028](028-freertos.md).
+Comparison `$…` vs `@[meta]` / `@[task]`: table in [028](028-freertos.md).
 
-Wykonanie callbacka jest **wewnątrz** `run()` (gdy timer/zdarzenie dojrzeje),
-nie w linii `every_ms`. `every_ms` tylko rejestruje fn-pointer. W tym modelu
-**nie ma** `async`/`await` — sama kooperacyjna pętla + zwykłe `fn`.
+Callback runs **inside** `run()` (when timer/event is due),
+not on the `every_ms` line. `every_ms` only registers fn-pointer. In this model
+**there is no** `async`/`await` — cooperative loop + plain `fn` only.
 
-## Werdykt: lib vs rdzeń vs Promise (ustalone kierunkowo)
+## Verdict: lib vs core vs Promise (directionally settled)
 
-### Event loop — część Klina czy user?
+### Event loop — part of Klin or user?
 
-**Pętla = opcjonalna biblioteka, nie cecha języka.**
+**Loop = optional library, not language feature.**
 
-| | Gdzie |
+| | Where |
 |---|---|
-| `eloop.init` / `every_ms` / `run` / kolejka | lib (stdlib opcjonalna *albo* paczka usera / [049](049-remote-imports.md)) |
-| `$event_loop { … }` | makro w tej libce |
-| Obowiązkowy loop w każdym programie | **nie** |
+| `eloop.init` / `every_ms` / `run` / queue | lib (optional stdlib *or* user package / [049](049-remote-imports.md)) |
+| `$event_loop { … }` | macro in that lib |
+| Mandatory loop in every program | **no** |
 
-User **może napisać własną** implementację (inny poll, WFI, host `select`).
-Oficjalna lib (gdy powstanie) to domyślny prosty wariant — styl [012](012-stdlib-io.md),
-nie runtime jak GC.
+User **can write own** implementation (different poll, WFI, host `select`).
+Official lib (when it exists) is default simple variant — [012](012-stdlib-io.md) style,
+not GC-like runtime.
 
-### `async` / `await` — część Klina?
+### `async` / `await` — part of Klin?
 
-**Jeśli w ogóle — feature rdzenia** (parser + emit → maszyna stanów). Lib sama
-nie doda prawdziwego `await`.
+**If at all — core feature** (parser + emit → state machine). Lib alone
+cannot add real `await`.
 
-**Nie jest wymagane** do event-loopa. Najpierw lib z callbackami; `async`/`await`
-to osobna, późna decyzja (też [018](018-generators-yield.md)).
+**Not required** for event-loop. Lib with callbacks first; `async`/`await`
+is separate, late decision (also [018](018-generators-yield.md)).
 
 ```
-opcjonalnie:  [ lib eloop ]     ← bez zmian języka
-później?:     [ async/await ]   ← tylko kompilator
+optional:  [ lib eloop ]     ← no language change
+later?:     [ async/await ]   ← compiler only
 ```
 
-### Czy `async`/`await` wymaga Promise/Future (jak JS)?
+### Does `async`/`await` require Promise/Future (like JS)?
 
-**Nie.** Sensowny model pod Klin (bliżej Rust / desugar, nie Node):
+**No.** Sensible model for Klin (closer to Rust / desugar, not Node):
 
-- `async fn` → kompilator robi **struct stanu** + `poll` / resume (albo switch),
-- `await` → zapisz stan, wróć do loopa, wznów potem,
-- executor = **jawna** pętla (`eloop.run` / task RTOS) — nie ukryty runtime,
-- **bez** heapowego `Promise` na każdą metodę / bez GC microtasków.
+- `async fn` → compiler makes **state struct** + `poll` / resume (or switch),
+- `await` → save state, return to loop, resume later,
+- executor = **explicit** loop (`eloop.run` / RTOS task) — no hidden runtime,
+- **no** heap `Promise` per method / no GC microtasks.
 
-Metody mogą być `async`, ale to nie znaczy „każda metoda zwraca Promise”.
-Wynik to zwykły typ / `!T` + maszyna stanów; stan na stosie / w buforze
-callera, nie magiczny Future w runtime.
+Methods can be `async`, but that does not mean "every method returns Promise".
+Result is plain type / `!T` + state machine; state on stack / in caller buffer,
+not magical Future in runtime.
 
-| Model JS | Model bliższy Klinowi |
+| JS model | Model closer to Klin |
 |---|---|
-| `Promise` na stercie | stan na stosie / w buforze callera |
-| domyślny event loop runtime | `eloop.run()` / task — jawne |
-| każda async metoda = Promise | desugar → state machine |
+| `Promise` on heap | state on stack / in caller buffer |
+| default runtime event loop | `eloop.run()` / task — explicit |
+| every async method = Promise | desugar → state machine |
 
-Taski RTOS / ticki event-loop **nie** wymagają zamiany metod w Promise/Future —
-wystarczą wolne `fn` (+ opcjonalnie `$rtos_task` / `$event_loop`).
+RTOS tasks / event-loop ticks **do not** require turning methods into Promise/Future —
+plain `fn` suffice (+ optional `$rtos_task` / `$event_loop`).
 
-### Szkic 1-plikowy: `async`/`await` (styl Rust) + remote lib
+### Single-file sketch: `async`/`await` (Rust style) + remote lib
 
-**Niekompilowalne dziś.** Plik roboczy:
+**Not compilable today.** Working file:
 [`examples/sketch_async_eventloop.kl`](../examples/sketch_async_eventloop.kl).
-Wymaga feature rdzenia (`async`/`await`) oraz paczki po
+Requires core feature (`async`/`await`) and package via
 `klin get github/mrhiden/eventloop@…` ([049](049-remote-imports.md)).
 
 ```klin
@@ -191,23 +191,23 @@ fn main() {
     let mut queue_buf: [64]u8
     let mut ex = eventloop.Executor{}
     ex.init(queue_buf[:])
-    ex.spawn(ticker)   // stan maszyny w executorze / buforze — nie heap Promise
-    ex.run()           // tu jest „życie”: poll timerów → resume po await
+    ex.spawn(ticker)   // state machine in executor / buffer — not heap Promise
+    ex.run()           // here is "life": poll timers → resume after await
 }
 ```
 
-Gdzie co się dzieje:
+What happens where:
 
-| Fragment | Rola |
+| Fragment | Role |
 |---|---|
-| `async fn ticker` | cukier rdzenia → struct stanu + `poll` (jak Rust) |
-| `delay_ms(100).await` | zawieś `ticker`, wróć do executora |
-| `eventloop.Executor` / `run` | **biblioteka zdalna** — jawna pętla |
-| `queue_buf` | pamięć callera — zero ukrytego malloc |
+| `async fn ticker` | core sugar → state struct + `poll` (like Rust) |
+| `delay_ms(100).await` | suspend `ticker`, return to executor |
+| `eventloop.Executor` / `run` | **remote library** — explicit loop |
+| `queue_buf` | caller memory — zero hidden malloc |
 
-### Obok: ten sam efekt **bez** `async`/`await` (to działa koncepcyjnie dziś)
+### Alongside: same effect **without** `async`/`await` (conceptually works today)
 
-Kompilator **nie** musi znać `async`. Wystarczy lib + zwykłe `fn` (fn-pointer):
+Compiler **does not** need to know `async`. Lib + plain `fn` (fn-pointer) suffice:
 
 ```klin
 import "github/mrhiden/eventloop"
@@ -221,53 +221,53 @@ fn main() {
     let mut queue_buf: [64]u8
     let mut ex = eventloop.Executor{}
     ex.init(queue_buf[:])
-    ex.every_ms(100, on_tick)   // tylko rejestracja — jeszcze nie woła
-    ex.run()                    // tu życie: … → on_tick() → …
+    ex.every_ms(100, on_tick)   // registration only — does not call yet
+    ex.run()                    // life here: … → on_tick() → …
 }
 ```
 
-| | Bez async (MVP lib) | Ze szkicu async |
+| | Without async (lib MVP) | With async sketch |
 |---|---|---|
-| Słowa `async` / `await` | nie | tak |
-| API lib | `every_ms` + `run` | `spawn` + `run` (+ `sleep_ms`) |
-| Gdzie „tick” | `on_tick()` z wewnątrz `run()` | ciało `ticker` po `.await` |
-| Zmiana języka Klin | nie | tak |
+| Words `async` / `await` | no | yes |
+| Lib API | `every_ms` + `run` | `spawn` + `run` (+ `sleep_ms`) |
+| Where "tick" | `on_tick()` from inside `run()` | `ticker` body after `.await` |
+| Klin language change | no | yes |
 
-**MVP ekosystemu = kolumna lewa.** Szkic z `async` = „później, jeśli kiedyś”.
+**Ecosystem MVP = left column.** Async sketch = "later, if ever".
 
-### Składnia `async`/`await` (gdy kiedyś w rdzeniu) — styl Rust, nie JS
+### `async`/`await` syntax (if ever in core) — Rust style, not JS
 
-- `async` jest przy **funkcji**: `async fn ticker() { … }`
-- `await` jest **postfix** na końcu wyrażenia: `delay_ms(100).await`
-- **nie** styl JS: `await delay_ms(100)`
+- `async` on **function**: `async fn ticker() { … }`
+- `await` is **postfix** at end of expression: `delay_ms(100).await`
+- **not** JS style: `await delay_ms(100)`
 
 ```klin
-// Rust-style (cel):
+// Rust-style (goal):
 delay_ms(100).await
 
-// NIE JS:
+// NOT JS:
 // await delay_ms(100)
 ```
 
-### Stan dziś w kompilatorze / IDE
+### State today in compiler / IDE
 
-| | Obecny Klin |
+| | Current Klin |
 |---|---|
-| Parser `async` / `.await` | **nie** |
-| Desugar → state machine | **nie** |
-| Paczka `github/mrhiden/eventloop` | **nie** (szkic) |
-| `klin run` na `sketch_async_eventloop.kl` | **nie przejdzie** |
+| Parser `async` / `.await` | **no** |
+| Desugar → state machine | **no** |
+| Package `github/mrhiden/eventloop` | **no** (sketch) |
+| `klin run` on `sketch_async_eventloop.kl` | **will not pass** |
 
-Wtyczka IntelliJ (highlight / parser) musiałaby znać `async` / `.await` **dopiero
-gdy** wejdą do języka — to nie „wtyczka eventloop”; lib sama nie uczy IDE
-słów kluczowych. Do tego czasu IDE ich nie potrzebuje.
+IntelliJ plugin (highlight / parser) would need to know `async` / `.await` **only
+when** they enter the language — not "eventloop plugin"; lib alone does not teach IDE
+keywords. Until then IDE does not need them.
 
-### Wiele loopów: taski RTOS i rdzenie CPU (SMP)
+### Multiple loops: RTOS tasks and CPU cores (SMP)
 
-Podejście z **jawnym** `Executor` / `run()` **umożliwia** osobne pętle — to
-cel warstwy 3, nie wypadek.
+Approach with explicit `Executor` / `run()` **enables** separate loops — that is
+layer 3 goal, not accident.
 
-Na taskach RTOS ([028](028-freertos.md)):
+On RTOS tasks ([028](028-freertos.md)):
 
 ```klin
 $rtos_task("net", 1024, 3) {
@@ -275,48 +275,48 @@ $rtos_task("net", 1024, 3) {
     let mut ex = eventloop.Executor{}
     ex.init(buf_net[:])
     ex.every_ms(10, on_net)
-    ex.run()    // tylko w tasku "net"
+    ex.run()    // only in "net" task
 }
 
 $rtos_task("blink", 512, 2) {
-    // bez event-loop
+    // no event-loop
 }
 ```
 
-Na rdzeniach (SMP) — ten sam wzorzec: **jeden executor na rdzeń / wątek**,
-osobny bufor kolejki; nie jeden ukryty loop systemowy.
+On cores (SMP) — same pattern: **one executor per core / thread**,
+separate queue buffer; not one hidden system loop.
 
 ```klin
-// rdzeń 0
+// core 0
 ex0.init(buf0[:]); ex0.run()
-// rdzeń 1
+// core 1
 ex1.init(buf1[:]); ex1.run()
 ```
 
-Dane współdzielone między taskami/rdzeniami → nadal jawny mutex / queue RTOS
-([028](028-freertos.md)). `await` **nie** jest lockiem między rdzeniami.
+Shared data between tasks/cores → still explicit mutex / RTOS queue
+([028](028-freertos.md)). `await` **is not** a lock between cores.
 
-Unikać: jednego globalnego Node-loop na cały firmware.
+Avoid: one global Node-loop for entire firmware.
 
-### Fazy (żeby nie pożreć roadmapy)
+### Phases (so roadmap is not eaten)
 
-1. **Docs / model** (ten issue) — ✅ kierunek spisany  
-2. **Lib callback** (`every_ms` / `run`, remote lub lokalna) — bez zmian języka  
-3. **Przykład z RTOS** — loop w jednym tasku, drugi bez  
-4. **Opcjonalnie później:** `async`/`await` w rdzeniu + IDE + szkic → prawdziwy example  
+1. **Docs / model** (this issue) — ✅ direction written  
+2. **Callback lib** (`every_ms` / `run`, remote or local) — no language change  
+3. **RTOS example** — loop in one task, second without  
+4. **Optionally later:** `async`/`await` in core + IDE + sketch → real example  
 
-Kroki 2–3 nie czekają na async. Krok 4 = osobne, duże zwierzę.
+Steps 2–3 do not wait for async. Step 4 = separate, big beast.
 
-## Hipotezy techniczne (nie zobowiązanie)
+## Technical hypotheses (not commitment)
 
-- **A)** opcjonalny moduł + jawny executor / `Allocator` (raczej host)
-- **B)** desugar do jawnej state machine w `.c`
-- **C)** cukier nad FreeRTOS (028), nie „Node na MCU”
+- **A)** optional module + explicit executor / `Allocator` (rather host)
+- **B)** desugar to explicit state machine in `.c`
+- **C)** sugar over FreeRTOS (028), not "Node on MCU"
 
-Wejścia (warianty z 028): `main` + dekorowane `fn` **lub** `main_N` / `task_N`.
+Entry points (variants from 028): `main` + decorated `fn` **or** `main_N` / `task_N`.
 
-## Czego nie robić na start
+## What not to do at start
 
-Promise GC, ukryty scheduler, async jako domyślny bare-metal, **wymuszenie**
-loopa na każdym tasku, ukryte automatyczne mutexy, wymuszanie Promise/Future
-na metodach jak w JS.
+Promise GC, hidden scheduler, async as default bare-metal, **forcing**
+loop on every task, hidden automatic mutexes, forcing Promise/Future
+on methods like JS.

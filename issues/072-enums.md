@@ -1,60 +1,60 @@
-# 072 — Enumy (styl C23, opcjonalny typ bazowy)
+# 072 — Enums (C23 style, optional underlying type)
 
-**Status:** ✅ zrobione (MVP: rdzeń + metody + jawna konwersja; bez string/kv-enum)
-**Zależy od:** 002 (checker/typy), 005 (metody z receiverem), 014 (`match`)
+**Status:** ✅ done (MVP: core + methods + explicit conversion; no string/kv-enum)
+**Depends on:** 002 (checker/types), 005 (methods with receiver), 014 (`match`)
 
-## Zrobione (MVP)
+## Done (MVP)
 
-- `enum E { … }` (bazowy `i32`) oraz `enum E: T { … }` (całkowity typ bazowy,
-  jawne wartości `= N`) — lekser/parser/checker/emisja/fmt.
-- Enum to osobny typ; `==`/`!=` tylko między tym samym enumem (bez porządku);
-  użycie w `match` (wzorce `Enum.Variant`, bez zakresów).
-- Metody z receiverem na enumie (`fn (c: Color) name(): str`).
-- Jawna konwersja enum↔liczba przez `cast` (bez ukrytej koercji).
-- Emisja przenośna: `typedef <baza>;` + anonimowy `enum { … }` ze stałymi
-  (bez C23 `enum E : T`, więc gcc/clang/tcc), z `#line`.
+- `enum E { … }` (underlying `i32`) and `enum E: T { … }` (integer underlying type,
+  explicit values `= N`) — lexer/parser/checker/emission/fmt.
+- Enum is a separate type; `==`/`!=` only within same enum (no ordering);
+  use in `match` (patterns `Enum.Variant`, no ranges).
+- Methods with receiver on enum (`fn (c: Color) name(): str`).
+- Explicit enum↔number conversion via `cast` (no hidden coercion).
+- Portable emission: `typedef <base>;` + anonymous `enum { … }` with constants
+  (no C23 `enum E : T`, so gcc/clang/tcc), with `#line`.
 
-Przykład: `examples/enums.kl`. Goldeny: `test/enum_basic.kl`.
+Example: `examples/enums.kl`. Goldens: `test/enum_basic.kl`.
 
-**Poza tym MVP** (dalej „do rozważenia”, sekcje niżej): string-enum, kv-enum,
-wymuszona wyczerpalność `match`, bitflagi (wymagają [078](078-bitwise-ops.md)).
+**Beyond this MVP** (still “under consideration”, sections below): string-enum, kv-enum,
+exhaustive `match`, bitflags (require [078](078-bitwise-ops.md)).
 
-## Cel
+## Goal
 
-Dodać do Klina enumy w stylu **C23**: nazwany zbiór stałych, **opcjonalnie z
-typem bazowym**. Enum ma znikać w emisji (zwykły `enum`/`int` w C) — zero
-ukrytego kosztu (zasada nadrzędna). Dziś Klina nie ma enumów (`enum` nie jest
-słowem kluczowym).
+Add C23-style enums to Klin: a named set of constants, **optionally with
+underlying type**. Enum should disappear in emission (plain `enum`/`int` in C) — zero
+hidden cost (overarching principle). Today Klin has no enums (`enum` is not a
+keyword).
 
-## Rdzeń (MVP)
+## Core (MVP)
 
 ```klin
-enum Color { Red, Green, Blue }         // domyślny typ bazowy (int)
-enum Status: u8 { Ok, Warn = 5, Err }   // opcjonalny typ bazowy + jawne wartości
+enum Color { Red, Green, Blue }         // default underlying type (int)
+enum Status: u8 { Ok, Warn = 5, Err }   // optional underlying type + explicit values
 ```
 
-- Wartości domyślnie 0,1,2… (jak C); jawne `= N` dozwolone.
-- Typ bazowy opcjonalny: `enum E: u8 { … }` (C23 `enum E : uint8_t`).
-- Enum to **osobny typ** w checkerze (nie alias `i32`); porównania `==`,
-  użycie w `match` ([014](014-match.md)).
-- Konwersja do/z liczby: jawna (np. `cast`/dedykowana funkcja) — bez ukrytej
-  koercji.
+- Values default to 0,1,2… (like C); explicit `= N` allowed.
+- Optional underlying type: `enum E: u8 { … }` (C23 `enum E : uint8_t`).
+- Enum is a **separate type** in checker (not `i32` alias); `==` comparisons,
+  use in `match` ([014](014-match.md)).
+- Conversion to/from number: explicit (e.g. `cast`/dedicated function) — no hidden
+  coercion.
 
-### Emisja / przenośność (do decyzji przy realizacji)
+### Emission / portability (decide at implementation)
 
-C23 „fixed underlying type" (`enum E : uint8_t`) wspiera gcc 13+/clang 16+ z
-`-std=c23`, ale **tcc nie**. Domyślny backend to gcc, lecz `--cc tcc` musi
-działać. Opcje:
-- typ bazowy podany → emitować przenośnie: `typedef uint8_t E;` + `#define`/`enum`
-  stałych (albo `static const`), zamiast polegać na C23; albo
-- emitować C23 `enum E : T` tylko gdy backend to wspiera (flaga), z fallbackiem.
-Rozstrzygnąć tak, by `#line` i „gcc nigdy nie krzyczy" zostały spełnione.
+C23 “fixed underlying type" (`enum E : uint8_t`) supported by gcc 13+/clang 16+ with
+`-std=c23`, but **tcc does not**. Default backend is gcc, but `--cc tcc` must
+work. Options:
+- underlying type given → emit portably: `typedef uint8_t E;` + `#define`/`enum`
+  constants (or `static const`), instead of relying on C23; or
+- emit C23 `enum E : T` only when backend supports it (flag), with fallback.
+Resolve so `#line` and “gcc never errors" remain satisfied.
 
-## Metody rozszerzające na enumach — tak, warto
+## Extension methods on enums — yes, worthwhile
 
-Klin ma już metody z receiverem na strukturach (`fn (v: Vec2) len_sq()`). Ten
-sam mechanizm pasuje do enumów (emisja = zwykła funkcja C biorąca wartość enuma
-— zero kosztu):
+Klin already has methods with receiver on structs (`fn (v: Vec2) len_sq()`). Same
+mechanism fits enums (emission = plain C function taking enum value
+— zero cost):
 
 ```klin
 enum Color { Red, Green, Blue }
@@ -68,78 +68,78 @@ fn (c: Color) name(): str {
 }
 ```
 
-Rekomendacja: dopuścić receiver na typie enum (jak na strukturze). To najbliższe
-modelowi **Go** (nazwany typ + metody) i zeru kosztu.
+Recommendation: allow receiver on enum type (like struct). Closest to
+**Go** model (named type + methods) and zero cost.
 
-### Jak to robią inne języki (metody na enumach)
+### How other languages do it (methods on enums)
 
-| Język | Metody na enumie |
+| Language | Methods on enum |
 |---|---|
-| Go | enum = nazwany typ int (`iota`) + metody na tym typie — tak |
-| Rust | `impl Enum { fn … }` — tak (enum algebraiczny) |
-| Swift | metody / computed props / protokoły — tak |
-| Kotlin | `enum class` z metodami (i abstrakcyjnymi per wariant) — tak |
-| Java | enum = klasa z metodami — tak |
-| C# | enum = int bez metod, ale **extension methods** przez `static` klasę — tak |
-| Dart | **enhanced enums** (2.17+): pola/metody/konstruktory/interfejsy; dodatkowo `extension on Enum` — tak |
-| TS | enum bez metod; obejścia przez namespace/obiekt |
-| C / C23 | stałe całkowite, **bez** metod |
+| Go | enum = named int type (`iota`) + methods on that type — yes |
+| Rust | `impl Enum { fn … }` — yes (algebraic enum) |
+| Swift | methods / computed props / protocols — yes |
+| Kotlin | `enum class` with methods (and abstract per variant) — yes |
+| Java | enum = class with methods — yes |
+| C# | enum = int without methods, but **extension methods** via `static` class — yes |
+| Dart | **enhanced enums** (2.17+): fields/methods/constructors/interfaces; plus `extension on Enum` — yes |
+| TS | enum without methods; workarounds via namespace/object |
+| C / C23 | integer constants, **no** methods |
 
-Wniosek: metody na enumach są normą (poza C/TS). Dla Klina najtańszy i spójny
-model to „nazwany typ + receiver" (Go-like), bez wariantów-z-danymi (patrz niżej).
+Conclusion: methods on enums are the norm (except C/TS). For Klin cheapest and consistent
+model is “named type + receiver" (Go-like), without data-carrying variants (see below).
 
-## Do rozważenia: enumy stringowe (styl TS)
+## Under consideration: string enums (TS style)
 
-TS: `enum E { A = "a", B = "b" }`. W języku kompilowanym do C „string enum" to
-nie enum (brak dyskryminanty całkowitej), tylko **nazwany zbiór stałych
-`str`** (`const char*`). Bywa wygodne (np. nazwy w logach/protokole), ale:
-- to inna cecha niż enum całkowity — myląca pod jedną składnią;
-- realizowalne jako zwykłe `pub` stałe / funkcja `name()` (wyżej), więc może
-  nie ma sensu jako osobny „string enum".
+TS: `enum E { A = "a", B = "b" }`. In a language compiled to C a “string enum" is
+not an enum (no integer discriminant), only a **named set of
+`str` constants** (`const char*`). Convenient sometimes (e.g. names in logs/protocol), but:
+- different feature than integer enum — confusing under one syntax;
+- achievable as plain `pub` constants / `name()` function (above), so maybe
+  not worth a separate “string enum".
 
-Propozycja: **na razie pominąć**; jeśli potrzebne, dać `fn (c: E) label(): str`
-zamiast enuma stringowego. Zapisane jako opcja, nie zobowiązanie.
+Proposal: **skip for now**; if needed, use `fn (c: E) label(): str`
+instead of string enum. Recorded as option, not commitment.
 
-## Do rozważenia: enum oparty o KV / uniwersalny „kvenum" / string-enum
+## Under consideration: KV-based enum / universal “kvenum" / string-enum
 
-Osobny, opcjonalny wariant enuma jako **mapa klucz→wartość** (nie tylko
-całkowita dyskryminanta). Warianty do rozważenia:
+Separate, optional enum variant as a **key→value map** (not only
+integer discriminant). Variants to consider:
 
-- **kv-enum** — wariant `wariant = wartość` z jednym, wspólnym typem wartości,
-  np. `str` (string-enum), `i64`, czy inny skalar: `enum Http: str { Ok = "ok",
-  NotFound = "not_found" }`. Emisja: tablica stałych (`static const`) indeksowana
-  dyskryminantą + akcesor `value()` — zero ukrytego kosztu.
-- **uniwersalny kvenum** — każdy wariant niesie krotkę/rekord metadanych
-  (np. `{ code: i32, label: str }`), coś jak „enhanced enum" z Darta, ale
-  **bez** heap i refleksji: statyczna tablica rekordów + akcesory. To już bliskie
-  wariantom-z-danymi, więc granica z „enum algebraiczny" (poza zakresem) musi być
-  jasna: tu **stała** tablica per-wariant, nie payload runtime.
-- **string-enum** (styl TS) — szczególny przypadek kv-enum z wartością `str`
-  (patrz sekcja wyżej).
+- **kv-enum** — variant `variant = value` with one shared value type,
+  e.g. `str` (string-enum), `i64`, or other scalar: `enum Http: str { Ok = "ok",
+  NotFound = "not_found" }`. Emission: constant array (`static const`) indexed by
+  discriminant + `value()` accessor — zero hidden cost.
+- **universal kvenum** — each variant carries tuple/record metadata
+  (e.g. `{ code: i32, label: str }`), like Dart “enhanced enum", but
+  **without** heap and reflection: static record table + accessors. Already close to
+  data-carrying variants, so boundary with “algebraic enum" (out of scope) must be
+  clear: here **static** per-variant table, not runtime payload.
+- **string-enum** (TS style) — special case of kv-enum with `str` value
+  (see section above).
 
-Relacja do [060](060-map-kv.md) (mapa KV): kvenum to **statyczny, domknięty**
-zbiór (znany w compile-time), więc lepiej pasuje tablica stałych niż hash-mapa;
-map-KV zostaje dla danych dynamicznych. Realizacja przez `$fn` (monomorfizacja)
-jak reszta.
+Relation to [060](060-map-kv.md) (KV map): kvenum is a **static, closed**
+set (known at compile-time), so constant array fits better than hash map;
+map-KV stays for dynamic data. Implementation via `$fn` (monomorphization)
+like the rest.
 
-Status: **do rozważenia** — czy jako rozszerzenie składni `enum` (wartości per
-wariant), czy jako osobny konstrukt; oraz czy w ogóle, skoro `fn (c: E)
-value(): T` + `match` już to pokrywa bez nowej cechy.
+Status: **under consideration** — as syntax extension of `enum` (per-variant values),
+or as separate construct; and whether at all, since `fn (c: E)
+value(): T` + `match` already covers it without a new feature.
 
-## Poza zakresem (na start)
+## Out of scope (initially)
 
-- Enumy algebraiczne z danymi (Rust/Swift `enum` z payloadem) — duży, osobny
-  temat (wymaga tagged union w emisji); tu tylko enum „C-like".
-- Automatyczne `to_string`/refleksja bez jawnej metody.
-- Wymuszona wyczerpalność `match` po enumie — do rozważenia osobno (wartościowe,
-  ale to rozszerzenie checkera/`match`).
-- Bitflagi/`enum` jako flagi (`|`/`&`) — ewentualnie później; wymaga operatorów
-  bitowych ([078](078-bitwise-ops.md)), których język dziś nie ma.
+- Algebraic enums with data (Rust/Swift `enum` with payload) — large, separate
+  topic (requires tagged union in emission); here only “C-like" enum.
+- Automatic `to_string`/reflection without explicit method.
+- Exhaustive `match` on enum — consider separately (valuable,
+  but checker/`match` extension).
+- Bitflags/`enum` as flags (`|`/`&`) — possibly later; requires bitwise
+  operators ([078](078-bitwise-ops.md)), which the language lacks today.
 
-## Kryteria (gdy wchodzi do prac)
+## Criteria (when work starts)
 
-- [x] `enum E { … }` i `enum E: T { … }` (jawne wartości) — parser + checker.
-- [x] Enum jako osobny typ; użycie w `match`; jawna konwersja do liczby.
-- [x] Metody z receiverem na enumie (jak na strukturze) + golden.
-- [x] Emisja przenośna (gcc/clang/tcc), `#line`, „gcc nie krzyczy".
-- [x] Decyzja: string-enum (TS) — pominięty w MVP (patrz sekcje wyżej).
+- [x] `enum E { … }` and `enum E: T { … }` (explicit values) — parser + checker.
+- [x] Enum as separate type; use in `match`; explicit conversion to number.
+- [x] Methods with receiver on enum (like struct) + golden.
+- [x] Portable emission (gcc/clang/tcc), `#line`, “gcc does not error".
+- [x] Decision: string-enum (TS) — skipped in MVP (see sections above).

@@ -1,17 +1,17 @@
-# 057 — `Allocator` (jawny alokator)
+# 057 — `Allocator` (explicit allocator)
 
-**Status:** ✅ ukończone
-**Zależy od:** [007](007-wskazniki-tablice-slice.md), [008](008-defer.md); D1 w [docs/01-decyzje.md](../docs/01-decyzje.md)
+**Status:** ✅ completed
+**Depends on:** [007](007-wskazniki-tablice-slice.md), [008](008-defer.md); D1 in [docs/01-decyzje.md](../docs/01-decyzje.md)
 
-## Kontekst
+## Context
 
-Model pamięci (D1): ręczny + `defer` + **alokator jako jawny argument**
-(Zig/Odin). Bez typu `Allocator` stdlib nie może oferować `*_alloc` bez
-ukrytego `malloc`.
+Memory model (D1): manual + `defer` + **allocator as explicit argument**
+(Zig/Odin). Without an `Allocator` type stdlib cannot offer `*_alloc` without
+hidden `malloc`.
 
-## MVP (zrobione)
+## MVP (done)
 
-Moduł [`stdlib/mem.kl`](../stdlib/mem.kl) — host heap (libc):
+Module [`stdlib/mem.kl`](../stdlib/mem.kl) — host heap (libc):
 
 ```klin
 import mem
@@ -24,29 +24,29 @@ fn main() {
 }
 ```
 
-- `Allocator` + `heap()`; metody `alloc_bytes` / `free_bytes`; wolne `alloc_u8` /
-  `alloc_i32` (+ `free_*`); `empty_u8` / `empty_i32` do bezpiecznych `or`
-- Emisja: `klin_mem_*` → `malloc` / `free` tylko przy `import mem`
-- `n < 0` / OOM → `!T`; `n == 0` → pusty slice bez `malloc`
+- `Allocator` + `heap()`; methods `alloc_bytes` / `free_bytes`; free functions `alloc_u8` /
+  `alloc_i32` (+ `free_*`); `empty_u8` / `empty_i32` for safe `or`
+- Emission: `klin_mem_*` → `malloc` / `free` only with `import mem`
+- `n < 0` / OOM → `!T`; `n == 0` → empty slice without `malloc`
 - Docs: [docs/14-allocator.md](../docs/14-allocator.md); golden `test/mem_alloc.kl`;
   example `examples/mem_heap.kl`
 
-**Bez** `a.alloc(u8, n)` w gramatyce — **nie obiecywać** w MVP (brak argumentu
-typu w wywołaniu; D3/`$fn`, ewentualnie [034](034-typy-generyczne.md) później).
-Szczegóły: [docs/14-allocator.md](../docs/14-allocator.md) § „Nie obiecywać”.
+**No** `a.alloc(u8, n)` in grammar — **do not promise** in MVP (no type
+argument in call; D3/`$fn`, possibly [034](034-typy-generyczne.md) later).
+Details: [docs/14-allocator.md](../docs/14-allocator.md) § “Do not promise”.
 
-## Zrobione poza 057 (konsumenci)
+## Done outside 057 (consumers)
 
-- [017](017-collection-methods.md) warstwa 2 — [`slice_alloc`](../stdlib/slice_alloc.kl)
+- [017](017-collection-methods.md) layer 2 — [`slice_alloc`](../stdlib/slice_alloc.kl)
   (`map_alloc_*` / `filter_alloc_*`); note: [16-slice.md](../docs/16-slice.md)
 
-## Follow-up (później)
+## Follow-up (later)
 
-- `a.alloc(T, n)` — cukier / generyki (034), nie w tym issue
-- Arena / `deinit`, vtable wielu alokatorów
+- `a.alloc(T, n)` — sugar / generics (034), not in this issue
+- Arena / `deinit`, vtable of multiple allocators
 
-## Czego nie robić
+## What not to do
 
 - GC, autofree, RAII / `using`
-- Ukrytego `malloc` w emisji „dla wygody”
-- Wymuszania alokatora na freestanding (import opcjonalny)
+- Hidden `malloc` in emission “for convenience”
+- Forcing allocator on freestanding (import optional)

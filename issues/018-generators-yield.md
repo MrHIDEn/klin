@@ -1,23 +1,23 @@
-# 018 — Generatory / `yield`
+# 018 — Generators / `yield`
 
-**Status:** 💭 do rozważenia
-**Zależy od:** 004 (funkcje), ewentualnie domknięcia / stan (D7); nie w kolejce głównej
+**Status:** 💭 to consider
+**Depends on:** 004 (functions), possibly closures / state (D7); not on main queue
 
-## Kontekst
+## Context
 
-JS/`async`/`function*`: `yield` zawiesza funkcję i oddaje wartość do iteratora. Wygodne do strumieni i lazy sekwencji, ale wymaga **ukrytego stanu** (ramka na stercie lub transformacja do state machine) — mocno gryzie się z zasadą nadrzędną Klina.
+JS/`async`/`function*`: `yield` suspends a function and yields a value to an iterator. Convenient for streams and lazy sequences, but requires **hidden state** (stack frame on heap or transformation to state machine) — strongly at odds with Klin's prime rule.
 
-## Propozycja (później, jeśli w ogóle)
+## Proposal (later, if at all)
 
-- Albo **nie** wprowadzać `yield` w rdzeniu.
-- Albo jawny model: generator = struct ze stanem + metoda `next(): ?T` (jak iteratory w V/Zig/Rust), bez magicznego zawieszania stosu.
-- Emisja do C: state machine wygenerowana jawnie (widać w `.c`) albo ręczne iteratory — zero ukrytej alokacji ramki bez `Allocator`.
+- Either **do not** introduce `yield` in the core.
+- Or explicit model: generator = struct with state + `next(): ?T` method (like iterators in V/Zig/Rust), without magical stack suspension.
+- Emission to C: state machine generated explicitly (visible in `.c`) or manual iterators — zero hidden frame allocation without `Allocator`.
 
-## Czego nie robić
+## What not to do
 
-- Nie obiecywać `yield` jak w Pythonie/JS przed decyzją o koszcie i alokacji.
-- Nie dodawać przed solidnymi funkcjami (004) i slice’ami/iteratorami (007).
-- Test zasady nadrzędnej: generator vs ręczna pętla w C — ten sam kod maszynowy albo cecha wypada.
+- Do not promise `yield` like Python/JS before deciding on cost and allocation.
+- Do not add before solid functions (004) and slices/iterators (007).
+- Prime rule test: generator vs manual C loop — same machine code or the feature drops out.
 
-`yield` nie jest związany z generatorem SVD z [011](011-svd.md): tamten jest
-narzędziem build-time, bez ukrytego stanu programu użytkownika.
+`yield` is unrelated to the SVD generator from [011](011-svd.md): that one is a
+build-time tool, without hidden user-program state.

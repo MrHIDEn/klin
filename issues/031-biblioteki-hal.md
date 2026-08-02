@@ -1,54 +1,54 @@
-# 031 — Biblioteki HAL
+# 031 — HAL libraries
 
-**Status:** 💭 do rozważenia
-**Zależy od:** 010 (bare metal), 021 (FFI/C), mile widziane 011/027 (rejestry z SVD)
+**Status:** 💭 to consider
+**Depends on:** 010 (bare metal), 021 (FFI/C), 011/027 welcome (registers from SVD)
 
-## Kontekst
+## Context
 
-Po blinku z ręcznym/SVD MMIO pojawia się pytanie o **HAL** producenta
-(np. STM32Cube HAL / LL): GPIO init, UART, DMA, clock tree — wygodniej niż
-surowe rejestry, ale to duża powierzchnia C z makrami i często ukrytymi
-założeniami o alokacji / callbackach.
+After blink with manual/SVD MMIO the question arises about vendor **HAL**
+(e.g. STM32Cube HAL / LL): GPIO init, UART, DMA, clock tree — more convenient than
+raw registers, but a large C surface with macros and often hidden
+assumptions about allocation / callbacks.
 
-Architektura już mówi: **nie parsować nagłówków CMSIS** (makra, bitfieldy).
-HAL wchodzi więc jako **vendor C obok** + jawne deklaracje Klin, nie jako
-tłumacz headerów.
+Architecture already says: **do not parse CMSIS headers** (macros, bitfields).
+HAL therefore enters as **vendor C alongside** + explicit Klin declarations, not as
+header translator.
 
-## Cel (do rozważenia)
+## Goal (to consider)
 
-Sensowna współpraca z HAL **bez** przepisywania Cubemx do Klina i **bez**
-łamania zasady nadrzędnej:
+Sensible HAL cooperation **without** rewriting CubeMX to Klin and **without**
+breaking the prime rule:
 
-- link źródeł / `.a` HAL jak w [021](021-biblioteki-c.md)
-- cienkie `@[cimport]` / `@[cinclude]` tylko na używane API (nie cały HAL)
-- przykład na znanym chipie (np. F411): init GPIO / UART przez HAL **albo**
-  przez LL (niższy poziom, bliżej rejestrów)
-- jasny podział względem [011](011-svd.md) / [027](027-svd-ergonomic-api.md):
-  SVD = typowane rejestry; HAL = wyższe API vendora — można używać osobno
-  lub razem (HAL pod spodem i tak często tyka tych samych rejestrów)
-- paczki chip/board i `$device`/`$board` (bez mieszania z HAL):
+- link HAL sources / `.a` like [021](021-biblioteki-c.md)
+- thin `@[cimport]` / `@[cinclude]` only on used API (not entire HAL)
+- example on known chip (e.g. F411): init GPIO / UART via HAL **or**
+  via LL (lower level, closer to registers)
+- clear split vs [011](011-svd.md) / [027](027-svd-ergonomic-api.md):
+  SVD = typed registers; HAL = vendor higher API — can use separately
+  or together (HAL underneath often touches same registers)
+- chip/board packages and `$device`/`$board` (without mixing with HAL):
   [053](053-device-board-assets.md)
-- wyższe API „jak MicroPython `machine`” (PWM/UART/…) osobno:
+- higher API "like MicroPython `machine`" (PWM/UART/…) separately:
   [061](061-micropython-machine-api.md)
 
-## Rozważania / przykłady myślowe (nie speć)
+## Considerations / thought examples (not spec)
 
-- **LL vs HAL:** LL bliższy zasadzie nadrzędnej (mniej magii); pełny HAL
-  wygodniejszy, ale więcej ukrytych stanów (`handle`, callbacki)
-- generacja cienkich wrapperów z Cube / z listy użytych symboli — opcjonalnie
-  później; nie w pierwszym cięciu
-- clock / `SystemInit`: zostaje w C/startup jak dziś, nie w „magicznym” Klin
-- konflikt z SVD accessors: unikać podwójnego, sprzecznego modelu tego
-  samego peryferium w jednym module bez świadomego wyboru
+- **LL vs HAL:** LL closer to prime rule (less magic); full HAL
+  more convenient, but more hidden state (`handle`, callbacks)
+- generation of thin wrappers from Cube / from list of used symbols — optionally
+  later; not in first cut
+- clock / `SystemInit`: stays in C/startup as today, not in "magical" Klin
+- conflict with SVD accessors: avoid double, conflicting model of same
+  peripheral in one module without conscious choice
 
-## Czego nie robić
+## What not to do
 
-- Nie obiecywać pełnego STM32Cube jako „stdlib Klina”.
-- Nie parsować `stm32*.h` / generować całego HAL z XML.
-- Nie ukrywać alokacji / kolejek DMA za cukrem składniowym.
+- Do not promise full STM32Cube as "Klin stdlib".
+- Do not parse `stm32*.h` / generate entire HAL from XML.
+- Do not hide allocation / DMA queues behind syntax sugar.
 
-## Kryterium (gdy kiedyś wejdzie do prac)
+## Criteria (when this eventually enters work)
 
-- [ ] przykład Klin + vendor HAL/LL na Nucleo (np. LED lub UART)
-- [ ] build freestanding jak 010; objdump / zachowanie bez narzutu „magii” Klina
-- [ ] dokumentacja: kiedy SVD, kiedy HAL, kiedy oba
+- [ ] Klin + vendor HAL/LL example on Nucleo (e.g. LED or UART)
+- [ ] freestanding build like 010; objdump / behavior without Klin "magic" overhead
+- [ ] documentation: when SVD, when HAL, when both

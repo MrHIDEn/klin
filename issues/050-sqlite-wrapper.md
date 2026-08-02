@@ -1,23 +1,23 @@
-# 050 — Opakowanie SQLite w module Klin
+# 050 — SQLite wrapper in a Klin module
 
-**Status:** 💭 do rozważenia (niski priorytet — nieblokujące)
-**Zależy od:** [021](021-biblioteki-c.md); mile [020](020-biblioteki-klin.md) / [047](047-directory-modules.md)
+**Status:** 💭 under consideration (low priority — non-blocking)
+**Depends on:** [021](021-biblioteki-c.md); nice to have [020](020-biblioteki-klin.md) / [047](047-directory-modules.md)
 
-## Kontekst
+## Context
 
-SQLite zostaje biblioteką **C**. Klin może dać cienki moduł (`import sqlite`)
-z `@[cimport]` / `@[cinclude]` / `@[link]` — nie portować silnika do Klina.
+SQLite stays a **C** library. Klin can provide a thin module (`import sqlite`)
+with `@[cimport]` / `@[cinclude]` / `@[link]` — do not port the engine to Klin.
 
-## Szkic (później)
+## Sketch (later)
 
-- pakiet `sqlite/` lub `sqlite.kl`: deklaracje FFI + `pub` API (open / exec / …)
-- link `-lsqlite3` albo amalgamation `.c` przez `@[link]`
-- przykład host; bare-metal tylko z jawnym VFS/FS (poza MVP tego issue)
+- package `sqlite/` or `sqlite.kl`: FFI declarations + `pub` API (open / exec / …)
+- link `-lsqlite3` or amalgamation `.c` via `@[link]`
+- host example; bare-metal only with explicit VFS/FS (out of MVP for this issue)
 
-Alokacja SQLite = kontrakt C (jawny), nie ukryta magia Klina.
+SQLite allocation = explicit C contract, not hidden Klin magic.
 
-## Poza zakresem
+## Out of scope
 
-- przepisanie SQLite w Klinie
-- ORM / typed repo / query builder → [070](070-host-orm-sqlite.md) (host, niski priorytet)
-- priorytet względem rdzenia języka / embedded LED / FFI podstaw
+- rewriting SQLite in Klin
+- ORM / typed repo / query builder → [070](070-host-orm-sqlite.md) (host, low priority)
+- priority relative to language core / embedded LED / basic FFI

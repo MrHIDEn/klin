@@ -1,20 +1,20 @@
-# 016 — Interpolowane napisy
+# 016 — Interpolated strings
 
-**Status:** ✅ zrobione
-**Zależy od:** 012 (`str` / `io`)
+**Status:** ✅ done
+**Depends on:** 012 (`str` / `io`)
 
-## Ustalenia
+## Decisions
 
-- Składnia Dart/V w zwykłym `"…"`: `$name`, `${expr}`, `${expr:format}`
-- Format: **printf** (`%d`, `%.2f`) + cukier masek (`0.00` → `%.Nf`, `0.###` →
+- Dart/V syntax in plain `"…"`: `$name`, `${expr}`, `${expr:format}`
+- Format: **printf** (`%d`, `%.2f`) + mask sugar (`0.00` → `%.Nf`, `0.###` →
   trim helper), `sN` → `%.Ns`, `hex` / `sci`
-- Emisja: `printf` (zero ukrytej alokacji); `0.###` → bufor na stosie +
+- Emission: `printf` (zero hidden allocation); `0.###` → stack buffer +
   `klin_fmt_trim_frac`
-- **Print-only MVP** — sinki: `puts` / `printf` / `io.print` / `io.println`
-- Bez `n3` / kultury; daty → [037](037-datetime-format.md)
+- **Print-only MVP** — sinks: `puts` / `printf` / `io.print` / `io.println`
+- No `n3` / locale; dates → [037](037-datetime-format.md)
 
-Runtime podmiana wąsów (wzorzec-jako-dane, `{0}` / `{klucz}`) → osobno
+Runtime mustache substitution (pattern-as-data, `{0}` / `{key}`) → separately
 [077](077-string-template.md).
 
-Szczegóły: [docs/07-interpolacja.md](../docs/07-interpolacja.md).
+Details: [docs/07-interpolacja.md](../docs/07-interpolacja.md).
 Golden: `test/interp.kl`. Demo: `examples/interp.kl`.

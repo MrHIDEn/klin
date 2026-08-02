@@ -1,19 +1,19 @@
-# 022 — Biblioteki / jednostki ASM
+# 022 — ASM libraries / units
 
-**Status:** ✅ zrobione
-**Zależy od:** [021](021-biblioteki-c.md) (`@[link]` / `cimport` / `codename`)
+**Status:** ✅ done
+**Depends on:** [021](021-biblioteki-c.md) (`@[link]` / `cimport` / `codename`)
 
-## Zakres MVP
+## MVP scope
 
-- `.s` / `.S` jako ścieżki w `@[link("…")]` (reuse 021; bez nowego atrybutu)
-- symbole: Klin→ASM = `@[codename]` / `@[cexport]`; ASM→Klin = `@[cimport, codename]`
+- `.s` / `.S` as paths in `@[link("…")]` (reuse 021; no new attribute)
+- symbols: Klin→ASM = `@[codename]` / `@[cexport]`; ASM→Klin = `@[cimport, codename]`
 - host: `klin run` + test + [`examples/asm_add/`](../examples/asm_add/)
-- bare-metal: blink `@[link("startup.s")]`; Makefile czyta `out/*.link`
-  (bez przenoszenia `-T linker.ld` do Klina)
-- nota: [`docs/10-asm.md`](../docs/10-asm.md)
+- bare-metal: blink `@[link("startup.s")]`; Makefile reads `out/*.link`
+  (without moving `-T linker.ld` into Klin)
+- note: [`docs/10-asm.md`](../docs/10-asm.md)
 
-## Czego nie robimy
+## What we are not doing
 
-- DSL / assembler wewnątrz `.kl`
-- ABI per target / mangling bez `codename`
-- CLI tylko pod ASM
+- DSL / assembler inside `.kl`
+- ABI per target / mangling without `codename`
+- CLI only for ASM

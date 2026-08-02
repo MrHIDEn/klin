@@ -1,9 +1,9 @@
-# 009 — Błędy jako wartości
+# 009 — Errors as values
 
-**Status:** ✅ zrobione
-**Zależy od:** 008
+**Status:** ✅ done
+**Depends on:** 008
 
-## Zakres
+## Scope
 
 ```
 pub fn load(path: string): !Config {
@@ -18,14 +18,14 @@ let cfg = load("app.toml") or {
 }
 ```
 
-- `!T` jako typ sumaryczny → struct z tagiem w C
-- operator propagacji → `if (r.is_err) return r;`
-- blok `or { }` z dostępem do `err`
-- brak `null`: `?T` jako opcja
+- `!T` as sum type → struct with tag in C
+- propagation operator → `if (r.is_err) return r;`
+- `or { }` block with access to `err`
+- no `null`: `?T` as option
 
-## Kryterium ukończenia
+## Completion criteria
 
-- [x] propagacja przez 3 poziomy wywołań
-- [x] `or` z wartością domyślną
-- [x] błąd kompilacji przy zignorowaniu `!T`
-- [x] objdump: narzut = sprawdzenie flagi, nic więcej
+- [x] propagation through 3 call levels
+- [x] `or` with default value
+- [x] compile error on ignoring `!T`
+- [x] objdump: overhead = flag check, nothing more

@@ -1,38 +1,38 @@
-# 006 — Moduły
+# 006 — Modules
 
-**Status:** ✅ zrobione
-**Zależy od:** 005
+**Status:** ✅ done
+**Depends on:** 005
 
-## Zakres
+## Scope
 
-- wiele plików
+- multiple files
 - `module nazwa` / `import`
-- `pub` — bez niego symbol jest prywatny (**w module**; pliki pakietu-katalogu
-  z [047](047-directory-modules.md) dzielą tę przestrzeń)
-- prefiks modułu w manglingu
-- `static` w C dla symboli prywatnych
+- `pub` — without it the symbol is private (**within the module**; directory-package
+  files from [047](047-directory-modules.md) share that namespace)
+- module prefix in mangling
+- `static` in C for private symbols
 
-## Uzasadnienie
+## Rationale
 
-To odpowiedź na pierwotny problem: w C nazwy zewnętrzne mają domyślnie
-external linkage i leżą w jednej płaskiej przestrzeni. Obejścia to
-`static` i konwencja prefiksów (`gtk_widget_show`, `sqlite3_open`).
-Klin ma to zrobić za programistę.
+This answers the original problem: in C external names have default
+external linkage and live in one flat namespace. Workarounds are
+`static` and prefix conventions (`gtk_widget_show`, `sqlite3_open`).
+Klin should do this for the programmer.
 
-C23 nadal nie ma modułów; C++ dostał je dopiero w C++20.
+C23 still has no modules; C++ got them only in C++20.
 
-## Decyzja
+## Decision
 
-`pub` jawne, a nie eksport przez wielkość litery jak w Go — jawne bije
-ukryte w konwencji nazewniczej.
+Explicit `pub`, not export by capital letter like Go — explicit beats
+hidden naming convention.
 
-## Nota
+## Note
 
-[`docs/12-moduly.md`](../docs/12-moduly.md). Przykłady: [`examples/modules/`](../examples/modules/),
-katalog-pakiet: [`examples/pkg_geom/`](../examples/pkg_geom/).
+[`docs/12-moduly.md`](../docs/12-moduly.md). Examples: [`examples/modules/`](../examples/modules/),
+directory package: [`examples/pkg_geom/`](../examples/pkg_geom/).
 
-## Kryterium ukończenia
+## Completion criteria
 
-- [x] projekt z 3 modułów kompiluje się do jednego `.c`
-- [x] symbol bez `pub` niedostępny z innego modułu (błąd kompilacji)
-- [x] symbole prywatne są `static` w wyjściu
+- [x] project with 3 modules compiles to a single `.c`
+- [x] symbol without `pub` unavailable from another module (compile error)
+- [x] private symbols are `static` in output

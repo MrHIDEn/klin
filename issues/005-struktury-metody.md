@@ -1,13 +1,13 @@
-# 005 — Struktury i metody
+# 005 — Structs and methods
 
-**Status:** ✅ zrobione
-**Zależy od:** 004
+**Status:** ✅ done
+**Depends on:** 004
 
-## Opis
+## Description
 
-**To jest to, po co cały projekt powstał.**
+**This is what the whole project exists for.**
 
-## Zakres
+## Scope
 
 ```
 pub struct Vec2 {
@@ -15,11 +15,11 @@ pub struct Vec2 {
     y: f64
 }
 
-pub fn (v: Vec2) len(): f64 { ... }         // kopia
-pub fn (mut v: Vec2) translate(dx: f64) { } // wskaźnik
+pub fn (v: Vec2) len(): f64 { ... }         // copy
+pub fn (mut v: Vec2) translate(dx: f64) { } // pointer
 ```
 
-Emisja:
+Emission:
 
 ```c
 typedef struct { double x, y; } Vec2;
@@ -28,18 +28,18 @@ void   Vec2_translate(Vec2 *v, double dx);
 ```
 
 - mangling `Typ_metoda`
-- receiver jako pierwszy argument
-- `mut` → wskaźnik; brak `mut` → kopia
-- automatyczne referencjonowanie przy wywołaniu metody (za Neluą)
-- inicjalizacja struktur: nazwana i pozycyjna
+- receiver as first argument
+- `mut` → pointer; no `mut` → copy
+- automatic referencing on method call (after Nelua)
+- struct initialization: named and positional
 
-## Test zasady nadrzędnej
+## Prime rule test
 
-`mut` musi **zniknąć** w emisji — zostaje samo `*`. Niezmienność to
-zjawisko czasu kompilacji, zero kosztu w runtime.
+`mut` must **disappear** in emission — only `*` remains. Immutability is a
+compile-time phenomenon, zero runtime cost.
 
-## Kryterium ukończenia
+## Completion criteria
 
-- [x] `Vec2` z metodami działa
-- [x] błąd przy wywołaniu metody mutującej na niemutowalnej zmiennej
-- [x] wygenerowany C czytelny i identyczny z tym, co napisałbym ręcznie
+- [x] `Vec2` with methods works
+- [x] error on calling a mutating method on an immutable variable
+- [x] generated C is readable and identical to what I would write by hand

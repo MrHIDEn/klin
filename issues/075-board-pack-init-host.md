@@ -1,169 +1,169 @@
 # 075 — Board pack / `klin init` vs host (laptop): linker & startup
 
-**Status:** 💭 wnioski (docs); implementacja później  
-**Zależy od:** [010](010-bare-metal.md), [054](054-embedded-project-layout.md), [053](053-device-board-assets.md); mile [074](074-board-ioc-klin-mod.md)
+**Status:** 💭 conclusions (docs); implementation later  
+**Depends on:** [010](010-bare-metal.md), [054](054-embedded-project-layout.md), [053](053-device-board-assets.md); optionally [074](074-board-ioc-klin-mod.md)
 
-## Werdykt w skrócie
+## Verdict in brief
 
-**Laptop (host): bez magii — bez `linker.ld`, `startup.s`, zwykle też bez Makefile.**
+**Laptop (host): no magic — no `linker.ld`, `startup.s`, usually no Makefile either.**
 
-`klin run examples/hello.kl` wystarczy: Klin emituje C, woła host `gcc`/`clang`/`tcc`,
-linkuje z **CRT + libc**. Nie trzeba `linker.ld`, `startup.s` ani `make`.
-Makefile / ld / startup to świat **bare-metalu** (`examples/stm32/…`).
+`klin run examples/hello.kl` is enough: Klin emits C, calls host `gcc`/`clang`/`tcc`,
+links with **CRT + libc**. No need for `linker.ld`, `startup.s`, or `make`.
+Makefile / ld / startup is the **bare-metal** world (`examples/stm32/…`).
 
 ## Problem
 
-`linker.ld` + `startup.s` to największy próg wejścia bare-metalu: mapa pamięci,
-tablica wektorów, kopiowanie `.data`, zerowanie `.bss`. User blinka nie powinien
-musieć tego *rozumieć ani pisać* — ale Klin **nie chowa** tego w magii języka
-(zasada: brak ukrytego kosztu; [010](010-bare-metal.md)).
+`linker.ld` + `startup.s` is the biggest bare-metal entry barrier: memory map,
+vector table, copying `.data`, zeroing `.bss`. A blink user should not
+have to *understand or write* this — but Klin **does not hide** it in language magic
+(principle: no hidden cost; [010](010-bare-metal.md)).
 
-SVD / `$device` ([053](053-device-board-assets.md)) **nie generuje** `.ld` ani
-startupu — tylko MMIO / rejestry. Inna warstwa.
+SVD / `$device` ([053](053-device-board-assets.md)) **does not generate** `.ld` or
+startup — only MMIO / registers. Different layer.
 
-## Wnioski (werdykt)
+## Conclusions (verdict)
 
-### 1. Ulga = pack + scaffold, nie kompilator
+### 1. Relief = pack + scaffold, not compiler
 
-| Podejście | Werdykt |
+| Approach | Verdict |
 |---|---|
-| Generować `linker.ld` z SVD | ❌ nie — SVD ≠ pełna mapa linkera; debug w czarną skrzynkę |
-| Ukryć startup w „magicznym” Klinie | ❌ nie — [010](010-bare-metal.md) |
-| Gotowy **board pack** (`startup.s` + `linker.ld` + ewent. pinout) | ✅ |
-| **`klin init <board>`** (lub szablon w repo) kopiujący pack | ✅ — [054](054-embedded-project-layout.md) |
-| Dyrektywa `board` / wąski `.ioc` (pinout) | później — [074](074-board-ioc-klin-mod.md); **nie** zastępuje ld/startup |
+| Generate `linker.ld` from SVD | ❌ no — SVD ≠ full linker map; debug becomes black box |
+| Hide startup in “magic" Klin | ❌ no — [010](010-bare-metal.md) |
+| Ready **board pack** (`startup.s` + `linker.ld` + optional pinout) | ✅ |
+| **`klin init <board>`** (or repo template) copying pack | ✅ — [054](054-embedded-project-layout.md) |
+| `board` directive / narrow `.ioc` (pinout) | later — [074](074-board-ioc-klin-mod.md); **does not** replace ld/startup |
 
-Cel UX: 95% userów **nigdy nie edytuje** `linker.ld` / `startup.s`; edytuje
-`main.kl` + `$device` + ewent. pinout.
+UX goal: 95% of users **never edit** `linker.ld` / `startup.s`; they edit
+`main.kl` + `$device` + optional pinout.
 
-### 1b. Trzy warstwy ulgi na MCU (jak to ma wyglądać)
+### 1b. Three relief layers on MCU (how it should look)
 
-Nie jedna magia — **trzy osobne rzeczy**. GitHub pasuje do warstw A i C
-(fetch jak `require` / `device`); B to jednorazowy scaffold lokalny.
+Not one magic — **three separate things**. GitHub fits layers A and C
+(fetch like `require` / `device`); B is one-time local scaffold.
 
-#### A — Paczka boardu (ld + startup) — z GitHub
+#### A — Board pack (ld + startup) — from GitHub
 
-Repo / asset np. `github/…/board-nucleo-f411re` zawiera gotowe:
+Repo / asset e.g. `github/…/board-nucleo-f411re` contains ready:
 
-- `startup.s`, `linker.ld`, cienki Makefile / reguły,
-- ewent. proste stałe pinów w `.kl`.
+- `startup.s`, `linker.ld`, thin Makefile / rules,
+- optional simple pin constants in `.kl`.
 
-User: `klin get` (albo `require` paczki Klin) → pliki w cache / projekcie.
-**Nie pisze** ld/startup sam. Build ARM nadal jawny (Make + `arm-none-eabi`),
-tylko boilerplate jest **skopiowany / z packa**, nie wymyślony przez kompilator.
+User: `klin get` (or Klin pack `require`) → files in cache / project.
+**Does not write** ld/startup themselves. ARM build still explicit (Make + `arm-none-eabi`),
+only boilerplate is **copied / from pack**, not invented by compiler.
 
-#### B — `klin init nucleo-f411` — scaffold (nie ciągły fetch)
+#### B — `klin init nucleo-f411` — scaffold (not continuous fetch)
 
-Jednorazowo tworzy katalog projektu:
+One-time project directory creation:
 
 ```text
 my_blink/
   main.kl
-  board/          # startup.s, linker.ld (z szablonu / packa A)
+  board/          # startup.s, linker.ld (from template / pack A)
   Makefile
-  klin.mod        # device … (+ ewent. require board pack)
-  README          # „najpierw klin get”
+  klin.mod        # device … (+ optional require board pack)
+  README          # “run klin get first”
 ```
 
-Źródło szablonu może być **z tego samego GitHub packa (A)** albo z szablonów
-w dystrybucji Klina. Potem pracujesz lokalnie; `get` tylko pinuje wersje —
-init **nie** linkuje magicznie przy każdym buildzie.
+Template source may be **same GitHub pack (A)** or templates
+in Klin distribution. Then work locally; `get` only pins versions —
+init **does not** magically link on every build.
 
-#### C — `board` w `klin.mod` + `$board` — pinout z `.ioc` ([074](074-board-ioc-klin-mod.md))
+#### C — `board` in `klin.mod` + `$board` — pinout from `.ioc` ([074](074-board-ioc-klin-mod.md))
 
-Później, osobno od ld/startup:
+Later, separate from ld/startup:
 
 ```text
 klin.mod:
   device github/…/stm32f411.svd main
-  board  github/…/nucleo_f411re.ioc v0.1.0   # fetch jak device → asset/
+  board  github/…/nucleo_f411re.ioc v0.1.0   # fetch like device → asset/
 ```
 
 ```klin
-$device("github/…/stm32f411.svd", "RCC,GPIOA,STK")  // MMIO z SVD
-$board("github/…/nucleo_f411re.ioc")                 // stałe LED→PA5 itd.
+$device("github/…/stm32f411.svd", "RCC,GPIOA,STK")  // MMIO from SVD
+$board("github/…/nucleo_f411re.ioc")                 // constants LED→PA5 etc.
 ```
 
-- `klin get` ściąga `.ioc` do cache `asset/` (ziarno); typowy flow potem
-  **kopiuje** do `board/*.ioc` w projekcie — lokalny plik = prawda, w gicie,
-  **nie** nadpisywany przez `get`/`update` (szczegóły: [074](074-board-ioc-klin-mod.md)),
-- parser wycina **tylko mapę pinów** → codegen stałych,
-- **nie** generuje `linker.ld` / `startup.s` — te nadal z A (pack) / B (init).
+- `klin get` downloads `.ioc` to `asset/` cache (seed); typical flow then
+  **copies** to `board/*.ioc` in project — local file = truth, in git,
+  **not** overwritten by `get`/`update` (details: [074](074-board-ioc-klin-mod.md)),
+- parser extracts **pin map only** → constant codegen,
+- **does not** generate `linker.ld` / `startup.s` — those still from A (pack) / B (init).
 
-| Warstwa | Skąd | Co daje userowi |
+| Layer | Source | What user gets |
 |---|---|---|
-| A pack | GitHub (paczka / asset) | `startup.s` + `linker.ld` (+ Make) |
-| B init | szablon (często z A) | katalog „od razu da się zbudować” |
-| C `board`/`.ioc` | GitHub (asset, jak SVD) | nazwy pinów — **nie** linkowanie |
+| A pack | GitHub (pack / asset) | `startup.s` + `linker.ld` (+ Make) |
+| B init | template (often from A) | “buildable right away" directory |
+| C `board`/`.ioc` | GitHub (asset, like SVD) | pin names — **not** linking |
 
-**Kolejność prac:** najpierw A+B (blink bez bólu ld), potem C (wygodniejszy
-pinout z Cube). Host (laptop) w ogóle poza tym modelem — patrz §3.
+**Work order:** A+B first (blink without ld pain), then C (easier
+pinout from Cube). Host (laptop) outside this model entirely — see §3.
 
-### 2. `linker.ld` jest inny per MCU (czasem board)
+### 2. `linker.ld` differs per MCU (sometimes board)
 
-- **Chip** — FLASH/RAM size i origin, czasem regiony (CCM, ITCM, …)
-- **Board** — rzadziej (zewnętrzny flash, offset aplikacji vs bootloader)
-- **Aplikacja** — rzadko (dual-bank, własny layout)
+- **Chip** — FLASH/RAM size and origin, sometimes regions (CCM, ITCM, …)
+- **Board** — rarely (external flash, app offset vs bootloader)
+- **Application** — rarely (dual-bank, custom layout)
 
-To boilerplate **targetu / boardu**, nie linia w `klin.mod` obok `device`
-(mod pinuje artefakty do fetch; ld leży w packu / `board/`).
+That is **target / board** boilerplate, not a line in `klin.mod` next to `device`
+(mod pins artifacts to fetch; ld lives in pack / `board/`).
 
-### 3. Host (laptop) — **nie ma** tej magii i **nie ma tych plików**
+### 3. Host (laptop) — **no** this magic and **no** these files
 
-Na laptopie ścieżka to `klin run` → emit C → host `gcc`/`clang`/`tcc` →
-link z **systemowym CRT + libc** (crt0, domyślny skrypt linkera OS).
+On laptop the path is `klin run` → emit C → host `gcc`/`clang`/`tcc` →
+link with **system CRT + libc** (crt0, OS default linker script).
 
-- **Brak** `startup.s` w projekcie hostowym.
-- **Brak** `linker.ld` / `-T …` w typowym `klin run`.
-- **Brak** Makefile — buduje i odpala **`klin run`** (ewent. `klin test`).
-- **Brak** freestanding wektorów przerwań.
+- **No** `startup.s` in host project.
+- **No** `linker.ld` / `-T …` in typical `klin run`.
+- **No** Makefile — build and run via **`klin run`** (or `klin test`).
+- **No** freestanding interrupt vectors.
 
-(Wyjątki hostowe z własnym Make — np. `ffi_add/` / `asm_add/` pod lib C —
-to FFI, nie wymóg zwykłego programu.)
+(Host exceptions with own Make — e.g. `ffi_add/` / `asm_add/` for C lib —
+that is FFI, not requirement for ordinary program.)
 
-To nie jest „ten sam problem co Nucleo”. Host ≠ MCU; nie projektować UX
-bare-metalu tak, jakby każdy program Klin wymagał ld/startup/Make.
+That is not “the same problem as Nucleo". Host ≠ MCU; do not design bare-metal UX
+as if every Klin program required ld/startup/Make.
 
 | | Host | Bare-metal (STM32, …) |
 |---|---|---|
-| Budowa | `klin run` / `klin test` | Makefile (+ `arm-none-eabi-gcc`) |
-| Entry / CRT | OS + toolchain | `startup.s` (wektory, Reset_Handler) |
-| Skrypt linkera | domyślny hosta | `linker.ld` (`-T`, FLASH/RAM) |
-| User pisze | `.kl` (+ ewent. `@[link]` do `.s`/`.a` FFI) | `.kl` + pack boardu (lub ręczny boilerplate) |
-| `klin init`? | opcjonalnie lekki szablon app (`hello` + `klin.mod`) | **`klin init nucleo-f411`** (itp.) z `board/` + Make |
+| Build | `klin run` / `klin test` | Makefile (+ `arm-none-eabi-gcc`) |
+| Entry / CRT | OS + toolchain | `startup.s` (vectors, Reset_Handler) |
+| Linker script | host default | `linker.ld` (`-T`, FLASH/RAM) |
+| User writes | `.kl` (+ optional `@[link]` to `.s`/`.a` FFI) | `.kl` + board pack (or manual boilerplate) |
+| `klin init`? | optional light app template (`hello` + `klin.mod`) | **`klin init nucleo-f411`** (etc.) with `board/` + Make |
 
-### 4. Dwa sensy `klin init` (nie mylić)
+### 4. Two meanings of `klin init` (do not confuse)
 
-1. **`klin init` (host)** — cienki projekt: `main.kl`, ewent. pusty/przykładowy
-   `klin.mod`, bez ld/startup. Nice-to-have; dziś wystarczy skopiować
-   `examples/hello.kl`.
-2. **`klin init <board>` (MCU)** — właściwa ulga na ból linkera/startupu:
-   katalog z `main.kl`, `board/{startup.s,linker.ld}`, cienki Makefile,
-   `klin.mod` z `device …`, README „najpierw `klin get`”. To potomek /
-   uszczegółowienie [054](054-embedded-project-layout.md).
+1. **`klin init` (host)** — thin project: `main.kl`, optional empty/example
+   `klin.mod`, no ld/startup. Nice-to-have; today copying
+   `examples/hello.kl` is enough.
+2. **`klin init <board>` (MCU)** — real relief for linker/startup pain:
+   directory with `main.kl`, `board/{startup.s,linker.ld}`, thin Makefile,
+   `klin.mod` with `device …`, README “run `klin get` first". Child /
+   detail of [054](054-embedded-project-layout.md).
 
-Implementacja MCU-init **po** ustaleniu layoutu w 054; host-init osobno i
-niższy priorytet.
+MCU-init implementation **after** layout settled in 054; host-init separately and
+lower priority.
 
-## Czego nie robić
+## Do not
 
-- obiecywać „Klin sam napisze linker z chipa”
-- mieszać host CRT z freestanding w jednym „magicznym” trybie bez jawnego targetu
-- pełny CubeMX → projekt ([074](074-board-ioc-klin-mod.md))
-- HAL przez pack — [031](031-biblioteki-hal.md)
+- promise “Klin writes linker from chip by itself"
+- mix host CRT with freestanding in one “magic" mode without explicit target
+- full CubeMX → project ([074](074-board-ioc-klin-mod.md))
+- HAL via pack — [031](031-biblioteki-hal.md)
 
-## Kryterium (gdy wejdzie implementacja)
+## Criteria (when implementation lands)
 
-- [x] udokumentowany podział: host vs MCU (ten issue + `examples/README`)
-      — laptop: bez magii, bez `linker.ld`/`startup.s`/Makefile (`klin run`)
-- [ ] co najmniej jeden board pack / szablon Nucleo-F411 bez edycji ld przez usera
-- [ ] (opcjonalnie) `klin init nucleo-f411` albo równoważny scaffold w repo
-- [ ] (opcjonalnie, niski priorytet) `klin init` host → `hello` + moda
+- [x] documented split: host vs MCU (this issue + `examples/README`)
+      — laptop: no magic, no `linker.ld`/`startup.s`/Makefile (`klin run`)
+- [ ] at least one board pack / Nucleo-F411 template without user editing ld
+- [ ] (optional) `klin init nucleo-f411` or equivalent scaffold in repo
+- [ ] (optional, low priority) `klin init` host → `hello` + mod
 
-## Powiązane
+## Related
 
-- [010](010-bare-metal.md) — startup zostaje `.s`; bez magii w języku
-- [022](022-biblioteki-asm.md) — `@[link]`; `-T linker.ld` zostaje w Make
+- [010](010-bare-metal.md) — startup stays `.s`; no magic in language
+- [022](022-biblioteki-asm.md) — `@[link]`; `-T linker.ld` stays in Make
 - [053](053-device-board-assets.md) — SVD / `$device` ≠ ld
-- [054](054-embedded-project-layout.md) — układ `board/` + szkic init
-- [074](074-board-ioc-klin-mod.md) — pinout / `.ioc`, nie linker
+- [054](054-embedded-project-layout.md) — `board/` layout + init sketch
+- [074](074-board-ioc-klin-mod.md) — pinout / `.ioc`, not linker

@@ -1,30 +1,29 @@
 # 025 — English project (except pl-PL)
 
-**Status:** ✅ zrobione
-**Zależy od:** —
+**Status:** ✅ done
+**Depends on:** —
 
-## Cel
+## Goal
 
-Przegląd repo i przeniesienie na angielski **wszystkiego poza korpusem polskim**.
+Review the repo and move to English **everything except the Polish corpus**.
 
-## PL zostaje (pl-PL)
+## PL stayed (pl-PL) — superseded
 
-- `issues/`
-- `docs/`
+Originally `issues/` and `docs/` were the official PL corpus (roadmap, decisions,
+architecture) and were not translated in 025. **That exception is being superseded:**
+issues and docs are moving to English (full migration tracked in [082](082-english-issues-docs.md)).
+Do not translate to `docs/pl-PL/{issues,note}` unless link breakage is avoided — out of
+025 scope or a separate micro-step.
 
-To oficjalny korpus PL (roadmapa, decyzje, architektura). Nie tłumaczyć w 025.
-Ewentualny późniejszy move do `docs/pl-PL/{issues,note}` tylko jeśli nie
-rozwali linków — poza zakresem 025 albo osobny mikro-krok.
+## Moved to English
 
-## Na angielski
+- [x] frontend / CLI messages (`lib/*`, `bin/*`, `svd2klin`)
+- [x] tests: assertions on error text, `test(...)` descriptions, comments in `test/`
+- [x] `README.md`, `pubspec.yaml` description, CLI help
+- [x] `CLAUDE.md` / agent rules: EN + links to pl-PL `docs/` / `issues/` (links updated as corpus migrates)
+- [x] compiler code comments (eventually all EN; when editing a file — EN)
 
-- [x] komunikaty frontendu / CLI (`lib/*`, `bin/*`, `svd2klin`)
-- [x] testy: asercje na treść błędów, opisy `test(...)`, komentarze w `test/`
-- [x] `README.md`, opis w `pubspec.yaml`, help CLI
-- [x] `CLAUDE.md` / reguły agenta: EN + linki do pl-PL `docs/` / `issues/`
-- [x] komentarze w kodzie kompilatora (docelowo całość EN; przy edycji pliku — EN)
+## Criteria
 
-## Kryterium
-
-Contributor bez PL ogarnia build/test/diagnostics; design czyta z
-`issues/` + `docs/` (PL).
+Contributor without Polish can handle build/test/diagnostics; design is read from
+`issues/` + `docs/` (now migrating to EN per 082).

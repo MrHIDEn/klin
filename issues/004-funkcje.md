@@ -1,24 +1,24 @@
-# 004 — Funkcje
+# 004 — Functions
 
-**Status:** ✅ zrobione
-**Zależy od:** 003
+**Status:** ✅ done
+**Depends on:** 003
 
-## Zakres
+## Scope
 
-- parametry z typami, wartość zwracana
-- wiele funkcji w pliku
-- rekurencja
-- **sortowanie topologiczne deklaracji + forward declarations w emisji**
+- parameters with types, return value
+- multiple functions in a file
+- recursion
+- **topological sort of declarations + forward declarations in emission**
 
-## Uwaga kluczowa
+## Key note
 
-W Klinie kolejność funkcji w pliku nie ma znaczenia. W C ma.
-Codegen musi sam posortować i wyemitować prototypy w sekcji deklaracji.
+In Klin, function order in a file does not matter. In C it does.
+Codegen must sort and emit prototypes in the declaration section itself.
 
-To pierwszy moment, gdy generowany C przestaje być odbiciem źródła.
+This is the first moment when generated C stops being a mirror of the source.
 
-## Kryterium ukończenia
+## Completion criteria
 
-- [x] funkcja wywołana przed swoją definicją w pliku działa
-- [x] rekurencja (fibonacci)
-- [x] błąd przy złej liczbie/typie argumentów
+- [x] function called before its definition in the file works
+- [x] recursion (fibonacci)
+- [x] error on wrong number/type of arguments

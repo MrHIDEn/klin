@@ -1,28 +1,28 @@
-# 030 — Przerwania przez dekoratory (ergonomia ISR)
+# 030 — Interrupts via decorators (ISR ergonomics)
 
-**Status:** 💭 do rozważenia
-**Zależy od:** 010; mile widziane 011/027 (nazwy z SVD), 028 (`FromISR`)
+**Status:** 💭 to consider
+**Depends on:** 010; 011/027 welcome (names from SVD), 028 (`FromISR`)
 
-## Pytanie
+## Question
 
-Czy da się **zgrabnie** obsługiwać IRQ/ISR atrybutami, ponad dzisiejsze
-`@[codename("SysTick_Handler")]` z [010](010-bare-metal.md).
+Can we **elegantly** handle IRQ/ISR with attributes, beyond today's
+`@[codename("SysTick_Handler")]` from [010](010-bare-metal.md).
 
-## Stan dziś
+## State today
 
-Nazwa symbolu musi zgadzać się z wektorem (startup `.s`); `codename` to już
-minimalny dekorator.
+Symbol name must match the vector (startup `.s`); `codename` is already
+minimal decorator.
 
-## Rozważania / przykłady myślowe (nie speć)
+## Considerations / thought examples (not spec)
 
-- `@[isr]` / `@[interrupt("SysTick")]` / `@[irq(IRQ_TIM2)]` → automatyczny
-  `codename` + konwencja z wektora/SVD
-- powiązanie z 011/027: nazwy IRQ z SVD / tablicy wektorów
-- reguły jak w C: krótki ISR, `volatile`, FreeRTOS `FromISR` — Klin **nie**
-  ukrywa kontekstu przerwania
-- opcjonalnie: ostrzeżenie checkera przy alokacji / długiej pracy w ISR
+- `@[isr]` / `@[interrupt("SysTick")]` / `@[irq(IRQ_TIM2)]` → automatic
+  `codename` + convention from vector/SVD
+- tie to 011/027: IRQ names from SVD / vector table
+- rules like C: short ISR, `volatile`, FreeRTOS `FromISR` — Klin **does not**
+  hide interrupt context
+- optionally: checker warning on allocation / long work in ISR
 
-## Czego nie robić
+## What not to do
 
-Generowanie całej tablicy wektorów w Klinie (startup zostaje `.s` — 010);
-ukryte prologi/epilogi inne niż C/ABI.
+Generate entire vector table in Klin (startup stays `.s` — 010);
+hidden prologues/epilogues other than C/ABI.

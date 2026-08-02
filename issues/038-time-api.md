@@ -1,11 +1,11 @@
-# 038 — Ergonomia API `stdlib/time`
+# 038 — `stdlib/time` API ergonomics
 
-**Status:** ✅ zrobione
-**Zależy od:** 037
+**Status:** ✅ done
+**Depends on:** 037
 
-## Zakres
+## Scope
 
-Dopisanie metod (zero FFI, zero alokacji):
+Added methods (zero FFI, zero allocation):
 
 - `Instant.until` / `MonoInstant.until` → `Duration`
 - `MonoInstant.add` / `sub` (`Duration`)
@@ -14,7 +14,7 @@ Dopisanie metod (zero FFI, zero alokacji):
 
 Golden: `test/time_basic.kl`. Docs: [docs/08-time.md](../docs/08-time.md).
 
-## Poza zakresem
+## Out of scope
 
-Luxon-like / hardware — osobne issue: [039](039-time-calendar.md)–[044](044-cpu-cycles.md)
-(lista w [037](037-datetime-format.md)). Cukier `${t:…}` nie planowany.
+Luxon-like / hardware — separate issues: [039](039-time-calendar.md)–[044](044-cpu-cycles.md)
+(list in [037](037-datetime-format.md)). `${t:…}` sugar not planned.

@@ -1,12 +1,12 @@
-# 046 — Nagłówek C z eksportów (`--emit-h`)
+# 046 — C header from exports (`--emit-h`)
 
-**Status:** ✅ zrobione
-**Zależy od:** [045](045-cexport.md)
+**Status:** ✅ done
+**Depends on:** [045](045-cexport.md)
 
-## Kontekst
+## Context
 
-Po `@[cexport, codename]` C woła symbole Klin; `--emit-h` generuje nagłówek
-z prototypami, żeby nie pisać ich ręcznie.
+After `@[cexport, codename]` C calls Klin symbols; `--emit-h` generates a header
+with prototypes so you do not write them by hand.
 
 ## API
 
@@ -15,15 +15,15 @@ klin --emit-h foo.kl              # → out/foo.h
 klin --emit-c --emit-h foo.kl     # → out/foo.c + out/foo.h
 ```
 
-- tylko funkcje z `@[cexport]` (nazwa = `codename`)
-- typy Klina → C jak w emisji `.c` (`stdint.h` itd.)
-- `#line` przy prototypach; include guard `KLIN_<BASE>_H`
-- nie zastępuje pack `.a` / `.so`
+- only functions with `@[cexport]` (name = `codename`)
+- Klin types → C as in `.c` emission (`stdint.h`, etc.)
+- `#line` on prototypes; include guard `KLIN_<BASE>_H`
+- does not replace pack `.a` / `.so`
 
-Przykład: [`examples/cexport_add/`](../examples/cexport_add/).
-Nota: [`docs/09-ffi-c.md`](../docs/09-ffi-c.md), CLI: [`docs/06-cli.md`](../docs/06-cli.md).
+Example: [`examples/cexport_add/`](../examples/cexport_add/).
+Note: [`docs/09-ffi-c.md`](../docs/09-ffi-c.md), CLI: [`docs/06-cli.md`](../docs/06-cli.md).
 
-## Poza zakresem
+## Out of scope
 
-- automatyczne `.a` / `.so`
-- `cexport` na metodach / typach (nadal poza 045)
+- automatic `.a` / `.so`
+- `cexport` on methods / types (still out of scope for 045)

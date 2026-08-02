@@ -1,48 +1,48 @@
-# 064 — Warunek kończący się gołą nazwą mylony z literałem struktury
+# 064 — Condition ending in bare name confused with struct literal
 
-**Status:** ✅ zrobione
-**Zależy od:** —
+**Status:** ✅ done
+**Depends on:** —
 
-(Numer: wcześniej kolizja z [063](063-remote-fixture-osa.md) fixture `osa` — ten bug = **064**.)
+(Number: previously collided with [063](063-remote-fixture-osa.md) fixture `osa` — this bug = **064**.)
 
-## Objaw (naprawione)
+## Symptom (fixed)
 
-Warunek `if`/`while`/`for …..<end`, który kończy się gołą nazwą tuż przed `{`,
-był błędnie parsowany jako literał struktury (`nazwa { … }`):
+An `if`/`while`/`for …..<end` condition ending in a bare name right before `{`
+was incorrectly parsed as a struct literal (`name { … }`):
 
 ```klin
 fn main() {
     let a: i32 = 1
     let b: i32 = 2
-    if a < b {          // OK: nawiasy opcjonalne
+    if a < b {          // OK: parentheses optional
         puts("less")
     }
-    if (a < b) {        // też OK
+    if (a < b) {        // also OK
         puts("paren")
     }
 }
 ```
 
-## Przyczyna
+## Cause
 
-W [`lib/parser.dart`](../lib/parser.dart) `_primary` traktuje `ident {` jako
-literał struktury, gdy `_noStructLit == false`. `match` już tłumił literały
-w nagłówku; `if`/`while` (i koniec `for …..<`) — nie.
+In [`lib/parser.dart`](../lib/parser.dart) `_primary` treats `ident {` as a
+struct literal when `_noStructLit == false`. `match` already suppressed literals
+in the header; `if`/`while` (and end of `for …..<`) — did not.
 
-## Naprawa
+## Fix
 
-`_headerExpr()` (`_noStructLit = true`) wokół warunków `if`/`while`, końca
-zakresu `for i in ..<end` oraz prawej strony post `for`. Literał struktury w
-warunku nadal możliwy w nawiasach: `if (Foo{...}).x { … }` (nawias zeruje flagę).
+`_headerExpr()` (`_noStructLit = true`) around `if`/`while` conditions, end of
+`for i in ..<end` range, and post `for` RHS. Struct literal in
+condition still possible in parentheses: `if (Foo{...}).x { … }` (paren resets flag).
 
-## Kryteria
+## Criteria
 
 - [x] `if a < b { … }` / `while a < b { … }` / `for i in 0..<n { … }`
-- [x] `if (cond) { … }` / `while (cond) { … }` — nawiasy opcjonalne
-- [x] `if (Point{ x: 3 }).x > 0 { … }` — literał w nawiasach
-- [x] goldeny: `test/if_cond_bare_name.kl`, `test/if_cond_struct_paren.kl`
+- [x] `if (cond) { … }` / `while (cond) { … }` — parentheses optional
+- [x] `if (Point{ x: 3 }).x > 0 { … }` — literal in parentheses
+- [x] goldens: `test/if_cond_bare_name.kl`, `test/if_cond_struct_paren.kl`
 
-## Kontekst
+## Context
 
-Wykryte przy [017](017-collection-methods.md) i przy fixture [063](063-remote-fixture-osa.md)
+Found during [017](017-collection-methods.md) and fixture [063](063-remote-fixture-osa.md)
 (`clamp`: `if v < lo {`).

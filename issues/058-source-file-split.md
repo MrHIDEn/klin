@@ -1,58 +1,58 @@
-# 058 — Podział dużych plików źródłowych kompilatora
+# 058 — Split large compiler source files
 
-**Status:** 💭 do rozważenia (dług techniczny / utrzymywalność)
-**Zależy od:** —
+**Status:** 💭 under consideration (technical debt / maintainability)
+**Depends on:** —
 
-## Obserwacja
+## Observation
 
-Kilka plików w [`lib/`](../lib/) mocno urosło (stan bieżący):
+Several files in [`lib/`](../lib/) have grown large (current state):
 
-| Plik | Linie |
+| File | Lines |
 |---|---|
 | [`lib/checker.dart`](../lib/checker.dart) | ~2116 |
 | [`lib/emit_c.dart`](../lib/emit_c.dart) | ~1931 |
 | [`lib/parser.dart`](../lib/parser.dart) | ~1373 |
 | [`lib/ast.dart`](../lib/ast.dart) | ~806 |
 
-Razem `lib/` ma ~8,4 tys. linii, z czego trzy pliki to grubo ponad połowa.
-Duże pliki utrudniają nawigację, review i lokalne zmiany (każda faza issue
-dotyka tych samych 3–4 plików), a switch-e po `sealed` typach robią się bardzo
-długie.
+Together `lib/` has ~8.4k lines, of which three files are well over half.
+Large files hinder navigation, review, and local changes (every issue phase
+touches the same 3–4 files), and `sealed` type switches get very
+long.
 
-## Czy to ma sens? — tak, ostrożnie
+## Does it make sense? — yes, carefully
 
-Podział poprawiłby utrzymywalność, ale to czysto **wewnętrzny refaktor**: nie
-zmienia zachowania ani wygenerowanego C. Ryzyko głównie w rozjeżdżaniu się z
-równoległymi zmianami (konflikty). Robić przyrostowo, przy okazji, nie jako
-jeden wielki PR.
+Splitting would improve maintainability, but this is purely an **internal refactor**: no
+behavior change or generated C change. Main risk is diverging from
+parallel changes (conflicts). Do incrementally, opportunistically, not as
+one big PR.
 
-## Możliwe kierunki (szkic, do decyzji przy realizacji)
+## Possible directions (sketch, decide at implementation)
 
-Dart wspiera `part` / `part of` (jeden `library`, wiele plików) oraz podział na
-osobne biblioteki z `import`. Propozycje:
+Dart supports `part` / `part of` (one `library`, many files) and split into
+separate libraries with `import`. Proposals:
 
-- `emit_c.dart` → np. `emit/expr.dart`, `emit/stmt.dart`, `emit/types.dart`
-  (mangling / `_cType` / `_cDecl`), `emit/host.dart` (host-helpery `mem`/`time`),
-  `emit/interp.dart` (interpolacja printf).
-- `checker.dart` → np. `check/stmt.dart`, `check/expr.dart`, `check/types.dart`
-  (rezolucja typów/modułów), `check/symbols.dart` (`_Scope` / `_Symbol`).
-- `parser.dart` → np. `parse/decls.dart` (fn/struct/import), `parse/stmt.dart`,
+- `emit_c.dart` → e.g. `emit/expr.dart`, `emit/stmt.dart`, `emit/types.dart`
+  (mangling / `_cType` / `_cDecl`), `emit/host.dart` (host helpers `mem`/`time`),
+  `emit/interp.dart` (printf interpolation).
+- `checker.dart` → e.g. `check/stmt.dart`, `check/expr.dart`, `check/types.dart`
+  (type/module resolution), `check/symbols.dart` (`_Scope` / `_Symbol`).
+- `parser.dart` → e.g. `parse/decls.dart` (fn/struct/import), `parse/stmt.dart`,
   `parse/expr.dart`.
-- `ast.dart` → ewentualnie `ast/stmt.dart`, `ast/expr.dart`, `ast/decl.dart`
-  (uwaga: `sealed` wymaga wszystkich podtypów w tej samej bibliotece — użyć
-  `part`, nie osobnych `import`).
+- `ast.dart` → possibly `ast/stmt.dart`, `ast/expr.dart`, `ast/decl.dart`
+  (note: `sealed` requires all subtypes in the same library — use
+  `part`, not separate `import`).
 
-## Zasady / kryteria
+## Rules / criteria
 
-- Zero zmian zachowania: `dart test` zielone przed i po każdym kroku,
-  wygenerowany C identyczny (goldeny).
-- `dart analyze` czysto.
-- Podział po odpowiedzialności, nie mechaniczny „co N linii".
-- `sealed` (Stmt/Expr/typy): trzymać podtypy w jednej bibliotece przez `part`.
-- Przyrostowo, mały PR na plik/obszar; nie łączyć z refaktorem logiki.
+- Zero behavior change: `dart test` green before and after each step,
+  generated C identical (goldens).
+- `dart analyze` clean.
+- Split by responsibility, not mechanical “every N lines”.
+- `sealed` (Stmt/Expr/types): keep subtypes in one library via `part`.
+- Incrementally, small PR per file/area; do not combine with logic refactor.
 
-## Poza zakresem
+## Out of scope
 
-- Zmiany semantyki języka / emisji.
-- Reorganizacja `stdlib/` (`.kl`) — to inny temat.
-- Wprowadzanie nowych zależności / generatorów.
+- Language semantics / emission changes.
+- Reorganizing `stdlib/` (`.kl`) — different topic.
+- Introducing new dependencies / generators.

@@ -1,59 +1,59 @@
-# 063 — Publiczna biblioteka-fixture `osa` (remote import)
+# 063 — Public fixture library `osa` (remote import)
 
-**Status:** ✅ zrobione
-**Zależy od:** [047](047-directory-modules.md) (katalog = moduł)
-**Konsumowane przez:** [049](049-remote-imports.md)
+**Status:** ✅ done
+**Depends on:** [047](047-directory-modules.md) (directory = module)
+**Consumed by:** [049](049-remote-imports.md)
 
-## Cel
+## Goal
 
-Osobne, **publiczne** repozytorium GitHub z minimalnym pakietem Klin —
-stabilne źródło pod e2e / przykłady `import "github/mrhiden/osa"` i
-`klin get` / `update` (049). Nie jest częścią stdlib Klin.
+Separate, **public** GitHub repository with a minimal Klin package —
+stable source for e2e / `import "github/mrhiden/osa"` examples and
+`klin get` / `update` (049). Not part of Klin stdlib.
 
 | | |
 |---|---|
 | Repo | https://github.com/MrHIDEn/osa |
-| Path importu | `github/mrhiden/osa` |
-| Forma | katalog-pakiet `osa/*.kl` (jak 047) |
-| Zależności | brak (czysty Klin, bez FFI) |
-| Licencja | MIT |
-| Pin MVP | git tag `v0.1.0` (`version()` = `1`) |
+| Import path | `github/mrhiden/osa` |
+| Form | package directory `osa/*.kl` (as in 047) |
+| Dependencies | none (pure Klin, no FFI) |
+| License | MIT |
+| MVP pin | git tag `v0.1.0` (`version()` = `1`) |
 
 ## Layout
 
 ```text
-osa/                 # root repo
+osa/                 # repo root
   README.md
   LICENSE
   osa/
     version.kl       # module osa — pub fn version(): i32
     math.kl          # module osa — pub fn add / clamp
-    math_test.kl     # *_test.kl — pomijane przy import (047)
+    math_test.kl     # *_test.kl — skipped on import (047)
 ```
 
 ## API (`v0.1.0`)
 
-| Symbol | Sens |
+| Symbol | Meaning |
 |---|---|
-| `version(): i32` | wersja pakietu (`1` przy `v0.1.0`) |
-| `add(a, b): i32` | suma |
-| `clamp(v, lo, hi): i32` | ograniczenie do `[lo, hi]` |
+| `version(): i32` | package version (`1` at `v0.1.0`) |
+| `add(a, b): i32` | sum |
+| `clamp(v, lo, hi): i32` | clamp to `[lo, hi]` |
 
-## Wersjonowanie
+## Versioning
 
-- Tag `v0.1.0` = MVP powyżej
-- Później `v0.2.0` z `version()` → `2` wyłącznie pod test `klin update` (049)
-- Bez registry — tylko git tags
+- Tag `v0.1.0` = MVP above
+- Later `v0.2.0` with `version()` → `2` only for `klin update` test (049)
+- No registry — git tags only
 
-## Checklista
+## Checklist
 
-- [x] publiczne repo `MrHIDEn/osa`
-- [x] treść (README, LICENSE, `osa/*.kl`) na `main`
-- [x] tag `v0.1.0` wypchnięty
-- [x] ten issue + wpis w [sorted.md](sorted.md) + link w [049](049-remote-imports.md)
+- [x] public repo `MrHIDEn/osa`
+- [x] content (README, LICENSE, `osa/*.kl`) on `main`
+- [x] tag `v0.1.0` pushed
+- [x] this issue + entry in [sorted.md](sorted.md) + link in [049](049-remote-imports.md)
 
-## Poza zakresem
+## Out of scope
 
-- implementacja `klin get` / lockfile → [049](049-remote-imports.md)
-- mirror GitLab
-- kopia `osa` jako jedyne źródło prawdy w monorepo Klin
+- `klin get` / lockfile implementation → [049](049-remote-imports.md)
+- GitLab mirror
+- `osa` copy as sole source of truth in Klin monorepo

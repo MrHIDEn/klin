@@ -1,55 +1,55 @@
-# 073 — Wykrywanie potencjalnych wycieków pamięci
+# 073 — Detecting potential memory leaks
 
-**Status:** 💭 do rozważenia
-**Zależy od:** 055/057 (`Allocator`, [docs/14](../docs/14-allocator.md)), 008 (`defer`)
+**Status:** 💭 under consideration
+**Depends on:** 055/057 (`Allocator`, [docs/14](../docs/14-allocator.md)), 008 (`defer`)
 
-## Pytanie
+## Question
 
-Czy Klin powinien wykrywać potencjalne wycieki pamięci — i czy to w ogóle
-możliwe bez łamania zasady nadrzędnej (brak ukrytego runtime / kosztu)?
+Should Klin detect potential memory leaks — and is that even
+possible without breaking the overarching principle (no hidden runtime / cost)?
 
-## Odpowiedź krótko
+## Short answer
 
-Częściowo. Pełne, **pewne** wykrywanie jest w ogólności nierozstrzygalne i
-wymagałoby systemu własności/borrow (à la Rust) — duży, sprzeczny z prostotą
-Klina. Ale kilka tańszych mechanizmów jest realnych, a model Klina temu sprzyja:
-jawny `Allocator` ([`stdlib/mem.kl`](../stdlib/mem.kl)), `defer` do sprzątania,
-brak GC i ukrytej alokacji.
+Partially. Full, **sound** detection is generally undecidable and
+would require an ownership/borrow system (à la Rust) — large, at odds with Klin
+simplicity. But several cheaper mechanisms are realistic, and Klin's model helps:
+explicit `Allocator` ([`stdlib/mem.kl`](../stdlib/mem.kl)), `defer` for cleanup,
+no GC and no hidden allocation.
 
-## Warianty (od najtańszego)
+## Variants (cheapest first)
 
-1. **Zewnętrzne narzędzia na emitowanym C** — Klin emituje czytelny `.c`/binarkę,
-   więc Valgrind / ASan+LSan działają wprost na hostowych buildach. Zero kosztu
-   językowego. Najsilniejsza pragmatyczna ścieżka; wystarczy udokumentować wzorzec
-   (np. w CI / `docs/`).
-2. **Debug-alokator (opcjonalny, host)** — wariant `mem`, który liczy
-   `alloc`/`free`, taguje miejsce alokacji i na końcu raportuje niezwolnione
-   bloki. Biblioteka / opt-in (jak `slice_alloc`); bare-metal bez heapu go nie
-   ciąga. Zero „magii" w rdzeniu.
-3. **Konserwatywny lint statyczny (frontend)** — wewnątrz funkcji: wynik
-   `mem.alloc_*` / `alloc_bytes` przypisany do zmiennej powinien mieć pasujący
-   `defer mem.free_*` / jawny `free` przed końcem zakresu; inaczej **ostrzeżenie**
-   „alloc bez free". Tani, ale tylko heurystyka (patrz ograniczenia).
+1. **External tools on emitted C** — Klin emits readable `.c`/binary,
+   so Valgrind / ASan+LSan work directly on host builds. Zero language cost.
+   Strongest pragmatic path; document the pattern
+   (e.g. in CI / `docs/`).
+2. **Debug allocator (optional, host)** — `mem` variant that counts
+   `alloc`/`free`, tags allocation site, and reports unfreed blocks at end.
+   Library / opt-in (like `slice_alloc`); bare-metal without heap does not
+   pull it in. Zero “magic" in core.
+3. **Conservative static lint (frontend)** — within a function: result of
+   `mem.alloc_*` / `alloc_bytes` assigned to a variable should have matching
+   `defer mem.free_*` / explicit `free` before end of scope; otherwise **warning**
+   “alloc without free". Cheap, but heuristic only (see limitations).
 
-## Ograniczenia (uczciwie)
+## Limitations (honestly)
 
-- Lint statyczny jest z natury niepełny: aliasy, przekazanie własności do innej
-  funkcji, zwrot bufora z funkcji, warunkowe ścieżki → fałszywe alarmy albo
-  przeoczenia.
-- Sound-check wymagałby modelu własności/borrow — zmienia język; poza zakresem.
-- Dlatego: lint jako **ostrzeżenie** (nie twardy błąd), a „twarde" wykrywanie
-  oprzeć na Valgrind/ASan w CI.
+- Static lint is inherently incomplete: aliases, passing ownership to another
+  function, returning buffer from function, conditional paths → false positives or
+  misses.
+- Sound check would require ownership/borrow model — changes the language; out of scope.
+- Therefore: lint as **warning** (not hard error), and “hard" detection
+  via Valgrind/ASan in CI.
 
-## Propozycja zakresu (gdy wejdzie do prac)
+## Proposed scope (when work starts)
 
-- [ ] Nota/wzorzec: Valgrind + ASan/LSan na hostowym buildzie (CI) — najpierw to.
-- [ ] Opcjonalny debug-alokator w `stdlib` (licznik + raport niezwolnionych).
-- [ ] (Opcjonalnie) konserwatywny lint intra-proceduralny „alloc bez
-  free/defer" jako ostrzeżenie, z jawnym wyłącznikiem dla przekazania własności.
+- [ ] Note/pattern: Valgrind + ASan/LSan on host build (CI) — that first.
+- [ ] Optional debug allocator in `stdlib` (counter + unfreed report).
+- [ ] (Optional) conservative intra-procedural lint “alloc without
+  free/defer" as warning, with explicit opt-out for ownership transfer.
 
 ## Non-goals
 
-- GC / liczniki referencji w rdzeniu.
-- Ownership / borrow-checker jako cecha języka.
-- „Autofree" wyniku / ukryte `defer`.
-- Pełna, sound analiza między-proceduralna wycieków.
+- GC / reference counting in core.
+- Ownership / borrow-checker as language feature.
+- “Autofree" of result / hidden `defer`.
+- Full, sound inter-procedural leak analysis.

@@ -1,18 +1,18 @@
-# 001 — Pusty przelot: hello world przez cały rurociąg
+# 001 — Empty pass-through: hello world through the full pipeline
 
-**Status:** ✅ zrobione
-**Szacunek:** kilka wieczorów
-**Zależy od:** 000
+**Status:** ✅ done
+**Estimate:** a few evenings
+**Depends on:** 000
 
-## Opis
+## Description
 
-Uruchomić **cały** rurociąg od tekstu do działającego procesu.
-To najważniejszy moment projektu — potem każda cecha to dokładanie
-do działającej maszyny, a nie budowa od zera.
+Run the **entire** pipeline from source text to a working process.
+This is the most important moment in the project — after this, every feature
+is added to a working machine, not built from scratch.
 
-## Zakres
+## Scope
 
-Wejście `hello.kl`:
+Input `hello.kl`:
 
 ```
 fn main() {
@@ -21,7 +21,7 @@ fn main() {
 }
 ```
 
-Wyjście `out/hello.c`:
+Output `out/hello.c`:
 
 ```c
 #include <stdio.h>
@@ -32,9 +32,9 @@ int main(void) {
 }
 ```
 
-Potem `gcc out/hello.c -o out/hello && ./out/hello`.
+Then `gcc out/hello.c -o out/hello && ./out/hello`.
 
-## Gramatyka — cała
+## Grammar — complete
 
 ```
 program := "fn" "main" "(" ")" block
@@ -42,12 +42,12 @@ block   := "{" call* "}"
 call    := ident "(" string ")"
 ```
 
-## Czego świadomie NIE MA
+## What is deliberately NOT there
 
-Zmiennych, typów, wyrażeń, `if`, argumentów funkcji, więcej niż jednej
-funkcji. **Żadnego type checkera.** Wygląda absurdalnie mało — o to chodzi.
+Variables, types, expressions, `if`, function arguments, more than one
+function. **No type checker.** It looks absurdly small — that is the point.
 
-## Pliki
+## Files
 
 ```
 bin/klin.dart
@@ -58,15 +58,15 @@ lib/parser.dart
 lib/emit_c.dart
 ```
 
-## Kryterium ukończenia
+## Completion criteria
 
-Nie "kompiluje się", tylko:
+Not just "it compiles", but:
 
-- [x] `dart run bin/klin.dart hello.kl` wypisuje `hello` w terminalu
-- [x] obok leży czytelny `out/hello.c`
-- [x] test poprawnego pliku
-- [x] **test pliku z błędem składni dający sensowny komunikat z numerem linii**
+- [x] `dart run bin/klin.dart hello.kl` prints `hello` in the terminal
+- [x] a readable `out/hello.c` sits alongside it
+- [x] test for a correct file
+- [x] **test for a syntactically invalid file giving a sensible message with line number**
 
-Ten ostatni jest ważniejszy, niż się wydaje: jeśli lekser od pierwszego
-dnia nosi pozycję (linia, kolumna), wszystko potem działa. Jeśli nie —
-trzeba to dokładać do każdej struktury osobno.
+The last one matters more than it seems: if the lexer carries position
+(line, column) from day one, everything else works. If not —
+you have to bolt it onto every structure separately.

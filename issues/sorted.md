@@ -1,120 +1,121 @@
-# Klin — kolejność prac
+# Klin — work order
 
-Kroki definiowane przez **to, co się kompiluje**, nie przez to, jakie
-komponenty istnieją.
+Steps are defined by **what compiles**, not by which
+components exist.
 
-## Kolejka główna (fundament) — ✅
+## Main queue (foundation) — ✅
 
-| # | Zadanie | Status | Zależy od |
+| # | Task | Status | Depends on |
 |---|---|---|---|
-| [000](000-decyzje-fundamentalne.md) | Trzy decyzje fundamentalne | ✅ | — |
-| [001](001-pusty-przelot.md) | **Pusty przelot: hello world** | ✅ | 000 |
-| [002](002-tablica-symboli-checker.md) | Tablica symboli i type checker | ✅ | 001 |
-| [003](003-przeplyw-sterowania.md) | Przepływ sterowania | ✅ | 002 |
-| [004](004-funkcje.md) | Funkcje | ✅ | 003 |
-| [005](005-struktury-metody.md) | Struktury i metody | ✅ | 004 |
-| [006](006-moduly.md) | Moduły | ✅ | 005 |
-| [007](007-wskazniki-tablice-slice.md) | Wskaźniki, tablice, slice'y | ✅ | 006 |
+| [000](000-decyzje-fundamentalne.md) | Three fundamental decisions | ✅ | — |
+| [001](001-pusty-przelot.md) | **Empty pass: hello world** | ✅ | 000 |
+| [002](002-tablica-symboli-checker.md) | Symbol table and type checker | ✅ | 001 |
+| [003](003-przeplyw-sterowania.md) | Control flow | ✅ | 002 |
+| [004](004-funkcje.md) | Functions | ✅ | 003 |
+| [005](005-struktury-metody.md) | Structs and methods | ✅ | 004 |
+| [006](006-moduly.md) | Modules | ✅ | 005 |
+| [007](007-wskazniki-tablice-slice.md) | Pointers, arrays, slices | ✅ | 006 |
 | [008](008-defer.md) | `defer` | ✅ | 007 |
-| [009](009-bledy.md) | Błędy jako wartości | ✅ | 008 |
-| [010](010-bare-metal.md) | **Bare metal: LED na STM32** | ✅ | 009 |
-| [011](011-svd.md) | Generator SVD (`svd2klin`) | ✅ | 010 |
+| [009](009-bledy.md) | Errors as values | ✅ | 008 |
+| [010](010-bare-metal.md) | **Bare metal: LED on STM32** | ✅ | 009 |
+| [011](011-svd.md) | SVD generator (`svd2klin`) | ✅ | 010 |
 
-Po **010** język robi to, po co powstał. Po **011** jest generator rejestrów
-z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
+After **010** the language does what it was built for. After **011** there is a
+register generator from SVD. Further work is growth (backlog below), not
+building the core from scratch.
 
 ---
 
-## Backlog — zrobione
+## Backlog — done
 
-| # | Zadanie | Status | Zależy od |
+| # | Task | Status | Depends on |
 |---|---|---|---|
-| [012](012-stdlib-io.md) | Opcjonalny moduł I/O (`io.print` / `println`) | ✅ | 006 |
-| [014](014-match.md) | `match` (domyślny break, `1,2,3` / `4..=10`, stmt+expr) | ✅ | 003 |
-| [016](016-string-interpolation.md) | Interpolowane napisy | ✅ | 012 |
-| [017](017-collection-methods.md) | Metody kolekcji (`slice` + `slice_alloc`; +typy i64/f64, +ops) | ✅ | 007, 057 |
-| [019](019-default-int-types.md) | Domyślne typy (`int` / `float` → `i32` / `f64`) | ✅ | 002 |
-| [020](020-biblioteki-klin.md) | Własne biblioteki Klina (`lib/` / `-I` / `KLIN_PATH`) | ✅ | 006 |
-| [021](021-biblioteki-c.md) | Biblioteki C (FFI / link) | ✅ | 006, 010 |
-| [022](022-biblioteki-asm.md) | Jednostki ASM (`.s` via `@[link]`) | ✅ | 021 |
-| [023](023-examples.md) | Katalog `examples/` (+ `stm32/`) | ✅ | 001+ |
-| [025](025-english-project.md) | English project (except `issues/` + `docs/`) | ✅ | — |
+| [012](012-stdlib-io.md) | Optional I/O module (`io.print` / `println`) | ✅ | 006 |
+| [014](014-match.md) | `match` (default break, `1,2,3` / `4..=10`, stmt+expr) | ✅ | 003 |
+| [016](016-string-interpolation.md) | Interpolated strings | ✅ | 012 |
+| [017](017-collection-methods.md) | Collection methods (`slice` + `slice_alloc`; +i64/f64 types, +ops) | ✅ | 007, 057 |
+| [019](019-default-int-types.md) | Default types (`int` / `float` → `i32` / `f64`) | ✅ | 002 |
+| [020](020-biblioteki-klin.md) | Klin libraries (`lib/` / `-I` / `KLIN_PATH`) | ✅ | 006 |
+| [021](021-biblioteki-c.md) | C libraries (FFI / link) | ✅ | 006, 010 |
+| [022](022-biblioteki-asm.md) | ASM units (`.s` via `@[link]`) | ✅ | 021 |
+| [023](023-examples.md) | `examples/` catalog (+ `stm32/`) | ✅ | 001+ |
+| [025](025-english-project.md) | English project (except `issues/` + `docs/` — superseded by 082) | ✅ | — |
 | [026](026-preprocessor.md) | Preprocessor (`$fn`…, D3) | ✅ | 010+ |
-| [027](027-svd-ergonomic-api.md) | Ładne API SVD (`$peripherals_from_svd`) | ✅ | 011, 026 |
-| [032](032-klin-run.md) | CLI: `klin run <plik.kl>` | ✅ | 001 |
-| [033](033-gofmt-style.md) | Formatowanie w stylu Go (`klin fmt`) | ✅ | 005+ |
-| [035](035-klin-test.md) | `klin test` (jak `go test`, kod Klina) | ✅ | 032 |
-| [036](036-docs-catchup.md) | Docs catch-up (CLI / stdlib / cechy ✅) | ✅ | 026–035 |
-| [037](037-datetime-format.md) | Formatowanie daty/czasu (`stdlib/time`) | ✅ | 016 |
-| [038](038-time-api.md) | Ergonomia API `time` (`until` / `abs` / `as_s`) | ✅ | 037 |
-| [039](039-time-calendar.md) | Kalendarzowe `add_days` / miesiące / lata | ✅ | 037 |
-| [045](045-cexport.md) | Eksport Klin → C (`@[cexport]`) | ✅ | 021 |
-| [046](046-emit-h.md) | `--emit-h` (nagłówek C z `@[cexport]`) | ✅ | 045 |
-| [047](047-directory-modules.md) | Katalog = jeden moduł (jak Go/V) | ✅ | 006, 020 |
-| [055](055-short-decl.md) | Skrót `:=` (= `let mut`) | ✅ | 002 |
-| [057](057-allocator.md) | `Allocator` (jawny alokator, D1) — `stdlib/mem` | ✅ | 007, 008 |
+| [027](027-svd-ergonomic-api.md) | Ergonomic SVD API (`$peripherals_from_svd`) | ✅ | 011, 026 |
+| [032](032-klin-run.md) | CLI: `klin run <file.kl>` | ✅ | 001 |
+| [033](033-gofmt-style.md) | Go-style formatting (`klin fmt`) | ✅ | 005+ |
+| [035](035-klin-test.md) | `klin test` (like `go test`, Klin code) | ✅ | 032 |
+| [036](036-docs-catchup.md) | Docs catch-up (CLI / stdlib / features ✅) | ✅ | 026–035 |
+| [037](037-datetime-format.md) | Date/time formatting (`stdlib/time`) | ✅ | 016 |
+| [038](038-time-api.md) | `time` API ergonomics (`until` / `abs` / `as_s`) | ✅ | 037 |
+| [039](039-time-calendar.md) | Calendar `add_days` / months / years | ✅ | 037 |
+| [045](045-cexport.md) | Klin → C export (`@[cexport]`) | ✅ | 021 |
+| [046](046-emit-h.md) | `--emit-h` (C header from `@[cexport]`) | ✅ | 045 |
+| [047](047-directory-modules.md) | Directory = one module (like Go/V) | ✅ | 006, 020 |
+| [055](055-short-decl.md) | `:=` shorthand (= `let mut`) | ✅ | 002 |
+| [057](057-allocator.md) | `Allocator` (explicit allocator, D1) — `stdlib/mem` | ✅ | 007, 008 |
 
 ---
 
-## Backlog — do rozważenia
+## Backlog — under consideration
 
-| # | Zadanie | Status | Zależy od |
+| # | Task | Status | Depends on |
 |---|---|---|---|
-| [018](018-generators-yield.md) | Generatory / `yield` | 💭 | 004+ |
+| [018](018-generators-yield.md) | Generators / `yield` | 💭 | 004+ |
 | [024](024-rtos.md) | RTOS (FreeRTOS / Zephyr / …) | 💭 | 010+ |
-| [028](028-freertos.md) | Ładna współpraca z FreeRTOS | 💭 | 024, 010, 021 |
-| [029](029-async-event-loop.md) | Event loop / async·await (duże zwierzę; MVP = lib bez async) | 💭 | 018?, 028?, 049? |
-| [030](030-isr-decorators.md) | Przerwania przez dekoratory | 💭 | 010 |
-| [031](031-biblioteki-hal.md) | Biblioteki HAL (Cube / LL) | 💭 | 010, 021 |
-| [034](034-typy-generyczne.md) | Generyki w gramatyce — nie teraz (D3/`$fn`; ew. cukier później) | 💭 | 026 |
-| [040](040-time-zones.md) | Strefy IANA + DST | 💭 | 037 |
-| [041](041-time-locale-relative.md) | Locale dat + relative strings | 💭 | 037 |
-| [042](042-time-format-luxon.md) | Dialekt formatu `yyyy-MM-dd` w `time` | 💭 | 037 |
-| [043](043-rtc.md) | RTC → `Instant` (osobny moduł) | 💭 | 010, 031? |
-| [044](044-cpu-cycles.md) | Cykle CPU / SysTick → `Duration` | 💭 | 010 |
-| [048](048-import-aliases.md) | Aliasy importów (+ string lokalny) | ✅ | 006, 047 |
-| [049](049-remote-imports.md) | Importy zdalne + `klin.mod` + `klin get` / `update` | ✅ | 048, 020, 047, 063 |
-| [063](063-remote-fixture-osa.md) | Fixture zdalny `mrhiden/osa` (e2e 049) | ✅ | 047 |
-| [065](065-project-lockfile.md) | `klin.lock` / sumy (jak go.sum) | ✅ | 049 |
-| [066](066-klin-upgrade-outdated.md) | `klin upgrade` / outdated (nowsze deps) | ✅ | 049 |
+| [028](028-freertos.md) | Clean FreeRTOS cooperation | 💭 | 024, 010, 021 |
+| [029](029-async-event-loop.md) | Event loop / async·await (large; MVP = lib without async) | 💭 | 018?, 028?, 049? |
+| [030](030-isr-decorators.md) | Interrupts via decorators | 💭 | 010 |
+| [031](031-biblioteki-hal.md) | HAL libraries (Cube / LL) | 💭 | 010, 021 |
+| [034](034-typy-generyczne.md) | Generics in the grammar — not now (D3/`$fn`; maybe sugar later) | 💭 | 026 |
+| [040](040-time-zones.md) | IANA zones + DST | 💭 | 037 |
+| [041](041-time-locale-relative.md) | Date locales + relative strings | 💭 | 037 |
+| [042](042-time-format-luxon.md) | `yyyy-MM-dd` format dialect in `time` | 💭 | 037 |
+| [043](043-rtc.md) | RTC → `Instant` (separate module) | 💭 | 010, 031? |
+| [044](044-cpu-cycles.md) | CPU cycles / SysTick → `Duration` | 💭 | 010 |
+| [048](048-import-aliases.md) | Import aliases (+ local string) | ✅ | 006, 047 |
+| [049](049-remote-imports.md) | Remote imports + `klin.mod` + `klin get` / `update` | ✅ | 048, 020, 047, 063 |
+| [063](063-remote-fixture-osa.md) | Remote fixture `mrhiden/osa` (e2e 049) | ✅ | 047 |
+| [065](065-project-lockfile.md) | `klin.lock` / checksums (like go.sum) | ✅ | 049 |
+| [066](066-klin-upgrade-outdated.md) | `klin upgrade` / outdated (newer deps) | ✅ | 049 |
 | [067](067-homebrew.md) | Homebrew: `brew install klin` (formula + CI) | ✅ | — |
-| [050](050-sqlite-wrapper.md) | Opakowanie SQLite (FFI, niski priorytet) | 💭 | 021 |
-| [070](070-host-orm-sqlite.md) | ORM-like / typed repo nad SQLite (host, niski priorytet) | 💭 | 050, 021 |
-| [051](051-json-wrapper.md) | Opakowanie JSON + ścieżki `$…` (niski priorytet) | 💭 | 021, 026? |
-| [052](052-klinstruct.md) | `klinstruct` — pack/unpack jak cstruct (niski priorytet) | 💭 | 007, 020/047 |
-| [053](053-device-board-assets.md) | `$device` + Go-like fetch SVD (`device` w `klin.mod`) | ✅ (MVP; board → 074) | 027, 049 |
-| [054](054-embedded-project-layout.md) | Wygląd / układ projektu embedded | 💭 | 023, 010 |
-| [056](056-destructuring.md) | Dekonstrukcja (`{}` / `[]` / multi-assign; bez tupli) | ✅ (A+A′+B+C+D; bare `[]=` pominięte) | 005, 007? |
-| [058](058-source-file-split.md) | Podział dużych plików źródłowych kompilatora (dług techn.) | 💭 | — |
-| [059](059-kstruct-macros.md) | Makra `$kstruct` / `$kstruct_from` (bogatsze klinstruct) | 💭 | 026, 052 |
-| [060](060-map-kv.md) | Mapa KV (hash map) — język / stdlib / C | 💭 | 007, 057? |
-| [061](061-micropython-machine-api.md) | API w stylu MicroPython `machine` (PWM, UART, …) | 💭 | 010, 031? |
-| [062](062-targets-esp-rp.md) | Cele MCU: ESP32 / RP2040 / RP2350 | 💭 | 010 |
-| [064](064-if-cond-struct-literal-parse.md) | Warunek `if`/`while` kończący się nazwą mylony z literałem struktury | ✅ | — |
-| [068](068-shared-type-decl.md) | Wspólna adnotacja typu (`a, b: i32` jak Go; obie formy OK) | ✅ | 002, 004, 005 |
-| [069](069-eventemitter-signals.md) | Observer / EventEmitter / Signals (biblioteka; JS-signals jawnie) | 💭 | 013, 057 |
-| [071](071-lambda.md) | Lambdy / `fn (…) => expr` (werdykt: nie teraz; po D7) | 💭 | fn-ptr, D7 |
-| [072](072-enums.md) | Enumy (styl C23, opcjonalny typ bazowy; metody; jawna konwersja; string/kv-enum poza MVP) | ✅ | 002, 005, 014 |
-| [073](073-mem-leak-detection.md) | Wykrywanie potencjalnych wycieków pamięci (Valgrind/ASan, debug-alokator, lint) | 💭 | 057, 008 |
-| [074](074-board-ioc-klin-mod.md) | `board` w `klin.mod` + wąski CubeMX `.ioc` (pinout) | 💭 | 053 |
+| [050](050-sqlite-wrapper.md) | SQLite wrapper (FFI, low priority) | 💭 | 021 |
+| [070](070-host-orm-sqlite.md) | ORM-like / typed repo over SQLite (host, low priority) | 💭 | 050, 021 |
+| [051](051-json-wrapper.md) | JSON wrapper + `$…` paths (low priority) | 💭 | 021, 026? |
+| [052](052-klinstruct.md) | `klinstruct` — pack/unpack like cstruct (low priority) | 💭 | 007, 020/047 |
+| [053](053-device-board-assets.md) | `$device` + Go-like SVD fetch (`device` in `klin.mod`) | ✅ (MVP; board → 074) | 027, 049 |
+| [054](054-embedded-project-layout.md) | Embedded project look / layout | 💭 | 023, 010 |
+| [056](056-destructuring.md) | Destructuring (`{}` / `[]` / multi-assign; no tuples) | ✅ (A+A′+B+C+D; bare `[]=` skipped) | 005, 007? |
+| [058](058-source-file-split.md) | Split large compiler source files (tech debt) | 💭 | — |
+| [059](059-kstruct-macros.md) | `$kstruct` / `$kstruct_from` macros (richer klinstruct) | 💭 | 026, 052 |
+| [060](060-map-kv.md) | KV map (hash map) — language / stdlib / C | 💭 | 007, 057? |
+| [061](061-micropython-machine-api.md) | MicroPython-style `machine` API (PWM, UART, …) | 💭 | 010, 031? |
+| [062](062-targets-esp-rp.md) | MCU targets: ESP32 / RP2040 / RP2350 | 💭 | 010 |
+| [064](064-if-cond-struct-literal-parse.md) | `if`/`while` condition ending in a name mistaken for a struct literal | ✅ | — |
+| [068](068-shared-type-decl.md) | Shared type annotation (`a, b: i32` like Go; both forms OK) | ✅ | 002, 004, 005 |
+| [069](069-eventemitter-signals.md) | Observer / EventEmitter / Signals (library; JS-signals explicitly) | 💭 | 013, 057 |
+| [071](071-lambda.md) | Lambdas / `fn (…) => expr` (verdict: not now; after D7) | 💭 | fn-ptr, D7 |
+| [072](072-enums.md) | Enums (C23-style, optional base type; methods; explicit conversion; string/kv-enum out of MVP) | ✅ | 002, 005, 014 |
+| [073](073-mem-leak-detection.md) | Potential memory-leak detection (Valgrind/ASan, debug allocator, lint) | 💭 | 057, 008 |
+| [074](074-board-ioc-klin-mod.md) | `board` in `klin.mod` + narrow CubeMX `.ioc` (pinout) | 💭 | 053 |
 | [075](075-board-pack-init-host.md) | Board pack / `klin init` vs host — linker & startup | 💭 | 010, 054, 053 |
-| [076](076-release-windows-arm.md) | Release: cele Windows/ARM + wydanie + sumy kontrolne | 🔨 | 067 |
-| [077](077-string-template.md) | Podmiana w napisach / szablony runtime (`{0}` pozycyjne + `{klucz}` KV) | 💭 | 007, 057, 016, 060 |
-| [078](078-bitwise-ops.md) | Operatory bitowe (`\| & ^ ~ << >>`; tylko całkowite) | ✅ | 002, 019 |
-| [079](079-associated-functions.md) | Funkcje asocjowane/statyczne na typach (`Type.func`; konstruktory/parsery) | ✅ | 005, 072 |
-| [080](080-stdlib-str.md) | `stdlib/str` — `eq`/`len`/… (porównania napisów bez operatora `==`) | 💭 | 012, 021 |
-| [081](081-number-literals.md) | Literały: binarne `0b`, wykładnik float `1e…`, znakowe `'A'`, (ósemkowe) | 🔨 (Grupa 1 ✅) | 002 |
+| [076](076-release-windows-arm.md) | Release: Windows/ARM targets + publishing + checksums | 🔨 | 067 |
+| [077](077-string-template.md) | Runtime string substitution / templates (`{0}` positional + `{key}` KV) | 💭 | 007, 057, 016, 060 |
+| [078](078-bitwise-ops.md) | Bitwise operators (`\| & ^ ~ << >>`; integers only) | ✅ | 002, 019 |
+| [079](079-associated-functions.md) | Associated/static functions on types (`Type.func`; constructors/parsers) | ✅ | 005, 072 |
+| [080](080-stdlib-str.md) | `stdlib/str` — `eq`/`len`/… (string compares without `==`) | 💭 | 012, 021 |
+| [081](081-number-literals.md) | Literals: binary `0b`, float exponent `1e…`, char `'A'`, (octal) | 🔨 (Group 1 ✅) | 002 |
 
 ---
 
-## Zasady (zawsze)
+## Rules (always)
 
-Szczegóły w `docs/02-architektura.md`.
+Details in `docs/02-architektura.md`.
 
-1. **Testy złote** — `.kl` + oczekiwane wyjście.
-2. **`#line` w emisji** — każdy token nosi pozycję.
-3. **Błędy łapie frontend** — gcc nie powinien krzyczeć na wygenerowany kod.
-4. **Ręczny parser** zejściem rekurencyjnym — bez generatorów.
-5. **Zasada nadrzędna** — brak ukrytej alokacji / przepływu / kosztu; przy nowej
-   cesze `objdump` Klin vs ręczny C.
-6. **Nie rozszerzać zakresu** bieżącego kroku z tej listy.
+1. **Golden tests** — `.kl` + expected output.
+2. **`#line` in emission** — every token carries a position.
+3. **The frontend catches errors** — gcc must not complain about generated code.
+4. **Hand-written recursive-descent parser** — no generators.
+5. **Overarching principle** — no hidden allocation / control flow / cost; for a new
+   feature, `objdump` Klin vs hand-written C.
+6. **Do not expand the scope** of the current step on this list.

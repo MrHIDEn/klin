@@ -1,15 +1,15 @@
-# 045 — Eksport Klin → C (`@[cexport]`)
+# 045 — Klin → C export (`@[cexport]`)
 
-**Status:** ✅ zrobione
-**Zależy od:** [021](021-biblioteki-c.md)
+**Status:** ✅ done
+**Depends on:** [021](021-biblioteki-c.md)
 
-## Kontekst
+## Context
 
 021 = C → Klin (`@[cimport]` / `@[link]`).
-Odwrotność: kod Klin wołany z C / ASM.
+The reverse: Klin code called from C / ASM.
 
-Częściowo działało już `@[codename("…")]` + ciało (ISR, np. `SysTick_Handler`).
-Issue 045 dodaje jawny marker `@[cexport]`.
+Partially worked already with `@[codename("…")]` + body (ISR, e.g. `SysTick_Handler`).
+Issue 045 adds the explicit `@[cexport]` marker.
 
 ## API
 
@@ -20,17 +20,17 @@ fn add(a: i32, b: i32): i32 {
 }
 ```
 
-- `@[cexport]` — fn z ciałem; symbol globalny w emisji C
-- `@[codename("…")]` — **wymagane** z `cexport` (stabilna nazwa dla C)
-- `@[codename]` bez `cexport` — nadal OK (ISR / legacy)
-- Nie łączyć z `@[cimport]`
+- `@[cexport]` — fn with body; global symbol in C emission
+- `@[codename("…")]` — **required** with `cexport` (stable name for C)
+- `@[codename]` without `cexport` — still OK (ISR / legacy)
+- Do not combine with `@[cimport]`
 
-Przykład: [`examples/cexport_add/`](../examples/cexport_add/).
-Nota: [`docs/09-ffi-c.md`](../docs/09-ffi-c.md) (import **i** export).
+Example: [`examples/cexport_add/`](../examples/cexport_add/).
+Note: [`docs/09-ffi-c.md`](../docs/09-ffi-c.md) (import **and** export).
 
-## Poza zakresem / później
+## Out of scope / later
 
-- `--emit-h` (nagłówek C z prototypami) → [046](046-emit-h.md) ✅
-- automatyczne `.a` / `.so`
-- `cexport` na metodach / typach
+- `--emit-h` (C header with prototypes) → [046](046-emit-h.md) ✅
+- automatic `.a` / `.so`
+- `cexport` on methods / types
 - rpath / `LD_LIBRARY_PATH`

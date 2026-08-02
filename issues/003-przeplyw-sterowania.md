@@ -1,26 +1,26 @@
-# 003 — Przepływ sterowania
+# 003 — Control flow
 
-**Status:** ✅ zrobione
-**Zależy od:** 002
+**Status:** ✅ done
+**Depends on:** 002
 
-## Zakres
+## Scope
 
 `if` / `else`, `while`, `for`, `return`, `break`, `continue`.
 
-Prosto, bo C ma to samo — mapowanie niemal jeden do jednego.
+Straightforward, because C has the same — mapping is nearly one-to-one.
 
-## Decyzje
+## Decisions
 
-- **`for` — obie formy** (jak w V):
-  - zakresowy: `for i in 0..<5 { ... }` (`..<` exclusive; `i` zawsze mut)
-  - C: `for i = 0; i < 5; i = i + 1 { ... }` (bez nawiasów; init wprowadza mut `i`)
-- **`while`** osobno (nie kopiujemy V-owego `for cond`)
-- **`match`** — poza kryterium 003 (`match`, domyślny break, bez fallthrough;
-  nie C-owy `switch`); osobny krok — zrobione w [014](014-match.md)
-- **`goto`** — nie w składni użytkownika; codegen może użyć wewnętrznie (008)
+- **`for` — both forms** (like V):
+  - range: `for i in 0..<5 { ... }` (`..<` exclusive; `i` always mut)
+  - C-style: `for i = 0; i < 5; i = i + 1 { ... }` (no parens; init introduces mut `i`)
+- **`while`** separately (we do not copy V's `for cond`)
+- **`match`** — outside 003 criteria (`match`, default break, no fallthrough;
+  not C-style `switch`); separate step — done in [014](014-match.md)
+- **`goto`** — not in user syntax; codegen may use it internally (008)
 
-## Kryterium ukończenia
+## Completion criteria
 
-- [x] fizzbuzz działa
-- [x] pętla z `break` i `continue`
-- [x] testy złote
+- [x] fizzbuzz works
+- [x] loop with `break` and `continue`
+- [x] golden tests

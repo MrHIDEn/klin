@@ -1,155 +1,155 @@
-# 056 — Dekonstrukcja (`{}` / `[]` / multi-assign)
+# 056 — Destructuring (`{}` / `[]` / multi-assign)
 
-**Status:** ✅ — fazy A (struktury) + A′ (bare `{}=`) + B (multi-assign) + C (tablice `[N]T`) + D (rename / `_`). Bare `[]=` świadomie pominięte (patrz niżej).
-**Zależy od:** [005](005-struktury-metody.md) (struct lit/pola ✅); mile [007](007-wskazniki-tablice-slice.md) (tablice stałej długości)
+**Status:** ✅ — phases A (structs) + A′ (bare `{}=`) + B (multi-assign) + C (arrays `[N]T`) + D (rename / `_`). Bare `[]=` deliberately skipped (see below).
+**Depends on:** [005](005-struktury-metody.md) (struct lit/fields ✅); nice to have [007](007-wskazniki-tablice-slice.md) (fixed-length arrays)
 
-> **Nie mylić z destruktorami RAII.** D6 ([docs/01-decyzje.md](../docs/01-decyzje.md)):
-> brak konstruktorów/destruktorów. Tu chodzi o **destructuring** —
-> rozpakowanie wartości do wielu nazw w jednym zdaniu.
+> **Do not confuse with RAII destructors.** D6 ([docs/01-decyzje.md](../docs/01-decyzje.md)):
+> no constructors/destructors. Here we mean **destructuring** —
+> unpacking a value into multiple names in one statement.
 
-## Motywacja
+## Motivation
 
-Wzorce w stylu:
+Patterns like:
 
 ```
-[a, b] = [b, a]     // swap / rozpakowanie tablicy
-[x] = tab           // pierwszy element?
-{ x, y } = p        // pola struktury
-a, b = b, a         // multi-assign jak Go/V (bez nawiasów)
+[a, b] = [b, a]     // swap / array unpack
+[x] = tab           // first element?
+{ x, y } = p        // struct fields
+a, b = b, a         // multi-assign like Go/V (no parentheses)
 ```
 
-Dziś Klin ma literały `[…]` / `Typ{ … }` i pojedyncze `target = expr`.
-Brak rozpakowania i brak jednoczesnego przypisania wielu LHS.
+Today Klin has `[…]` / `Typ{ … }` literals and single `target = expr`.
+No unpacking and no simultaneous assignment to multiple LHS.
 
-## Go / V — czy mają tuple?
+## Go / V — do they have tuples?
 
-| Język | Tuple jako typ pierwszej klasy? | Co zamiast |
+| Language | Tuple as first-class type? | Instead |
 |---|---|---|
-| **Go** | **Nie.** Świadoma decyzja. | Wieloargumentowy `return`; multi-assign `a, b = b, a`; „krotka” = struct albo osobne wartości. |
-| **V** | **Nie** (brak typu `tuple` w docs). | Multi-assign / swap `a, b = b, a`; multi-return; dane złożone = **struct**. Dekonstrukcja tablic/`{}` — propozycje społeczności, nie rdzeń. |
+| **Go** | **No.** Deliberate decision. | Multi-arg `return`; multi-assign `a, b = b, a`; “tuple” = struct or separate values. |
+| **V** | **No** (no `tuple` type in docs). | Multi-assign / swap `a, b = b, a`; multi-return; compound data = **struct**. Array/`{}` destructuring — community proposals, not core. |
 
-**Wniosek dla Klina:** nie dodawać tupli. Mamy struktury, `!T`, tablice
-stałej długości — to wystarczy. Tuple to drugi sposób na to samo co
-anonimowy struct, z gorszymi komunikatami i kolizją z literałami.
+**Conclusion for Klin:** do not add tuples. We have structs, `!T`, fixed-length
+arrays — that is enough. Tuples are a second way to do the same as an
+anonymous struct, with worse messages and collision with literals.
 
-## Kierunek (preferowany)
+## Direction (preferred)
 
-### 1. Struct `{}` — naturalny MVP
+### 1. Struct `{}` — natural MVP
 
-Skoro są struktury i literały nazwane/pozycyjne, dekonstrukcja po
-**nazwach pól** jest prosta i znika w emisji (zwykłe `.field`):
+Since we have structs and named/positional literals, destructuring by
+**field names** is simple and vanishes in emission (plain `.field`):
 
 ```
 let p = Vec2{ x: 3, y: 4 }
 let { x, y } = p          // ≡ let x = p.x; let y = p.y
-let mut { x, y } = p      // mutowalne lokalne
-{ x, y } = p              // przypisanie do istniejących (wymaga mut)
+let mut { x, y } = p      // mutable locals
+{ x, y } = p              // assign to existing (requires mut)
 ```
 
-- kolejność w `{}` nieistotna (jak w literale nazwanym)
-- podzbiór pól OK; brakujące pola = nie wprowadzane
-- rename później: `{ x: px, y: py }` (opcjonalnie, nie w fazie 1)
-- `_` do pominięcia? raczej niepotrzebne przy podzbiorze
+- order in `{}` irrelevant (like named literal)
+- field subset OK; missing fields = not introduced
+- rename later: `{ x: px, y: py }` (optional, not in phase 1)
+- `_` to skip? probably unnecessary with subset
 
-Zasada nadrzędna: emisja = sekwencja odczytów pól / zapisów lokalnych.
-Zero alokacji, zero ukrytego kopiowania poza tym, co i tak robi `let`
-struktury (kopia wartości jak dziś).
+Overarching rule: emission = sequence of field reads / local writes.
+Zero allocation, zero hidden copying beyond what `let`
+of a struct already does (value copy as today).
 
-### 2. Multi-assign (Go/V) — swap bez tablicy
+### 2. Multi-assign (Go/V) — swap without array
 
 ```
 a, b = b, a
-x, y = foo()          // dopiero gdy/jeśli multi-return
+x, y = foo()          // only when/if multi-return
 ```
 
-- RHS ewaluowane „równolegle” (tmp jak w Go) — widać w emitowanym C
-- nie wymaga nowego typu
-- pokrywa swap bez `[a,b]=[b,a]`
+- RHS evaluated “in parallel” (tmp like Go) — visible in emitted C
+- does not require a new type
+- covers swap without `[a,b]=[b,a]`
 
-### 3. Tablice `[…]` — tylko stała długość
+### 3. Arrays `[…]` — fixed length only
 
 ```
 let xs: [2]i32 = [10, 20]
 let [a, b] = xs           // ≡ let a = xs[0]; let b = xs[1]
-[a, b] = [b, a]           // swap przez literał / wzorzec
+[a, b] = [b, a]           // swap via literal / pattern
 ```
 
-- **tylko** `[N]T` o znanym `N` w czasie kompilacji
-- **nie** slice `[]T` (długość runtime → wyjątek / panika — łamie
-  „błędy łapie frontend” albo wymaga ukrytego checka)
-- liczba wzorców == `N` (albo `N` z `_` — decyzja później)
+- **only** `[N]T` with known `N` at compile time
+- **not** slice `[]T` (runtime length → exception / panic — breaks
+  “frontend catches errors” or requires hidden check)
+- pattern count == `N` (or `N` with `_` — decision later)
 
-`[x] = tab` przy `tab: [3]i32` jest **niejednoznaczne** (pierwszy?
-całość?). Propozycja: albo zabronić (wymagaj pełnego pokrycia), albo
-jawny indeks / slice — nie cukier `[x]=`.
+`[x] = tab` with `tab: [3]i32` is **ambiguous** (first?
+whole thing?). Proposal: either forbid (require full coverage), or
+explicit index / slice — not `[x]=` sugar.
 
-## Poza zakresem (na start)
+## Out of scope (initially)
 
-- typ `tuple` / `(T, U)` w gramatyce
-- dekonstrukcja slice / dynamicznych kolekcji
-- pattern matching w `if` / `match` (osobny temat, jeśli kiedyś)
-- destruktory / RAII (D6 zostaje)
-- multi-return funkcji (może później; dziś `!T` + struct wystarcza)
+- `tuple` type / `(T, U)` in grammar
+- destructuring slice / dynamic collections
+- pattern matching in `if` / `match` (separate topic, if ever)
+- destructors / RAII (D6 stays)
+- multi-return functions (maybe later; today `!T` + struct is enough)
 
-## Fazy (gdy otworzyć implementację)
+## Phases (when implementation opens)
 
-| Faza | Co | Zależy | Status |
+| Phase | What | Depends | Status |
 |---|---|---|---|
-| A | `let { a, b } = s` (deklaracja) | 005 | ✅ |
-| A′ | bare `{ a, b } = s` (reassign; wymaga lookaheadu) | 005 | ✅ (struct); `[]=` pominięte |
-| B | `a, b = b, a` (multi-assign, bez multi-return) | parser + checker tmp | ✅ |
-| C | `let [a, b] = xs` dla `[N]T`, `N` znane | 007 | ✅ |
-| D | rename `{ x: px }`, `_` w tablicach (skip) | po A/C | ✅ |
+| A | `let { a, b } = s` (declaration) | 005 | ✅ |
+| A′ | bare `{ a, b } = s` (reassign; needs lookahead) | 005 | ✅ (struct); `[]=` skipped |
+| B | `a, b = b, a` (multi-assign, no multi-return) | parser + checker tmp | ✅ |
+| C | `let [a, b] = xs` for `[N]T`, known `N` | 007 | ✅ |
+| D | rename `{ x: px }`, `_` in arrays (skip) | after A/C | ✅ |
 
-**Faza A (zrobione):** `let { … } = expr` i `let mut { … } = expr` dla struktur —
-podzbiór pól, kolejność nieistotna, źródło liczone raz (kopia do tymczasowej gdy
-nie jest nazwą), lowerowanie do `.field`. Przykład
-[`examples/destructure.kl`](../examples/destructure.kl), testy w
+**Phase A (done):** `let { … } = expr` and `let mut { … } = expr` for structs —
+field subset, order irrelevant, source evaluated once (copy to temporary when
+not a name), lowered to `.field`. Example
+[`examples/destructure.kl`](../examples/destructure.kl), tests in
 [`test/destruct_struct.kl`](../test/destruct_struct.kl) +
 `test/pipeline_test.dart`.
 
-**Faza C (zrobione):** `let [a, b] = xs` i `let mut [a, b] = xs` dla tablic
-stałej długości `[N]T`, gdzie `N` == liczba wzorców (pełne pokrycie, brak
-niejednoznaczności `[x] = tab`). Nazwana tablica indeksowana w miejscu
-(`xs[i]`), literał tablicowy wiązany element po elemencie. Odrzucane przez
-frontend: slice `[]T` (długość runtime), niezgodna długość, źródło inne niż
-zmienna/literał tablicy, zagnieżdżony element tablicowy. Przykład
-[`examples/destructure.kl`](../examples/destructure.kl), testy
-w [`test/destruct_array.kl`](../test/destruct_array.kl) +
+**Phase C (done):** `let [a, b] = xs` and `let mut [a, b] = xs` for fixed-length
+arrays `[N]T`, where `N` == pattern count (full coverage, no
+`[x] = tab` ambiguity). Named array indexed in place
+(`xs[i]`), array literal bound element by element. Rejected by
+frontend: slice `[]T` (runtime length), length mismatch, source other than
+variable/array literal, nested array element. Example
+[`examples/destructure.kl`](../examples/destructure.kl), tests
+in [`test/destruct_array.kl`](../test/destruct_array.kl) +
 `test/pipeline_test.dart`.
 
-**Faza B (zrobione):** multi-assign `a, b = b, a` — ≥2 przypisywalne cele i tyle
-samo wartości. Wartości liczone do tymczasowych przed jakimkolwiek zapisem, więc
-swap/rotacja działają bez tymczasowej w źródle. Cele podlegają zwykłym regułom
-lvalue/`mut`; odrzucane: cały-tablicowy cel oraz wartości `or`/`!`/`match`
-(przypisz je osobną instrukcją). Przykład
-[`examples/multi_assign.kl`](../examples/multi_assign.kl), testy w
+**Phase B (done):** multi-assign `a, b = b, a` — ≥2 assignable targets and as many
+values. Values computed into temporaries before any write, so
+swap/rotation work without a temporary in the source. Targets follow normal
+lvalue/`mut` rules; rejected: whole-array target and values with `or`/`!`/`match`
+(assign them in a separate statement). Example
+[`examples/multi_assign.kl`](../examples/multi_assign.kl), tests in
 [`test/multi_assign.kl`](../test/multi_assign.kl) + `test/pipeline_test.dart`.
 
-**Faza D (zrobione):** rename pól struktury `let { x: px, y: py } = p` (mieszalne
-z polami bez zmiany nazwy) oraz `_` jako skip pozycji w tablicy
-`let [_, b, _, d] = xs` (pełne pokrycie nadal wymagane, min. jedno realne
-wiązanie; indeksy zachowane). Testy w
+**Phase D (done):** struct field rename `let { x: px, y: py } = p` (mixable
+with unchanged field names) and `_` as skip position in array
+`let [_, b, _, d] = xs` (full coverage still required, min. one real
+binding; indices preserved). Tests in
 [`test/destruct_phase_d.kl`](../test/destruct_phase_d.kl) +
 `test/pipeline_test.dart`.
 
-**Faza A′ (zrobione — struktury):** bare `{ x, y } = p` i rename `{ x: cel } = p`
-przypisują pola do istniejących miejsc (zmienne lub dowolne lvalue). Blok vs
-wzorzec rozróżniany ograniczonym lookaheadem (`=` po dopasowanym `}`); źródło
-kopiowane raz, więc cel może bezpiecznie aliasować źródło. Przykład
-[`examples/destructure.kl`](../examples/destructure.kl), testy w
+**Phase A′ (done — structs):** bare `{ x, y } = p` and rename `{ x: cel } = p`
+assign fields to existing places (variables or any lvalue). Block vs
+pattern distinguished by limited lookahead (`=` after matched `}`); source
+copied once, so target can safely alias source. Example
+[`examples/destructure.kl`](../examples/destructure.kl), tests in
 [`test/struct_assign.kl`](../test/struct_assign.kl) + `test/pipeline_test.dart`.
 
-**Bare `[ … ] = xs` — świadomie pominięte:** przy gramatyce nieczułej na białe
-znaki instrukcja zaczynająca się od `[` skleja się z poprzednim wyrażeniem jako
-postfiksowy indeks (`prev[…]`). Zamiennik: multi-assign fazy B
+**Bare `[ … ] = xs` — deliberately skipped:** with whitespace-insensitive
+grammar, a statement starting with `[` glues to the previous expression as
+postfix index (`prev[…]`). Substitute: phase B multi-assign
 (`a, b = xs[0], xs[1]`, swap `a, b = b, a`).
 
-## Kryterium „issue zamknięte jako decyzja”
+## “Issue closed as decision” criteria
 
-- [x] potwierdzenie: **bez tupli**
-- [x] wybór fazy A jako pierwszej (struct `{}`)
-- [x] decyzja: multi-assign B **po** tablicach jest OK; kolejność B/C otwarta,
-  ale faza A (struct) idzie pierwsza i jest już zaimplementowana
-- [x] dla tablic (faza C): jawne `_`, **nie** dziury w stylu JS `[,,a,b]`
-  (spójność z Go/V, czytelność; zero-cost identyczny, więc decyduje ergonomia)
+- [x] confirmation: **no tuples**
+- [x] choice of phase A as first (struct `{}`)
+- [x] decision: multi-assign B **after** arrays is OK; B/C order open,
+  but phase A (struct) goes first and is already implemented
+- [x] for arrays (phase C): explicit `_`, **not** JS-style holes `[,,a,b]`
+  (Go/V consistency, readability; zero-cost identical, so ergonomics decides)

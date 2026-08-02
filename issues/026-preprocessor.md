@@ -1,22 +1,22 @@
 # 026 — Preprocessor (`$…`, D3)
 
-**Status:** ✅ zrobione
-**Zależy od:** stabilny frontend (praktycznie po 010+)
+**Status:** ✅ done
+**Depends on:** stable frontend (practically after 010+)
 
-## Cel
+## Goal
 
-Implementacja decyzji D3 ([docs/01-decyzje.md](../docs/01-decyzje.md)): makra
-czasu kompilacji, **nie** generyki w gramatyce.
+Implementation of decision D3 ([docs/01-decyzje.md](../docs/01-decyzje.md)): compile-time
+macros, **not** generics in grammar.
 
 ## MVP
 
-- `$fn name(param: type|name|str, …) { … }` — definicja (ciało jako tekst ze
-  slotami `$param`)
-- `$name(args…)` — wywołanie; expand **przed** lex/parse/check/emit
-- `--emit-pp` → `out/<plik>.pp.kl` (podgląd rozwinięcia)
-- błędy preprocessora z pozycją wywołania (`unknown macro`, zła arność, …)
+- `$fn name(param: type|name|str, …) { … }` — definition (body as text with
+  `$param` slots)
+- `$name(args…)` — call; expand **before** lex/parse/check/emit
+- `--emit-pp` → `out/<file>.pp.kl` (expansion preview)
+- preprocessor errors with call position (`unknown macro`, wrong arity, …)
 
-Przykład (jak w D3, uproszczone `name` zamiast literału string):
+Example (as in D3, simplified `name` instead of string literal):
 
 ```
 $fn point(name: name, T: type) {
@@ -26,15 +26,15 @@ $fn point(name: name, T: type) {
 $point(Vec2i, i32)
 ```
 
-## Poza MVP
+## Outside MVP
 
-- pełny język szablonów / AST-quote jak Nelua
+- full template language / AST-quote like Nelua
 - `$peripherals_from_svd` → [027](027-svd-ergonomic-api.md)
-- mapowanie pozycji checkerowych z powrotem do ciała makra
-- makra z pakietu + `$kstruct` / `$kstruct_from` → [059](059-kstruct-macros.md)
+- mapping checker positions back to macro body
+- macros from package + `$kstruct` / `$kstruct_from` → [059](059-kstruct-macros.md)
 
 
-## Kryterium
+## Criteria
 
-- [x] proste makro generuje wyspecjalizowany AST (golden `point_macro.kl`)
-- [x] `--emit-pp` zapisuje rozwinięte źródło
+- [x] simple macro generates specialized AST (golden `point_macro.kl`)
+- [x] `--emit-pp` writes expanded source

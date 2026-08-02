@@ -1,57 +1,57 @@
-# 079 — Funkcje asocjowane (statyczne) na typach (`Type.func`)
+# 079 — Associated (static) functions on types (`Type.func`)
 
-**Status:** ✅ zrobione (enum + struct, bieżący moduł)
-**Zależy od:** 005 (metody z receiverem), 072 (enumy)
+**Status:** ✅ done (enum + struct, current module)
+**Depends on:** 005 (methods with receiver), 072 (enums)
 
-## Cel
+## Goal
 
-Funkcje „na typie" bez receivera-instancji — deklarowane z kwalifikacją typu,
-wołane jako `Type.func(args)`. To konstruktory / parsery / fabryki:
-odwrotność metody instancyjnej (`fn (c: Color) name(): str` ↔
-`fn Color.from_name(s: str): !Color`). Znikają w emisji (zwykła funkcja C
-`Type_func(...)`, bez ukrytego receivera) — zero ukrytego kosztu.
+Functions “on a type" without instance receiver — declared with type qualification,
+called as `Type.func(args)`. Constructors / parsers / factories:
+opposite of instance method (`fn (c: Color) name(): str` ↔
+`fn Color.from_name(s: str): !Color`). Disappear in emission (plain C function
+`Type_func(...)`, no hidden receiver) — zero hidden cost.
 
-## Składnia
+## Syntax
 
 ```klin
-fn Color.from_name(s: str): !Color { … }   // deklaracja (lustro wywołania)
+fn Color.from_name(s: str): !Color { … }   // declaration (mirror of call)
 let c = Color.from_name("red") or { Color.Blue }
 
 fn Point.new(x, y: i32): Point { return Point{ x: x, y: y } }
 let p = Point.new(3, 4)
 ```
 
-- Deklaracja: `fn Type.name(params): Ret { … }` — pierwszy identyfikator po `fn`
-  z kropką to typ, pod którym funkcja jest w przestrzeni nazw. Brak receivera.
-- Wywołanie: `Type.name(args)` — checker rozpoznaje, że `Type` to nazwa typu
-  (nie zmienna), i kieruje do funkcji asocjowanej.
-- Działa dla **enumów i struktur**. Jest osobną przestrzenią od metod
-  instancyjnych i stałych enuma (`Color.Red` bez `()` to nadal stała).
+- Declaration: `fn Type.name(params): Ret { … }` — first identifier after `fn`
+  with a dot is the type under which the function lives in the namespace. No receiver.
+- Call: `Type.name(args)` — checker recognizes `Type` as type name
+  (not variable), and routes to associated function.
+- Works for **enums and structs**. Separate namespace from instance
+  methods and enum constants (`Color.Red` without `()` is still a constant).
 
-## Jak robią to inni
+## How others do it
 
 - Rust: `impl T { fn from_str(…) -> T }` → `T::from_str(…)`.
-- Zig: typ jako namespace — `T.fromName(…)` (najbliższe temu podejściu).
+- Zig: type as namespace — `T.fromName(…)` (closest to this approach).
 - Swift/Kotlin/Java/C#: `static` / `companion` / failable `init?`.
-- Go/C: brak cechy — konwencja wolnej funkcji (`NewT` / `t_from_name`).
+- Go/C: no feature — free function convention (`NewT` / `t_from_name`).
 
-Klin: wariant Zig/Rust‑like z emisją do zwykłej funkcji C.
+Klin: Zig/Rust‑like variant with emission to plain C function.
 
-## Poza zakresem (świadomie)
+## Out of scope (deliberately)
 
-- Auto‑generowane `values()` / `valueOf` / `to_string` (wymaga tablic napisów /
-  refleksji → ukryty koszt). Piszesz jawnie (`from_name` + `strcmp`).
-- `mod.Type.func` (cross-module) — na razie bieżący moduł.
-- Asocjowane `@[cimport]`/`@[cexport]`, użycie `Type.func` jako wskaźnika funkcji.
-- Przeciążanie nazw (Klin nie ma overloadingu).
+- Auto-generated `values()` / `valueOf` / `to_string` (requires string arrays /
+  reflection → hidden cost). Write explicitly (`from_name` + `strcmp`).
+- `mod.Type.func` (cross-module) — current module for now.
+- Associated `@[cimport]`/`@[cexport]`, using `Type.func` as function pointer.
+- Name overloading (Klin has no overloading).
 
-## Zrobione
+## Done
 
 - Parser: `fn Type.name(...)` (`FuncDecl.associatedType`).
-- Checker: rejestracja w `_assocFuncs` pod `Type.func`; rozpoznanie wywołania
-  `Type.func(...)` (receiver = nazwa typu, nie zmienna); arność/typy; mangling.
-- Emisja: nagłówek bez receivera, wywołanie bez argumentu‑receivera,
-  mangling `Type_func` (spójny z metodami).
-- Fmt: druk `fn Type.func(...)`.
+- Checker: registration in `_assocFuncs` under `Type.func`; recognition of
+  `Type.func(...)` call (receiver = type name, not variable); arity/types; mangling.
+- Emission: header without receiver, call without receiver argument,
+  mangling `Type_func` (consistent with methods).
+- Fmt: prints `fn Type.func(...)`.
 
-Przykład: `examples/associated_fn.kl`. Golden: `test/assoc_fn.kl`.
+Example: `examples/associated_fn.kl`. Golden: `test/assoc_fn.kl`.

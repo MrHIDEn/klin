@@ -1,34 +1,34 @@
-# 021 — Biblioteki C (FFI / link)
+# 021 — C libraries (FFI / link)
 
-**Status:** ✅ zrobione
-**Zależy od:** 006 (moduły), atrybuty z 010
+**Status:** ✅ done
+**Depends on:** 006 (modules), attributes from 010
 
-## Zakres MVP
+## MVP scope
 
-- jawne `@[cimport]` z typami (arity + typy argumentów/zwrotu)
-- `@[cheader]` + `@[cimport]` — deklaracja z nagłówka C (bez prototypu w emisji;
+- explicit `@[cimport]` with types (arity + argument/return types)
+- `@[cheader]` + `@[cimport]` — declaration from C header (no prototype in emission;
   SVD accessors)
-- `@[cinclude]` → `#include` w emisji (bez parsera nagłówków C)
-- `@[link("…")]` przekazywane do host `cc` przy `klin run` / `klin test`
-  - string zaczynający się od `-` → flaga as-is (`-lm`, `-L…`)
-  - inaczej → ścieżka `.a` / `.o` / `.so` / `.s` / `.S` względem katalogu `.kl`
+- `@[cinclude]` → `#include` in emission (no C header parser)
+- `@[link("…")]` passed to host `cc` on `klin run` / `klin test`
+  - string starting with `-` → flag as-is (`-lm`, `-L…`)
+  - otherwise → path `.a` / `.o` / `.so` / `.s` / `.S` relative to `.kl` directory
     (ASM → [022](022-biblioteki-asm.md))
-- CLI: `-l <name>`, `-L <dir>` (także sklejone `-lm`, `-L/path`)
-- nieznane wywołania = błąd checkera, **oprócz** host builtins `puts` / `printf`
-- przykład: [`examples/ffi_add/`](../examples/ffi_add/)
-- nota: [`docs/09-ffi-c.md`](../docs/09-ffi-c.md)
+- CLI: `-l <name>`, `-L <dir>` (also glued `-lm`, `-L/path`)
+- unknown calls = checker error, **except** host builtins `puts` / `printf`
+- example: [`examples/ffi_add/`](../examples/ffi_add/)
+- note: [`docs/09-ffi-c.md`](../docs/09-ffi-c.md)
 
-Test zasady nadrzędnej: FFI nie ukrywa alokacji ani ownership — kontrakt
-użytkownika z C.
+Prime rule test: FFI does not hide allocation or ownership — user's
+contract with C.
 
 HAL (STM32Cube / LL) → [031](031-biblioteki-hal.md).
 
-## Poza zakresem / później
+## Out of scope / later
 
-- Pełny parser nagłówków C
-- Biblioteki Klina → [020](020-biblioteki-klin.md) ✅
-- Jednostki ASM (`.s` via `@[link]`) → [022](022-biblioteki-asm.md) ✅
-- Manifest projektu (JSON/toml) zamiast attrs + CLI
+- Full C header parser
+- Klin libraries → [020](020-biblioteki-klin.md) ✅
+- ASM units (`.s` via `@[link]`) → [022](022-biblioteki-asm.md) ✅
+- Project manifest (JSON/toml) instead of attrs + CLI
 - `cexport` → [045](045-cexport.md) ✅
 - rpath / `LD_LIBRARY_PATH`
-- Pełne typowanie varargs (`printf`) poza allowlistą builtins
+- Full varargs typing (`printf`) beyond builtins allowlist

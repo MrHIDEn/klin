@@ -1,59 +1,59 @@
-# 017 — Metody kolekcji (`map` / `filter` / …)
+# 017 — Collection methods (`map` / `filter` / …)
 
 **Status:** ✅
-**Zależy od:** 007 (slice ✅); fn-pointer (faza 2 ✅); warstwa 2: `Allocator` ([057](057-allocator.md) ✅)
+**Depends on:** 007 (slice ✅); fn-pointer (phase 2 ✅); layer 2: `Allocator` ([057](057-allocator.md) ✅)
 
 Note: [16-slice.md](../docs/16-slice.md) · fn-ptr: [13-fn-ptr.md](../docs/13-fn-ptr.md) ·
-alokator: [14-allocator.md](../docs/14-allocator.md)
+allocator: [14-allocator.md](../docs/14-allocator.md)
 
-## Kontekst
+## Context
 
-W JS: `arr.map(…)`, `filter`, `reduce`, `find`, `forEach`. Wygodne, ale w
-językach systemowych łatwo o ukrytą alokację i ukryty koszt (callback, heap).
+In JS: `arr.map(…)`, `filter`, `reduce`, `find`, `forEach`. Convenient, but in
+systems languages it is easy to get hidden allocation and hidden cost (callback, heap).
 
-## Decyzje API
+## API decisions
 
-### Zasada
+### Principle
 
-Żadnego gołego `xs.map(f)` w stylu JS. Każda operacja produkująca dane albo
-bierze gotowy bufor, albo (warstwa 2) jawny `Allocator`. `defer` zawsze po
-stronie callera — API nigdy nie rejestruje zwolnienia ani autofree.
+No bare `xs.map(f)` in JS style. Every operation that produces data either
+takes a ready buffer, or (layer 2) an explicit `Allocator`. `defer` always on
+the caller side — the API never registers freeing or autofree.
 
 ```
-// OK — zero alokacji (monomorficzne nazwy przez $fn)
+// OK — zero allocation (monomorphic names via $fn)
 let n = slice.filter_into_i32(xs, dst, pred) or { 0 }
 let y = slice.reduce_i32(xs, 0, add)
 
-// OK — widać koszt (osobny moduł, żeby `import slice` nie ciągnął heap)
+// OK — cost is visible (separate module so `import slice` does not pull heap)
 let mut out = slice_alloc.map_alloc_i32(&a, xs, f) or { mem.empty_i32() }
 defer mem.free_i32(&a, out)
 ```
 
-Bez generyków w gramatyce: `each_i32` / `map_into_u8` (instancje w
-[`stdlib/slice.kl`](../stdlib/slice.kl)); `map_alloc_i32` w
-[`stdlib/slice_alloc.kl`](../stdlib/slice_alloc.kl). Typy elementu: `i32`, `u8`,
-`i64`, `f64` (dla `slice_alloc` alokator z [`stdlib/mem.kl`](../stdlib/mem.kl)).
+Without generics in grammar: `each_i32` / `map_into_u8` (instances in
+[`stdlib/slice.kl`](../stdlib/slice.kl)); `map_alloc_i32` in
+[`stdlib/slice_alloc.kl`](../stdlib/slice_alloc.kl). Element types: `i32`, `u8`,
+`i64`, `f64` (for `slice_alloc` allocator from [`stdlib/mem.kl`](../stdlib/mem.kl)).
 
-### Nazewnictwo
+### Naming
 
-- Zero alokacji, krótkie: `each`, `index_of`, `any`, `all`, `count`, `reduce`
-  (`index_of` zwraca indeks, nie element — nie mylić z JS `find`)
-- Produkcja do bufora: zawsze sufiks `_into` (`map_into`, `filter_into`)
-- Alokacja: zawsze sufiks `_alloc` (`map_alloc`, `filter_alloc`) — warstwa 2
-- Unikać gołych `map` / `filter` bez sufiksu
+- Zero allocation, short: `each`, `index_of`, `any`, `all`, `count`, `reduce`
+  (`index_of` returns index, not element — do not confuse with JS `find`)
+- Production into buffer: always `_into` suffix (`map_into`, `filter_into`)
+- Allocation: always `_alloc` suffix (`map_alloc`, `filter_alloc`) — layer 2
+- Avoid bare `map` / `filter` without suffix
 
-### Forma wywołania (nie metody na `[]T`)
+### Call form (not methods on `[]T`)
 
-Warstwa 0+1 — moduł `slice` (bez `mem` / bez `malloc` w emisji):
+Layer 0+1 — `slice` module (no `mem` / no `malloc` in emission):
 
 ```
 import slice
 slice.map_into_i32(xs, dst, f)
 ```
 
-Warstwa 2 — osobny moduł `slice_alloc` (importuje `mem` + `slice`). Emit nie
-usuwa nieużywanych `pub`, więc trzymanie `*_alloc` w `slice.kl` pociągnęłoby
-heap przy każdym `import slice` (freestanding / zasada nadrzędna).
+Layer 2 — separate `slice_alloc` module (imports `mem` + `slice`). Emit does not
+remove unused `pub`, so keeping `*_alloc` in `slice.kl` would pull
+heap on every `import slice` (freestanding / prime rule).
 
 ```
 import mem
@@ -61,112 +61,112 @@ import slice_alloc
 slice_alloc.map_alloc_i32(&a, xs, f)
 ```
 
-### Ownership — bez `using` (C#)
+### Ownership — no `using` (C#)
 
-| Wariant | Co powstaje | Kto zwalnia |
+| Variant | What is created | Who frees |
 |---|---|---|
-| `*_into(dst, …)` | nic nowego — zapis do bufora callera | nikt (caller ma `dst`) |
-| `*_alloc(a, …)` | **nowy** bufor | caller: `defer mem.free_i32(&a, out)` |
+| `*_into(dst, …)` | nothing new — write to caller buffer | nobody (caller owns `dst`) |
+| `*_alloc(a, …)` | **new** buffer | caller: `defer mem.free_i32(&a, out)` |
 
 ### Callback
 
-Wskaźniki na funkcje bez capture ([docs/13-fn-ptr.md](../docs/13-fn-ptr.md)).
+Function pointers without capture ([docs/13-fn-ptr.md](../docs/13-fn-ptr.md)).
 
-Zapis przez `dst[i]` na slice: dozwolony (nagłówek slice to wartość; pamięć
-elementów współdzielona z callerem — jak Go).
+Write via `dst[i]` on slice: allowed (slice header is by value; element memory
+shared with caller — like Go).
 
-## Warstwa 0 + 1 (MVP) — ✅
+## Layer 0 + 1 (MVP) — ✅
 
-| Funkcja | Alokacja | Uwagi |
+| Function | Allocation | Notes |
 |---|---|---|
-| `each` | brak | efekt uboczny |
-| `index_of` | brak | zwraca indeks; przy braku: **`-1`** |
-| `any` / `all` / `count` | brak | |
-| `reduce` | brak | akumulator + funkcja |
-| `map_into` | brak | wymaga `dst.len == xs.len`; zwraca `!i32` (`0` / `error(1)`) |
-| `filter_into` | brak | wymaga `dst.len >= xs.len`; zwraca `!i32` (liczba zapisanych / `error(1)`) |
-| `copy_into` | brak | `dst.len >= xs.len`; zwraca `!i32` = `xs.len` |
-| `reverse_into` | brak | jw.; kopiuje odwrócone |
-| `sum` / `product` | brak | liczbowe; pusty → `0` / `1` |
-| `min` / `max` | brak | liczbowe; `!T`, pusty → `error(1)` |
-| `contains` | brak | liczbowe; `bool` (`==`) |
+| `each` | none | side effect |
+| `index_of` | none | returns index; if missing: **`-1`** |
+| `any` / `all` / `count` | none | |
+| `reduce` | none | accumulator + function |
+| `map_into` | none | requires `dst.len == xs.len`; returns `!i32` (`0` / `error(1)`) |
+| `filter_into` | none | requires `dst.len >= xs.len`; returns `!i32` (count written / `error(1)`) |
+| `copy_into` | none | `dst.len >= xs.len`; returns `!i32` = `xs.len` |
+| `reverse_into` | none | same; copies reversed |
+| `sum` / `product` | none | numeric; empty → `0` / `1` |
+| `min` / `max` | none | numeric; `!T`, empty → `error(1)` |
+| `contains` | none | numeric; `bool` (`==`) |
 
-Rozdział szablonów: ogólne (arytmetyko-wolne) w `$fn slice_ops`, liczbowe
-(`+`/`*`/`<`/`==`) w `$fn slice_num_ops` — żeby ogólny szablon działał też dla
-typów nie-liczbowych.
+Template split: general (non-arithmetic) in `$fn slice_ops`, numeric
+(`+`/`*`/`<`/`==`) in `$fn slice_num_ops` — so the general template also works for
+non-numeric types.
 
-Poza MVP: `flatMap`, `groupBy`, lazy iteratory (018), sort z
-comparator-domknięciem.
+Outside MVP: `flatMap`, `groupBy`, lazy iterators (018), sort with
+closure comparator.
 
-## Warstwa 2 (`*_alloc`) — ✅
+## Layer 2 (`*_alloc`) — ✅
 
-Typ `Allocator`: [`stdlib/mem`](../stdlib/mem.kl)
+Type `Allocator`: [`stdlib/mem`](../stdlib/mem.kl)
 ([docs/14-allocator.md](../docs/14-allocator.md)).
 
-Moduł [`stdlib/slice_alloc.kl`](../stdlib/slice_alloc.kl):
+Module [`stdlib/slice_alloc.kl`](../stdlib/slice_alloc.kl):
 
-- `map_alloc_i32` / `map_alloc_u8(a, xs, f): ![]T` — `alloc(xs.len)` + mapowanie
-- `filter_alloc_i32` / `filter_alloc_u8(a, xs, pred): ![]T` — dwa przebiegi
-  (`count` → `alloc(n)` → kopiowanie)
-- Alokator: `*mut mem.Allocator`; błędy `mem.alloc_*` przez `!` / `or`
-- Caller: `defer mem.free_i32(&a, out)` (API nie rejestruje `defer`)
+- `map_alloc_i32` / `map_alloc_u8(a, xs, f): ![]T` — `alloc(xs.len)` + mapping
+- `filter_alloc_i32` / `filter_alloc_u8(a, xs, pred): ![]T` — two passes
+  (`count` → `alloc(n)` → copy)
+- Allocator: `*mut mem.Allocator`; `mem.alloc_*` errors via `!` / `or`
+- Caller: `defer mem.free_i32(&a, out)` (API does not register `defer`)
 
-## Fazy
+## Phases
 
-1. **Docs** — projekt API. ✅
+1. **Docs** — API design. ✅
 2. **Fn-pointer** — `fn(...): T`. ✅
-3. **stdlib `slice` warstwa 0+1** — ✅ ([`stdlib/slice.kl`](../stdlib/slice.kl))
-4. **`Allocator`** ([057](057-allocator.md) ✅) + warstwa 2 `*_alloc` — ✅
+3. **stdlib `slice` layer 0+1** — ✅ ([`stdlib/slice.kl`](../stdlib/slice.kl))
+4. **`Allocator`** ([057](057-allocator.md) ✅) + layer 2 `*_alloc` — ✅
    ([`stdlib/slice_alloc.kl`](../stdlib/slice_alloc.kl))
 
 Golden: `test/fn_ptr.kl`, `test/slice_ops.kl`, `test/slice_alloc_ops.kl`.  
 Examples: `examples/fn_ptr.kl`, `examples/slice_ops.kl`,
 `examples/slice_alloc_demo.kl`.
 
-`map_into_*` / `filter_into_*` zwracają `!i32` (Klin nie ma `!void`): sukces
-`0` / liczba elementów; błąd długości bufora → `error(1)`.
+`map_into_*` / `filter_into_*` return `!i32` (Klin has no `!void`): success
+`0` / element count; buffer length error → `error(1)`.
 
-## Dalsze możliwe rozszerzenia (pomysły, bez implementacji)
+## Possible further extensions (ideas, not implemented)
 
-- `find_$T` (zwraca element, nie indeks — jak JS `find`), `zip_into`, `chunk`,
+- `find_$T` (returns element, not index — like JS `find`), `zip_into`, `chunk`,
   `dedup_into`.
-- `sort` in-place na `[]T` z comparatorem fn-ptr.
-- `flatMap` / `groupBy` (wymagają alokacji / zagnieżdżenia).
-- kolejne typy elementu: `f32`, `i16`, `i8`, `u16`, `u32`, `u64`, `bool` (dla
-  `any`/`all`) — w `slice`; w `slice_alloc` wymagają alokatora `mem` dla danego
-  typu.
+- `sort` in-place on `[]T` with fn-ptr comparator.
+- `flatMap` / `groupBy` (require allocation / nesting).
+- more element types: `f32`, `i16`, `i8`, `u16`, `u32`, `u64`, `bool` (for
+  `any`/`all`) — in `slice`; in `slice_alloc` require `mem` allocator for the
+  type.
 
-Uwaga (dług techniczny): `min`/`max` w `slice_num_ops` mają warunek zapisany tak,
-by nie kończył się gołą nazwą przed `{` — bo `nazwa {` w warunku jest mylnie
-parsowana jako literał struktury. To ograniczenie parsera warto naprawić
-(warunki `if`/`while` powinny tłumić literały struktur, jak `match`).
+Note (technical debt): `min`/`max` in `slice_num_ops` have conditions written so
+they do not end with a bare name before `{` — because `name {` in a condition is
+mis-parsed as a struct literal. Worth fixing this parser limitation
+(`if`/`while` conditions should suppress struct literals, like `match`).
 
 ## Non-goals
 
-- Kopiowanie JS 1:1 (`map` zawsze nowa tablica z GC).
-- `using` / RAII / autofree wyniku.
-- Domknięcia (D7), generyki w rdzeniu (034), generatory (018).
-- Metody na `[]T` przed decyzją o receiverze slice.
-- DCE nieużywanych `pub` w emit (dlatego osobny moduł `slice_alloc`).
+- Copying JS 1:1 (`map` always new GC array).
+- `using` / RAII / autofree of result.
+- Closures (D7), core generics (034), generators (018).
+- Methods on `[]T` before slice receiver decision.
+- DCE of unused `pub` in emit (hence separate `slice_alloc` module).
 
-## Kryteria ukończenia
+## Completion criteria
 
-### Faza docs
+### Docs phase
 
-- [x] Projekt API / nazwy / ownership / fazy spisane w tym issue
+- [x] API design / names / ownership / phases written in this issue
 
-### Faza fn-pointer
+### Fn-pointer phase
 
-- [x] Typ `fn(...): T` + przekazanie / wywołanie
+- [x] Type `fn(...): T` + pass / call
 - [x] Golden + example
 
-### Faza warstwa 0+1
+### Layer 0+1 phase
 
-- [x] Moduł `slice` z funkcjami MVP (`i32`, `u8`)
-- [x] Testy złote
-- [x] Brak `malloc` w emisji (pętla jak ręczny C)
+- [x] `slice` module with MVP functions (`i32`, `u8`)
+- [x] Golden tests
+- [x] No `malloc` in emission (loop like hand-written C)
 
-### Faza warstwa 2
+### Layer 2 phase
 
-- [x] `map_alloc` / `filter_alloc` w `slice_alloc` + dokumentacja `defer mem.free_*`
-- [x] Testy złote z jawnym `Allocator`
+- [x] `map_alloc` / `filter_alloc` in `slice_alloc` + `defer mem.free_*` documentation
+- [x] Golden tests with explicit `Allocator`

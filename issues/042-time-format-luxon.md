@@ -1,21 +1,21 @@
-# 042 — Dialekt formatu Luxon/V (`yyyy-MM-dd`)
+# 042 — Luxon/V format dialect (`yyyy-MM-dd`)
 
-**Status:** 💭 do rozważenia
-**Zależy od:** [037](037-datetime-format.md)
+**Status:** 💭 under consideration
+**Depends on:** [037](037-datetime-format.md)
 
-## Kontekst
+## Context
 
-MVP: dialekt `strftime` (`%Y-%m-%d`) w `time.format` / `parse`. Tokeny w
-stylu Luxon / V (`yyyy-MM-dd`, `HH:mm`) bywają czytelniejsze — **wyłącznie**
-jako drugi dialekt w API `time`, nigdy jako slot interpolacji globalnej.
+MVP: `strftime` dialect (`%Y-%m-%d`) in `time.format` / `parse`. Tokens in the
+Luxon / V style (`yyyy-MM-dd`, `HH:mm`) can be more readable — **only**
+as a second dialect in the `time` API, never as a global interpolation slot.
 
-## Propozycja
+## Proposal
 
-- `time.format(buf, "yyyy-MM-dd", t)` albo jawny tryb / osobna fn
-- ten sam subset co dziś (data/czas UTC); bez locale-heavy tokenów (041)
-- parse odwrotny dla tego dialektu
+- `time.format(buf, "yyyy-MM-dd", t)` or an explicit mode / separate fn
+- same subset as today (UTC date/time); no locale-heavy tokens (041)
+- reverse parse for this dialect
 
-## Czego nie robić
+## What not to do
 
-- `${t:yyyy-MM-dd}` / `${t:%Y-…}` w 016 — **nie planowane** (zostaje w 037).
-- Zastępowania `strftime` bez potrzeby — oba dialekty mogą współistnieć.
+- `${t:yyyy-MM-dd}` / `${t:%Y-…}` in 016 — **not planned** (stays in 037).
+- Replacing `strftime` without need — both dialects can coexist.

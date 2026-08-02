@@ -1,24 +1,24 @@
-# 007 — Wskaźniki, tablice, slice'y
+# 007 — Pointers, arrays, slices
 
-**Status:** ✅ zrobione
-**Zależy od:** 006
+**Status:** ✅ done
+**Depends on:** 006
 
-## Zakres
+## Scope
 
-- `&` referencja, dereferencja
-- `*T` typ wskaźnikowy
-- tablice o stałym rozmiarze
+- `&` reference, dereference
+- `*T` pointer type
+- fixed-size arrays
 - slice: `struct { T* ptr; size_t len; }`
-- `cast(*volatile u32, 0x4000_1000)` — potrzebne pod bare metal
+- `cast(*volatile u32, 0x4000_1000)` — needed for bare metal
 
-## Uwagi
+## Notes
 
-- Slice wymusza generyki → zależność od D3 (preprocesor).
-- Arytmetyka wskaźników: Nelua jej zabrania i wymaga jawnego rzutowania
-  na liczbę. Rozważyć to samo — czy zbyt restrykcyjne pod MCU?
-- Rozważyć sprawdzanie zakresu w slice (wyłączalne w release).
+- Slice forces generics → dependency on D3 (preprocessor).
+- Pointer arithmetic: Nelua forbids it and requires explicit cast
+  to a number. Consider the same — too restrictive for MCU?
+- Consider bounds checking on slice (disable in release).
 
-## Kryterium ukończenia
+## Completion criteria
 
-- [x] slice przekazany do funkcji bez kopii
-- [x] zapis do rejestru przez rzutowany wskaźnik volatile
+- [x] slice passed to a function without copy
+- [x] write to register via cast volatile pointer

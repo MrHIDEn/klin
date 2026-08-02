@@ -1,26 +1,26 @@
-# 044 — Cykle CPU / SysTick → `Duration`
+# 044 — CPU cycles / SysTick → `Duration`
 
-**Status:** 💭 do rozważenia
-**Zależy od:** [010](010-bare-metal.md)
+**Status:** 💭 under consideration
+**Depends on:** [010](010-bare-metal.md)
 
-## Kontekst
+## Context
 
-Pomiary czasu w ns na hoście: `time.mono()`. Na MCU często DWT CYCCNT /
-SysTick — to **nie** należy do module `time` jako ukryte `now()`.
+Time measurements in ns on the host: `time.mono()`. On MCU, often DWT CYCCNT /
+SysTick — this **does not** belong in the `time` module as a hidden `now()`.
 
-## Propozycja
+## Proposal
 
 ```klin
 let c0 = cpu.cycles()
 // …
-let dt = cpu.cycles_since(c0, freq_hz)   // → time.Duration; freq_hz jawne
+let dt = cpu.cycles_since(c0, freq_hz)   // → time.Duration; freq_hz explicit
 ```
 
-- osobny moduł (`cpu` / board); jawna częstotliwość — zero magii
-- wynik kompatybilny z `time.Duration` (ns po przeliczeniu)
+- separate module (`cpu` / board); explicit frequency — zero magic
+- result compatible with `time.Duration` (ns after conversion)
 
-## Czego nie robić
+## What not to do
 
-- Wrzenia CYCCNT w `time.now()` / `time.mono()` bez osobnego API.
-- Ukrytego `freq_hz` w globalnym stanie bez dokumentacji kosztu.
-- RTC ([043](043-rtc.md)) w tym samym kroku.
+- Baking CYCCNT into `time.now()` / `time.mono()` without a separate API.
+- Hidden `freq_hz` in global state without documenting the cost.
+- RTC ([043](043-rtc.md)) in the same step.

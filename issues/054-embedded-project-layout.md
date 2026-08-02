@@ -1,77 +1,77 @@
-# 054 — Wygląd / układ projektu embedded
+# 054 — Embedded project layout / appearance
 
-**Status:** 💭 do rozważenia
-**Zależy od:** [023](023-examples.md) (układ `examples/stm32/`), [010](010-bare-metal.md);
-mile widziane [053](053-device-board-assets.md) (czysty `$device`), [022](022-biblioteki-asm.md);
-inne rodziny MCU: [062](062-targets-esp-rp.md)
+**Status:** 💭 under consideration
+**Depends on:** [023](023-examples.md) (`examples/stm32/` layout), [010](010-bare-metal.md);
+nice to have [053](053-device-board-assets.md) (clean `$device`), [022](022-biblioteki-asm.md);
+other MCU families: [062](062-targets-esp-rp.md)
 
 ## Problem
 
-Dziś [`examples/stm32/blink_f411/`](../examples/stm32/blink_f411/) w jednym katalogu
-miesza:
+Today [`examples/stm32/blink_f411/`](../examples/stm32/blink_f411/) in one directory
+mixes:
 
-- źródło Klin (`blink.kl`) z długą ścieżką do SVD
+- Klin source (`blink.kl`) with a long path to SVD
 - boilerplate: `startup.s`, `linker.ld`, `Makefile`
-- referencja C (`blink_ref.c`)
-- generowane `*_regs.h` / `*_regs.kl`
+- C reference (`blink_ref.c`)
+- generated `*_regs.h` / `*_regs.kl`
 
-Dla kogoś, kto otwiera „projekt Klin na Nucleo”, wygląda to jak kupka plików
-toolchaina, nie jak mała aplikacja. [023](023-examples.md) ustaliło tylko
-`stm32/<nazwa>/` — bez konwencji „app vs board vs vendor” ani scaffoldu.
+For someone opening a “Klin project on Nucleo”, it looks like a pile of
+toolchain files, not a small app. [023](023-examples.md) only established
+`stm32/<name>/` — no “app vs board vs vendor” convention or scaffold.
 
-[053](053-device-board-assets.md) poprawia UX **kodu** (SVD / fetch); ten issue
-= UX **katalogów i szablonu projektu**.
+[053](053-device-board-assets.md) improves **code** UX (SVD / fetch); this issue
+= **directory and project template** UX.
 
-## Cel
+## Goal
 
-Czytelny układ freestanding, w którym:
+A clear freestanding layout where:
 
-1. aplikacja to głównie `main.kl` (lub mało plików Klin) + `import` / `$device`
-2. linker / startup / wspólny Make siedzą w `board/` / `vendor/` / wspólnym
-   targetcie — nie „krzyczą” w rootzie dema
-3. ewent. `klin init` (lub skopiowalny szablon Nucleo-F411) generuje ten układ
+1. the app is mainly `main.kl` (or few Klin files) + `import` / `$device`
+2. linker / startup / shared Make live in `board/` / `vendor/` / shared
+   target — not “shouting” in the demo root
+3. optionally `klin init` (or copyable Nucleo-F411 template) generates this layout
 
-Szkic (orientacyjny, nie speć):
+Sketch (orientational, not spec):
 
 ```
 blink_f411/
-  main.kl              # albo blink.kl — mało szumu
-  board/               # startup.s, linker.ld, pinout / stałe
-  Makefile             # cienki; include wspólnych reguł freestanding
+  main.kl              # or blink.kl — low noise
+  board/               # startup.s, linker.ld, pinout / constants
+  Makefile             # thin; include shared freestanding rules
 ```
 
-Albo wspólny `examples/stm32/_common/` + dema tylko z `main.kl` + krótkim Make.
+Or shared `examples/stm32/_common/` + demos with only `main.kl` + short Make.
 
-Startup nadal może być surowym `.s` ([010](010-bare-metal.md)) — chodzi o
-**gdzie leży**, nie o ukrycie w magii Klina.
+Startup can still be raw `.s` ([010](010-bare-metal.md)) — the point is
+**where it lives**, not hiding it in Klin magic.
 
-## Szkic ewolucji
+## Evolution sketch
 
-1. Ustalona konwencja katalogów + refaktor blinka (docs `examples/README.md`)
-2. Wspólne reguły Make / skrypt pod ARM (bez zmiany semantyki języka)
-3. Opcjonalnie: `klin init nucleo-f411` (lub szablon w repo) — po [053](053-device-board-assets.md)
-   sensowniejsze (`$device` zamiast `../../../third_party/...`).
-   Wnioski host vs MCU + **trzy warstwy** (pack / init / `board`+.ioc):
+1. Settled directory convention + blink refactor (docs `examples/README.md`)
+2. Shared Make rules / script for ARM (no language semantics change)
+3. Optionally: `klin init nucleo-f411` (or repo template) — after [053](053-device-board-assets.md)
+   more sensible (`$device` instead of `../../../third_party/...`).
+   Host vs MCU takeaways + **three layers** (pack / init / `board`+.ioc):
    [075 §1b](075-board-pack-init-host.md).
 
-## Czego nie robić
+## What not to do
 
-- pełne IDE / plugin CubeMX / wizard graficzny
-- opakowywanie tablicy wektorów w „magiczny” Klin ([010](010-bare-metal.md))
-- zmiana semantyki `import` / FFI tylko po to, by schować pliki
-- obiecywać HAL przez layout — to [031](031-biblioteki-hal.md)
+- full IDE / CubeMX plugin / graphical wizard
+- wrapping the vector table in “magic” Klin ([010](010-bare-metal.md))
+- changing `import` / FFI semantics just to hide files
+- promising HAL through layout — that is [031](031-biblioteki-hal.md)
 
-## Kryterium (gdy wejdzie do prac)
+## Criteria (when work starts)
 
-- [ ] blink (lub nowy szablon) czytelny: app Klin osobno od linker/startup
-- [ ] build ARM bez regresji (elf / `SysTick_Handler` jak dziś)
-- [ ] `examples/README.md` opisuje konwencję
-- [ ] (opcjonalnie) `klin init` albo skopiowalny szablon w repo
+- [ ] blink (or new template) readable: Klin app separate from linker/startup
+- [ ] ARM build without regression (elf / `SysTick_Handler` as today)
+- [ ] `examples/README.md` describes the convention
+- [ ] (optional) `klin init` or copyable repo template
 
-## Powiązane
+## Related
 
 - [010](010-bare-metal.md) / [023](023-examples.md) — bare metal + `examples/stm32/`
 - [022](022-biblioteki-asm.md) — `@[link]` / `out/*.link`
-- [053](053-device-board-assets.md) — czysty device / SVD
+- [053](053-device-board-assets.md) — clean device / SVD
 - [075](075-board-pack-init-host.md) — board pack / init vs host (linker & startup)
-- [028](028-freertos.md) — kolejne dema też pod tą konwencją
+- [028](028-freertos.md) — further demos under this convention too

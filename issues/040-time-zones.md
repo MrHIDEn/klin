@@ -1,23 +1,23 @@
-# 040 — Strefy IANA + DST
+# 040 — IANA timezones + DST
 
-**Status:** 💭 do rozważenia
-**Zależy od:** [037](037-datetime-format.md)
+**Status:** 💭 to consider
+**Depends on:** [037](037-datetime-format.md)
 
-## Kontekst
+## Context
 
-`Instant` w 037 to UTC / unix ns. Brak `setZone("Europe/Warsaw")`, offsetu
-lokalnego i reguł DST. Baza stref to duży artefakt (rozmiar, aktualizacje)
-— świadomie poza MVP.
+`Instant` in 037 is UTC / unix ns. No `setZone("Europe/Warsaw")`, local
+offset, or DST rules. Timezone database is a large artifact (size, updates)
+— deliberately outside MVP.
 
-## Propozycja
+## Proposal
 
-- jawne API strefy (np. `Instant` + `Zone` / offset), zero magii w `now()`
-- źródło danych stref: do decyzji (host libc? osadzona baza? zewnętrzny plik)
-- format lokalny nadal do **bufora użytkownika**
+- explicit zone API (e.g. `Instant` + `Zone` / offset), no magic in `now()`
+- zone data source: to decide (host libc? embedded database? external file)
+- local format still to **user buffer**
 
-## Czego nie robić
+## What not to do
 
-- Ukrywania RTC / CPU jako `time.now()` ([043](043-rtc.md), [044](044-cpu-cycles.md)).
-- Locale nazw dni ([041](041-time-locale-relative.md)) w tym samym kroku, jeśli
-  da się rozdzielić.
-- Cukru interpolacji `${t:…}`.
+- Hide RTC / CPU as `time.now()` ([043](043-rtc.md), [044](044-cpu-cycles.md)).
+- Locale day names ([041](041-time-locale-relative.md)) in same step if
+  separable.
+- Interpolation sugar `${t:…}`.

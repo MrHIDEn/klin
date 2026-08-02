@@ -1,80 +1,78 @@
-# 078 — Operatory bitowe (`| & ^ ~ << >>`)
+# 078 — Bitwise operators (`| & ^ ~ << >>`)
 
-**Status:** ✅ zrobione (MVP)
-**Zależy od:** [002](002-tablica-symboli-checker.md) (typy/checker), [019](019-default-int-types.md) (typy całkowite)
+**Status:** ✅ done (MVP)
+**Depends on:** [002](002-tablica-symboli-checker.md) (types/checker), [019](019-default-int-types.md) (integer types)
 
-## Cel
+## Goal
 
-Dodać do Klina operatory bitowe na typach całkowitych. Manipulacja bitami
-występowała wcześniej wyłącznie w **generowanym C** dla rejestrów SVD
-(`lib/svd/emit.dart`) — nie w kodzie źródłowym Klina.
+Add bitwise operators to Klin for integer types. Bit manipulation
+previously existed only in **generated C** for SVD registers
+(`lib/svd/emit.dart`) — not in Klin source.
 
-## Zakres (MVP) — zrobione
+## Scope (MVP) — done
 
-| Klin | Znaczenie | C |
+| Klin | Meaning | C |
 |---|---|---|
-| `a & b` | AND bitowy | `a & b` |
-| `a \| b` | OR bitowy | `a \| b` |
-| `a ^ b` | XOR bitowy | `a ^ b` |
-| `~a` | NOT bitowy (unarny) | `~a` |
-| `a << b` | przesunięcie w lewo | `a << b` |
-| `a >> b` | przesunięcie w prawo | `a >> b` |
-| `a &= b` itd. | złożone przypisanie | `a &= b` … (`\|= ^= <<= >>=`) |
+| `a & b` | bitwise AND | `a & b` |
+| `a \| b` | bitwise OR | `a \| b` |
+| `a ^ b` | bitwise XOR | `a ^ b` |
+| `~a` | bitwise NOT (unary) | `~a` |
+| `a << b` | left shift | `a << b` |
+| `a >> b` | right shift | `a >> b` |
+| `a &= b` etc. | compound assignment | `a &= b` … (`\|= ^= <<= >>=`) |
 
-Zasady semantyczne:
-- **Tylko typy całkowite** (`i8..u64`, `usize`/`isize`); błąd na `bool`/`float`/
-  wskaźnikach (checker), tak jak dla `%`.
-- `>>` na typach ze znakiem = przesunięcie arytmetyczne (jak w C dla
-  implementacji dwójkowych); na bez znaku — logiczne.
-- Operand przesunięcia (`b` w `a << b`) — całkowity; wynik ma typ lewego
-  operandu. Ujemny/za duży count to UB w C — bez lintu w MVP.
-- Emisja 1:1 do C (w tym promocje całkowite C w „gołych” wyrażeniach);
-  przypisanie do węższego typu obcina jak w C.
+Semantic rules:
+- **Integer types only** (`i8..u64`, `usize`/`isize`); error on `bool`/`float`/
+  pointers (checker), like `%`.
+- `>>` on signed types = arithmetic shift (like C on two's complement); unsigned — logical.
+- Shift operand (`b` in `a << b`) — integer; result has left operand type. Negative/too-large count is UB in C — no lint in MVP.
+- Emission 1:1 to C (including C integer promotions in “bare" expressions);
+  assignment to narrower type truncates like C.
 
-## Precedencja (ustalone — jak Rust, nie C)
+## Precedence (settled — like Rust, not C)
 
-Decyzja projektowa: [docs/01-decyzje.md](../docs/01-decyzje.md) **D8**.
+Design decision: [docs/01-decyzje.md](../docs/01-decyzje.md) **D8**.
 
 ```
-* / %  →  + -  →  << >>  →  &  →  ^  →  |  →  porównania  →  == !=
+* / %  →  + -  →  << >>  →  &  →  ^  →  |  →  comparisons  →  == !=
 ```
 
-Dzięki temu `a & b == c` to `(a & b) == c`, a nie pułapka C
-`a & (b == c)`. Binarny `&` vs unarny `&` (adres) — rozróżnienie po pozycji,
-jak `*` (mnożenie vs dereferencja).
+So `a & b == c` is `(a & b) == c`, not C trap
+`a & (b == c)`. Binary `&` vs unary `&` (address) — distinguished by position,
+like `*` (multiply vs dereference).
 
-## Punkty implementacji
+## Implementation points
 
 - `lib/token.dart` + `lib/lexer.dart`: `pipe |`, `caret ^`, `tilde ~`,
   `lessLess <<`, `greaterGreater >>`.
-- `lib/parser.dart`: warstwy `_shift` / `_bitAnd` / `_bitXor` / `_bitOr` + `~`
-  w `_unary`.
-- `lib/checker.dart`: `_bitOps` / `_inferShift`; `~` w inferencji unarnej.
-- Emisja: istniejący `BinaryExpr` / `UnaryExpr` (nawiasowanie `(a op b)`).
-- `lib/fmt.dart`: `~` jak pozostałe unarne prefiksy.
+- `lib/parser.dart`: layers `_shift` / `_bitAnd` / `_bitXor` / `_bitOr` + `~`
+  in `_unary`.
+- `lib/checker.dart`: `_bitOps` / `_inferShift`; `~` in unary inference.
+- Emission: existing `BinaryExpr` / `UnaryExpr` (parenthesize `(a op b)`).
+- `lib/fmt.dart`: `~` like other unary prefixes.
 
-## Relacja do innych issue
+## Relation to other issues
 
-- Odblokowuje „bitflagi” dla enumów ([072](072-enums.md)) — `Flags.A | Flags.B`
-  wymaga tych operatorów (oraz semantyki bitflagów na enumach — osobno).
-- Przydatne dla HAL/rejestrów ([031](031-biblioteki-hal.md), [011](011-svd.md))
-  po stronie kodu Klina.
+- Unblocks “bitflags" for enums ([072](072-enums.md)) — `Flags.A | Flags.B`
+  needs these operators (and enum bitflag semantics — separately).
+- Useful for HAL/registers ([031](031-biblioteki-hal.md), [011](011-svd.md))
+  on Klin source side.
 
-## Poza zakresem
+## Out of scope
 
-- Rotacje bitów, `popcount`/`clz` itp. (to funkcje/`@cimport`, nie operatory).
-- Bitflagi jako cecha enuma — należą do [072](072-enums.md).
-- Ostrzeżenia o UB przesunięć (ujemny/za duży count) — ewentualnie z lintem.
+- Bit rotations, `popcount`/`clz` etc. (functions/`@cimport`, not operators).
+- Bitflags as enum feature — belongs to [072](072-enums.md).
+- UB shift warnings (negative/too-large count) — possibly with lint later.
 
-Arytmetyczne złożone (`+= -= *= /= %=`) używają tego samego `AssignStmt.compoundOp`
-co bitowe — osobny follow-up PR, nie część semantyki bitowej.
+Arithmetic compound (`+= -= *= /= %=`) uses same `AssignStmt.compoundOp`
+as bitwise — separate follow-up PR, not part of bitwise semantics.
 
-## Kryteria
+## Criteria
 
-- [x] Tokeny + parser (precedencja Rust-like, `~` unarny, infiks `&`).
-- [x] Checker: ograniczenie do typów całkowitych; błędy na `bool`/`float`.
-- [x] Emisja przenośna (gcc/clang/tcc), `#line`; goldeny.
-- [x] `fmt` drukuje operatory idempotentnie.
-- [x] Złożone bitowe `&= |= ^= <<= >>=` (emisja 1:1 C `op=`).
+- [x] Tokens + parser (Rust-like precedence, unary `~`, infix `&`).
+- [x] Checker: integer types only; errors on `bool`/`float`.
+- [x] Portable emission (gcc/clang/tcc), `#line`; goldens.
+- [x] `fmt` prints operators idempotently.
+- [x] Compound bitwise `&= |= ^= <<= >>=` (emission 1:1 C `op=`).
 
-Zob. [`examples/bitwise.kl`](../examples/bitwise.kl), `test/bitwise.kl`.
+See [`examples/bitwise.kl`](../examples/bitwise.kl), `test/bitwise.kl`.

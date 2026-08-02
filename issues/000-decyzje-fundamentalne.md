@@ -1,17 +1,17 @@
-# 000 — Trzy decyzje fundamentalne
+# 000 — Three fundamental decisions
 
-**Status:** ✅ rozstrzygnięte (patrz `docs/01-decyzje.md`)
-**Blokuje:** wszystko
+**Status:** ✅ resolved (see `docs/01-decyzje.md`)
+**Blocks:** everything
 
-## Opis
+## Description
 
-Przed pierwszą linią parsera podjąć trzy decyzje, które przenikają
-tablicę symboli, checker i codegen. Zmiana później = przepisywanie.
+Before the first line of the parser, make three decisions that permeate
+the symbol table, checker, and codegen. Changing them later means rewriting.
 
-1. **Model pamięci** → ręczny + `defer` + alokator jako jawny argument
-2. **Model błędów** → `!T` + operator propagacji + `or { }`
-3. **Generyki** → preprocesor, nie gramatyka
+1. **Memory model** → manual + `defer` + allocator as an explicit argument
+2. **Error model** → `!T` + propagation operator + `or { }`
+3. **Generics** → preprocessor, not grammar
 
-## Kryterium ukończenia
+## Completion criteria
 
-Zapisane w `docs/01-decyzje.md` z uzasadnieniem każdego odrzucenia.
+Recorded in `docs/01-decyzje.md` with justification for each rejection.

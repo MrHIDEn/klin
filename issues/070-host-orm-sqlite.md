@@ -1,52 +1,52 @@
-# 070 — ORM-like / typed repo nad SQLite (host)
+# 070 — ORM-like / typed repo over SQLite (host)
 
-**Status:** 💭 do rozważenia (niski priorytet — nieblokujące)
-**Zależy od:** [050](050-sqlite-wrapper.md) (cienki FFI), [021](021-biblioteki-c.md);
-  mile [026](026-preprocessor.md) / [057](057-allocator.md)
+**Status:** 💭 under consideration (low priority — non-blocking)
+**Depends on:** [050](050-sqlite-wrapper.md) (thin FFI), [021](021-biblioteki-c.md);
+  optionally [026](026-preprocessor.md) / [057](057-allocator.md)
 
-## Kontekst
+## Context
 
-Cel: aplikacje na **maszynach host** (desktop / serwer / Linux), nie bare-metal.
-Unikać ręcznego klejenia SQL wszędzie — bez portowania Hibernate do C.
+Goal: applications on **host machines** (desktop / server / Linux), not bare-metal.
+Avoid hand-gluing SQL everywhere — without porting Hibernate to C.
 
-W czystym C pełnych ORMów prawie nie ma (brak refleksji / generyków). Sensowne
-ORMy SQLite są zwykle w **C++** (`sqlite_orm`, sqlpp11, ODB). Klin kompiluje
-do C → naturalna ścieżka to **sqlite3 C API** + warstwa Klin, nie binding C++.
+Pure C has almost no full ORMs (no reflection / generics). Sensible
+SQLite ORMs are usually in **C++** (`sqlite_orm`, sqlpp11, ODB). Klin compiles
+to C → natural path is **sqlite3 C API** + Klin layer, not C++ binding.
 
-Embedded: tylko gdy jest OS + heap + FS (np. RPi / SBC z Linuxem ≈ host).
-Klasyczny STM32 bez heap — poza tym issue (SQLite i tak mallocuje wewnętrznie).
+Embedded: only when there is OS + heap + FS (e.g. RPi / SBC with Linux ≈ host).
+Classic STM32 without heap — outside this issue (SQLite mallocates internally anyway).
 
-## Kierunek (nie klasyczny ORM)
+## Direction (not classic ORM)
 
-1. **Warstwa 0** — [050](050-sqlite-wrapper.md): `open` / `prepare` / `bind` /
+1. **Layer 0** — [050](050-sqlite-wrapper.md): `open` / `prepare` / `bind` /
    `step` / `close`, link `-lsqlite3`.
-2. **Warstwa 1 (to issue)** — typed helpers / „repo”:
-   - codegen ze schematu (`.sql` / deklaracje) **albo** `$fn` (D3) generujący
-     `insert` / `get_by_id` / proste `query_*` dla konkretnych structów;
-   - ownership i alokacja **jawne** (`Allocator` / bufory callera / kontrakt C);
-   - `defer` po stronie callera — bez autofree / RAII.
-3. **Nie obiecywać** magicznego `users.filter(u => u.age > 18)` bez SQL ani
-   bez własnego DSL + codegen.
+2. **Layer 1 (this issue)** — typed helpers / “repo”:
+   - codegen from schema (`.sql` / declarations) **or** `$fn` (D3) generating
+     `insert` / `get_by_id` / simple `query_*` for concrete structs;
+   - ownership and allocation **explicit** (`Allocator` / caller buffers / C contract);
+   - `defer` on caller side — no autofree / RAII.
+3. **Do not promise** magic `users.filter(u => u.age > 18)` without SQL or
+   without a custom DSL + codegen.
 
-Szkic użycia (host):
+Usage sketch (host):
 
 ```klin
 let db = sqlite.open("app.db")!
 defer db.close()
-let u = user_repo.get(db, id)!   // wygenerowane / $fn — typed, nie surowy SQL wszędzie
+let u = user_repo.get(db, id)!   // generated / $fn — typed, not raw SQL everywhere
 ```
 
-## Poza zakresem
+## Out of scope
 
-- przepisanie SQLite w Klinie
-- pełny ORM jak EF / Hibernate / Luxon-style lazy
-- port C++ ORMa do Klina
-- bare-metal / VFS na MCU (osobna decyzja; nie priorytet)
-- priorytet względem rdzenia języka, embedded LED, FFI podstaw
+- rewriting SQLite in Klin
+- full ORM like EF / Hibernate / Luxon-style lazy
+- porting a C++ ORM to Klin
+- bare-metal / VFS on MCU (separate decision; not priority)
+- priority over language core, embedded LED, basic FFI
 
-## Kryteria (gdy kiedyś implementacja)
+## Criteria (when implementation happens)
 
-- [ ] Docs: model warstw 0/1 + ownership
-- [ ] Zależność od działającego wrappera 050
-- [ ] Przykład host + testy złote (deterministyczne, bez „żywego” internetu)
-- [ ] Zero ukrytej alokacji po stronie API Klina (malloc SQLite = kontrakt C)
+- [ ] Docs: layer 0/1 model + ownership
+- [ ] Dependency on working 050 wrapper
+- [ ] Host example + golden tests (deterministic, no “live” internet)
+- [ ] Zero hidden allocation on Klin API side (SQLite malloc = C contract)
