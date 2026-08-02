@@ -822,6 +822,31 @@ fn main() {
     );
   });
 
+  test('imported pub enum variants via mod.Enum.Variant (issue 072)', () async {
+    final dir = Directory.systemTemp.createTempSync('klin_impenum072_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    File('${dir.path}/colors.kl').writeAsStringSync('''
+module colors
+pub enum Color { Red, Green, Blue }
+''');
+    File('${dir.path}/app.kl').writeAsStringSync('''
+module app
+import colors
+fn main() {
+  let c: colors.Color = colors.Color.Green
+  printf("%d\\n", cast(i32, c))
+}
+''');
+    final result = await _compileAndRun('${dir.path}/app.kl', dir);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, '1\n');
+
+    final program = loadProject('${dir.path}/app.kl');
+    Checker().check(program);
+    final c = emitC(program, '${dir.path}/app.kl');
+    expect(c, contains('colors_Color_Green'));
+  });
+
   test('error: match expression requires an else arm', () {
     const source = 'fn main() { let a = match 1 { 1 { 2 } } }';
     final program = Parser(Lexer(source).tokenize()).parse();
@@ -2786,6 +2811,24 @@ fn main() {
     expect(c, contains('add(2, 3)'));
   });
 
+  test('parser: newline before `(` inside open parens still forms a call', () {
+    // Go-like: only statement-level newline before `(` breaks a call.
+    // Inside an argument list, `bar\\n(y)` must remain a call.
+    const source = '''
+fn bar(y: i32): i32 { return y }
+fn foo(a: i32, b: i32): i32 { return a + b }
+fn main() {
+  let x = foo(1, bar
+(2))
+  printf("%d\\n", x)
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'nested_call.kl');
+    expect(c, contains('foo(1, bar(2))'));
+  });
+
   test('golden: associated functions on types (Type.func)', () async {
     final result = await _compileAndRun('test/assoc_fn.kl', tmp);
     expect(result.exitCode, 0, reason: result.stderr);
@@ -2832,6 +2875,62 @@ fn main() {
       throwsA(predicate((e) =>
           e is CheckError && e.toString().contains('expects 2 arguments'))),
     );
+  });
+
+  test('error: associated function conflicts with method C name (Type.func)', () {
+    const source = '''
+struct Point { x, y: i32 }
+fn (p: Point) new(): i32 { return p.x }
+fn Point.new(x, y: i32): Point { return Point{ x: x, y: y } }
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError && e.toString().contains('conflicts with a method'))),
+    );
+  });
+
+  test('error: associated function conflicts with enum variant (Type.func)', () {
+    const source = '''
+enum Color { Red, Green }
+fn Color.Red(): i32 { return 1 }
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError &&
+          e.toString().contains('conflicts with enum variant'))),
+    );
+  });
+
+  test('imported associated function via mod.Type.func (Type.func)', () async {
+    final dir = Directory.systemTemp.createTempSync('klin_impassoc079_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    File('${dir.path}/geom.kl').writeAsStringSync('''
+module geom
+pub struct Point { x, y: i32 }
+pub fn Point.origin(): Point { return Point{ x: 0, y: 0 } }
+''');
+    File('${dir.path}/app.kl').writeAsStringSync('''
+module app
+import geom
+fn main() {
+  let p: geom.Point = geom.Point.origin()
+  printf("%d\\n", p.x)
+}
+''');
+    final result = await _compileAndRun('${dir.path}/app.kl', dir);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, '0\n');
+
+    final program = loadProject('${dir.path}/app.kl');
+    Checker().check(program);
+    final c = emitC(program, '${dir.path}/app.kl');
+    expect(c, contains('geom_Point_origin'));
   });
 
   test('klin fmt: formats associated function declaration (Type.func)', () {
@@ -3408,6 +3507,25 @@ fn test_value() {
     expect(imported.exitCode, 0, reason: imported.stderr.toString());
     expect(imported.stdout.toString(), contains('ok\t'));
     expect('${imported.stdout}${imported.stderr}', isNot(contains('imported-main')));
+
+    // Injected test `main` must keep enum declarations (Bugbot retro #97).
+    File('${dir.path}/enum_harness_test.kl').writeAsStringSync('''
+import testing
+enum Color { Red, Green }
+fn test_color() {
+  testing.assert_eq_i32(cast(i32, Color.Green), 1)
+}
+''');
+    final withEnum = await Process.run(
+      'dart',
+      ['run', 'bin/klin.dart', 'test', '${dir.path}/enum_harness_test.kl'],
+      environment: {
+        ...Platform.environment,
+        'KLIN_STDLIB': Directory('stdlib').absolute.path,
+      },
+    );
+    expect(withEnum.exitCode, 0, reason: withEnum.stderr.toString());
+    expect(withEnum.stdout.toString(), contains('ok\t'));
   });
 
   test('klin run compiles and executes a program', () async {

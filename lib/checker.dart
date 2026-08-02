@@ -264,9 +264,23 @@ final class Checker {
       final String key;
       final Map<String, _FuncSignature> collection;
       if (func.receiver != null) {
-        key =
-            '${_resolveType(func.receiver!.typeName, func.receiver!.pos).displayName}.${func.name}';
+        final receiverType =
+            _resolveType(func.receiver!.typeName, func.receiver!.pos);
+        key = '${receiverType.displayName}.${func.name}';
         collection = _methods;
+        if (_assocFuncs.containsKey(key)) {
+          throw CheckError(
+            'method `${receiverType.displayName}.${func.name}` conflicts with '
+            'an associated function of the same C name',
+            func.pos,
+          );
+        }
+        _rejectEnumVariantCNameClash(
+          receiverType,
+          func.name,
+          func.pos,
+          'method',
+        );
       } else if (func.associatedType != null) {
         final assocType = _resolveType(func.associatedType!, func.pos);
         if (assocType is! StructType && assocType is! EnumType) {
@@ -275,6 +289,19 @@ final class Checker {
         }
         key = '${assocType.displayName}.${func.name}';
         collection = _assocFuncs;
+        if (_methods.containsKey(key)) {
+          throw CheckError(
+            'associated function `${assocType.displayName}.${func.name}` '
+            'conflicts with a method of the same C name',
+            func.pos,
+          );
+        }
+        _rejectEnumVariantCNameClash(
+          assocType,
+          func.name,
+          func.pos,
+          'associated function',
+        );
       } else {
         key = _key(func.moduleName, func.name);
         collection = _functions;
@@ -579,23 +606,74 @@ final class Checker {
 
   String _key(String module, String name) => '$module.$name';
 
-  /// Resolves `Enum.Variant` to an enum constant when [object] is an enum type
-  /// name (in the current module) rather than a variable. Returns the enum type
-  /// and annotates [node] with the C constant to emit, or `null` when this is a
-  /// plain field access.
+  /// Rejects a method/associated function whose C mangling would collide with
+  /// an enum variant constant (`Type_Variant` / `mod_Type_Variant`).
+  void _rejectEnumVariantCNameClash(
+    KlinType type,
+    String memberName,
+    SourcePos pos,
+    String kind,
+  ) {
+    if (type is! EnumType) return;
+    final decl = _enums[_key(type.moduleName, type.name)];
+    if (decl == null) return;
+    if (!decl.variants.any((v) => v.name == memberName)) return;
+    throw CheckError(
+      '$kind `${type.displayName}.$memberName` conflicts with enum variant '
+      '`$memberName`',
+      pos,
+    );
+  }
+
+  /// Resolves a type-name expression used as `Type.member` or `mod.Type.member`.
+  /// Returns `null` when [expr] denotes a value instead of a type.
+  ({String module, String typeName, KlinType type})? _typeNameExpr(Expr expr) {
+    if (expr is NameExpr) {
+      if (_scope.lookup(expr.name) != null) return null;
+      final key = _key(_currentModule, expr.name);
+      if (!_enums.containsKey(key) && !_structs.containsKey(key)) return null;
+      final type = _resolveType(expr.name, expr.pos);
+      return (module: _currentModule, typeName: expr.name, type: type);
+    }
+    if (expr is FieldExpr && expr.object is NameExpr) {
+      final modAlias = (expr.object as NameExpr).name;
+      final typeName = expr.name;
+      if (_scope.lookup(modAlias) != null) return null;
+      final actual = _importAliases[_currentModule]?[modAlias];
+      if (actual == null && modAlias != _currentModule) return null;
+      final module = actual ?? modAlias;
+      final key = _key(module, typeName);
+      final enumDecl = _enums[key];
+      final struct = _structs[key];
+      if (enumDecl == null && struct == null) return null;
+      if (enumDecl != null && module != _currentModule && !enumDecl.isPub) {
+        throw CheckError('enum `$modAlias.$typeName` is private', expr.pos);
+      }
+      if (struct != null && module != _currentModule && !struct.isPub) {
+        throw CheckError('struct `$modAlias.$typeName` is private', expr.pos);
+      }
+      final type = _resolveType('$modAlias.$typeName', expr.pos);
+      return (module: module, typeName: typeName, type: type);
+    }
+    return null;
+  }
+
+  /// Resolves `Enum.Variant` / `mod.Enum.Variant` to an enum constant when
+  /// [object] is an enum type name rather than a variable. Returns the enum
+  /// type and annotates [node] with the C constant to emit, or `null` when
+  /// this is a plain field access.
   KlinType? _tryEnumConstant(
     FieldExpr node,
     Expr object,
     String variant,
     SourcePos pos,
   ) {
-    if (object is! NameExpr) return null;
-    if (_scope.lookup(object.name) != null) return null; // it is a variable
-    final decl = _enums[_key(_currentModule, object.name)];
-    if (decl == null) return null;
+    final typeInfo = _typeNameExpr(object);
+    if (typeInfo == null || typeInfo.type is! EnumType) return null;
+    final decl = _enums[_key(typeInfo.module, typeInfo.typeName)]!;
     if (!decl.variants.any((v) => v.name == variant)) {
       throw CheckError(
-          'enum `${object.name}` has no variant `$variant`', pos);
+          'enum `${typeInfo.typeName}` has no variant `$variant`', pos);
     }
     node.enumConstCName =
         _enumConstCName(decl.moduleName, decl.name, variant);
@@ -1312,7 +1390,10 @@ final class Checker {
         throw CheckError('nieznana funkcja `$moduleName.$callee`', pos);
       }
       final elsewhere = _allFunctions
-          .where((func) => func.receiver == null && func.name == callee)
+          .where((func) =>
+              func.receiver == null &&
+              func.associatedType == null &&
+              func.name == callee)
           .toList();
       if (elsewhere.isNotEmpty) {
         final mod = elsewhere.first.moduleName;
@@ -1395,6 +1476,7 @@ final class Checker {
   FuncDecl _functionDecl(String module, String name) =>
       _allFunctions.firstWhere((func) =>
           func.receiver == null &&
+          func.associatedType == null &&
           func.moduleName == module &&
           func.name == name);
 
@@ -1408,32 +1490,27 @@ final class Checker {
     return _mangledFreeName(func.moduleName, func.name);
   }
 
-  /// Resolves `Type.func(args)` — an associated (static) function call where the
-  /// "receiver" is a type name, not a value. Returns the result type, or `null`
-  /// when this is a normal instance-method call.
+  /// Resolves `Type.func(args)` / `mod.Type.func(args)` — an associated
+  /// (static) function call where the "receiver" is a type name, not a value.
+  /// Returns the result type, or `null` when this is a normal instance-method
+  /// call.
   KlinType? _tryAssociatedCall(MethodCallExpr call) {
-    final receiver = call.receiver;
-    if (receiver is! NameExpr) return null;
-    if (_scope.lookup(receiver.name) != null) return null; // a variable
-    final key = _key(_currentModule, receiver.name);
-    if (!_enums.containsKey(key) && !_structs.containsKey(key)) return null;
-    final type = _resolveType(receiver.name, receiver.pos);
-    final String module;
-    final String typeName;
-    switch (type) {
-      case StructType(:final moduleName, :final name):
-        module = moduleName;
-        typeName = name;
-      case EnumType(:final moduleName, :final name):
-        module = moduleName;
-        typeName = name;
-      default:
-        return null;
-    }
+    final typeInfo = _typeNameExpr(call.receiver);
+    if (typeInfo == null) return null;
+    final type = typeInfo.type;
+    if (type is! StructType && type is! EnumType) return null;
+    final module = typeInfo.module;
+    final typeName = typeInfo.typeName;
     final signature = _assocFuncs['${type.displayName}.${call.name}'];
     if (signature == null) {
       throw CheckError(
         'type `$typeName` has no associated function `${call.name}`',
+        call.pos,
+      );
+    }
+    if (module != _currentModule && !signature.isPub) {
+      throw CheckError(
+        'associated function `$module.$typeName.${call.name}` is private',
         call.pos,
       );
     }

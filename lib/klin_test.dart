@@ -163,6 +163,7 @@ Program _withoutImportedMains(Program program, String absEntry) {
     program.structs,
     funcs,
     program.pos,
+    enums: program.enums,
     importAliases: program.importAliases,
   );
 }
@@ -196,6 +197,7 @@ Program _withInjectedMain(
     program.structs,
     [...program.funcs, main],
     program.pos,
+    enums: program.enums,
     importAliases: program.importAliases,
   );
 }

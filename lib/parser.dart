@@ -44,6 +44,10 @@ final class Parser {
   /// `{` after a name is unambiguously a struct literal.
   bool _noStructLit = false;
 
+  /// Depth of expression-level parentheses (`(…)` groups, calls, `cast`, …).
+  /// While > 0, a newline before `(` does not break a call (Go-like).
+  int _exprParenDepth = 0;
+
   Parser(this._tokens);
 
   Program parse() {
@@ -419,13 +423,16 @@ final class Parser {
       expr is IndexExpr ||
       (expr is UnaryExpr && expr.op == '*');
 
-  /// A `(` forms a call only when it is on the same source line as its callee.
-  /// A `(` that opens a new line starts a new statement instead (Go-like; the
-  /// same rule [_looksLikeReturnValue] uses for `return`). Without this,
-  /// `f\n(x)` parses as `f(x)`, which for example swallows a following
-  /// `(*p).field = …` statement into the previous line's trailing identifier.
+  /// A `(` forms a call only when it is on the same source line as its callee,
+  /// unless we are already inside expression parentheses (argument list,
+  /// grouping, `cast`, …) — then a newline before `(` may continue the call
+  /// (Go-like). At statement level, a `(` on a new line starts a new statement
+  /// instead. Without the statement-level rule, `f\n(x)` parses as `f(x)`,
+  /// which for example swallows a following `(*p).field = …` into the previous
+  /// line's trailing identifier.
   bool _callParenSameLine(SourcePos calleePos) =>
-      _check(TokenKind.lParen) && _current.pos.line == calleePos.line;
+      _check(TokenKind.lParen) &&
+      (_exprParenDepth > 0 || _current.pos.line == calleePos.line);
 
   /// `t0, t1, … = v0, v1, …` — multi-assignment (issue 056, phase B).
   Stmt _multiAssign(Expr first) {
@@ -919,19 +926,24 @@ final class Parser {
 
   List<Expr> _argList() {
     _expect(TokenKind.lParen, 'oczekiwano `(`');
+    _exprParenDepth++;
     final savedNoStruct = _noStructLit;
     _noStructLit = false;
-    final args = <Expr>[];
-    if (!_check(TokenKind.rParen)) {
-      args.add(_expr());
-      while (_check(TokenKind.comma)) {
-        _advance();
+    try {
+      final args = <Expr>[];
+      if (!_check(TokenKind.rParen)) {
         args.add(_expr());
+        while (_check(TokenKind.comma)) {
+          _advance();
+          args.add(_expr());
+        }
       }
+      _expect(TokenKind.rParen, 'oczekiwano `)`');
+      return args;
+    } finally {
+      _exprParenDepth--;
+      _noStructLit = savedNoStruct;
     }
-    _expect(TokenKind.rParen, 'oczekiwano `)`');
-    _noStructLit = savedNoStruct;
-    return args;
   }
 
   Expr _expr() {
@@ -1056,9 +1068,14 @@ final class Parser {
       case TokenKind.error_:
         _advance();
         _expect(TokenKind.lParen, 'oczekiwano `(` po `error`');
-        final code = _expr();
-        _expect(TokenKind.rParen, 'expected `)` after error code');
-        expr = ErrorExpr(code, t.pos);
+        _exprParenDepth++;
+        try {
+          final code = _expr();
+          _expect(TokenKind.rParen, 'expected `)` after error code');
+          expr = ErrorExpr(code, t.pos);
+        } finally {
+          _exprParenDepth--;
+        }
         break;
       case TokenKind.ident:
         _advance();
@@ -1078,6 +1095,14 @@ final class Parser {
             );
           } else if (_check(TokenKind.lBrace)) {
             expr = _structLit(member, moduleName: t.lexeme);
+          } else if (_check(TokenKind.dot)) {
+            // `mod.Type.Variant` / `mod.Type.func(...)` — continue in the
+            // postfix loop below.
+            expr = FieldExpr(
+              object: NameExpr(t.lexeme, t.pos),
+              name: member.lexeme,
+              pos: member.pos,
+            );
           } else {
             throw ParseError('expected call or struct literal', member.pos);
           }
@@ -1111,23 +1136,33 @@ final class Parser {
       case TokenKind.cast:
         _advance();
         _expect(TokenKind.lParen, 'oczekiwano `(` po `cast`');
-        final typeName = _typeName();
-        _expect(TokenKind.comma, 'oczekiwano `,` po typie castowania');
-        final savedNoStructCast = _noStructLit;
-        _noStructLit = false;
-        final value = _expr();
-        _noStructLit = savedNoStructCast;
-        _expect(TokenKind.rParen, 'oczekiwano `)` po castowaniu');
-        expr = CastExpr(typeName: typeName, expr: value, pos: t.pos);
+        _exprParenDepth++;
+        try {
+          final typeName = _typeName();
+          _expect(TokenKind.comma, 'oczekiwano `,` po typie castowania');
+          final savedNoStructCast = _noStructLit;
+          _noStructLit = false;
+          final value = _expr();
+          _noStructLit = savedNoStructCast;
+          _expect(TokenKind.rParen, 'oczekiwano `)` po castowaniu');
+          expr = CastExpr(typeName: typeName, expr: value, pos: t.pos);
+        } finally {
+          _exprParenDepth--;
+        }
         break;
       case TokenKind.lParen:
         final open = _advance();
-        final savedNoStructParen = _noStructLit;
-        _noStructLit = false;
-        final inner = _expr();
-        _noStructLit = savedNoStructParen;
-        _expect(TokenKind.rParen, 'oczekiwano `)`');
-        expr = GroupExpr(inner, open.pos);
+        _exprParenDepth++;
+        try {
+          final savedNoStructParen = _noStructLit;
+          _noStructLit = false;
+          final inner = _expr();
+          _noStructLit = savedNoStructParen;
+          _expect(TokenKind.rParen, 'oczekiwano `)`');
+          expr = GroupExpr(inner, open.pos);
+        } finally {
+          _exprParenDepth--;
+        }
         break;
       default:
         throw ParseError('expected expression', t.pos);
