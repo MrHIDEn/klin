@@ -1,18 +1,13 @@
 # Klin
 
 ```
-              ▲
-             ╱ ╲
-            ╱   ╲
-           ╱  K  ╲
-          ╱   L   ╲
-         ╱    I    ╲
-        ╱     N     ╲
-       ╱_____________╲
-          klin → C
+  +====================+
+  |  K L I N            \
+  |  systems language    \
+  +=======================+----> C
 ```
 
-A wedge between you and C — thin layer, zero hidden cost.
+A wedge driven between you and C — thin layer, zero hidden cost.
 
 > **Experimental 0.1.0** — the language and toolchain work for real programs
 > (host + STM32 demos), but the public packaging surface is still settling.
