@@ -1,7 +1,7 @@
 # 029 — Event loop / `async`·`await` (big beast)
 
-**Status:** 🔨 phase 2 MVP lib in tree (`examples/pkg_eventloop/`); remote
-`github/mrhiden/eventloop` publish + async still open
+**Status:** 🔨 phase 2 MVP lib published (`github/mrhiden/eventloop@v0.1.0`);
+async / `$event_loop` / RTOS still open
 **Depends on:** D1/D3 decisions; probably 018, 026, 028; remote lib → 049
 
 ## Question
@@ -209,11 +209,11 @@ What happens where:
 ### Alongside: same effect **without** `async`/`await` (works today)
 
 Compiler **does not** need to know `async`. Lib + plain `fn` (fn-pointer) suffice.
-Runnable local package: [`examples/pkg_eventloop/`](../examples/pkg_eventloop/)
-(publish target: `github/mrhiden/eventloop`).
+Remote package: [`github/mrhiden/eventloop@v0.1.0`](https://github.com/MrHIDEn/eventloop);
+consumer example: [`examples/remote_eventloop/`](../examples/remote_eventloop/).
 
 ```klin
-import eventloop
+import "github/mrhiden/eventloop"
 import io
 
 struct App {
@@ -273,8 +273,8 @@ delay_ms(100).await
 |---|---|
 | Parser `async` / `.await` | **no** |
 | Desugar → state machine | **no** |
-| Callback lib (local) | **yes** — [`examples/pkg_eventloop/`](../examples/pkg_eventloop/) |
-| Package `github/mrhiden/eventloop` | **pending publish** (sources ready in tree) |
+| Callback lib | **yes** — [`MrHIDEn/eventloop@v0.1.0`](https://github.com/MrHIDEn/eventloop) |
+| Example | [`examples/remote_eventloop/`](../examples/remote_eventloop/) after `klin get` |
 | `klin run` on `sketch_async_eventloop.kl` | **will not pass** |
 
 IntelliJ plugin (highlight / parser) would need to know `async` / `.await` **only
@@ -320,8 +320,9 @@ Avoid: one global Node-loop for entire firmware.
 ### Phases (so roadmap is not eaten)
 
 1. **Docs / model** (this issue) — ✅ direction written  
-2. **Callback lib** (`every_ms` / `run`, remote or local) — ✅ local MVP in
-   `examples/pkg_eventloop/`; remote tag `v0.1.0` still to publish  
+2. **Callback lib** (`every_ms` / `run`, remote or local) — ✅
+   `github/mrhiden/eventloop@v0.1.0`  
+
 3. **RTOS example** — loop in one task, second without  
 4. **Optionally later:** `async`/`await` in core + IDE + sketch → real example  
 

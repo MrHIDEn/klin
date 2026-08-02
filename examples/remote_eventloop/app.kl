@@ -1,4 +1,4 @@
-import eventloop
+import "github/mrhiden/eventloop"
 import io
 
 struct App {
