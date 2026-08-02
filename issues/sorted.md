@@ -105,6 +105,7 @@ building the core from scratch.
 | [078](078-bitwise-ops.md) | Bitwise operators (`\| & ^ ~ << >>`; integers only) | ✅ | 002, 019 |
 | [079](079-associated-functions.md) | Associated/static functions on types (`Type.func`; constructors/parsers) | ✅ | 005, 072 |
 | [080](080-stdlib-str.md) | `stdlib/str` — `eq`/`len`/… (string compares without `==`) | ✅ | 012, 021 |
+| [083](083-stdlib-math.md) | `stdlib/math` — thin libm (`sin`/`sqrt`/…; Klin module, not JS `Math`) | ✅ | 012, 021 |
 | [081](081-number-literals.md) | Literals: binary `0b`, float exponent `1e…`, char `'A'`, (octal) | 🔨 (Group 1 ✅) | 002 |
 
 ---

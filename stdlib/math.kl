@@ -1,0 +1,40 @@
+/// Optional host math (libm). Do not import on bare metal without libm.
+module math
+
+@[link("-lm"), cinclude("<math.h>"), cimport, codename("sin")]
+pub fn sin(x: f64): f64
+
+@[cinclude("<math.h>"), cimport, codename("cos")]
+pub fn cos(x: f64): f64
+
+@[cinclude("<math.h>"), cimport, codename("tan")]
+pub fn tan(x: f64): f64
+
+@[cinclude("<math.h>"), cimport, codename("sqrt")]
+pub fn sqrt(x: f64): f64
+
+@[cinclude("<math.h>"), cimport, codename("fabs")]
+pub fn abs(x: f64): f64
+
+@[cinclude("<math.h>"), cimport, codename("floor")]
+pub fn floor(x: f64): f64
+
+@[cinclude("<math.h>"), cimport, codename("ceil")]
+pub fn ceil(x: f64): f64
+
+@[cinclude("<math.h>"), cimport, codename("pow")]
+pub fn pow(x, y: f64): f64
+
+@[cinclude("<math.h>"), cimport, codename("fmin")]
+pub fn min(a, b: f64): f64
+
+@[cinclude("<math.h>"), cimport, codename("fmax")]
+pub fn max(a, b: f64): f64
+
+pub fn pi(): f64 {
+    return 3.141592653589793
+}
+
+pub fn e(): f64 {
+    return 2.718281828459045
+}

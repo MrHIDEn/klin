@@ -1166,6 +1166,22 @@ fn main() {
     expect(c, contains('strlen('));
   });
 
+  test('golden: stdlib math (issue 083)', () async {
+    final result = await _compileAndRun('test/math_basic.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/math_basic.out').readAsString());
+
+    final program = loadProject('test/math_basic.kl');
+    Checker().check(program);
+    final c = emitC(program, 'test/math_basic.kl');
+    expect(c, contains('#include <math.h>'));
+    // pub @[cimport] emits direct C calls (like io.println → puts).
+    expect(c, contains('sin('));
+    expect(c, contains('sqrt('));
+    expect(c, contains('fabs('));
+    expect(collectLinkAttrs(program), contains('-lm'));
+  });
+
   test('golden: string interpolation → printf (issue 016)', () async {
     final result = await _compileAndRun('test/interp.kl', tmp);
     expect(result.exitCode, 0, reason: result.stderr);

@@ -1,0 +1,10 @@
+// Thin libm helpers — Klin module style (`import math`), not a global JS Math.
+
+import math
+
+fn main() {
+    let x: f64 = math.pi() / 2.0
+    printf("sin(pi/2)=%.4f\n", math.sin(x))
+    printf("sqrt(2)=%.4f\n", math.sqrt(2.0))
+    printf("abs(-3.5)=%.1f\n", math.abs(-3.5))
+}
