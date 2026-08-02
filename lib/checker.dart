@@ -85,6 +85,7 @@ final class Checker {
   final Map<String, StructDecl> _structs = {};
   final Map<String, EnumDecl> _enums = {};
   final Map<String, _FuncSignature> _methods = {};
+  final Map<String, _FuncSignature> _assocFuncs = {};
   final List<FuncDecl> _allFunctions = [];
   Map<String, Map<String, String>> _importAliases = {};
   KlinType _currentReturn = const VoidType();
@@ -100,6 +101,7 @@ final class Checker {
     _structs.clear();
     _enums.clear();
     _methods.clear();
+    _assocFuncs.clear();
     _allFunctions
       ..clear()
       ..addAll(program.funcs);
@@ -109,7 +111,10 @@ final class Checker {
     _registerEnums(program);
     _registerFunctions(program);
     final main = program.funcs
-        .where((func) => func.receiver == null && func.name == 'main')
+        .where((func) =>
+            func.receiver == null &&
+            func.associatedType == null &&
+            func.name == 'main')
         .toList();
     if (main.isEmpty) {
       throw CheckError('missing required `main` function', program.pos);
@@ -256,10 +261,24 @@ final class Checker {
   void _registerFunctions(Program program) {
     for (final func in program.funcs) {
       _currentModule = func.moduleName;
-      final key = func.receiver == null
-          ? _key(func.moduleName, func.name)
-          : '${_resolveType(func.receiver!.typeName, func.receiver!.pos).displayName}.${func.name}';
-      final collection = func.receiver == null ? _functions : _methods;
+      final String key;
+      final Map<String, _FuncSignature> collection;
+      if (func.receiver != null) {
+        key =
+            '${_resolveType(func.receiver!.typeName, func.receiver!.pos).displayName}.${func.name}';
+        collection = _methods;
+      } else if (func.associatedType != null) {
+        final assocType = _resolveType(func.associatedType!, func.pos);
+        if (assocType is! StructType && assocType is! EnumType) {
+          throw CheckError(
+              'associated function type must be a struct or enum', func.pos);
+        }
+        key = '${assocType.displayName}.${func.name}';
+        collection = _assocFuncs;
+      } else {
+        key = _key(func.moduleName, func.name);
+        collection = _functions;
+      }
       if (collection.containsKey(key)) {
         throw CheckError('redeclaration of function `${func.name}`', func.pos);
       }
@@ -1382,7 +1401,57 @@ final class Checker {
     return _mangledFreeName(func.moduleName, func.name);
   }
 
+  /// Resolves `Type.func(args)` — an associated (static) function call where the
+  /// "receiver" is a type name, not a value. Returns the result type, or `null`
+  /// when this is a normal instance-method call.
+  KlinType? _tryAssociatedCall(MethodCallExpr call) {
+    final receiver = call.receiver;
+    if (receiver is! NameExpr) return null;
+    if (_scope.lookup(receiver.name) != null) return null; // a variable
+    final key = _key(_currentModule, receiver.name);
+    if (!_enums.containsKey(key) && !_structs.containsKey(key)) return null;
+    final type = _resolveType(receiver.name, receiver.pos);
+    final String module;
+    final String typeName;
+    switch (type) {
+      case StructType(:final moduleName, :final name):
+        module = moduleName;
+        typeName = name;
+      case EnumType(:final moduleName, :final name):
+        module = moduleName;
+        typeName = name;
+      default:
+        return null;
+    }
+    final signature = _assocFuncs['${type.displayName}.${call.name}'];
+    if (signature == null) {
+      throw CheckError(
+        'type `$typeName` has no associated function `${call.name}`',
+        call.pos,
+      );
+    }
+    if (call.args.length != signature.paramTypes.length) {
+      throw CheckError(
+        'associated function `$typeName.${call.name}` expects '
+        '${signature.paramTypes.length} arguments, got ${call.args.length}',
+        call.pos,
+      );
+    }
+    for (var i = 0; i < call.args.length; i++) {
+      final arg = call.args[i];
+      _expectAssignable(signature.paramTypes[i], _inferExpr(arg), arg.pos);
+      _materialize(arg, signature.paramTypes[i]);
+    }
+    call.mangledName = module.isEmpty
+        ? '${typeName}_${call.name}'
+        : '${module}_${typeName}_${call.name}';
+    call.isAssociated = true;
+    return signature.returnType;
+  }
+
   KlinType _checkMethodCall(MethodCallExpr call) {
+    final assoc = _tryAssociatedCall(call);
+    if (assoc != null) return assoc;
     final receiverType = _inferExpr(call.receiver);
     if (receiverType is! StructType && receiverType is! EnumType) {
       throw CheckError(

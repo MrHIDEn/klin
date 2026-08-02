@@ -24,13 +24,19 @@ String _functionHeader(FuncDecl func) {
   final name = func.name == 'main'
       ? 'main'
       : codename ??
-          (func.receiver == null
-              ? _freeCName(func.moduleName, func.name)
-              : _methodCName(
+          (func.receiver != null
+              ? _methodCName(
                   func.moduleName,
                   _receiverTypeName(func.receiver!),
                   func.name,
-                ));
+                )
+              : func.associatedType != null
+                  ? _methodCName(
+                      func.moduleName,
+                      _lastTypeSegment(func.associatedType!),
+                      func.name,
+                    )
+                  : _freeCName(func.moduleName, func.name));
   final staticPrefix = !func.isPub &&
           func.name != 'main' &&
           codename == null &&
@@ -40,9 +46,11 @@ String _functionHeader(FuncDecl func) {
   return '$staticPrefix${_cType(returnType)} $name(${params.isEmpty ? 'void' : params.join(', ')})';
 }
 
-String _receiverTypeName(Receiver receiver) => receiver.typeName.contains('.')
-    ? receiver.typeName.split('.').last
-    : receiver.typeName;
+String _receiverTypeName(Receiver receiver) =>
+    _lastTypeSegment(receiver.typeName);
+
+String _lastTypeSegment(String typeName) =>
+    typeName.contains('.') ? typeName.split('.').last : typeName;
 
 String _cType(KlinType type) => switch (type) {
       PrimType(:final kind) => kind.cType,

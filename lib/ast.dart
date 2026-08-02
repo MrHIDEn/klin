@@ -176,6 +176,11 @@ final class FieldDecl {
 final class FuncDecl {
   final String name;
   final Receiver? receiver;
+
+  /// For an associated (static) function `fn Type.name(…)`: the type name it is
+  /// namespaced under (issue: associated functions). `null` for free functions
+  /// and instance methods (which use [receiver]).
+  final String? associatedType;
   final List<Param> params;
   final String? returnTypeName;
   final Block? body;
@@ -195,6 +200,7 @@ final class FuncDecl {
     required this.returnTypeName,
     required this.body,
     required this.pos,
+    this.associatedType,
     this.attrs = const [],
     this.isPub = false,
     this.moduleName = '',
@@ -694,6 +700,10 @@ final class MethodCallExpr extends Expr {
   /// Filled by the checker.
   String? mangledName;
   bool receiverByRef = false;
+
+  /// True when the "receiver" is a type name and this is an associated
+  /// (static) function call `Type.func(…)` — emitted with no receiver argument.
+  bool isAssociated = false;
 
   MethodCallExpr({
     required this.receiver,

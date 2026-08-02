@@ -275,8 +275,17 @@ final class Parser {
         pos: receiverName.pos,
       );
     }
-    final name = _expect(TokenKind.ident, 'expected function name');
+    var name = _expect(TokenKind.ident, 'expected function name');
     _rejectCKeyword(name, 'a function name');
+    // Associated (static) function: `fn Type.name(…)` — the first identifier is
+    // the type it is namespaced under (no instance receiver).
+    String? associatedType;
+    if (receiver == null && _check(TokenKind.dot)) {
+      _advance();
+      associatedType = name.lexeme;
+      name = _expect(TokenKind.ident, 'expected associated function name');
+      _rejectCKeyword(name, 'a function name');
+    }
     _expect(TokenKind.lParen, 'oczekiwano `(`');
     final params = <Param>[];
     if (!_check(TokenKind.rParen)) {
@@ -313,6 +322,7 @@ final class Parser {
     return FuncDecl(
       name: name.lexeme,
       receiver: receiver,
+      associatedType: associatedType,
       params: params,
       returnTypeName: returnTypeName,
       body: attrs.any((attr) => attr.name == 'cimport') ? null : _block(),

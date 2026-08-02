@@ -107,6 +107,7 @@ void _writeFunc(StringBuffer buf, FuncDecl decl, int indent) {
     if (recv.isMut) buf.write('mut ');
     buf.write('${recv.name}: ${recv.typeName}) ');
   }
+  if (decl.associatedType != null) buf.write('${decl.associatedType}.');
   buf.write(decl.name);
   buf.write('(');
   buf.write(

@@ -107,6 +107,16 @@ to/from the integer base is explicit via `cast` (`cast(i32, c)`, `cast(Color, 1)
 `enum E : T`, so gcc/clang/tcc all work), zero hidden cost. See
 [issues/072-enums.md](issues/072-enums.md), [`examples/enums.kl`](examples/enums.kl).
 
+### Associated (static) functions
+
+`fn Type.name(…)` declares a function namespaced under a type, with no instance
+receiver — constructors and parsers such as `fn Point.new(x, y: i32): Point` or
+`fn Color.from_name(s: str): !Color`. Call them as `Type.name(…)` (e.g.
+`Point.new(3, 4)`, `Color.from_name("red")`). Works on enums and structs; emits
+as a plain C function (`Type_name(…)`), zero hidden cost. See
+[issues/079-associated-functions.md](issues/079-associated-functions.md),
+[`examples/associated_fn.kl`](examples/associated_fn.kl).
+
 ### Short declaration (`:=`)
 
 `name := expr` is sugar for `let mut name = expr`. See
