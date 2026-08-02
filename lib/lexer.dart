@@ -62,18 +62,38 @@ final class Lexer {
         return Token(TokenKind.rBracket, ']', start);
       case '+':
         _advance();
+        if (!_atEnd && _peek == '=') {
+          _advance();
+          return Token(TokenKind.plusEqual, '+=', start);
+        }
         return Token(TokenKind.plus, '+', start);
       case '-':
         _advance();
+        if (!_atEnd && _peek == '=') {
+          _advance();
+          return Token(TokenKind.minusEqual, '-=', start);
+        }
         return Token(TokenKind.minus, '-', start);
       case '*':
         _advance();
+        if (!_atEnd && _peek == '=') {
+          _advance();
+          return Token(TokenKind.starEqual, '*=', start);
+        }
         return Token(TokenKind.star, '*', start);
       case '/':
         _advance();
+        if (!_atEnd && _peek == '=') {
+          _advance();
+          return Token(TokenKind.slashEqual, '/=', start);
+        }
         return Token(TokenKind.slash, '/', start);
       case '%':
         _advance();
+        if (!_atEnd && _peek == '=') {
+          _advance();
+          return Token(TokenKind.percentEqual, '%=', start);
+        }
         return Token(TokenKind.percent, '%', start);
       case '&':
         _advance();

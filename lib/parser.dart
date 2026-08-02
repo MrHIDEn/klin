@@ -429,9 +429,14 @@ final class Parser {
     throw ParseError('expected assignment `=` or call', expr.pos);
   }
 
-  /// Returns the binary op (`&`, `|`, …) when the next token is a bitwise
-  /// compound-assign token; otherwise `null`.
+  /// Returns the binary op when the next token is a compound-assign token
+  /// (`+=`, `&=`, `<<=`, …); otherwise `null`.
   String? _compoundAssignOp() {
+    if (_check(TokenKind.plusEqual)) return '+';
+    if (_check(TokenKind.minusEqual)) return '-';
+    if (_check(TokenKind.starEqual)) return '*';
+    if (_check(TokenKind.slashEqual)) return '/';
+    if (_check(TokenKind.percentEqual)) return '%';
     if (_check(TokenKind.ampEqual)) return '&';
     if (_check(TokenKind.pipeEqual)) return '|';
     if (_check(TokenKind.caretEqual)) return '^';

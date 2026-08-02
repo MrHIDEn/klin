@@ -57,10 +57,15 @@ enum TokenKind {
 
   // operators and punctuation
   plus,
+  plusEqual, // `+=`
   minus,
+  minusEqual, // `-=`
   star,
+  starEqual, // `*=`
   slash,
+  slashEqual, // `/=`
   percent,
+  percentEqual, // `%=`
   ampersand, // unary address / binary bitwise AND
   ampEqual, // `&=`
   pipe, // bitwise OR `|`
