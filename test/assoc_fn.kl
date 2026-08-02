@@ -1,0 +1,38 @@
+@[cimport, codename("strcmp")]
+fn strcmp(a: str, b: str): i32
+
+enum Color { Red, Green, Blue }
+
+fn (c: Color) name(): str {
+    match c {
+        Color.Red { return "red" }
+        Color.Green { return "green" }
+        else { return "blue" }
+    }
+}
+
+// Associated (static) function on an enum: str -> Color, failable (`!Color`).
+fn Color.from_name(s: str): !Color {
+    if strcmp(s, "red") == 0 { return Color.Red }
+    if strcmp(s, "green") == 0 { return Color.Green }
+    if strcmp(s, "blue") == 0 { return Color.Blue }
+    return error(1)
+}
+
+struct Point { x, y: i32 }
+
+// Associated constructor on a struct.
+fn Point.new(x, y: i32): Point {
+    return Point{ x: x, y: y }
+}
+
+fn main() {
+    let c: Color = Color.from_name("green") or { Color.Red }
+    printf("parsed: %s\n", c.name())
+
+    let bad: Color = Color.from_name("nope") or { Color.Blue }
+    printf("fallback: %s\n", bad.name())
+
+    let p: Point = Point.new(3, 4)
+    printf("point: %d %d\n", p.x, p.y)
+}

@@ -2786,6 +2786,62 @@ fn main() {
     expect(c, contains('add(2, 3)'));
   });
 
+  test('golden: associated functions on types (Type.func)', () async {
+    final result = await _compileAndRun('test/assoc_fn.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/assoc_fn.out').readAsString());
+
+    final source = File('test/assoc_fn.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/assoc_fn.kl');
+    // Associated functions emit as plain C functions with no receiver arg,
+    // mangled `Type_func`.
+    expect(c, contains('Color_from_name(const char* s)'));
+    expect(c, contains('Point_new(int32_t x, int32_t y)'));
+    expect(c, contains('Point_new(3, 4)'));
+  });
+
+  test('error: unknown associated function (Type.func)', () {
+    const source = '''
+enum Color { Red, Green }
+fn main() {
+  let c: Color = Color.parse("red")
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError &&
+          e.toString().contains('no associated function'))),
+    );
+  });
+
+  test('error: associated function wrong argument count (Type.func)', () {
+    const source = '''
+struct Point { x, y: i32 }
+fn Point.new(x, y: i32): Point { return Point{ x: x, y: y } }
+fn main() {
+  let p: Point = Point.new(1)
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError && e.toString().contains('expects 2 arguments'))),
+    );
+  });
+
+  test('klin fmt: formats associated function declaration (Type.func)', () {
+    const ugly =
+        'struct Point{x,y:i32}\nfn Point.new(x,y:i32):Point{return Point{x:x,y:y}}\nfn main(){}';
+    final once = formatSource(ugly);
+    expect(once, contains('fn Point.new(x: i32, y: i32): Point {'));
+    expect(formatSource(once), once);
+  });
+
   test('error: wrong function argument count', () {
     final source = File('test/bad_arity.kl').readAsStringSync();
     final program = Parser(Lexer(source).tokenize()).parse();

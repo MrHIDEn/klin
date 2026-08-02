@@ -1,0 +1,44 @@
+// Associated (static) functions on types: `fn Type.name(...)`, called as
+// `Type.name(...)`. No instance receiver — they emit as plain C functions
+// (`Type_name(...)`), zero hidden cost. Useful for constructors and parsers.
+
+@[cimport, codename("strcmp")]
+fn strcmp(a: str, b: str): i32
+
+enum Color { Red, Green, Blue }
+
+fn (c: Color) name(): str {
+    match c {
+        Color.Red { return "red" }
+        Color.Green { return "green" }
+        else { return "blue" }
+    }
+}
+
+// Reverse of `name`: parse a string into a Color. Failable (`!Color`), like a
+// Swift `init?` / Rust `from_str` — the caller decides how to handle the error.
+fn Color.from_name(s: str): !Color {
+    if strcmp(s, "red") == 0 { return Color.Red }
+    if strcmp(s, "green") == 0 { return Color.Green }
+    if strcmp(s, "blue") == 0 { return Color.Blue }
+    return error(1)
+}
+
+struct Point { x, y: i32 }
+
+// A constructor on a struct.
+fn Point.new(x, y: i32): Point {
+    return Point{ x: x, y: y }
+}
+
+fn main() {
+    // `or { … }` supplies a fallback for the failable parse.
+    let c: Color = Color.from_name("green") or { Color.Red }
+    printf("parsed: %s\n", c.name())
+
+    let unknown: Color = Color.from_name("teal") or { Color.Blue }
+    printf("fallback: %s\n", unknown.name())
+
+    let p: Point = Point.new(3, 4)
+    printf("point: %d %d\n", p.x, p.y)
+}
