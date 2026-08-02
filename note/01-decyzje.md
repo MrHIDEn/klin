@@ -135,6 +135,27 @@ Ewentualnie adnotacja wyłączająca zerowanie dla mikrooptymalizacji.
 
 ---
 
+## D8. Precedencja operatorów bitowych — ROZSTRZYGNIĘTE
+
+**Wybór: jak Rust, nie jak C.**
+
+```
+* / %  →  + -  →  << >>  →  &  →  ^  →  |  →  porównania  →  == !=
+```
+
+W C bitowe leżą *poniżej* porównań, więc `a & b == c` to `a & (b == c)` —
+klasyczna pułapka. W Klinie (jak w Ruście) bitowe wiążą mocniej:
+`a & b == c` ⇒ `(a & b) == c`. Emisja do C nadal 1:1; nawiasowanie
+`BinaryExpr` zachowuje zamierzoną kolejność.
+
+Binarny `&` vs unarny `&` (adres) — rozróżnienie po pozycji, jak `*`
+(mnożenie vs dereferencja).
+
+Zaimplementowane w [078](../issues/078-bitwise-ops.md); przykład:
+[`examples/bitwise.kl`](../examples/bitwise.kl).
+
+---
+
 ## D7. Do rozstrzygnięcia później
 
 - Domknięcia — czy w ogóle? Nelua ich nie ma poza top-level. Struct

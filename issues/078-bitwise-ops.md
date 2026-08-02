@@ -33,6 +33,8 @@ Zasady semantyczne:
 
 ## Precedencja (ustalone — jak Rust, nie C)
 
+Decyzja projektowa: [note/01-decyzje.md](../note/01-decyzje.md) **D8**.
+
 ```
 * / %  →  + -  →  << >>  →  &  →  ^  →  |  →  porównania  →  == !=
 ```
