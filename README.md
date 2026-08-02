@@ -97,9 +97,9 @@ dart run bin/klin.dart --emit-pp examples/point_macro.kl
 CLI summary: [docs/06-cli.md](docs/06-cli.md).
 Homebrew details: [docs/17-homebrew.md](docs/17-homebrew.md).
 
-Optional host I/O, clocks, heap, and slice helpers: [`stdlib/`](stdlib/)
-(`import io`, `import testing`, `import time`, `import mem`, `import slice`,
-`import slice_alloc` — see [docs/08-time.md](docs/08-time.md),
+Optional host I/O, strings, clocks, heap, and slice helpers: [`stdlib/`](stdlib/)
+(`import io`, `import str`, `import testing`, `import time`, `import mem`,
+`import slice`, `import slice_alloc` — see [docs/08-time.md](docs/08-time.md),
 [docs/14-allocator.md](docs/14-allocator.md),
 [docs/16-slice.md](docs/16-slice.md)).
 Klin libraries (`lib/`, `-I`, `$KLIN_PATH`; directory packages; import aliases

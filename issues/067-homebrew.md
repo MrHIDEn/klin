@@ -1,6 +1,6 @@
 # 067 — Homebrew: `brew install klin`
 
-**Status:** ✅ done (formula + CI; public tap/release = operator step)
+**Status:** ✅ done (formula + CI + public tap [`homebrew-klin`](https://github.com/MrHIDEn/homebrew-klin) + tag `v0.1.0`)
 **Depends on:** — (public releases unlock *stable*; HEAD works with repo access)
 
 ## Name

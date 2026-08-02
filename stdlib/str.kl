@@ -1,0 +1,18 @@
+/// Optional host string helpers (libc). Do not import on bare metal.
+module str
+
+@[cinclude("<string.h>"), cimport, codename("strcmp")]
+fn c_strcmp(a: str, b: str): i32
+
+@[cinclude("<string.h>"), cimport, codename("strlen")]
+fn c_strlen(s: str): usize
+
+/// Content equality (`strcmp` == 0). Visible cost — not `==` on `str`.
+pub fn eq(a, b: str): bool {
+    return c_strcmp(a, b) == 0
+}
+
+/// Byte length (`strlen`). Visible cost.
+pub fn len(s: str): usize {
+    return c_strlen(s)
+}

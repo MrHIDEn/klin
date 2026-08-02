@@ -1151,6 +1151,21 @@ fn main() {
     expect(c, isNot(contains('io_println(')));
   });
 
+  test('golden: stdlib str.eq / str.len (issue 080)', () async {
+    final result = await _compileAndRun('test/str_eq.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/str_eq.out').readAsString());
+
+    final program = loadProject('test/str_eq.kl');
+    Checker().check(program);
+    final c = emitC(program, 'test/str_eq.kl');
+    expect(c, contains('#include <string.h>'));
+    expect(c, contains('str_eq('));
+    expect(c, contains('str_len('));
+    expect(c, contains('strcmp('));
+    expect(c, contains('strlen('));
+  });
+
   test('golden: string interpolation → printf (issue 016)', () async {
     final result = await _compileAndRun('test/interp.kl', tmp);
     expect(result.exitCode, 0, reason: result.stderr);
@@ -2987,8 +3002,7 @@ fn main() {
     expect(result.exitCode, 0, reason: result.stderr);
     expect(result.stdout, await File('test/assoc_fn.out').readAsString());
 
-    final source = File('test/assoc_fn.kl').readAsStringSync();
-    final program = Parser(Lexer(source).tokenize()).parse();
+    final program = loadProject('test/assoc_fn.kl');
     Checker().check(program);
     final c = emitC(program, 'test/assoc_fn.kl');
     // Associated functions emit as plain C functions with no receiver arg,
@@ -2996,6 +3010,7 @@ fn main() {
     expect(c, contains('Color_from_name(const char* s)'));
     expect(c, contains('Point_new(int32_t x, int32_t y)'));
     expect(c, contains('Point_new(3, 4)'));
+    expect(c, contains('str_eq('));
   });
 
   test('error: unknown associated function (Type.func)', () {

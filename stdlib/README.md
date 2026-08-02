@@ -17,6 +17,7 @@ User libraries / directory packages: [docs/11-klin-libraries.md](../docs/11-klin
 | Module | Role |
 |---|---|
 | [`io`](io.kl) | Host `print` / `println` (thin libc wrappers) |
+| [`str`](str.kl) | Host `eq` / `len` (thin `strcmp` / `strlen`; no `==` on `str`) |
 | [`testing`](testing.kl) | `assert` / `assert_eq_i32` for `klin test` |
 | [`time`](time.kl) | Wall / monotonic clocks, `Duration`, format, UTC calendar `add_*` |
 | [`mem`](mem.kl) | Explicit host heap `Allocator` (`malloc`/`free`) |
@@ -33,6 +34,20 @@ io.println("with newline")
 ```
 
 Do **not** import on bare metal (pulls `stdio`).
+
+## `str`
+
+Content compare and length via libc ([issue 080](../issues/080-stdlib-str.md)).
+Cost is a function call — `==` on `str` is intentionally unsupported:
+
+```klin
+import str
+
+if str.eq(s, "red") { … }
+let n = str.len(s)
+```
+
+Do **not** import on bare metal (pulls `string.h`).
 
 ## `testing`
 

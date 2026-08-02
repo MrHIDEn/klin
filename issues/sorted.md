@@ -79,7 +79,7 @@ building the core from scratch.
 | [063](063-remote-fixture-osa.md) | Remote fixture `mrhiden/osa` (e2e 049) | ✅ | 047 |
 | [065](065-project-lockfile.md) | `klin.lock` / checksums (like go.sum) | ✅ | 049 |
 | [066](066-klin-upgrade-outdated.md) | `klin upgrade` / outdated (newer deps) | ✅ | 049 |
-| [067](067-homebrew.md) | Homebrew: `brew install klin` (formula + CI) | ✅ | — |
+| [067](067-homebrew.md) | Homebrew: `brew install klin` (formula + tap + v0.1.0) | ✅ | — |
 | [050](050-sqlite-wrapper.md) | SQLite wrapper (FFI, low priority) | 💭 | 021 |
 | [070](070-host-orm-sqlite.md) | ORM-like / typed repo over SQLite (host, low priority) | 💭 | 050, 021 |
 | [051](051-json-wrapper.md) | JSON wrapper + `$…` paths (low priority) | 💭 | 021, 026? |
@@ -100,11 +100,11 @@ building the core from scratch.
 | [073](073-mem-leak-detection.md) | Potential memory-leak detection (Valgrind/ASan, debug allocator, lint) | 💭 | 057, 008 |
 | [074](074-board-ioc-klin-mod.md) | `board` in `klin.mod` + narrow CubeMX `.ioc` (pinout) | 💭 | 053 |
 | [075](075-board-pack-init-host.md) | Board pack / `klin init` vs host — linker & startup | 💭 | 010, 054, 053 |
-| [076](076-release-windows-arm.md) | Release: Windows/ARM targets + publishing + checksums | 🔨 | 067 |
+| [076](076-release-windows-arm.md) | Release: Windows/ARM targets + publishing + checksums | ✅ | 067 |
 | [077](077-string-template.md) | Runtime string substitution / templates (`{0}` positional + `{key}` KV) | 💭 | 007, 057, 016, 060 |
 | [078](078-bitwise-ops.md) | Bitwise operators (`\| & ^ ~ << >>`; integers only) | ✅ | 002, 019 |
 | [079](079-associated-functions.md) | Associated/static functions on types (`Type.func`; constructors/parsers) | ✅ | 005, 072 |
-| [080](080-stdlib-str.md) | `stdlib/str` — `eq`/`len`/… (string compares without `==`) | 💭 | 012, 021 |
+| [080](080-stdlib-str.md) | `stdlib/str` — `eq`/`len`/… (string compares without `==`) | ✅ | 012, 021 |
 | [081](081-number-literals.md) | Literals: binary `0b`, float exponent `1e…`, char `'A'`, (octal) | 🔨 (Group 1 ✅) | 002 |
 
 ---
