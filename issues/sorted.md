@@ -102,6 +102,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [077](077-string-template.md) | Podmiana w napisach / szablony runtime (`{0}` pozycyjne + `{klucz}` KV) | 💭 | 007, 057, 016, 060 |
 | [078](078-bitwise-ops.md) | Operatory bitowe (`\| & ^ ~ << >>`; tylko całkowite) | 💭 | 002, 019 |
 | [079](079-associated-functions.md) | Funkcje asocjowane/statyczne na typach (`Type.func`; konstruktory/parsery) | ✅ | 005, 072 |
+| [080](080-stdlib-str.md) | `stdlib/str` — `eq`/`len`/… (porównania napisów bez operatora `==`) | 💭 | 012, 021 |
 
 ---
 
