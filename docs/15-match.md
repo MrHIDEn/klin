@@ -1,10 +1,10 @@
-# `match` — dopasowanie z domyślnym breakiem
+# `match` — pattern matching with default break
 
 Issue: [014](../issues/014-match.md).
 
-## Składnia
+## Syntax
 
-Instrukcja:
+Statement:
 
 ```
 match x {
@@ -20,7 +20,7 @@ match x {
 }
 ```
 
-Wyrażenie (tylko jako inicjalizator `let` albo prawa strona przypisania):
+Expression (only as `let` initializer or right-hand side of assignment):
 
 ```
 let fee = match x {
@@ -30,32 +30,31 @@ let fee = match x {
 }
 ```
 
-Wzorce ramienia:
+Arm patterns:
 
-- grupa wartości: `1, 2, 3`
-- zakres **domknięty obustronnie**: `4..=10` (osobny token `..=`;
-  `..<` pozostaje półotwartym zakresem `for`)
-- `else` — musi być ostatnie
+- value group: `1, 2, 3`
+- **closed on both ends** range: `4..=10` (separate token `..=`;
+  `..<` remains half-open range for `for`)
+- `else` — must be last
 
-## Semantyka
+## Semantics
 
-- **Domyślny break.** Wykonuje się pierwsze pasujące ramię; brak fallthrough
-  i brak słowa `fallthrough`.
-- Podmiot jest **całkowitoliczbowy** (`i8`…`u64`, `int`). `f64`, struktura,
-  wskaźnik → błąd checkera.
-- Ramię to blok, nie `case`: `break` / `continue` w ramieniu odnoszą się do
-  otaczającej pętli, `return` wraca z funkcji (i uruchamia `defer`).
-- W instrukcji `else` jest opcjonalne — bez niego brak dopasowania nic nie
-  robi. W wyrażeniu `else` jest **wymagane** (nie ma wartości „w przeciwnym
-  razie").
-- Typ wyrażenia: wspólny typ ramion (unifikacja jak w literałach tablicy);
-  `match` liczy się jako zwracający na wszystkich ścieżkach tylko wtedy, gdy
-  ma `else` i każde ramię zwraca.
+- **Default break.** The first matching arm runs; no fallthrough
+  and no `fallthrough` keyword.
+- Subject must be **integral** (`i8`…`u64`, `int`). `f64`, struct,
+  pointer → checker error.
+- An arm is a block, not `case`: `break` / `continue` in an arm refer to the
+  enclosing loop, `return` returns from the function (and runs `defer`).
+- In a statement `else` is optional — no match does nothing. In an expression `else` is **required** (there is no “otherwise"
+  value).
+- Expression type: common type of arms (unification like array literals);
+  `match` counts as returning on all paths only when
+  it has `else` and every arm returns.
 
-## Emisja
+## Emission
 
-Łańcuch `if` / `else if` / `else`. Podmiot ląduje **raz** w zmiennej
-tymczasowej, więc wzorzec wielowartościowy ani zakres go nie przeliczają:
+Chain of `if` / `else if` / `else`. Subject lands **once** in a temporary
+variable, so multi-value patterns and ranges do not re-evaluate it:
 
 ```c
 int32_t klin_val_0 = x;
@@ -68,8 +67,8 @@ if (klin_val_0 == 1 || klin_val_0 == 2 || klin_val_0 == 3) {
 }
 ```
 
-Forma wyrażenia obniża się do deklaracji celu + przypisania w gałęziach
-(dlatego jest dozwolona tylko w pozycji `let` / przypisania):
+Expression form lowers to target declaration + assignment in branches
+(hence allowed only in `let` / assignment position):
 
 ```c
 int32_t fee;
@@ -77,23 +76,23 @@ int32_t klin_val_0 = x;
 if (klin_val_0 == 0) { fee = 0; } else if (…) { fee = 10; } else { fee = 25; }
 ```
 
-Świadomie **nie** `switch`: `switch` nie obsługuje zakresów przenośnie
-(`case 4 ... 10` to rozszerzenie GCC), a `break` w `case` kolidowałby z
-`break` pętli. Łańcuch `if` daje ten sam kod maszynowy co ręczny C —
-zasada nadrzędna spełniona.
+Deliberately **not** `switch`: `switch` does not handle ranges portably
+(`case 4 ... 10` is a GCC extension), and `break` in `case` would clash with
+loop `break`. An `if` chain gives the same machine code as hand-written C —
+overarching principle satisfied.
 
-## Ograniczenia MVP
+## MVP limitations
 
-- brak wzorców relacyjnych (`>= 4`), brak `|` jako alternatywy — jest `,`
-- brak dopasowania po napisach i strukturach (`str` nie jest jeszcze typem
-  wartościowym)
-- brak sprawdzania wyczerpania (poza wymaganym `else` w wyrażeniu) i
-  ostrzeżeń o martwych ramionach
-- `match` jako wyrażenie tylko w `let` / przypisaniu; w argumencie wywołania
-  → błąd checkera z podpowiedzią
-- podmiot w nagłówku nie przyjmuje gołego literału struktury
-  (`match Point{…}.x` — użyj nawiasów: `match (Point{…}).x`), bo `{`
-  otwiera blok ramion
+- no relational patterns (`>= 4`), no `|` as alternative — use `,`
+- no matching on strings and structs (`str` is not yet a value
+  type)
+- no exhaustiveness checking (beyond required `else` in expression) and
+  dead-arm warnings
+- `match` as expression only in `let` / assignment; in call argument
+  → checker error with hint
+- subject in header does not accept bare struct literal
+  (`match Point{…}.x` — use parentheses: `match (Point{…}).x`), because `{`
+  opens the arm block
 
-Przykład: [`examples/match.kl`](../examples/match.kl).
-Testy: `test/match_stmt.kl`, `test/match_expr.kl`, `test/fmt_match.kl`.
+Example: [`examples/match.kl`](../examples/match.kl).
+Tests: `test/match_stmt.kl`, `test/match_expr.kl`, `test/fmt_match.kl`.

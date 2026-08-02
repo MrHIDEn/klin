@@ -1,7 +1,7 @@
-# `Allocator` — jawny heap (stdlib `mem`)
+# `Allocator` — explicit heap (stdlib `mem`)
 
-Model D1 ([01-decyzje.md](01-decyzje.md)): ręczny + `defer` + alokator jako
-**jawny** argument. Brak GC / autofree / ukrytego `malloc` w rdzeniu języka.
+D1 model ([01-decyzje.md](01-decyzje.md)): manual + `defer` + allocator as
+**explicit** argument. No GC / autofree / hidden `malloc` in the language core.
 
 ## MVP (`import mem`)
 
@@ -11,7 +11,7 @@ import mem
 fn main() {
     let mut a = mem.heap()
     let mut buf = a.alloc_bytes(16) or {
-        // n < 0 lub OOM — pusty slice (bezpieczny z free_*)
+        // n < 0 or OOM — empty slice (safe with free_*)
         mem.empty_u8()
     }
     defer a.free_bytes(buf)
@@ -21,48 +21,48 @@ fn main() {
 }
 ```
 
-| API | Uwagi |
+| API | Notes |
 |---|---|
-| `mem.heap()` | host libc heap (pusty `Allocator` pod przyszłe arena/vtable) |
-| `a.alloc_bytes(n)` / `a.free_bytes` | `![]u8`; metody na `mut Allocator` |
-| `mem.alloc_i32` / `free_i32` (+ `u8`, `i64`, `f64`) | wolne funkcje z `*mut Allocator` |
-| `mem.empty_u8` / `empty_i32` / `empty_i64` / `empty_f64` | `{NULL,0}` — fallback w `or`, bezpieczny z `free_*` |
+| `mem.heap()` | host libc heap (empty `Allocator` for future arena/vtable) |
+| `a.alloc_bytes(n)` / `a.free_bytes` | `![]u8`; methods on `mut Allocator` |
+| `mem.alloc_i32` / `free_i32` (+ `u8`, `i64`, `f64`) | free functions with `*mut Allocator` |
+| `mem.empty_u8` / `empty_i32` / `empty_i64` / `empty_f64` | `{NULL,0}` — fallback in `or`, safe with `free_*` |
 
-- `n < 0` → `error(1)`; OOM → `error(2)`; `n == 0` → pusty slice **bez** `malloc`
-- `free_*` na pustym / NULL = no-op (`free(NULL)` w C)
-- Emisja: `klin_mem_alloc_*` / `klin_mem_free_*` (+ `#include <stdlib.h>`) tylko gdy
-  program importuje `mem` / woła te symbole
-- Freestanding: **nie** `import mem`
+- `n < 0` → `error(1)`; OOM → `error(2)`; `n == 0` → empty slice **without** `malloc`
+- `free_*` on empty / NULL = no-op (`free(NULL)` in C)
+- Emission: `klin_mem_alloc_*` / `klin_mem_free_*` (+ `#include <stdlib.h>`) only when
+  program imports `mem` / calls those symbols
+- Freestanding: **do not** `import mem`
 
 Issue: [057](../issues/057-allocator.md). Example: [`examples/mem_heap.kl`](../examples/mem_heap.kl).
 
-## Konsumenci stdlib
+## Stdlib consumers
 
-| Moduł | Uwagi |
+| Module | Notes |
 |---|---|
 | [`slice_alloc`](../stdlib/slice_alloc.kl) | `map_alloc_*` / `filter_alloc_*` — [017](../issues/017-collection-methods.md), [docs/16-slice.md](16-slice.md) |
 
-Caller zawsze: `defer mem.free_i32(&a, out)` (lub `free_u8` / `free_bytes`).
+Caller always: `defer mem.free_i32(&a, out)` (or `free_u8` / `free_bytes`).
 
-## Nie obiecywać w MVP / później
+## Do not promise in MVP / later
 
-Szkic D1 `a.alloc(u8, n)` wymaga **argumentu typu** w wywołaniu metody.
-Klin tego nie ma w gramatyce (D3 = `$fn` / monomorfizacja, nie generyki —
-[034](../issues/034-typy-generyczne.md)). **Nie obiecywać** `a.alloc(u8, n)`
-jako API publiczne dopóki nie będzie cukru albo generyków.
+D1 sketch `a.alloc(u8, n)` requires a **type argument** in a method call.
+Klin does not have that in the grammar (D3 = `$fn` / monomorphization, not generics —
+[034](../issues/034-typy-generyczne.md)). **Do not promise** `a.alloc(u8, n)`
+as public API until there is sugar or generics.
 
-Dziś zamiast tego:
+Today instead:
 
-- bajty: `a.alloc_bytes(n)` / `a.free_bytes`
-- typowane: jawne `mem.alloc_i32` / `free_i32` (i `u8`) — ewentualnie
-  rozszerzenie przez `$fn` jak w `slice` / `slice_alloc`, nie przez składnię
-  `alloc(T, n)`
+- bytes: `a.alloc_bytes(n)` / `a.free_bytes`
+- typed: explicit `mem.alloc_i32` / `free_i32` (and `u8`) — possibly
+  extended via `$fn` like in `slice` / `slice_alloc`, not via
+  `alloc(T, n)` syntax
 
-**Później (osobne kroki, nie w 057):**
+**Later (separate steps, not in 057):**
 
-| Temat | Gdzie |
+| Topic | Where |
 |---|---|
-| `a.alloc(T, n)` / cukier albo generyki | 034 / D3 |
-| Arena + `deinit` (jeden `defer`) | follow-up po 057 |
-| Vtable wielu alokatorów | follow-up (dziś wystarczy heap + pusty struct) |
-| GC / autofree / ukryty `malloc` w rdzeniu | **nigdy** (zasada nadrzędna) |
+| `a.alloc(T, n)` / sugar or generics | 034 / D3 |
+| Arena + `deinit` (one `defer`) | follow-up after 057 |
+| Vtable of allocators | follow-up (today heap + empty struct is enough) |
+| GC / autofree / hidden `malloc` in core | **never** (overarching principle) |

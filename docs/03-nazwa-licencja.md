@@ -1,111 +1,109 @@
-# Nazwa, rozszerzenie, licencja
+# Name, extension, license
 
-## Nazwa: Klin
+## Name: Klin
 
-Cztery litery, jedna sylaba, wymawialne po polsku i po angielsku
-(/klin/, /klɪn/). Anglojęzyczny przeczyta poprawnie za pierwszym razem.
+Four letters, one syllable, pronounceable in Polish and English
+(/klin/, /klɪn/). An English speaker will read it correctly the first time.
 
-**Metafora jest trafna:** klin to najstarsza maszyna prosta — zero
-ruchomych części, zero narzutu. Język jest cienką warstwą wbijaną między
-programistę a C. Nie zastępuje C, tylko się w nie wklinowuje.
+**The metaphor fits:** a wedge is the oldest simple machine — zero
+moving parts, zero overhead. The language is a thin layer driven between
+the programmer and C. It does not replace C, it wedges into it.
 
-Brzmienie: `K` to fonetyczne `C`, więc "Klin" ≈ "C lin". Przypadek,
-ale przyjemny.
+Sound: `K` is the phonetic `C`, so "Klin" ≈ "C lin". Coincidence,
+but a pleasant one.
 
-### Sprawdzone kolizje
+### Checked collisions
 
-- **Języki programowania** — czysto. Najbliżej: Grotsky (`.gr`), grot
-  (solver MES w Pythonie). Żadne w tej przestrzeni.
-- Konto GitHub `klin` istnieje (3 repo, nie języki).
-- "Klein" to inna nazwa, inne litery — szum, nie kolizja.
-- Po polsku "klin" zwróci stolarkę i siatkówkę; po angielsku miasto Klin
-  pod Moskwą.
+- **Programming languages** — clear. Closest: Grotsky (`.gr`), grot
+  (FEM solver in Python). None in this space.
+- GitHub account `klin` exists (3 repos, not languages).
+- "Klein" is a different name, different letters — noise, not a collision.
+- In Polish "klin" returns carpentry and volleyball; in English the town Klin
+  near Moscow.
 
-**Wniosek:** wszędzie pisać **"Klin language"** albo **"klin-lang"**.
-To jest tag, pod którym się znajdzie.
+**Conclusion:** everywhere write **"Klin language"** or **"klin-lang"**.
+That is the tag under which it will be found.
 
-### Odrzucone kandydatury
+### Rejected candidates
 
-| Nazwa | Powód odrzucenia |
+| Name | Reason for rejection |
 |---|---|
-| NeV | Nev = edytor tekstu; Neva = język dataflow kompilujący do Go; `nev` = kod ISO języka nyaheun |
-| `.nc` / NewC | **nesC** — rozszerzenie C pod TinyOS, ta sama domena, używa `.nc`. Plus NetCDF i G-code CNC |
-| Grot | po brytyjsku "grot" = brud, "grotty" = obskurny. Recenzja pisze się sama: *"Grot is grotty"*. Plus MSBS Grot i Warhammer 40k |
-| C3, E | zajęte (C3 = język Lernö na LLVM; E = język Millera z 1997) |
+| NeV | Nev = text editor; Neva = dataflow language compiling to Go; `nev` = ISO code for Nyaheun |
+| `.nc` / NewC | **nesC** — C extension for TinyOS, same domain, uses `.nc`. Plus NetCDF and CNC G-code |
+| Grot | in British English "grot" = dirt, "grotty" = shabby. Review writes itself: *"Grot is grotty"*. Plus MSBS Grot and Warhammer 40k |
+| C3, E | taken (C3 = Lernö language on LLVM; E = Miller's language from 1997) |
 
-**Lekcja ogólna:** cała przestrzeń dwu-trzyliterowych kombinacji wokół
-C jest wyczerpana trzydziestoma latami prób. Poza tym nazwa typu "NewC"
-mówi, czym język *nie* jest. Zig, Rust, Odin, Hare, Nim — żaden nie
-nazwał się po przodku i wszystkie na tym wygrały.
+**General lesson:** the whole space of two- and three-letter combinations around
+C is exhausted by thirty years of attempts. Beyond that, a name like "NewC"
+says what the language *is not*. Zig, Rust, Odin, Hare, Nim — none named
+themselves after a predecessor and all won on that.
 
-### Do zaklepania
+### To lock in
 
-- [ ] domena `klin.dev` albo `klin-lang.org`
-- [ ] organizacja `klin-lang` na GitHubie
-- [ ] `crates.io`, `npm`, `pypi` (nawet jeśli nigdy tam nie trafię —
-      zajęta nazwa pakietu to sygnał, że słowo jest już oswojone
-      w kontekście programowania)
+- [ ] domain `klin.dev` or `klin-lang.org`
+- [ ] `klin-lang` organization on GitHub
+- [ ] `crates.io`, `npm`, `pypi` (even if I never publish there —
+      a taken package name is a signal the word is already familiar
+      in a programming context)
 
-## Rozszerzenie: `.kl`
+## Extension: `.kl`
 
-Wolne. Alternatywa `.klin`, jeśli potrzebna jednoznaczność.
+Free. Alternative `.klin` if unambiguousness is needed.
 
-## Licencja: MIT
+## License: MIT
 
-**Kluczowe:** licencja kompilatora nie może rzutować na kod, który ktoś
-w nim napisze. GPL straszy ludzi nawet gdy prawnie nie ma podstaw — GCC
-musiało to rozwiązać osobnym Runtime Library Exception.
+**Key point:** the compiler license must not cast onto code someone
+writes in it. GPL scares people even when there is no legal basis — GCC
+had to solve that with a separate Runtime Library Exception.
 
-Wszyscy sąsiedzi wybrali permisywnie: Nelua (MIT — wprost stwierdza,
-że dla programów w Nelui można użyć dowolnej licencji), Go, Rust, Zig, V.
+All neighbors chose permissively: Nelua (MIT — explicitly states
+that programs in Nelua may use any license), Go, Rust, Zig, V.
 
-### Podział
+### Split
 
-| Część | Licencja |
+| Part | License |
 |---|---|
-| kompilator | MIT |
-| biblioteka standardowa | MIT + jawne zdanie w README |
+| compiler | MIT |
+| standard library | MIT + explicit sentence in README |
 
-Zdanie do README:
+Sentence for README:
 
-> Kod wygenerowany przez kompilator Klin oraz fragmenty biblioteki
-> standardowej wkompilowane w Twój program nie podlegają żadnym
-> ograniczeniom — Twój program jest Twój.
+> Code generated by the Klin compiler and standard library fragments
+> compiled into your program are not subject to any restrictions — your program is yours.
 
-To zdanie oszczędza dziesiątek pytań.
+That sentence saves dozens of questions.
 
 ### MIT vs Apache-2.0
 
-Apache-2.0 dodaje jawną klauzulę patentową. Rust używa dual
-`MIT OR Apache-2.0` i to standard w ekosystemie systemowym.
+Apache-2.0 adds an explicit patent clause. Rust uses dual
+`MIT OR Apache-2.0` and that is standard in the systems ecosystem.
 
-Dla projektu solo na start: **MIT** — krótszy, każdy zna. Przejście
-później na dual jest łatwe, dopóki jestem jedynym autorem. Odwrotny
-kierunek (GPL → MIT) jest praktycznie niemożliwy po pojawieniu się
-kontrybutorów.
+For a solo project at the start: **MIT** — shorter, everyone knows it. Moving
+later to dual is easy as long as I am the sole author. The reverse
+(GPL → MIT) is practically impossible after contributors appear.
 
-**Plik `LICENSE` przy pierwszym commicie.** Repozytorium bez niego jest
-domyślnie całkowicie zastrzeżone — nikt nie może go legalnie użyć ani
-forknąć, nawet jeśli jest publiczne.
+**`LICENSE` file on the first commit.** A repo without it is
+fully proprietary by default — nobody can legally use or
+fork it, even if it is public.
 
 ## .gitignore
 
-Szablon **Dart** z GitHuba plus:
+**Dart** template from GitHub plus:
 
 ```gitignore
-/out/          # całe wyjście kompilatora — .c, .o, binarki
+/out/          # all compiler output — .c, .o, binaries
 .idea/
 *.iml
 .DS_Store
 ```
 
-Dwie pułapki:
+Two traps:
 
-1. **Nie ignorować `*.c` wzorcem.** W kroku 10 pojawią się ręcznie pisane
-   moduły C i startup, których ignorować nie wolno. Lepiej wymusić, żeby
-   kompilator pisał wyłącznie do `out/`.
-2. **`pubspec.lock` commitować.** Ignoruje się go dla bibliotek; Klin
-   jest aplikacją CLI.
+1. **Do not ignore `*.c` with a pattern.** At step 10 hand-written
+   C modules and startup appear that must not be ignored. Better to force
+   the compiler to write only to `out/`.
+2. **Commit `pubspec.lock`.** It is ignored for libraries; Klin
+   is a CLI application.
 
-`test/` zawiera pliki `.kl` i oczekiwane wyjścia — muszą być w repo,
-trzymać z dala od `out/`.
+`test/` contains `.kl` files and expected outputs — they must be in the repo,
+kept away from `out/`.

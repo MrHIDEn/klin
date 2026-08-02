@@ -1,24 +1,24 @@
-# Slice helpers — zero-alloc i `*_alloc`
+# Slice helpers — zero-alloc and `*_alloc`
 
-Issue: [017](../issues/017-collection-methods.md). Fn-pointery: [13-fn-ptr.md](13-fn-ptr.md).
-Alokator: [14-allocator.md](14-allocator.md).
+Issue: [017](../issues/017-collection-methods.md). Fn pointers: [13-fn-ptr.md](13-fn-ptr.md).
+Allocator: [14-allocator.md](14-allocator.md).
 
-## Dwa moduły
+## Two modules
 
-| Moduł | Rola | Heap |
+| Module | Role | Heap |
 |---|---|---|
-| [`stdlib/slice.kl`](../stdlib/slice.kl) | odczyty + `*_into` | nie — freestanding-safe |
-| [`stdlib/slice_alloc.kl`](../stdlib/slice_alloc.kl) | `map_alloc_*` / `filter_alloc_*` | tak — `import mem` |
+| [`stdlib/slice.kl`](../stdlib/slice.kl) | reads + `*_into` | no — freestanding-safe |
+| [`stdlib/slice_alloc.kl`](../stdlib/slice_alloc.kl) | `map_alloc_*` / `filter_alloc_*` | yes — `import mem` |
 
-Osobny `slice_alloc`, bo emit nie usuwa nieużywanych `pub`: gdyby `*_alloc`
-siedział w `slice.kl`, każdy `import slice` wciągałby `klin_mem_*` / `malloc`.
+Separate `slice_alloc`, because emit does not remove unused `pub`: if `*_alloc`
+lived in `slice.kl`, every `import slice` would pull in `klin_mem_*` / `malloc`.
 
-Nazwy monomorficzne przez `$fn` (`_i32`, `_u8`, `_i64`, `_f64`) — brak generyków
-w gramatyce. Operacje dzielą się na dwa szablony: ogólny `slice_ops`
-(arytmetyko-wolny — działa dla dowolnego typu) i liczbowy `slice_num_ops`
-(`+`/`*`/`<`/`==` — instancje tylko dla typów liczbowych).
+Monomorphic names via `$fn` (`_i32`, `_u8`, `_i64`, `_f64`) — no generics
+in grammar. Operations split into two templates: general `slice_ops`
+(arithmetic-free — works for any type) and numeric `slice_num_ops`
+(`+`/`*`/`<`/`==` — instances only for numeric types).
 
-## Warstwa 0+1 (`import slice`)
+## Layer 0+1 (`import slice`)
 
 ```klin
 import slice
@@ -36,38 +36,38 @@ fn main() {
 }
 ```
 
-Ogólne (`$fn slice_ops`, dowolny typ):
+General (`$fn slice_ops`, any type):
 
-| Funkcja | Uwagi |
+| Function | Notes |
 |---|---|
-| `each_*` | efekt uboczny |
-| `index_of_*` | indeks albo `-1` |
+| `each_*` | side effect |
+| `index_of_*` | index or `-1` |
 | `any_*` / `all_*` / `count_*` | |
-| `reduce_*` | akumulator + `fn(T,T): T` |
+| `reduce_*` | accumulator + `fn(T,T): T` |
 | `map_into_*` | `dst.len == xs.len`; `!i32` (`0` / `error(1)`) |
-| `filter_into_*` | `dst.len >= xs.len`; `!i32` = liczba zapisanych |
+| `filter_into_*` | `dst.len >= xs.len`; `!i32` = number written |
 | `copy_into_*` | `dst.len >= xs.len`; `!i32` = `xs.len` |
-| `reverse_into_*` | jw.; kopiuje odwrócone |
+| `reverse_into_*` | same; copies reversed |
 
-Liczbowe (`$fn slice_num_ops`, tylko typy liczbowe):
+Numeric (`$fn slice_num_ops`, numeric types only):
 
-| Funkcja | Uwagi |
+| Function | Notes |
 |---|---|
-| `sum_*` | suma; pusty → `0` |
-| `product_*` | iloczyn; pusty → `1` |
-| `min_*` / `max_*` | `!T`; pusty → `error(1)` |
-| `contains_*` | `bool` (porównanie `==`) |
+| `sum_*` | sum; empty → `0` |
+| `product_*` | product; empty → `1` |
+| `min_*` / `max_*` | `!T`; empty → `error(1)` |
+| `contains_*` | `bool` (`==` comparison) |
 
-Instancje: `slice_ops` dla `i32`/`u8`/`i64`/`f64`; `slice_num_ops` dla tych samych
-typów liczbowych.
+Instances: `slice_ops` for `i32`/`u8`/`i64`/`f64`; `slice_num_ops` for the same
+numeric types.
 
-Zapis `dst[i]` na slice jest dozwolony (nagłówek to wartość; bufor współdzielony
-z callerem — jak Go).
+Writing `dst[i]` on a slice is allowed (header is by value; buffer shared
+with caller — like Go).
 
 Example: [`examples/slice_ops.kl`](../examples/slice_ops.kl).  
 Golden: `test/slice_ops.kl`.
 
-## Warstwa 2 (`import mem` + `import slice_alloc`)
+## Layer 2 (`import mem` + `import slice_alloc`)
 
 ```klin
 import mem
@@ -85,25 +85,25 @@ fn main() {
 }
 ```
 
-| Funkcja | Zachowanie |
+| Function | Behavior |
 |---|---|
-| `map_alloc_*` | `alloc(xs.len)` + mapowanie; `![]T` |
-| `filter_alloc_*` | dwa przebiegi: `count` → `alloc(n)` → kopiowanie; `![]T` |
+| `map_alloc_*` | `alloc(xs.len)` + map; `![]T` |
+| `filter_alloc_*` | two passes: `count` → `alloc(n)` → copy; `![]T` |
 
-Instancje dla `i32`/`u8`/`i64`/`f64` (wymagają `mem.alloc_*` danego typu).
+Instances for `i32`/`u8`/`i64`/`f64` (require `mem.alloc_*` of that type).
 
-- Alokator: `*mut mem.Allocator` (jak `mem.alloc_i32`)
-- Błędy alokacji (`n < 0` / OOM) z `mem` przez `!` / `or`
-- **Caller** zwalnia: `defer mem.free_i32(&a, out)` — API nie robi `defer`
-- Predykat w `filter_alloc` jak w `count`: bez side-effectów między przebiegami
+- Allocator: `*mut mem.Allocator` (like `mem.alloc_i32`)
+- Allocation errors (`n < 0` / OOM) from `mem` via `!` / `or`
+- **Caller** frees: `defer mem.free_i32(&a, out)` — API does not `defer`
+- Predicate in `filter_alloc` like in `count`: no side effects between passes
 
 Example: [`examples/slice_alloc_demo.kl`](../examples/slice_alloc_demo.kl)
-(nie nazywaj pliku `slice_alloc.kl` obok `import slice_alloc` — kolizja ścieżki).  
+(do not name the file `slice_alloc.kl` next to `import slice_alloc` — path collision).  
 Golden: `test/slice_alloc_ops.kl`.
 
 ## Non-goals
 
-- Gołe `xs.map(f)` / ukryty `malloc`
-- `using` / autofree wyniku
-- Domknięcia (D7), generyki w rdzeniu (034)
-- Metody na `[]T` jako receiver
+- Bare `xs.map(f)` / hidden `malloc`
+- `using` / autofree of result
+- Closures (D7), generics in core (034)
+- Methods on `[]T` as receiver

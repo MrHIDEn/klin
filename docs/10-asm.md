@@ -1,23 +1,23 @@
-# Jednostki ASM (issue 022)
+# ASM units (issue 022)
 
-Surowy `.s` / `.S` dołączany przez istniejące `@[link]` — **bez** DSL-a ASM
-w Klinie.
+Raw `.s` / `.S` attached via existing `@[link]` — **no** ASM DSL
+in Klin.
 
 ## `.s` vs `.S`
 
-Konwencja toolchainów C (gcc/clang):
+C toolchain convention (gcc/clang):
 
-| Rozszerzenie | Preprocessor C | Sens |
+| Extension | C preprocessor | Meaning |
 |---|---|---|
-| **`.s`** | nie | Plik idzie prosto do assemblera; `#if` / `#define` / `#include` nie działają (albo są zwykłym tekstem / błędem, zależnie od toola). |
-| **`.S`** | tak (`cpp`, potem assembler) | Można pisać `#if defined(__APPLE__)`, `#define SYM _foo`, `#include`. |
+| **`.s`** | no | File goes straight to assembler; `#if` / `#define` / `#include` do not work (or are plain text / error, depending on tool). |
+| **`.S`** | yes (`cpp`, then assembler) | You can write `#if defined(__APPLE__)`, `#define SYM _foo`, `#include`. |
 
-W Klinie (`@[link]`) oba są OK — to tylko ścieżka dla `cc`. Wybór zależy od
-tego, czy potrzebujesz preprocessora.
+In Klin (`@[link]`) both are OK — it is just a path for `cc`. Choice depends on
+whether you need the preprocessor.
 
-Przykład [`examples/asm_add/add.S`](../examples/asm_add/add.S) ma wielkie `.S`,
-żeby ten sam plik obsługiwał Apple (`_asm_add`) vs ELF (`asm_add`) oraz
-aarch64 vs x86_64 przez `#if`.
+Example [`examples/asm_add/add.S`](../examples/asm_add/add.S) uses uppercase `.S`
+so the same file handles Apple (`_asm_add`) vs ELF (`asm_add`) and
+aarch64 vs x86_64 via `#if`.
 
 ## Host
 
@@ -27,18 +27,18 @@ aarch64 vs x86_64 przez `#if`.
 fn asm_add(a: i32, b: i32): i32
 ```
 
-`klin run` przekazuje ścieżkę do host `cc` (jak `.a` / `.o`). Symbole:
+`klin run` passes the path to host `cc` (like `.a` / `.o`). Symbols:
 Klin→ASM / C = `@[codename]` / `@[cexport]`; ASM→Klin = `@[cimport, codename]`.
 
-Przykład: [`examples/asm_add/`](../examples/asm_add/).
+Example: [`examples/asm_add/`](../examples/asm_add/).
 
 ## Bare-metal
 
-`-T linker.ld` i `arm-none-eabi-*` zostają w Makefile. Klin przy `--emit-c`
-zapisuje listę `@[link]` do `out/<base>.link`; Makefile linkuje te pliki
-obok wyemitowanego `.c` (np. `startup.s` z blink STM32).
+`-T linker.ld` and `arm-none-eabi-*` stay in the Makefile. Klin with `--emit-c`
+writes the `@[link]` list to `out/<base>.link`; Makefile links those files
+alongside emitted `.c` (e.g. `startup.s` from STM32 blink).
 
-## Poza zakresem
+## Out of scope
 
-ABI per target, mangling bez `codename`, assembler w `.kl`, CLI tylko pod ASM.
-FFI C ogólnie: [09-ffi-c.md](09-ffi-c.md).
+ABI per target, mangling without `codename`, assembler in `.kl`, CLI only for ASM.
+C FFI in general: [09-ffi-c.md](09-ffi-c.md).

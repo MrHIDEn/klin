@@ -1,27 +1,27 @@
-# Architektura i zasady inżynierskie
+# Architecture and engineering rules
 
-## Rurociąg
+## Pipeline
 
 ```
-plik.kl
-  → lekser        (tekst → tokeny, każdy z pozycją)
-  → parser        (tokeny → AST, zejście rekurencyjne)
-  → checker       (tablica symboli, typy, rozwiązywanie nazw)
-  → codegen       (AST → jeden plik .c)
-  → gcc/clang/tcc (.c → binarka)
+file.kl
+  → lexer        (text → tokens, each with position)
+  → parser       (tokens → AST, recursive descent)
+  → checker      (symbol table, types, name resolution)
+  → codegen      (AST → one .c file)
+  → gcc/clang/tcc (.c → binary)
 ```
 
-## Język implementacji: Dart
+## Implementation language: Dart
 
-Nie dlatego, że jest najlepszym narzędziem do pisania kompilatorów
-(to OCaml albo Rust), tylko dlatego, że jest najlepszy **dla mnie
-do tego projektu**. Projekt umrze nie na trudności technicznej, tylko
-na tarciu — kiedy po tygodniowej przerwie trzeba sobie przypomnieć
-składnię. Plus: skonfigurowany IntelliJ, znajomość debuggera,
-`dart compile exe` daje samodzielną binarkę.
+Not because it is the best tool for writing compilers
+(that is OCaml or Rust), but because it is the best **for me
+for this project**. The project will die not on technical difficulty, but on
+friction — when after a week away you have to remember
+the syntax. Plus: configured IntelliJ, familiarity with the debugger,
+`dart compile exe` gives a standalone binary.
 
-Sealed classes + pattern matching z Darta 3 to dokładnie to, czego
-potrzeba na AST:
+Sealed classes + pattern matching from Dart 3 are exactly what
+the AST needs:
 
 ```dart
 sealed class Expr {}
@@ -32,97 +32,97 @@ final class Binary extends Expr {
 }
 ```
 
-Kompilator wymusi obsłużenie każdego wariantu w każdym `switch` —
-to zastępuje połowę testów.
+The compiler will force handling every variant in every `switch` —
+that replaces half the tests.
 
-Ewentualne przepisanie frontendu na OCaml/Rust to decyzja na po kroku 5,
-nie na teraz.
+Rewriting the frontend in OCaml/Rust is a decision for after step 5,
+not now.
 
-## Struktura katalogów
+## Directory layout
 
 ```
-bin/klin.dart      # CLI: argv → czytaj → lex → parse → check → emit → cc → run
+bin/klin.dart      # CLI: argv → read → lex → parse → check → emit → cc → run
 lib/token.dart
 lib/lexer.dart
 lib/ast.dart
 lib/parser.dart
 lib/checker.dart
 lib/emit_c.dart
-test/             # testy złote: pliki .kl + oczekiwane wyjście
-out/              # WSZYSTKO generowane, ignorowane przez git
+test/             # golden tests: .kl files + expected output
+out/              # ALL generated output, ignored by git
 doc/
 ```
 
-Podział na pliki od pierwszego dnia, mimo że początkowo wszystko
-zmieściłoby się w jednym — za miesiąc `parser.dart` będzie miał 1500 linii
-i nie chce się tego rozdzielać wstecz.
+Split into files from day one, even though initially everything
+would fit in one — in a month `parser.dart` will be 1500 lines
+and you will not want to split it retroactively.
 
 ---
 
-## Zasady, od pierwszego dnia
+## Rules, from day one
 
-### Z1. Testy złote
+### Z1. Golden tests
 
-Katalog `test/`: plik `.kl` + oczekiwane wyjście programu. Skrypt
-kompiluje wszystko i porównuje. **Bez tego po trzech tygodniach
-przestanie się cokolwiek zmieniać ze strachu.**
+`test/` directory: a `.kl` file + expected program output. A script
+compiles everything and compares. **Without this, after three weeks
+nothing will change out of fear.**
 
-Testy błędów są ważniejsze niż testy sukcesu.
+Error tests matter more than success tests.
 
-### Z2. `#line` w emisji
+### Z2. `#line` in emission
 
-Od pierwszego dnia. Bez tego gdb pokazuje wygenerowany C, nie źródło
-w Klinie. Dopisanie później = przepisywanie codegenu.
+From day one. Without it gdb shows generated C, not Klin
+source. Adding it later = rewriting codegen.
 
-Konsekwencja: **lekser musi nosić pozycję (linia, kolumna) w każdym
-tokenie od samego początku.** Jeśli tak jest, wszystko potem działa.
-Jeśli nie — trzeba to dokładać do każdej struktury osobno.
+Consequence: **the lexer must carry position (line, column) in every
+token from the very start.** If it does, everything else works.
+If not — you have to bolt it onto every structure separately.
 
-### Z3. Wszystkie błędy łapie frontend
+### Z3. The frontend catches every error
 
-Jeśli gcc krzyczy na wygenerowany kod, to jest **mój** bug, nie
-użytkownika. C ma być już tylko assemblerem. Użytkownik nigdy nie
-powinien zobaczyć komunikatu o kodzie, którego nie napisał.
+If gcc screams at generated code, that is **my** bug, not
+the user's. C is supposed to be just an assembler. The user should never
+see a message about code they did not write.
 
-### Z4. Ręczny parser zejściem rekurencyjnym
+### Z4. Hand-written recursive-descent parser
 
-Bez generatorów parserów. Dla języka o składni, którą sam projektuję,
-ręczny parser jest szybszy w pisaniu i daje nieporównanie lepsze
-komunikaty błędów.
+No parser generators. For a language whose syntax I design myself,
+a hand-written parser is faster to write and gives incomparably better
+error messages.
 
-### Z5. Kolejność deklaracji
+### Z5. Declaration order
 
-W Klinie kolejność w pliku nie ma znaczenia. W C ma. Codegen musi sam
-sortować typy topologicznie i emitować forward declarations.
+In Klin order in a file does not matter. In C it does. Codegen must
+topologically sort types and emit forward declarations.
 
-### Z6. tcc podczas iteracji
+### Z6. tcc during iteration
 
-`tcc` startuje w milisekundach. gcc/clang dopiero do release'u
-i do pomiarów. Flaga `--cc`.
-
----
-
-## Sekcje w generowanym C
-
-Za Neluą — cztery sekcje, bo inaczej kolejność się sypie:
-
-1. **dyrektywy** — `#include`, `#define`
-2. **deklaracje** — typy, prototypy funkcji, zmienne
-3. **definicje** — ciała funkcji
-4. **wewnątrz funkcji** — kod lokalny
+`tcc` starts in milliseconds. gcc/clang only for release
+and measurements. Flag `--cc`.
 
 ---
 
-## Bare metal (od kroku 10)
+## Sections in generated C
 
-- `-ffreestanding`, brak libc: żadnego `printf`, `malloc`, `string`
-- brak GC — u nas to i tak stan domyślny, nie flaga
-- startup w ASM zostaje surowym `.s` obok — tablica wektorów, reset
-  handler, kopiowanie `.data`, zerowanie `.bss`. **Nie opakowywać.**
-- skrypt linkera po stronie użytkownika
+After Nelua — four sections, otherwise order breaks:
+
+1. **directives** — `#include`, `#define`
+2. **declarations** — types, function prototypes, variables
+3. **definitions** — function bodies
+4. **inside functions** — local code
+
+---
+
+## Bare metal (from step 10)
+
+- `-ffreestanding`, no libc: no `printf`, `malloc`, `string`
+- no GC — for us that is the default anyway, not a flag
+- ASM startup stays raw `.s` alongside — vector table, reset
+  handler, copying `.data`, zeroing `.bss`. **Do not wrap it.**
+- linker script on the user side
 - `-Os`, `-ffunction-sections -fdata-sections`, `--gc-sections`
-  — inaczej martwy kod z SVD wysadzi binarkę
+  — otherwise dead code from SVD will blow up the binary
 
-**Nie parsować nagłówków CMSIS.** Są zbudowane z makr i bitfieldów,
-których żaden prosty parser nie ugryzie. Sygnatury pisane ręcznie
-jako deklaracje FFI.
+**Do not parse CMSIS headers.** They are built from macros and bitfields
+that no simple parser can chew. Signatures written by hand
+as FFI declarations.

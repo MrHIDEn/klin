@@ -1,31 +1,31 @@
-# Skrót `:=` (`let mut`)
+# `:=` shorthand (`let mut`)
 
 Issue: [055](../issues/055-short-decl.md).
 
-## Składnia
+## Syntax
 
 ```
 name := expr          // ≡ let mut name = expr
-name = expr           // przypisanie (bez zmian)
-let name = expr       // niemutowalne (bez zmian)
-let mut name = expr   // równoważne `:=`
+name = expr           // assignment (unchanged)
+let name = expr       // immutable (unchanged)
+let mut name = expr   // equivalent to `:=`
 ```
 
-W C-`for` init przyjmuje `=` albo `:=` (oba wprowadzają mutowalną
-zmienną pętli):
+In C-`for` init accepts `=` or `:=` (both introduce a mutable
+loop variable):
 
 ```
 for i := 0; i < n; i = i + 1 { … }
 ```
 
-## Semantyka
+## Semantics
 
-Jak `let mut`: mutowalna lokalna z inicjalizatorem, dedukcja typu z
-prawej strony. W emisji C nie ma `mut` — zostaje zwykła lokalna.
+Like `let mut`: mutable local with initializer, type inference from
+the right-hand side. In C emission there is no `mut` — a plain local remains.
 
-## Ograniczenia MVP
+## MVP limitations
 
-- brak adnotacji typu przy `:=` (`x: i32 := 1` — użyj `let mut x: i32 = 1`)
-- `klin fmt` zachowuje `:=` w deklaracjach; w init C-`for` normalizuje do `=`
+- no type annotation with `:=` (`x: i32 := 1` — use `let mut x: i32 = 1`)
+- `klin fmt` preserves `:=` in declarations; in C-`for` init normalizes to `=`
 
-Przykład: [`examples/short_decl.kl`](../examples/short_decl.kl).
+Example: [`examples/short_decl.kl`](../examples/short_decl.kl).

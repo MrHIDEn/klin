@@ -1,66 +1,66 @@
-# Budowanie, binarki i Task
+# Building, binaries, and Task
 
-## Sam kompilator Klin jako `exe`
+## Klin compiler itself as `exe`
 
 ```bash
 task release
-# albo: dart compile exe bin/klin.dart -o build/klin
+# or: dart compile exe bin/klin.dart -o build/klin
 ```
 
-Na Windowsie wynik to `build/klin.exe`, na macOS/Linuxie `build/klin`.
-Na start wystarczy `dart run` / `task hello`; `release` gdy narzędzie
-ma trafić do PATH albo być rozdawane bez zainstalowanego SDK.
+On Windows the result is `build/klin.exe`, on macOS/Linux `build/klin`.
+At the start `dart run` / `task hello` is enough; `release` when the tool
+should go on PATH or be distributed without an installed SDK.
 
 Homebrew (macOS/Linux): [17-homebrew.md](17-homebrew.md) — `Formula/klin.rb`,
-tag `v*` → workflow `release`.
+tag `v*` → `release` workflow.
 
-## Programy w Klinie → binarka
+## Klin programs → binary
 
-To jest domyślna ścieżka kompilatora (od kroku 001):
+That is the compiler's default path (from step 001):
 
 ```
-plik.kl → out/plik.c → gcc/clang/tcc → out/plik
+file.kl → out/file.c → gcc/clang/tcc → out/file
 ```
 
-Na Windowsie wynik to `.exe`, na macOS/Linuxie zwykły plik wykonywalny.
-Flaga `--cc` wybiera backend C (`tcc` do iteracji, `gcc`/`clang` do
-release'u — patrz `02-architektura.md`, Z6).
+On Windows the result is `.exe`, on macOS/Linux a normal executable.
+Flag `--cc` selects C backend (`tcc` for iteration, `gcc`/`clang` for
+release — see `02-architektura.md`, Z6).
 
 ---
 
-## Task (go-task) — wybrane
+## Task (go-task) — selected
 
-W repo jest `Taskfile.yml`. Jedna komenda działa tak samo na
-**Windows, Linux i Darwin** (o ile w PATH są `dart` i kompilator C):
+The repo has `Taskfile.yml`. One command works the same on
+**Windows, Linux, and Darwin** (as long as `dart` and a C compiler are on PATH):
 
 ```bash
 task --list
 task check      # analyze + test
-task hello      # pełny przelot hello.kl
+task hello      # full hello.kl run
 task run -- hello.kl
 task release    # build/klin[.exe]
 task clean
 ```
 
-- Binarka: `task`, dokumentacja: [taskfile.dev](https://taskfile.dev)
-- Instalacja: [taskfile.dev/installation](https://taskfile.dev/installation/)
+- Binary: `task`, docs: [taskfile.dev](https://taskfile.dev)
+- Install: [taskfile.dev/installation](https://taskfile.dev/installation/)
   (`brew install go-task` / `scoop install task` / …)
-- Cache checksumów: `.task/` (w `.gitignore`)
-- Rozszerzenie `.exe` na Windowsie ustawiane przez zmienną `EXE` w Taskfile
+- Checksum cache: `.task/` (in `.gitignore`)
+- `.exe` extension on Windows set by `EXE` variable in Taskfile
   (`{{OS}}` → `windows` | `linux` | `darwin`)
 
-Task **nie instaluje** Darta ani gcc — tylko ujednolica komendy, żeby nie
-pisać osobnych skryptów `.sh` / `.ps1` / `.bat`.
+Task **does not install** Dart or gcc — it only unifies commands so you do not
+write separate `.sh` / `.ps1` / `.bat` scripts.
 
 ---
 
-## Make / just — świadomie nie
+## Make / just — deliberately not
 
-| Narzędzie | Po co | Dlaczego nie teraz |
+| Tool | Purpose | Why not now |
 |---|---|---|
-| **Make** | build C / embedded | wraca przy bare-metal (010+): linker, startup `.s` |
-| **just** | krótsze menu komend | Task już znany; funkcje podobne na tym etapie |
+| **Make** | C / embedded build | returns at bare-metal (010+): linker, `.s` startup |
+| **just** | shorter command menu | Task already known; similar features at this stage |
 
-Make z przyzwyczajenia do tuzina phony targetów to błąd, którego Task
-unika. Osobna warstwa Make/CMake przy MCU to OK — nie mieszać z menu
-komend dewelopera.
+Make out of habit with a dozen phony targets is a mistake Task
+avoids. Separate Make/CMake layer for MCU is OK — do not mix with developer
+command menu.

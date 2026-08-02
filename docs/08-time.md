@@ -1,26 +1,26 @@
-# Moduł `time` (wall / monotonic)
+# `time` module (wall / monotonic)
 
-Model jak Go: **Instant** (wall UTC) + **MonoInstant** (pomiary) + **Duration**
-(ns). Format tylko do **bufora użytkownika** — bez ukrytego `malloc`, bez
-`${t:yyyy-MM-dd}` w interpolacji 016.
+Model like Go: **Instant** (wall UTC) + **MonoInstant** (measurements) + **Duration**
+(ns). Format only into **user buffer** — no hidden `malloc`, no
+`${t:yyyy-MM-dd}` in interpolation 016.
 
-## Zegary (jawne)
+## Clocks (explicit)
 
-| API | Źródło |
+| API | Source |
 |---|---|
 | `time.now()` | `CLOCK_REALTIME` → `Instant` |
 | `time.mono()` | `CLOCK_MONOTONIC` → `MonoInstant` |
-| RTC / cykle CPU | **osobne** API (HAL/board) — nie `now()` |
+| RTC / CPU cycles | **separate** API (HAL/board) — not `now()` |
 
 ## Duration / span
 
 - `between(a, b)` / `a.until(b)` — `b - a`
-- `Duration.abs` / `mul`; składowe `as_ns` / `as_us` / `as_ms` / `as_s`
-- `MonoInstant.add` / `sub` (`Duration`) jak u `Instant`
+- `Duration.abs` / `mul`; components `as_ns` / `as_us` / `as_ms` / `as_s`
+- `MonoInstant.add` / `sub` (`Duration`) like `Instant`
 
-## Kalendarz (UTC, Go `AddDate`)
+## Calendar (UTC, Go `AddDate`)
 
-Nie mylić z `add(Duration)` (czyste ns). Operacje cywilne:
+Do not confuse with `add(Duration)` (pure ns). Civil operations:
 
 ```klin
 let t = time.unix(1704067200)   // 2024-01-01 UTC
@@ -29,10 +29,10 @@ let m = time.unix(1706659200).add_months(1) or { t }  // 2024-01-31 → 2024-03-
 let d = t.add_days(5) or { t }
 ```
 
-`add_date(years, months, days)` — wspólna ścieżka; ujemne wartości cofają.
-Zachowuje godzinę UTC i ułamek ns. Strefy IANA → [040](../issues/040-time-zones.md).
+`add_date(years, months, days)` — shared path; negative values go backward.
+Preserves UTC time and ns fraction. IANA zones → [040](../issues/040-time-zones.md).
 
-## Przykład
+## Example
 
 ```klin
 import time
@@ -52,10 +52,10 @@ fn main() {
 }
 ```
 
-Dialekt formatu MVP: `strftime` (`%Y %m %d %H %M %S` …).  
-Parse: `parse_iso` / `parse(fmt, s)` → `!Instant` (w `main` użyj `or { }`).
+MVP format dialect: `strftime` (`%Y %m %d %H %M %S` …).  
+Parse: `parse_iso` / `parse(fmt, s)` → `!Instant` (in `main` use `or { }`).
 
-Szczegóły i poza zakresem: [issues/037-datetime-format.md](../issues/037-datetime-format.md),
+Details and out of scope: [issues/037-datetime-format.md](../issues/037-datetime-format.md),
 [issues/038-time-api.md](../issues/038-time-api.md),
 [issues/039-time-calendar.md](../issues/039-time-calendar.md).
 Demo: [examples/time_demo.kl](../examples/time_demo.kl).

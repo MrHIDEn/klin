@@ -1,31 +1,31 @@
-# Formatowanie źródła (`klin fmt`)
+# Source formatting (`klin fmt`)
 
 Issue: [033](../issues/033-gofmt-style.md).
 
-## Zasada
+## Principle
 
-Jak `gofmt`: **jeden styl, zero flag**. Dyskusja o wcięciach kończy się na
+Like `gofmt`: **one style, zero flags**. Indentation debates end with
 `klin fmt -w`.
 
-## Reguły (MVP)
+## Rules (MVP)
 
-- wcięcie: **4 spacje**
-- klamry K&R / Go: `fn main() {` w tej samej linii; `} else {` w jednej linii
-- spacje wokół operatorów binarnych i po przecinkach
-- pusta linia między deklaracjami top-level (`struct` / `fn`)
-- `module` / `import` na górze, potem pusta linia, potem deklaracje
+- indentation: **4 spaces**
+- K&R / Go braces: `fn main() {` on the same line; `} else {` on one line
+- spaces around binary operators and after commas
+- blank line between top-level declarations (`struct` / `fn`)
+- `module` / `import` at the top, then blank line, then declarations
 
-## Użycie
+## Usage
 
 ```sh
 dart run bin/klin.dart fmt examples/hello.kl          # stdout
-dart run bin/klin.dart fmt -w path/a.kl path/b.kl     # zapis na miejscu
+dart run bin/klin.dart fmt -w path/a.kl path/b.kl     # write in place
 ```
 
-Wejście: lex → parse (`ModuleUnit`) → pretty-print. Bez preprocess / check / emit.
+Input: lex → parse (`ModuleUnit`) → pretty-print. No preprocess / check / emit.
 
-## Ograniczenia MVP
+## MVP limitations
 
-- **Komentarze giną** (lexer je pomija) — zachowanie komentarzy później.
-- Pliki z makrami `$fn` / `$peripherals_from_svd` nie są poprawnym Klinem
-  przed expandem — formatuj wynik `--emit-pp` albo plik bez `$`.
+- **Comments are dropped** (lexer skips them) — comment preservation later.
+- Files with `$fn` / `$peripherals_from_svd` macros are not valid Klin
+  before expand — format `--emit-pp` output or a file without `$`.

@@ -1,95 +1,95 @@
-# Klin — ogólna idea
+# Klin — overall idea
 
-## Czym jest
+## What it is
 
-Klin to język systemowy kompilowany **do C**, a nie do kodu maszynowego.
-Kompilator Klina generuje jeden czytelny plik `.c`, który następnie
-obsługuje zwykły kompilator C (gcc, clang, tcc, arm-none-eabi-gcc).
+Klin is a systems language compiled **to C**, not to machine code.
+The Klin compiler generates one readable `.c` file, which is then
+handled by an ordinary C compiler (gcc, clang, tcc, arm-none-eabi-gcc).
 
-Nazwa nie jest przypadkowa: klin to najstarsza maszyna prosta — zero
-ruchomych części, zero narzutu. Język jest cienką warstwą **wklinowaną**
-między programistę a C. Nie zastępuje C, nie ukrywa go, nie udaje, że go nie ma.
+The name is not accidental: a wedge (klin) is the oldest simple machine — zero
+moving parts, zero overhead. The language is a thin layer **wedged**
+between the programmer and C. It does not replace C, does not hide it, does not pretend it is not there.
 
-## Zasada nadrzędna
+## Overarching principle
 
-> **Żadnej ukrytej alokacji, żadnego ukrytego przepływu sterowania,
-> żadnego ukrytego kosztu. Jeśli coś alokuje albo skacze, musi to być
-> widoczne w składni.**
+> **No hidden allocation, no hidden control flow,
+> no hidden cost. If something allocates or branches, it must be
+> visible in the syntax.**
 
-To zdanie rozstrzyga każdy spór projektowy. Praktyczny test dla każdej
-proponowanej cechy:
+That sentence settles every design dispute. Practical test for every
+proposed feature:
 
-> Skompiluj to samo dwa razy — raz w Klinie, raz ręcznie w C — i porównaj
-> `objdump -d`. Jeśli instrukcje są identyczne, cecha przechodzi.
-> Jeśli nie, wywal ją albo napraw.
+> Compile the same thing twice — once in Klin, once by hand in C — and compare
+> `objdump -d`. If the instructions are identical, the feature passes.
+> If not, drop it or fix it.
 
-C++ złamał tę zasadę trzy razy: konstruktory kopiujące, wyjątki,
-przeciążanie operatorów. Każde z nich sprawia, że niewinna linijka robi
-coś drogiego. Klin ma tego nie powtórzyć.
+C++ broke this rule three times: copy constructors, exceptions,
+operator overloading. Each makes an innocent line do something expensive.
+Klin must not repeat that.
 
-## Cel docelowy
+## Target goal
 
-Programowanie mikrokontrolerów (STM32, Cortex-M) w języku, który daje:
+Programming microcontrollers (STM32, Cortex-M) in a language that gives:
 
-- struktury z metodami zamiast prefiksów `modul_funkcja_()`
-- moduły i realną enkapsulację zamiast `static` i opaque pointerów
-- brak `null`, błędy jako wartości
-- niezmienność domyślną
-- typowany dostęp do rejestrów sprzętowych, generowany automatycznie z SVD
+- structures with methods instead of `module_function()` prefixes
+- modules and real encapsulation instead of `static` and opaque pointers
+- no `null`, errors as values
+- immutability by default
+- typed access to hardware registers, generated automatically from SVD
 
-...przy zachowaniu pełnej kontroli nad pamięcią i zerowym narzutem runtime.
+...while keeping full control over memory and zero runtime overhead.
 
-## Dlaczego backend C, a nie LLVM
+## Why a C backend, not LLVM
 
-1. **Zasięg.** Działa na każdym MCU, dla którego istnieje kompilator C —
-   łącznie z archaicznymi PIC-ami i 8051, dla których LLVM nigdy nie
-   dostanie backendu. To realna nisza, której Zig i Rust nie pokrywają.
-2. **Brak vendor lock-inu.** Jeśli projekt umrze, użytkownik bierze
-   wygenerowany C i pracuje dalej.
-3. **Interop za darmo.** Nagłówki C, biblioteki C, narzędzia C (gdb,
-   objdump, valgrind) działają bez warstwy pośredniej.
-4. **Prostota implementacji.** Backend C to najłatwiejsza część projektu.
-   Cała trudność siedzi we frontendzie — którego potrzebowałbym tak czy
-   inaczej, również celując w LLVM.
+1. **Reach.** Works on every MCU for which a C compiler exists —
+   including archaic PICs and 8051s, for which LLVM will never
+   get a backend. That is a real niche Zig and Rust do not cover.
+2. **No vendor lock-in.** If the project dies, the user takes
+   the generated C and keeps working.
+3. **Interop for free.** C headers, C libraries, C tools (gdb,
+   objdump, valgrind) work without a middle layer.
+4. **Implementation simplicity.** The C backend is the easiest part of the project.
+   All the difficulty sits in the frontend — which I would need anyway,
+   even targeting LLVM.
 
-## Czym Klin NIE jest (non-goals)
+## What Klin is NOT (non-goals)
 
-- **Nie jest supersetem C.** Nie parsuje legalnego kodu C. Parsowanie
-  pełnego C (preprocesor, `typedef` vs identyfikator, "lexer hack") to
-  problem rzędu wielkości większy niż własna czysta gramatyka.
-  Interop realizowany przez deklaracje FFI, nie przez parsowanie nagłówków.
-- **Nie ma GC.** Ani domyślnie, ani opcjonalnie na start.
-- **Nie ma borrow checkera.** To problem badawczy, nie kwestia zapału.
-- **Nie ma runtime'u.** Żadnych goroutines, żadnego schedulera.
-- **Nie ma wyjątków.**
+- **Not a superset of C.** It does not parse legal C code. Parsing
+  full C (preprocessor, `typedef` vs identifier, "lexer hack") is
+  an order of magnitude harder than a clean grammar of your own.
+  Interop is done through FFI declarations, not by parsing headers.
+- **No GC.** Neither by default nor optionally at the start.
+- **No borrow checker.** That is a research problem, not a matter of enthusiasm.
+- **No runtime.** No goroutines, no scheduler.
+- **No exceptions.**
 
-## Inspiracje i co z nich brane
+## Inspirations and what to take from them
 
-| Źródło | Co brane |
+| Source | What to take |
 |---|---|
-| **V** | `mut` (niezmienność domyślna), `pub`, brak globali, brak `null`, `!T` + `or {}` |
-| **Nelua** | preprocesor zamiast generyków w rdzeniu, adnotacje `cimport`/`cexport`/`codename`, ZII |
-| **Go** | `defer`, struktury z metodami bez dziedziczenia, kompozycja zamiast hierarchii |
-| **Zig / Odin** | alokator jako jawny argument, nie globalna magia |
+| **V** | `mut` (immutability by default), `pub`, no globals, no `null`, `!T` + `or {}` |
+| **Nelua** | preprocessor instead of generics in the core, `cimport`/`cexport`/`codename` annotations, ZII |
+| **Go** | `defer`, structures with methods without inheritance, composition instead of hierarchy |
+| **Zig / Odin** | allocator as an explicit argument, not global magic |
 
-### Czego świadomie NIE brać
+### What to deliberately NOT take
 
-**Autofree z V.** Sztandarowa obietnica V — kompilator sam wstawia
-`free()` w czasie kompilacji, bez GC i bez borrow checkera. Po latach
-wciąż WIP, dokumentacja odradza używanie, a bywa **wolniejszy niż GC**
-(klonowanie stringów O(n), żeby uniknąć wiszących wskaźników).
-To empiryczny dowód, że automatyczne zarządzanie pamięcią bez GC
-i bez systemu typów pilnującego czasu życia jest problemem badawczym.
+**Autofree from V.** V's flagship promise — the compiler inserts
+`free()` at compile time, without GC and without a borrow checker. After years
+it is still WIP, the docs discourage using it, and it can be **slower than GC**
+(string cloning O(n) to avoid dangling pointers).
+That is empirical proof that automatic memory management without GC
+and without a type system tracking lifetimes is a research problem.
 
-**Wniosek:** deklaruj model pamięci, który na pewno zaimplementujesz,
-a nie taki, który brzmi najlepiej w README.
+**Conclusion:** declare the memory model you can actually implement,
+not the one that sounds best in the README.
 
-## Sąsiedzi — warto znać przed startem
+## Neighbors — worth knowing before you start
 
-- **Nelua** — najbliższy punkt odniesienia. Kompletny, działający
-  kompilator do C napisany w Lua. Warto przeczytać jego codegen.
-- **nesC** — rozszerzenie C pod TinyOS, komponenty i moduły. Bezpośredni
-  poprzednik idei, choć inna epoka.
-- **V** — kompiluje do C, samohostowany, celowo mały kod źródłowy.
-- **TinyGo** `tools/gen-device-svd` — wzorzec generatora SVD.
-- **Zig / Odin** — robią to samo lepiej, ale przez LLVM.
+- **Nelua** — closest reference point. Complete, working
+  compiler to C written in Lua. Worth reading its codegen.
+- **nesC** — C extension for TinyOS, components and modules. Direct
+  predecessor of the idea, though a different era.
+- **V** — compiles to C, self-hosted, deliberately small source.
+- **TinyGo** `tools/gen-device-svd` — SVD generator pattern.
+- **Zig / Odin** — do the same thing better, but through LLVM.

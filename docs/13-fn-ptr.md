@@ -1,7 +1,7 @@
-# Function pointers (bez capture)
+# Function pointers (no capture)
 
-Typ `fn(T1, T2): Ret` — wskaźnik na funkcję top-level (emisja = C fn pointer).
-Bez domknięć / capture ([D7](01-decyzje.md)).
+Type `fn(T1, T2): Ret` — pointer to a top-level function (emission = C fn pointer).
+No closures / capture ([D7](01-decyzje.md)).
 
 ```klin
 fn is_pos(x: i32): bool {
@@ -19,10 +19,10 @@ fn main() {
 }
 ```
 
-Część [issue 017](../issues/017-collection-methods.md) (faza 2). Example:
+Part of [issue 017](../issues/017-collection-methods.md) (phase 2). Example:
 [`examples/fn_ptr.kl`](../examples/fn_ptr.kl).
 
-Moduły [`stdlib/slice.kl`](../stdlib/slice.kl) (warstwa 0+1) i
-[`stdlib/slice_alloc.kl`](../stdlib/slice_alloc.kl) (warstwa 2) używają tych
-typów jako callbacków (`map_into_i32`, `map_alloc_i32`, …) —
-szczegóły: [docs/16-slice.md](16-slice.md).
+Modules [`stdlib/slice.kl`](../stdlib/slice.kl) (layer 0+1) and
+[`stdlib/slice_alloc.kl`](../stdlib/slice_alloc.kl) (layer 2) use these
+types as callbacks (`map_into_i32`, `map_alloc_i32`, …) —
+details: [docs/16-slice.md](16-slice.md).

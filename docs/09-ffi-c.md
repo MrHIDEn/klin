@@ -1,11 +1,11 @@
-# FFI C — import i export (issues 021 / 045)
+# C FFI — import and export (issues 021 / 045)
 
-Interop z C to **jawne deklaracje** w Klinie, nie parser nagłówków.
+Interop with C is **explicit declarations** in Klin, not a header parser.
 
-| Kierunek | Atrybuty | Example |
+| Direction | Attributes | Example |
 |---|---|---|
 | **Import** C→Klin | `@[cimport]`, `@[cheader]`, `@[cinclude]`, `@[link]`, CLI `-l`/`-L` | [`examples/ffi_add/`](../examples/ffi_add/) |
-| **Export** Klin→C | `@[cexport, codename("…")]`; sam `codename` = ISR | [`examples/cexport_add/`](../examples/cexport_add/), blink STM32 |
+| **Export** Klin→C | `@[cexport, codename("…")]`; `codename` alone = ISR | [`examples/cexport_add/`](../examples/cexport_add/), STM32 blink |
 
 Issues: [021](../issues/021-biblioteki-c.md) (import/link), [045](../issues/045-cexport.md) (export).
 
@@ -17,22 +17,22 @@ Issues: [021](../issues/021-biblioteki-c.md) (import/link), [045](../issues/045-
 fn sqrt(x: f64): f64
 ```
 
-- `@[cimport]` — funkcja bez ciała; frontend sprawdza arity i typy; emituje prototyp C
-- `@[cheader]` — z `cimport`: deklaracja jest w nagłówku (`cinclude`); **bez** prototypu w `.c`
-  (potrzebne dla `static inline` z SVD / HAL)
-- `@[codename("…")]` — symbol C (inaczej mangling Klina)
-- `@[cinclude("…")]` — `#include` w wyemitowanym `.c` (cudzysłów lub `<…>`)
+- `@[cimport]` — function without body; frontend checks arity and types; emits C prototype
+- `@[cheader]` — with `cimport`: declaration is in header (`cinclude`); **no** prototype in `.c`
+  (needed for `static inline` from SVD / HAL)
+- `@[codename("…")]` — C symbol (otherwise Klin mangling)
+- `@[cinclude("…")]` — `#include` in emitted `.c` (quoted or `<…>`)
 
 ### Host builtins
 
-Bez deklaracji dozwolone są tylko **`puts`** i **`printf`** (varargs / historyczne
-hello-world). Każda inna funkcja C wymaga `@[cimport]`.
+Without declarations only **`puts`** and **`printf`** are allowed (varargs / historical
+hello-world). Every other C function requires `@[cimport]`.
 
 ### Link
 
 ```klin
-@[link("libadd.a")]          // ścieżka względem pliku .kl
-@[link("-lm")]               // flaga linkera as-is
+@[link("libadd.a")]          // path relative to .kl file
+@[link("-lm")]               // linker flag as-is
 ```
 
 CLI (host `klin run` / `klin test`):
@@ -41,12 +41,12 @@ CLI (host `klin run` / `klin test`):
 klin run -L/opt/lib -lfoo main.kl
 ```
 
-`@[link]` + `-l` / `-L` trafiają do argv `gcc`/`clang`/`tcc`. Przy `--emit-c`
-lista `@[link]` trafia też do `out/<base>.link` (Makefile bare-metal).
-Ścieżki obejmują też jednostki ASM (`.s` / `.S`) — [docs/10-asm.md](10-asm.md),
+`@[link]` + `-l` / `-L` go to `gcc`/`clang`/`tcc` argv. With `--emit-c`
+the `@[link]` list also goes to `out/<base>.link` (bare-metal Makefile).
+Paths also cover ASM units (`.s` / `.S`) — [docs/10-asm.md](10-asm.md),
 [`examples/asm_add/`](../examples/asm_add/).
 
-Przykład C: [`examples/ffi_add/`](../examples/ffi_add/).
+C example: [`examples/ffi_add/`](../examples/ffi_add/).
 
 ## Export (Klin → C)
 
@@ -57,32 +57,32 @@ fn add(a: i32, b: i32): i32 {
 }
 ```
 
-- `@[cexport]` — `fn` **z ciałem**; globalny symbol w emisji C (nie `static`)
-- `@[codename("…")]` — **wymagane** razem z `cexport` (stabilna nazwa dla C)
-- `@[codename]` **bez** `cexport` — nadal OK (ISR / startup), np. `@[codename("SysTick_Handler")]`
-- Nie łączyć `cexport` z `cimport`; nie stosować `cexport` na `main`
+- `@[cexport]` — `fn` **with body**; global symbol in C emission (not `static`)
+- `@[codename("…")]` — **required** with `cexport` (stable name for C)
+- `@[codename]` **without** `cexport` — still OK (ISR / startup), e.g. `@[codename("SysTick_Handler")]`
+- Do not combine `cexport` with `cimport`; do not apply `cexport` to `main`
 
-C woła wyeksportowaną funkcję po `codename`. Prototypy:
+C calls the exported function by `codename`. Prototypes:
 
 ```sh
 klin --emit-h lib.kl                 # → out/lib.h
 klin --emit-c --emit-h lib.kl        # .c + .h
 ```
 
-Przykład: [`examples/cexport_add/`](../examples/cexport_add/). Issue:
+Example: [`examples/cexport_add/`](../examples/cexport_add/). Issue:
 [046](../issues/046-emit-h.md).
 
-## Porównanie
+## Comparison
 
 | | Import | Export |
 |---|---|---|
 | Marker | `@[cimport]` | `@[cexport]` |
-| Ciało w Klinie | nie | tak |
-| Nazwa C | zwykle `@[codename]` | **wymagany** `@[codename]` |
-| Typowy use | libc / `.a` / HAL | biblioteka Klin, ISR |
+| Body in Klin | no | yes |
+| C name | usually `@[codename]` | **required** `@[codename]` |
+| Typical use | libc / `.a` / HAL | Klin library, ISR |
 
-## Kontrakt
+## Contract
 
-FFI **nie** ukrywa alokacji ani ownership — to umowa użytkownika z kodem C.
-Bare-metal: ta sama ścieżka deklaracji; inne liby (HAL → [031](../issues/031-biblioteki-hal.md)).
-Jednostki `.s` → [docs/10-asm.md](10-asm.md) / [022](../issues/022-biblioteki-asm.md).
+FFI **does not** hide allocation or ownership — that is the user's agreement with C code.
+Bare-metal: same declaration path; other libs (HAL → [031](../issues/031-biblioteki-hal.md)).
+`.s` units → [docs/10-asm.md](10-asm.md) / [022](../issues/022-biblioteki-asm.md).

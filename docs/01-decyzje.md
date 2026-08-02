@@ -1,23 +1,23 @@
-# Decyzje projektowe
+# Design decisions
 
-Trzy pierwsze podjąć **przed pierwszą linią parsera** — przenikają
-tablicę symboli, checker i codegen. Zmiana później to przepisywanie.
+The first three must be made **before the first line of the parser** — they permeate
+the symbol table, checker, and codegen. Changing them later means rewriting.
 
 ---
 
-## D1. Model czasu życia pamięci — ROZSTRZYGNIĘTE
+## D1. Memory lifetime model — DECIDED
 
-**Wybór: ręczny + `defer` + alokator jako jawny argument (model Zig/Odin).**
+**Choice: manual + `defer` + allocator as an explicit argument (Zig/Odin model).**
 
-Odrzucone:
-- **GC** — wyklucza bare-metal, łamie zasadę nadrzędną.
-- **Borrow checker** — problem badawczy. Zespół Rusta poświęcił lata
-  (NLL, Polonius) i nadal dokłada. Solo = projekt, który nie osiągnie 1.0.
-- **Autofree** — patrz `00-idea.md`.
+Rejected:
+- **GC** — rules out bare-metal, breaks the overarching principle.
+- **Borrow checker** — research problem. The Rust team spent years
+  (NLL, Polonius) and is still adding. Solo = a project that never reaches 1.0.
+- **Autofree** — see `00-idea.md`.
 
 ```
 pub fn parse(a: *Allocator, src: []u8): !Doc {
-    let buf = a.alloc(u8, src.len)   // szkic — MVP: alloc_bytes / alloc_i32
+    let buf = a.alloc(u8, src.len)   // sketch — MVP: alloc_bytes / alloc_i32
     defer a.free(buf)
     ...
 }
@@ -26,47 +26,47 @@ pub fn parse(a: *Allocator, src: []u8): !Doc {
 MVP host: [`stdlib/mem`](../stdlib/mem.kl) (`heap`, `alloc_bytes`, `alloc_i32`) —
 [docs/14-allocator.md](14-allocator.md), issue [057](../issues/057-allocator.md).
 
-**Nie obiecywać** `a.alloc(u8, n)` dopóki nie ma argumentu typu w wywołaniu
-(generyki [034](../issues/034-typy-generyczne.md) / cukier D3). Dziś: `alloc_bytes`
-+ jawne `alloc_i32` / `alloc_u8`. `slice_alloc.map_alloc_*` —
+**Do not promise** `a.alloc(u8, n)` until there is a type argument in the call
+(generics [034](../issues/034-typy-generyczne.md) / D3 sugar). Today: `alloc_bytes`
++ explicit `alloc_i32` / `alloc_u8`. `slice_alloc.map_alloc_*` —
 [017](../issues/017-collection-methods.md) / [docs/16-slice.md](16-slice.md).
-Arena, vtable — później (patrz docs/14 § „Nie obiecywać / później”).
+Arena, vtable — later (see docs/14 § "Do not promise / later").
 
-Tryby do rozważenia później (wzorzec z V, ale bez autofree):
-ręczny (domyślny) / arena / opcjonalnie oznaczanie pojedynczych funkcji.
+Modes to consider later (pattern from V, but without autofree):
+manual (default) / arena / optionally marking individual functions.
 
 ---
 
-## D2. Model błędów — ROZSTRZYGNIĘTE
+## D2. Error model — DECIDED
 
-**Wybór: typ sumaryczny `!T` + operator propagacji + blok `or { }`.**
+**Choice: sum type `!T` + propagation operator + `or { }` block.**
 
 ```
-let f = os.open(path)!          // propaguj wyżej
-let cfg = load(path) or {       // obsłuż lokalnie
-    log.warn("brak: ${err}")
+let f = os.open(path)!          // propagate upward
+let cfg = load(path) or {       // handle locally
+    log.warn("missing: ${err}")
     Config.defaults()
 }
 ```
 
-Odrzucone:
-- **Wyjątki** — ukryty przepływ sterowania, łamie zasadę nadrzędną.
-- **Para `(T, error)` jak w Go** — zaśmieca kod przez `if err != nil`.
+Rejected:
+- **Exceptions** — hidden control flow, breaks the overarching principle.
+- **Go-style `(T, error)` pair** — clutters code with `if err != nil`.
 
-Uzasadnienie: Zig i Rust zbiegły się na tym niezależnie.
+Rationale: Zig and Rust converged on this independently.
 
-W emisji: `!T` to struct z tagiem. Operator propagacji to `if (r.is_err)
-return r;`. Zero narzutu poza sprawdzeniem flagi.
+In emission: `!T` is a struct with a tag. The propagation operator is `if (r.is_err)
+return r;`. Zero overhead beyond checking the flag.
 
 ---
 
-## D3. Generyki — ROZSTRZYGNIĘTE
+## D3. Generics — DECIDED
 
-**Wybór: preprocesor/makra czasu kompilacji, NIE w gramatyce języka.**
+**Choice: preprocessor/compile-time macros, NOT in the language grammar.**
 
-Model Nelui: potężny preprocesor mający dostęp do AST generuje
-wyspecjalizowany kod. Klasy, generyki i polimorfizm implementowane
-ad hoc, bez wpisywania ich do rdzenia.
+Nelua model: a powerful preprocessor with AST access generates
+specialized code. Classes, generics, and polymorphism implemented
+ad hoc, without putting them in the core.
 
 ```
 $fn point(name: str, T: type) {
@@ -77,92 +77,92 @@ $point("Vec2f", f64)
 $point("Vec2i", i32)
 ```
 
-Uzasadnienie: tańsze w implementacji niż pełny system typów
-z parametrami; pozwala odroczyć decyzję zamiast podejmować ją
-przed pierwszą linią parsera; monomorfizacja i tak jest jedyną sensowną
-strategią przy backendzie C.
+Rationale: cheaper to implement than a full type system
+with parameters; lets you defer the decision instead of making it
+before the first line of the parser; monomorphization is anyway the only sensible
+strategy with a C backend.
 
-Ryzyko: czas kompilacji, komunikaty błędów z rozwiniętych makr.
+Risk: compile time, error messages from expanded macros.
 
-**MVP (026):** [04-makra.md](04-makra.md) — przed/po expand + przykład
+**MVP (026):** [04-makra.md](04-makra.md) — before/after expand + example
 [`examples/point.kl`](../examples/point.kl) /
 [`point_macro.kl`](../examples/point_macro.kl).
 
-**Po 017 / 057:** `$fn` w stdlib wystarcza (`slice` / `slice_alloc`,
-`mem.alloc_i32` / `alloc_u8`). Generyki w gramatyce — **nie teraz**;
-ew. cienki cukier → ten sam expand (wariant 2) dopiero przy twardym bólu.
-Szczegóły: [034](../issues/034-typy-generyczne.md). Nadal nie obiecywać
+**After 017 / 057:** `$fn` in stdlib is enough (`slice` / `slice_alloc`,
+`mem.alloc_i32` / `alloc_u8`). Generics in the grammar — **not now**;
+eventual thin sugar → same expand (variant 2) only when the pain is real.
+Details: [034](../issues/034-typy-generyczne.md). Still do not promise
 `a.alloc(T, n)`.
 
 ---
 
-## D4. Mangling nazw
+## D4. Name mangling
 
-Schemat: `modul_Typ_metoda`, np. `geom_Vec2_translate`.
+Scheme: `module_Type_method`, e.g. `geom_Vec2_translate`.
 
-**Musi być wyłączalny.** Na bare-metal nazwy symboli muszą się zgadzać
-co do znaku z tablicą wektorów (`TIM2_IRQHandler`, `SysTick_Handler`).
+**Must be exclusive.** On bare-metal symbol names must match
+character-for-character with the vector table (`TIM2_IRQHandler`, `SysTick_Handler`).
 
 ```
 @[codename("TIM2_IRQHandler")]
 pub fn on_timer() { counter += 1 }
 ```
 
-Mangling musi być odporny na kolizje ze wszystkim z `<stdio.h>`
-i na słowa kluczowe C.
+Mangling must be collision-resistant against everything from `<stdio.h>`
+and against C keywords.
 
 ---
 
-## D5. Receiver metody
+## D5. Method receivers
 
-`fn (v: Vec2) len()` — kopia. `fn (mut v: Vec2) translate()` — wskaźnik.
+`fn (v: Vec2) len()` — copy. `fn (mut v: Vec2) translate()` — pointer.
 
-**Mutacja widoczna w sygnaturze.** To ulepszenie względem Nelui, gdzie
-`function Vec2:translate` daje `self: *Vec2` niejawnie i z wywołania
-nie wiadomo, czy obiekt zostanie zmieniony.
+**Mutation visible in the signature.** That is an improvement over Nelua, where
+`function Vec2:translate` gives `self: *Vec2` implicitly and from the call
+you cannot tell whether the object will be modified.
 
-`mut` znika w emisji — zostaje `*`. Cała niezmienność to zjawisko czasu
-kompilacji, zero kosztu w runtime. **To dobry test dla każdej cechy:
-jeśli nie znika w emisji, prawdopodobnie łamie zasadę nadrzędną.**
-
----
-
-## D6. Inicjalizacja — ZII
-
-Zmienne zadeklarowane bez wartości są zerowane (za Neluą).
-Brak konstruktorów i destruktorów (brak RAII).
-Ewentualnie adnotacja wyłączająca zerowanie dla mikrooptymalizacji.
+`mut` disappears in emission — only `*` remains. All immutability is a compile-time
+phenomenon, zero runtime cost. **That is a good test for every feature:
+if it does not disappear in emission, it probably breaks the overarching principle.**
 
 ---
 
-## D8. Precedencja operatorów bitowych — ROZSTRZYGNIĘTE
+## D6. Initialization — ZII
 
-**Wybór: jak Rust, nie jak C.**
+Variables declared without a value are zeroed (after Nelua).
+No constructors or destructors (no RAII).
+Optionally an annotation to disable zeroing for micro-optimization.
+
+---
+
+## D8. Bitwise operator precedence — DECIDED
+
+**Choice: like Rust, not like C.**
 
 ```
-* / %  →  + -  →  << >>  →  &  →  ^  →  |  →  porównania  →  == !=
+* / %  →  + -  →  << >>  →  &  →  ^  →  |  →  comparisons  →  == !=
 ```
 
-W C bitowe leżą *poniżej* porównań, więc `a & b == c` to `a & (b == c)` —
-klasyczna pułapka. W Klinie (jak w Ruście) bitowe wiążą mocniej:
-`a & b == c` ⇒ `(a & b) == c`. Emisja do C nadal 1:1; nawiasowanie
-`BinaryExpr` zachowuje zamierzoną kolejność.
+In C bitwise operators sit *below* comparisons, so `a & b == c` means `a & (b == c)` —
+a classic trap. In Klin (like Rust) bitwise binds tighter:
+`a & b == c` ⇒ `(a & b) == c`. Emission to C is still 1:1; parenthesization in
+`BinaryExpr` preserves the intended order.
 
-Binarny `&` vs unarny `&` (adres) — rozróżnienie po pozycji, jak `*`
-(mnożenie vs dereferencja).
+Binary `&` vs unary `&` (address) — distinguished by position, like `*`
+(multiplication vs dereference).
 
-Zaimplementowane w [078](../issues/078-bitwise-ops.md); przykład:
+Implemented in [078](../issues/078-bitwise-ops.md); example:
 [`examples/bitwise.kl`](../examples/bitwise.kl).
 
 ---
 
-## D7. Do rozstrzygnięcia później
+## D7. To decide later
 
-- Domknięcia — czy w ogóle? Nelua ich nie ma poza top-level. Struct
-  z environment + wskaźnik na funkcję to średnia trudność, ale alokacja
-  środowiska łamie zasadę nadrzędną.
-- Interfejsy — fat pointer `{ void* data; Vtable* vt; }`. Jeśli tak, to
-  dispatch dynamiczny **jawny** w składni (`dyn Writer`), domyślny statyczny.
-- Slice: `struct { T* ptr; size_t len, cap; }` — wymusza generyki, więc
-  zależy od D3.
-- Operatory na typach użytkownika — czy w ogóle. Ryzyko ukrytego kosztu.
+- Closures — at all? Nelua does not have them outside top-level. A struct
+  with environment + function pointer is medium difficulty, but allocating
+  the environment breaks the overarching principle.
+- Interfaces — fat pointer `{ void* data; Vtable* vt; }`. If so,
+  dynamic dispatch is **explicit** in syntax (`dyn Writer`), static by default.
+- Slice: `struct { T* ptr; size_t len, cap; }` — forces generics, so
+  it depends on D3.
+- Operators on user types — at all. Risk of hidden cost.
