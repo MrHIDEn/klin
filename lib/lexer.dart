@@ -196,20 +196,47 @@ final class Lexer {
       }
       return Token(TokenKind.intLit, buf.toString(), start);
     }
+    if (_peek == '0' &&
+        _i + 1 < source.length &&
+        (source[_i + 1] == 'b' || source[_i + 1] == 'B')) {
+      buf.write(_advance());
+      buf.write(_advance());
+      if (_atEnd || !_isBinaryDigit(_peek)) {
+        throw LexError('expected binary digit after `0b`', start);
+      }
+      while (!_atEnd && (_isBinaryDigit(_peek) || _peek == '_')) {
+        buf.write(_advance());
+      }
+      return Token(TokenKind.intLit, buf.toString(), start);
+    }
     while (!_atEnd && (_isDigit(_peek) || _peek == '_')) {
       buf.write(_advance());
     }
+    var isFloat = false;
     if (!_atEnd &&
         _peek == '.' &&
         _i + 1 < source.length &&
         _isDigit(source[_i + 1])) {
+      isFloat = true;
       buf.write(_advance()); // .
       while (!_atEnd && (_isDigit(_peek) || _peek == '_')) {
         buf.write(_advance());
       }
-      return Token(TokenKind.floatLit, buf.toString(), start);
     }
-    return Token(TokenKind.intLit, buf.toString(), start);
+    // Exponent: `e`/`E` with an optional sign, e.g. `1e9`, `1.5e-3`. Only consume
+    // when a digit follows, so `1end` stays `1` + ident `end`.
+    if (!_atEnd && (_peek == 'e' || _peek == 'E') && _hasExponentDigits()) {
+      isFloat = true;
+      buf.write(_advance()); // e/E
+      if (!_atEnd && (_peek == '+' || _peek == '-')) {
+        buf.write(_advance());
+      }
+      while (!_atEnd && (_isDigit(_peek) || _peek == '_')) {
+        buf.write(_advance());
+      }
+    }
+    return Token(
+        isFloat ? TokenKind.floatLit : TokenKind.intLit, buf.toString(), start);
   }
 
   Token _string(SourcePos start) {
@@ -293,6 +320,16 @@ final class Lexer {
   static bool _isDigit(String c) {
     final u = c.codeUnitAt(0);
     return u >= 48 && u <= 57;
+  }
+
+  static bool _isBinaryDigit(String c) => c == '0' || c == '1';
+
+  /// True when the `e`/`E` at the cursor is a float exponent: optional sign then
+  /// at least one digit.
+  bool _hasExponentDigits() {
+    var j = _i + 1;
+    if (j < source.length && (source[j] == '+' || source[j] == '-')) j++;
+    return j < source.length && _isDigit(source[j]);
   }
 
   static bool _isHexDigit(String c) {

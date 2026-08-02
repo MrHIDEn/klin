@@ -24,7 +24,7 @@ String _emitExpr(Expr expr, _ExprCtx ctx) {
 
 String _emitExprRaw(Expr expr, _ExprCtx ctx) {
   return switch (expr) {
-    IntLit(:final lexeme) => lexeme.replaceAll('_', ''),
+    IntLit(:final lexeme) => _cIntLiteral(lexeme),
     FloatLit(:final lexeme) => lexeme.replaceAll('_', ''),
     BoolLit(:final value) => value ? 'true' : 'false',
     StringLit(:final value) => '"${_escapeC(value)}"',
@@ -162,6 +162,17 @@ String _structCName(String module, String name) =>
 
 String _enumCName(String module, String name) =>
     module.isEmpty ? name : '${module}_$name';
+
+/// Emits an integer literal portably. Binary `0b…` is not standard C (and tcc
+/// support is unreliable), so it is rewritten to `0x…` with the same bit
+/// pattern; decimal and `0x…` pass through. `_` separators are stripped.
+String _cIntLiteral(String lexeme) {
+  final s = lexeme.replaceAll('_', '');
+  if (s.startsWith('0b') || s.startsWith('0B')) {
+    return '0x${BigInt.parse(s.substring(2), radix: 2).toRadixString(16)}';
+  }
+  return s;
+}
 
 String _enumConstCName(String module, String name, String variant) =>
     module.isEmpty ? '${name}_$variant' : '${module}_${name}_$variant';

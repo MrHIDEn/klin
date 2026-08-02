@@ -423,11 +423,15 @@ final class Checker {
       final close = name.indexOf(']');
       if (close < 2) throw CheckError('invalid array type `$name`', pos);
       final lenText = name.substring(1, close).replaceAll('_', '');
+      final isHex = lenText.startsWith('0x') || lenText.startsWith('0X');
+      final isBin = lenText.startsWith('0b') || lenText.startsWith('0B');
       final len = int.tryParse(
-        lenText.startsWith('0x') || lenText.startsWith('0X')
-            ? lenText.substring(2)
-            : lenText,
-        radix: lenText.startsWith('0x') || lenText.startsWith('0X') ? 16 : 10,
+        isHex || isBin ? lenText.substring(2) : lenText,
+        radix: isHex
+            ? 16
+            : isBin
+                ? 2
+                : 10,
       );
       if (len == null || len < 0 || close == name.length - 1) {
         throw CheckError('invalid array type `$name`', pos);
