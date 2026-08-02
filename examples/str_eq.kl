@@ -1,0 +1,12 @@
+// Thin libc string helpers — content compare / length with visible cost.
+// `==` on `str` is intentionally unsupported (would hide O(n) behind an operator).
+
+import str
+
+fn main() {
+    let s: str = "klin"
+    if str.eq(s, "klin") {
+        printf("match\n")
+    }
+    printf("len=%zu\n", str.len(s))
+}

@@ -1,12 +1,12 @@
 # 080 — `stdlib/str` — comparisons and string helpers
 
-**Status:** 💭 under consideration
+**Status:** ✅ done
 **Depends on:** [012](012-stdlib-io.md) (stdlib module pattern), [021](021-c-libraries.md) (FFI/libc); related to [016](016-string-interpolation.md), [077](077-string-template.md)
 
 ## Problem
 
 `str` in Klin is `const char*`. `==` on `str` **does not work** (would compare addresses,
-not content — silent trap), so today content comparison is raw:
+not content — silent trap), so content comparison used to be raw:
 
 ```klin
 @[cimport, codename("strcmp")]
@@ -27,42 +27,29 @@ Downsides: repeated `@cimport` boilerplate, easy to mix up direction / forget
 - Similarly **do not** add “string‑match" (`match s { "red" {…} }`) — that is also a
   `strcmp` chain. `match` stays int/enum‑only.
 
-## Proposal: thin library module
+## Delivered: thin library module
 
-`stdlib/str` — libc wrapper, cost visible (call), reads well,
-eliminates repeated `@cimport`:
-
-```klin
-module str
-
-@[cimport, codename("strcmp")]
-fn c_strcmp(a: str, b: str): i32
-
-@[cimport, codename("strlen")]
-fn c_strlen(s: str): usize
-
-pub fn eq(a, b: str): bool { return c_strcmp(a, b) == 0 }
-pub fn len(s: str): usize { return c_strlen(s) }
-// eventually (under consideration): starts_with, ends_with, contains (via strstr)
-```
-
-Usage:
+[`stdlib/str.kl`](../stdlib/str.kl) — libc wrapper, cost visible (call):
 
 ```klin
 import str
 if str.eq(s, "red") { … }
+let n = str.len(s)
 ```
+
+Golden: [`test/str_eq.kl`](../test/str_eq.kl). Example: [`examples/str_eq.kl`](../examples/str_eq.kl).
 
 Model like Go (`strings`) / Zig — library functions, not operator magic.
 
 ## MVP
 
-- [ ] `stdlib/str` with `eq` (and `len`), via `@cimport` on `strcmp`/`strlen`.
-- [ ] Golden + example; hook into stdlib import mechanism (like `io`/`mem`).
-- [ ] Docs (README, stdlib README).
+- [x] `stdlib/str` with `eq` (and `len`), via `@cimport` on `strcmp`/`strlen`.
+- [x] Golden + example; hook into stdlib import mechanism (like `io`/`mem`).
+- [x] Docs (README, stdlib README).
 
 ## Out of scope
 
 - Overloading `==` / “string‑match" (deliberately, see above).
 - Owning / mutable strings / allocation (that is `Allocator` + [077](077-string-template.md)).
 - Unicode/locale (libc `strcmp` is byte-wise) — possibly later.
+- `starts_with` / `ends_with` / `contains` (future).

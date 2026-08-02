@@ -1,6 +1,6 @@
 # 076 — Release: Windows/ARM targets + release + checksums
 
-**Status:** 🔨 in progress (workflow extended; v* release = maintainer action)
+**Status:** ✅ done (workflow + tag `v0.1.0` with 6 platforms / checksums)
 **Depends on:** [067](067-homebrew.md)
 
 ## Goal
@@ -66,5 +66,5 @@ C compiler (gcc/clang/tcc; on Windows MSVC/clang/mingw).
 
 - [x] `release.yml`: 6 targets (macOS arm64/x64, Linux x64/arm64, Windows x64/arm64).
 - [x] Per-OS packaging (`tar.gz`/`zip`) + `.sha256`.
-- [ ] First tag `v*` passes end-to-end (test on real release).
-- [ ] Docs: platform list + note about C compiler on Windows.
+- [x] First tag `v*` passes end-to-end (`v0.1.0` Release with binaries + sidecars).
+- [x] Docs: platform list + note about C compiler on Windows ([docs/17-homebrew.md](../docs/17-homebrew.md), README).

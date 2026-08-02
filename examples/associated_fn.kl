@@ -2,8 +2,7 @@
 // `Type.name(...)`. No instance receiver — they emit as plain C functions
 // (`Type_name(...)`), zero hidden cost. Useful for constructors and parsers.
 
-@[cimport, codename("strcmp")]
-fn strcmp(a: str, b: str): i32
+import str
 
 enum Color { Red, Green, Blue }
 
@@ -18,9 +17,9 @@ fn (c: Color) name(): str {
 // Reverse of `name`: parse a string into a Color. Failable (`!Color`), like a
 // Swift `init?` / Rust `from_str` — the caller decides how to handle the error.
 fn Color.from_name(s: str): !Color {
-    if strcmp(s, "red") == 0 { return Color.Red }
-    if strcmp(s, "green") == 0 { return Color.Green }
-    if strcmp(s, "blue") == 0 { return Color.Blue }
+    if str.eq(s, "red") { return Color.Red }
+    if str.eq(s, "green") { return Color.Green }
+    if str.eq(s, "blue") { return Color.Blue }
     return error(1)
 }
 

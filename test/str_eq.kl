@@ -1,0 +1,16 @@
+import str
+
+fn main() {
+    if str.eq("red", "red") {
+        printf("eq_ok\n")
+    }
+    if str.eq("red", "blue") {
+        printf("eq_bad\n")
+    } else {
+        printf("neq_ok\n")
+    }
+    let n: usize = str.len("hello")
+    if n == 5 {
+        printf("len_ok\n")
+    }
+}
