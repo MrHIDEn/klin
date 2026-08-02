@@ -1,0 +1,22 @@
+// Bitwise operators (issue 078): map 1:1 to C on integer types only.
+// Precedence is Rust-like (not C): `<<`/`>>`, then `&`, `^`, `|`, then
+// comparisons — so `flags & mask == bit` means `(flags & mask) == bit`.
+
+fn main() {
+    let a: u8 = 0b1100
+    let b: u8 = 0b1010
+    // `~` follows C integer promotions in a bare expression; storing into `u8`
+    // truncates to the Klin result type (0b0011 → 243 as unsigned 8-bit).
+    let na: u8 = ~a
+    printf("and=%d or=%d xor=%d not=%d\n", a & b, a | b, a ^ b, na)
+
+    let x: i32 = 1
+    printf("shl=%d shr=%d\n", x << 3, 0b1000 >> 2)
+
+    // Mask check without extra parentheses (Rust-like precedence).
+    let flags: u32 = 0b0101
+    let mask: u32 = 0b0100
+    if flags & mask == mask {
+        printf("bit2 set\n")
+    }
+}

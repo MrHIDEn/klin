@@ -28,12 +28,18 @@ final class ParseError implements Exception {
 ///   call    := ident "(" (expr ("," expr)*)? ")"
 ///   expr    := equality
 ///   equality   := comparison (("==" | "!=") comparison)*
-///   comparison := term (("<" | "<=" | ">" | ">=") term)*
+///   comparison := bitor (("<" | "<=" | ">" | ">=") bitor)*
+///   bitor   := bitxor ("|" bitxor)*
+///   bitxor  := bitand ("^" bitand)*
+///   bitand  := shift ("&" shift)*
+///   shift   := term (("<<" | ">>") term)*
 ///   term    := factor (("+" | "-") factor)*
 ///   factor  := unary (("*" | "/" | "%") unary)*
-///   unary   := ("-" | "!") unary | primary
+///   unary   := ("-" | "!" | "~" | "*" | "&") unary | primary
 ///   primary := INT | FLOAT | STRING | true | false | ident ["(" args? ")"]
 ///            | "(" expr ")"
+/// Precedence for bitwise ops follows Rust (not C): shifts and `&`/`^`/`|`
+/// bind tighter than comparisons, so `a & b == c` is `(a & b) == c`.
 final class Parser {
   final List<Token> _tokens;
   int _i = 0;
@@ -754,6 +760,7 @@ final class Parser {
         TokenKind.lBracket ||
         TokenKind.minus ||
         TokenKind.bang ||
+        TokenKind.tilde ||
         TokenKind.star ||
         TokenKind.ampersand ||
         TokenKind.cast ||
@@ -984,11 +991,54 @@ final class Parser {
   }
 
   Expr _comparison() {
-    var left = _termAdd();
+    var left = _bitOr();
     while (_check(TokenKind.less) ||
         _check(TokenKind.lessEqual) ||
         _check(TokenKind.greater) ||
         _check(TokenKind.greaterEqual)) {
+      final op = _advance();
+      final right = _bitOr();
+      left = BinaryExpr(left, op.lexeme, right, op.pos);
+    }
+    return left;
+  }
+
+  /// Bitwise OR — below comparisons (Rust-like; not C).
+  Expr _bitOr() {
+    var left = _bitXor();
+    while (_check(TokenKind.pipe)) {
+      final op = _advance();
+      final right = _bitXor();
+      left = BinaryExpr(left, op.lexeme, right, op.pos);
+    }
+    return left;
+  }
+
+  Expr _bitXor() {
+    var left = _bitAnd();
+    while (_check(TokenKind.caret)) {
+      final op = _advance();
+      final right = _bitAnd();
+      left = BinaryExpr(left, op.lexeme, right, op.pos);
+    }
+    return left;
+  }
+
+  /// Binary `&` (bitwise AND). Distinct from unary `&` (address), resolved by
+  /// position the same way `*` is multiplication vs dereference.
+  Expr _bitAnd() {
+    var left = _shift();
+    while (_check(TokenKind.ampersand)) {
+      final op = _advance();
+      final right = _shift();
+      left = BinaryExpr(left, op.lexeme, right, op.pos);
+    }
+    return left;
+  }
+
+  Expr _shift() {
+    var left = _termAdd();
+    while (_check(TokenKind.lessLess) || _check(TokenKind.greaterGreater)) {
       final op = _advance();
       final right = _termAdd();
       left = BinaryExpr(left, op.lexeme, right, op.pos);
@@ -1022,6 +1072,7 @@ final class Parser {
   Expr _unary() {
     if (_check(TokenKind.minus) ||
         _check(TokenKind.bang) ||
+        _check(TokenKind.tilde) ||
         _check(TokenKind.star) ||
         _check(TokenKind.ampersand)) {
       final op = _advance();

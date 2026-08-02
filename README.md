@@ -117,6 +117,14 @@ as a plain C function (`Type_name(…)`), zero hidden cost. See
 [issues/079-associated-functions.md](issues/079-associated-functions.md),
 [`examples/associated_fn.kl`](examples/associated_fn.kl).
 
+### Bitwise operators
+
+Integers only: `& | ^ ~ << >>` (map 1:1 to C). Precedence is Rust-like, not C —
+shifts, then `&`, `^`, `|`, then comparisons — so `flags & mask == bit` means
+`(flags & mask) == bit`. Signed `>>` is arithmetic; unsigned is logical. No
+compound assigns (`|=`, …) yet. See [issues/078-bitwise-ops.md](issues/078-bitwise-ops.md),
+[`examples/bitwise.kl`](examples/bitwise.kl).
+
 ### Number literals
 
 Integers are decimal (`123`), hex (`0xFF`), binary (`0b1010`), or octal
