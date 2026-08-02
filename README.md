@@ -1,13 +1,15 @@
 # Klin
 
 ```
-  +====================+
-  |  K L I N            \
-  |  systems language    \
-  +=======================+----> C
+  ┌────────────────────╱│
+  │                    ╱ │
+  │   K L I N         ╱  │
+  │                  ╱   │
+  └─────────────────╱────┘
+         thin layer  →  C
 ```
 
-A wedge driven between you and C — thin layer, zero hidden cost.
+Geometric klin: UI wedge cut — driven between you and C, zero hidden cost.
 
 > **Experimental 0.1.0** — the language and toolchain work for real programs
 > (host + STM32 demos), but the public packaging surface is still settling.
