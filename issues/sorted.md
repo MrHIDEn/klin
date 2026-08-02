@@ -103,7 +103,7 @@ z SVD. Dalsza praca to rozwój (backlog poniżej), nie budowa rdzenia od zera.
 | [078](078-bitwise-ops.md) | Operatory bitowe (`\| & ^ ~ << >>`; tylko całkowite) | 💭 | 002, 019 |
 | [079](079-associated-functions.md) | Funkcje asocjowane/statyczne na typach (`Type.func`; konstruktory/parsery) | ✅ | 005, 072 |
 | [080](080-stdlib-str.md) | `stdlib/str` — `eq`/`len`/… (porównania napisów bez operatora `==`) | 💭 | 012, 021 |
-| [081](081-number-literals.md) | Literały: binarne `0b`, wykładnik float `1e…`, znakowe `'A'`, (ósemkowe) | 💭 | 002 |
+| [081](081-number-literals.md) | Literały: binarne `0b`, wykładnik float `1e…`, znakowe `'A'`, (ósemkowe) | 🔨 (Grupa 1 ✅) | 002 |
 
 ---
 

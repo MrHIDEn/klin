@@ -1,7 +1,17 @@
 # 081 — Literały liczbowe i znakowe (binarne, wykładnik float, znakowe, ósemkowe?)
 
-**Status:** 💭 do rozważenia
+**Status:** 🔨 w toku — **Grupa 1 zrobiona** (`0b` + wykładnik float); Grupa 2/ósemkowe do rozważenia
 **Zależy od:** [002](002-tablica-symboli-checker.md) (lekser/typy); powiązane z [078](078-bitwise-ops.md) (maski)
+
+## Zrobione (Grupa 1)
+
+- Binarne `0b1010` / `0B…` (z `_`), oraz wykładnik float `1e9` / `1.5e-3` / `2.5E+2`
+  (z kropką i bez). Lekser: walidacja cyfry po `0b`; wykładnik konsumowany tylko
+  gdy po `e`/`E` (opcjonalny znak) jest cyfra, więc `1end` = `1` + `end`.
+- Emisja przenośna: `0b…` → `0x…` (ten sam wzorzec bitów; brak `0b` w wyjściu →
+  gcc/clang/tcc OK); wykładniki wprost. Długość tablicy akceptuje `0b…`.
+- `fmt` zachowuje pisownię źródłową. Przykład: `examples/number_literals.kl`,
+  golden: `test/number_literals.kl`.
 
 ## Stan obecny (lekser)
 
@@ -33,12 +43,12 @@
   untyped int (koercja do `u8`/`i32`); emisja `'A'` (przenośne).
 - Separator `_` dozwolony we wszystkich formach liczbowych.
 
-## Grupowanie (rekomendacja)
+## Grupowanie
 
-- **Grupa 1 (priorytet, tanie, przenośne):** binarne `0b` + wykładnik float `1e…`.
-  Pokrywa realne potrzeby (bity + f64). → osobny PR.
-- **Grupa 2:** literały znakowe `'A'` (większa zmiana leksera) → osobno.
-- **Ósemkowe `0o`:** niski priorytet; dodać przy okazji albo pominąć.
+- **Grupa 1 — ✅ zrobiona:** binarne `0b` + wykładnik float `1e…`. Pokrywa realne
+  potrzeby (bity + f64), emisja przenośna.
+- **Grupa 2 — 💭:** literały znakowe `'A'` (większa zmiana leksera) → osobno.
+- **Ósemkowe `0o` — 💭:** niski priorytet; dodać przy okazji albo pominąć.
 
 ## Punkty implementacji
 
