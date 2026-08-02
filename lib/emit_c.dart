@@ -155,7 +155,7 @@ void _emitEnums(StringBuffer buf, Program program, String sourcePath) {
       final name = _enumConstCName(decl.moduleName, decl.name, variant.name);
       final value = variant.value;
       if (value is IntLit) {
-        parts.add('$name = ${value.lexeme.replaceAll('_', '')}');
+        parts.add('$name = ${_cIntLiteral(value.lexeme)}');
       } else {
         parts.add(name);
       }

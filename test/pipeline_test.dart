@@ -2842,6 +2842,62 @@ fn main() {
     expect(formatSource(once), once);
   });
 
+  test('golden: binary + float-exponent literals (issue 081)', () async {
+    final result = await _compileAndRun('test/number_literals.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(
+        result.stdout, await File('test/number_literals.out').readAsString());
+
+    final source = File('test/number_literals.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/number_literals.kl');
+    // Binary and octal literals emit as portable 0x (no `0b`/`0o`).
+    expect(c, contains('uint32_t mask = 0xf0;'));
+    expect(c, contains('uint32_t bit = 0x5;'));
+    expect(c, contains('uint32_t perm = 0x1ed;')); // 0o755 == 493
+    expect(c, isNot(contains('0b')));
+    expect(c, isNot(contains('0o')));
+    // Float exponents pass through; `0b100` array length becomes 4.
+    expect(c, contains('double small = 1.5e-3;'));
+    expect(c, contains('int32_t xs[4]'));
+  });
+
+  test('error: binary literal without a digit (issue 081)', () {
+    expect(
+      () => Lexer('fn main() { let x = 0b }').tokenize(),
+      throwsA(predicate(
+          (e) => e is LexError && e.toString().contains('binary digit'))),
+    );
+  });
+
+  test('error: octal literal without a digit (issue 081)', () {
+    expect(
+      () => Lexer('fn main() { let x = 0o }').tokenize(),
+      throwsA(predicate(
+          (e) => e is LexError && e.toString().contains('octal digit'))),
+    );
+  });
+
+  test('lexer: `1end` is `1` then ident, not a float exponent (issue 081)', () {
+    final tokens = Lexer('1end').tokenize();
+    expect(tokens[0].kind, TokenKind.intLit);
+    expect(tokens[0].lexeme, '1');
+    expect(tokens[1].kind, TokenKind.ident);
+    expect(tokens[1].lexeme, 'end');
+  });
+
+  test('klin fmt: preserves binary and exponent literals (issue 081)', () {
+    const source =
+        'fn main() { let a = 0b1010\nlet o = 0o755\nlet b = 1.5e-3\nlet c = 1e9 }';
+    final once = formatSource(source);
+    expect(once, contains('0b1010'));
+    expect(once, contains('0o755'));
+    expect(once, contains('1.5e-3'));
+    expect(once, contains('1e9'));
+    expect(formatSource(once), once);
+  });
+
   test('error: wrong function argument count', () {
     final source = File('test/bad_arity.kl').readAsStringSync();
     final program = Parser(Lexer(source).tokenize()).parse();

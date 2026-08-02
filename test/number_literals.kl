@@ -1,0 +1,20 @@
+fn main() {
+    // Binary integer literals (with `_` separators).
+    let mask: u32 = 0b1111_0000
+    let bit: u32 = 0b101
+    printf("bin: %u %u\n", mask, bit)
+
+    // Modern octal (0o…), never C's leading-zero form.
+    let perm: u32 = 0o755
+    printf("oct: %u\n", perm)
+
+    // Float exponent literals: with and without a fractional part, signs.
+    let big: f64 = 1e9
+    let small: f64 = 1.5e-3
+    let plus: f64 = 2.5E+2
+    printf("exp: %g %g %g\n", big, small, plus)
+
+    // Binary literal as an array length.
+    let xs: [0b100]i32 = [1, 2, 3, 4]
+    printf("len: %d first: %d\n", xs.len, xs[0])
+}

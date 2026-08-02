@@ -1,0 +1,18 @@
+// Number literals (issue 081, group 1): binary integers and float exponents.
+// Non-C forms (binary) are emitted as portable `0x` — zero hidden cost.
+
+fn main() {
+    // Binary integers with `_` grouping — handy for bit masks / registers.
+    let flags: u32 = 0b1010_0001
+    let mask: u32 = 0b1111
+    printf("flags: %u  mask: %u\n", flags, mask)
+
+    // Modern octal (0o…), never C's leading-zero form.
+    let perm: u32 = 0o755
+    printf("perm: %u\n", perm)
+
+    // Float exponent form, with or without a fractional part and a sign.
+    let avogadro: f64 = 6.022e23
+    let milli: f64 = 1e-3
+    printf("%g %g\n", avogadro, milli)
+}
