@@ -3,13 +3,15 @@
 
 # Homebrew formula for the Klin compiler (issue 067).
 #
-# Install from this repo (clone with access if private):
+# Tap (recommended):
 #   brew tap dart-lang/dart
-#   brew install --HEAD --formula Formula/klin.rb
+#   brew install mrhiden/klin/klin
+#   brew install --HEAD mrhiden/klin/klin
 #
-# Stable: brew install (from this formula or mrhiden/klin tap).
-# HEAD:   brew install --HEAD --formula Formula/klin.rb
-# See docs/17-homebrew.md.
+# From this clone:
+#   brew install --formula Formula/klin.rb
+#   brew install --HEAD --formula Formula/klin.rb
+# See docs/17-homebrew.md. Keep in sync with MrHIDEn/homebrew-klin.
 class Klin < Formula
   desc "Systems language that compiles to C"
   homepage "https://github.com/MrHIDEn/klin"

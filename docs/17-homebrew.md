@@ -13,18 +13,29 @@
 
 ## Install (recommended)
 
-Requires [Dart tap](https://github.com/dart-lang/homebrew-dart) to build from source:
+Requires [Dart tap](https://github.com/dart-lang/homebrew-dart) to build from source.
+
+Short form — Homebrew adds the tap automatically:
+
+```sh
+brew tap dart-lang/dart
+brew install mrhiden/klin/klin
+klin --version
+```
+
+Equivalent explicit taps:
 
 ```sh
 brew tap dart-lang/dart
 brew tap mrhiden/klin
 brew install klin
-klin --version
 ```
 
 HEAD (`main`):
 
 ```sh
+brew install --HEAD mrhiden/klin/klin
+# or, after `brew tap mrhiden/klin`:
 brew install --HEAD klin
 ```
 
