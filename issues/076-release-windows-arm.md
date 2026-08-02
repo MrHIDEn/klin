@@ -1,16 +1,16 @@
-# 076 — Release: cele Windows/ARM + wydanie + sumy kontrolne
+# 076 — Release: Windows/ARM targets + release + checksums
 
-**Status:** 🔨 w toku (workflow rozszerzony; wydanie v* = akcja maintainera)
-**Zależy od:** [067](067-homebrew.md)
+**Status:** 🔨 in progress (workflow extended; v* release = maintainer action)
+**Depends on:** [067](067-homebrew.md)
 
-## Cel
+## Goal
 
-Rozszerzyć [`.github/workflows/release.yml`](../.github/workflows/release.yml)
-o więcej platform i opisać proces wydania + weryfikację sum kontrolnych.
+Extend [`.github/workflows/release.yml`](../.github/workflows/release.yml)
+with more platforms and document release process + checksum verification.
 
-## Cele build (na tag `v*`)
+## Build targets (on tag `v*`)
 
-| Platforma | Runner | Asset |
+| Platform | Runner | Asset |
 |---|---|---|
 | macOS arm64 | `macos-15` | `klin-macos-arm64.tar.gz` |
 | macOS x64 | `macos-15-intel` | `klin-macos-amd64.tar.gz` |
@@ -19,52 +19,52 @@ o więcej platform i opisać proces wydania + weryfikację sum kontrolnych.
 | Windows x64 | `windows-latest` | `klin-windows-amd64.zip` |
 | Windows arm64 | `windows-11-arm` | `klin-windows-arm64.zip` (`continue-on-error`) |
 
-`dart compile exe` buduje pod hosta (brak cross-kompilacji) — stąd runner per
-cel. Windows: `.zip` + `Get-FileHash` (pwsh); Unix: `.tar.gz` + `shasum`. Każdy
-asset ma `.sha256`.
+`dart compile exe` builds for host (no cross-compilation) — hence runner per
+target. Windows: `.zip` + `Get-FileHash` (pwsh); Unix: `.tar.gz` + `shasum`. Each
+asset has `.sha256`.
 
-Windows ARM64 to najświeższy runner (`windows-11-arm`) — oznaczony jako
-eksperymentalny (`continue-on-error`), by nie blokować całego release'u, jeśli
-zawiedzie.
+Windows ARM64 is the newest runner (`windows-11-arm`) — marked
+experimental (`continue-on-error`) so it does not block the whole release if it
+fails.
 
-## Proces wydania (akcja maintainera — nie robi tego agent)
+## Release process (maintainer action — agent does not do this)
 
-1. `git tag vX.Y.Z && git push origin vX.Y.Z` → workflow buduje 6 assetów +
-   publikuje GitHub Release.
-2. Wypełnić `sha256` w [`Formula/klin.rb`](../Formula/klin.rb) ze źródła
-   (job `source-checksum` podaje URL/komendę) — jak `go.sum` dla Homebrew.
-3. Zweryfikować `.sha256` przy assetach.
+1. `git tag vX.Y.Z && git push origin vX.Y.Z` → workflow builds 6 assets +
+   publishes GitHub Release.
+2. Fill `sha256` in [`Formula/klin.rb`](../Formula/klin.rb) from source
+   (job `source-checksum` provides URL/command) — like `go.sum` for Homebrew.
+3. Verify `.sha256` on assets.
 
-## Dystrybucja
+## Distribution
 
 - macOS/Linux: Homebrew ([067](067-homebrew.md)).
-- Windows: brak Homebrew — na teraz `.zip` z Release; kanały Scoop/WinGet =
-  przyszłość (osobno).
+- Windows: no Homebrew — for now `.zip` from Release; Scoop/WinGet channels =
+  future (separate).
 
-## Możliwe automatyzacje (przyszłość, opcjonalne)
+## Possible automation (future, optional)
 
-Pipeline już buduje i publikuje wszystkie 6 wersji z jednego tagu (matryca,
-`fail-fast: false`, job `publish`). Do domknięcia „jeden przycisk":
+Pipeline already builds and publishes all 6 versions from one tag (matrix,
+`fail-fast: false`, job `publish`). To close “one button":
 
-- **Auto-`sha256` w Homebrew**: po release policzyć sumę źródła i zaktualizować
-  `sha256` w [`Formula/klin.rb`](../Formula/klin.rb) (commit/PR do tapu),
-  zamiast ręcznego kroku z `source-checksum`.
-- **Smoke po buildzie**: na każdym runnerze po kompilacji uruchomić
-  `klin --version` i skompilować `examples/hello.kl` (gdzie jest host C), by
-  release nie wypuścił zepsutej binarki. Uwaga: na Windows wymaga C-kompilatora
-  na runnerze (MSVC/clang/mingw) — do rozważenia, czy smoke tylko tam, gdzie
-  `cc` jest dostępny.
-- **Weryfikacja `.sha256`**: krok `shasum -c` / `Get-FileHash` sprawdzający
-  spójność sidecarów przed publikacją.
+- **Auto-`sha256` in Homebrew**: after release compute source sum and update
+  `sha256` in [`Formula/klin.rb`](../Formula/klin.rb) (commit/PR to tap),
+  instead of manual step from `source-checksum`.
+- **Smoke after build**: on each runner after compile run
+  `klin --version` and compile `examples/hello.kl` (where host C exists), so
+  release does not ship broken binary. Note: Windows needs C compiler
+  on runner (MSVC/clang/mingw) — consider whether smoke only where
+  `cc` is available.
+- **`.sha256` verification**: `shasum -c` / `Get-FileHash` step checking
+  sidecar consistency before publish.
 
-## Uwaga
+## Note
 
-Wydana binarka to **frontend** Klina; do `klin run` nadal potrzebny hostowy
-kompilator C (gcc/clang/tcc; na Windows MSVC/clang/mingw).
+Released binary is Klin **frontend**; `klin run` still needs host
+C compiler (gcc/clang/tcc; on Windows MSVC/clang/mingw).
 
-## Kryteria
+## Criteria
 
-- [x] `release.yml`: 6 celów (macOS arm64/x64, Linux x64/arm64, Windows x64/arm64).
-- [x] Pakowanie per-OS (`tar.gz`/`zip`) + `.sha256`.
-- [ ] Pierwszy tag `v*` przechodzi end-to-end (test przy realnym wydaniu).
-- [ ] Docs: lista platform + nota o C-kompilatorze na Windows.
+- [x] `release.yml`: 6 targets (macOS arm64/x64, Linux x64/arm64, Windows x64/arm64).
+- [x] Per-OS packaging (`tar.gz`/`zip`) + `.sha256`.
+- [ ] First tag `v*` passes end-to-end (test on real release).
+- [ ] Docs: platform list + note about C compiler on Windows.

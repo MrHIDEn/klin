@@ -1,26 +1,26 @@
-# 014 — `match` (domyślny break)
+# 014 — `match` (default break)
 
-**Status:** ✅ ukończone
-**Zależy od:** 003
+**Status:** ✅ complete
+**Depends on:** 003
 
-> **Uwaga historyczna.** Wczesna, kompletna implementacja `match` powstała na
-> branchu `issue-014-match` (2026-07-30), ale nigdy nie została scalona do
-> `main` — powstała względem starego frontendu i dziś konfliktuje w rdzeniu
-> (`lexer`/`parser`/`ast`/`checker`/`emit_c`). Posłużyła jako **referencja
-> projektowa** (składnia, testy, docs); właściwa implementacja powstała od zera
-> na świeżym branchu z `origin/main`. Stary branch można usunąć.
+> **Historical note.** An early, complete `match` implementation was built on
+> branch `issue-014-match` (2026-07-30), but was never merged to
+> `main` — it was built against an old frontend and today conflicts in the core
+> (`lexer`/`parser`/`ast`/`checker`/`emit_c`). It served as a **design
+> reference** (syntax, tests, docs); the proper implementation was built from scratch
+> on a fresh branch from `origin/main`. The old branch can be deleted.
 
-## Zakres
+## Scope
 
-- keyword `match` (nie `switch`)
-- **domyślny break** — brak fallthrough, brak słowa `fallthrough`
-- grupowanie: `1, 2, 3`
-- zakres inclusive: `4..=10`
-- forma instrukcji i forma wyrażenia
+- keyword `match` (not `switch`)
+- **default break** — no fallthrough, no `fallthrough` keyword
+- grouping: `1, 2, 3`
+- inclusive range: `4..=10`
+- statement form and expression form
 
-## Składnia
+## Syntax
 
-Bez przypisania (instrukcja):
+Without assignment (statement):
 
 ```
 match x {
@@ -36,7 +36,7 @@ match x {
 }
 ```
 
-Z przypisaniem (wyrażenie):
+With assignment (expression):
 
 ```
 let a = match x {
@@ -46,27 +46,27 @@ let a = match x {
 }
 ```
 
-## Decyzje
+## Decisions
 
-- Emisja: łańcuch `if` / `else if` (subject raz do zmiennej tymczasowej)
-- Wzorce `>= 4` itd. — później
-- `else` wymagane w formie wyrażenia; w instrukcji opcjonalne
-- Podmiot musi być całkowitoliczbowy (`i8`…`u64`, `int`); `f64` / struktury —
-  błąd checkera
-- Forma wyrażenia tylko jako inicjalizator `let` albo prawa strona
-  przypisania (obniża się do instrukcji, nie do wyrażenia C)
-- Ramiona zwracają wartość, nie napis — `str` nie jest jeszcze typem
-  pierwszej klasy (przykład z `"abc"` z wczesnego szkicu nie przechodzi
-  checkera również poza `match`)
+- Emission: chain of `if` / `else if` (subject once into a temp variable)
+- Patterns `>= 4` etc. — later
+- `else` required in expression form; optional in statement form
+- Subject must be integral (`i8`…`u64`, `int`); `f64` / structs —
+  checker error
+- Expression form only as `let` initializer or right-hand side of
+  assignment (lowers to statement, not to a C expression)
+- Arms return a value, not a string — `str` is not yet a first-class type
+  (example with `"abc"` from early sketch would fail the checker
+  outside `match` too)
 
-Szczegóły: [note/15-match.md](../note/15-match.md).
+Details: [docs/15-match.md](../docs/15-match.md).
 
-## Kryterium ukończenia
+## Completion criteria
 
-- [x] `match` jako instrukcja — test złoty (`test/match_stmt.kl`)
-- [x] `let a = match …` — test złoty (`test/match_expr.kl`)
-- [x] brak fallthrough między ramionami (emisja bez `switch`/`case`)
-- [x] błędy checkera: `else` nie na końcu, brak `else` w wyrażeniu,
-      podmiot nie-całkowity, `match` jako wyrażenie w złej pozycji
-- [x] `klin fmt` (`test/fmt_match.kl`), przykład
+- [x] `match` as statement — golden test (`test/match_stmt.kl`)
+- [x] `let a = match …` — golden test (`test/match_expr.kl`)
+- [x] no fallthrough between arms (emission without `switch`/`case`)
+- [x] checker errors: `else` not at end, missing `else` in expression,
+      non-integral subject, `match` as expression in wrong position
+- [x] `klin fmt` (`test/fmt_match.kl`), example
       [`examples/match.kl`](../examples/match.kl)

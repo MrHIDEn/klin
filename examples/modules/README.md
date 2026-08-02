@@ -17,7 +17,7 @@ dart run ../../bin/klin.dart run app.kl
 # → 2+3=5
 ```
 
-Details: [note/12-moduly.md](../../note/12-moduly.md).
+Details: [docs/12-modules.md](../../docs/12-modules.md).
 
 Directory package (many files, one module): [`../pkg_geom/`](../pkg_geom/) —
-[note/11-biblioteki-klin.md](../../note/11-biblioteki-klin.md).
+[docs/11-klin-libraries.md](../../docs/11-klin-libraries.md).

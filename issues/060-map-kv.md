@@ -1,59 +1,59 @@
-# 060 — Mapa KV (hash map)
+# 060 — KV map (hash map)
 
-**Status:** 💭 do rozważenia (niski priorytet — nieblokujące)
-**Zależy od:** [007](007-wskazniki-tablice-slice.md); przy heap: [057](057-allocator.md); mile [021](021-biblioteki-c.md)
+**Status:** 💭 under consideration (low priority — non-blocking)
+**Depends on:** [007](007-pointers-arrays-slices.md); with heap: [057](057-allocator.md); nice to have [021](021-c-libraries.md)
 
-## Kontekst (notatki z rozmowy)
+## Context (conversation notes)
 
 ### C
 
-- **Brak** wbudowanych map KV w języku i w libc.
-- Lookup „po kluczu”: własna hash table / drzewo, albo `qsort`+`bsearch` na
-  posortowanej tablicy, albo biblioteka (np. uthash, khash).
-- `enum` w C to nazwane stałe **całkowite** (nie „enum na dowolnym typie”).
-  Dopiero **C23** ma `enum E : uint8_t` (underlying type nadal integer).
+- **No** built-in KV maps in the language or libc.
+- Key lookup: own hash table / tree, or `qsort`+`bsearch` on
+  sorted array, or a library (e.g. uthash, khash).
+- `enum` in C is named **integer** constants (not “enum on arbitrary type”).
+  Only **C23** has `enum E : uint8_t` (underlying type still integer).
 
-### Trudność implementacji
+### Implementation difficulty
 
-- **MVP** (np. `string`/`int` → wskaźnik, open addressing / chaining): realne
-  w krótkim czasie.
-- **Mapa „produkcyjna”**: hashe, resize, delete, ownership kluczy, OOM,
-  custom allocator — tu robi się trudno.
-- Bare-metal bez `malloc`: zwykle fixed capacity / arena; ogólna mapa z heapa
-  często nie pasuje do MCU.
+- **MVP** (e.g. `string`/`int` → pointer, open addressing / chaining): feasible
+  in short time.
+- **“Production” map**: hashes, resize, delete, key ownership, OOM,
+  custom allocator — gets hard here.
+- Bare-metal without `malloc`: usually fixed capacity / arena; general heap map
+  often does not fit MCU.
 
 ### uthash / khash
 
-Obie **małe** (header-only, ~1k linii lub mniej) — nie GLib. Runtime: overhead
-na element + (zwykle) dynamiczny resize. Na host OK; na bare-metal nadal trzeba
-świadomie o alokacji.
+Both **small** (header-only, ~1k lines or less) — not GLib. Runtime: overhead
+per element + (usually) dynamic resize. OK on host; on bare-metal still need to be
+explicit about allocation.
 
 ### Go / V
 
-Obie mają **wbudowane** `map[K]V` w języku/runtime (V mocno jak Go). W C tego
-poziomu nie ma — stąd osobne headery albo własny kod.
+Both have **built-in** `map[K]V` in language/runtime (V heavily like Go). C does not have that
+level — hence separate headers or own code.
 
-## Co to znaczy dla Klina
+## What it means for Klin
 
-Zasada nadrzędna: **żadnej ukrytej alokacji / kosztu**. Jeśli mapa kiedyś
-powstanie:
+Overarching rule: **no hidden allocation / cost**. If a map ever
+appears:
 
-- nie jako magiczny builtin z ukrytym heaped grow przy `m[k] = v`,
-- albo jawny `Allocator` ([057](057-allocator.md)) + API w stylu
-  [017](017-collection-methods.md) (`map_*` / `put` z widocznym kosztem),
-- albo cienki wrapper FFI na C (uthash/khash/`-l…`) jak [050](050-sqlite-wrapper.md),
-- albo na embedded: tablica + `bsearch` / compile-time / ideal hash — bez ogólnej
-  hash mapy w stdlib.
+- not as magic builtin with hidden heap grow on `m[k] = v`,
+- or explicit `Allocator` ([057](057-allocator.md)) + API in style of
+  [017](017-collection-methods.md) (`map_*` / `put` with visible cost),
+- or thin FFI wrapper on C (uthash/khash/`-l…`) like [050](050-sqlite-wrapper.md),
+- or on embedded: array + `bsearch` / compile-time / ideal hash — without general
+  hash map in stdlib.
 
-## Szkic (później — nie teraz)
+## Sketch (later — not now)
 
-1. Decyzja: język vs `stdlib/map` vs tylko przykład FFI.
-2. Klucze MVP: `i32` / `u32` / `str`? (ownership stringów).
-3. Host najpierw; bare-metal = fixed / arena albo poza zakresem.
-4. Testy złote + `objdump` vs ręczny C przy grow/lookup.
+1. Decision: language vs `stdlib/map` vs FFI example only.
+2. MVP keys: `i32` / `u32` / `str`? (string ownership).
+3. Host first; bare-metal = fixed / arena or out of scope.
+4. Golden tests + `objdump` vs hand-written C on grow/lookup.
 
-## Poza zakresem
+## Out of scope
 
-- implementacja w tym issue (tylko placeholder w roadmapie)
-- ordered map / drzewo jako wymóg MVP
-- priorytet względem rdzenia / embedded LED / bieżących issue
+- implementation in this issue (roadmap placeholder only)
+- ordered map / tree as MVP requirement
+- priority relative to core / embedded LED / current issues

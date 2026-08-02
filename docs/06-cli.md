@@ -1,0 +1,45 @@
+# Klin CLI
+
+Entry: `dart run bin/klin.dart <subcommand|file.kl> …`
+
+## Meta
+
+| Flag | Meaning |
+|---|---|
+| `--version` / `-v` | Print `klin <version>` (from `lib/version.dart` / `pubspec.yaml`) |
+| `--help` / `-h` | Usage on stdout, exit 0 |
+| *(no arguments)* | Same as `--help` |
+
+## Subcommands
+
+| Command | Meaning |
+|---|---|
+| `run <file.kl>` | Preprocess → parse → check → emit C → host `cc` → run |
+| *(bare path)* | Alias for `run` — `klin examples/hello.kl` |
+| `fmt [-w] <file.kl>` | Canonical printer (4 spaces, K&R). Without `-w` → stdout; with `-w` → write |
+| `test [path…]` | Finds `*_test.kl`, runs `test_*` (like `go test`) |
+| `get [path[@ref]…]` | Fetch remote package **or** device SVD (`.svd`) into cache; writes `klin.mod` (`require` / `device`) + `klin.lock` ([049](../issues/049-remote-imports.md), [053](../issues/053-device-board-assets.md), [065](../issues/065-project-lockfile.md)) |
+| `update [path[@ref]…]` | Force re-fetch (no args = all `require`/`device` from `klin.mod`); refreshes lock |
+| `outdated [path…]` | Report: pin from mod vs latest tag/ref on host ([066](../issues/066-klin-upgrade-outdated.md); **network**) |
+| `upgrade [path…]` | Bump outdated → latest + fetch ([066](../issues/066-klin-upgrade-outdated.md); **network**) |
+
+`run` / `test` **do not** open network for remotes — cache only.
+`get` with existing `klin.lock` prefers commit SHA (reproducible).
+`update` ≠ `upgrade`: update keeps pin from mod; upgrade looks for a newer tag.
+
+## Flags before / with `run`
+
+| Flag | Meaning |
+|---|---|
+| `--emit-c` | Write generated `.c` (default `out/`), no compile / run |
+| `--emit-h` | Write C header with `@[cexport]` prototypes (`out/<base>.h`) |
+| `--emit-pp` | Write preprocessor output (`.pp.kl`), no further stages |
+| `--cc <gcc\|clang\|tcc>` | Host C compiler (default `gcc`) |
+| `-I <dir>` / `-Idir` | Search Klin sources (`import` → `name.kl`) in `dir` |
+| `-l <name>` / `-lname` | Link `-lname` (like cc; C FFI) |
+| `-L <dir>` / `-Ldir` | Search C libs in `dir` |
+
+Klin paths (`lib/`, `-I`, `$KLIN_PATH`): [11-klin-libraries.md](11-klin-libraries.md).
+Modules (`module` / `import` / `pub`): [12-modules.md](12-modules.md).
+fmt details: [05-fmt.md](05-fmt.md). Macros / SVD: [04-macros.md](04-macros.md).
+FFI (import `@[cimport]`/`@[link]` and export `@[cexport]`): [09-ffi-c.md](09-ffi-c.md).

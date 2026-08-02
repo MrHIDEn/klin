@@ -20,5 +20,5 @@ device github/tinygo-org/stm32-svd/svd/stm32f411.svd main
 
 `blink.kl` uses `$device("github/tinygo-org/stm32-svd/svd/stm32f411.svd", …)`.
 Lokalny vendor: [`../blink_f411/`](../blink_f411/) (`$peripherals_from_svd` +
-`third_party/svd`). Docs: [note/04-makra.md](../../../note/04-makra.md),
+`third_party/svd`). Docs: [docs/04-macros.md](../../../docs/04-macros.md),
 [issues/053](../../../issues/053-device-board-assets.md).

@@ -1,50 +1,50 @@
-# 049 — Importy zdalne (GitHub / path jak Go)
+# 049 — Remote imports (GitHub / path like Go)
 
-**Status:** ✅ zrobione (MVP)
-**Zależy od:** [048](048-import-aliases.md), [020](020-biblioteki-klin.md), [047](047-directory-modules.md);
-fixture e2e: [063](063-remote-fixture-osa.md) (`github/mrhiden/osa`, tag `v0.1.0`)
+**Status:** ✅ done (MVP)
+**Depends on:** [048](048-import-aliases.md), [020](020-klin-libraries.md), [047](047-directory-modules.md);
+e2e fixture: [063](063-remote-fixture-osa.md) (`github/mrhiden/osa`, tag `v0.1.0`)
 
-## Składnia
+## Syntax
 
 ```klin
 import "github/mrhiden/osa"       // qualifier = osa
 import "github/mrhiden/osa" oso   // qualifier = oso
-import "gitlab/owner/repo"        // drugi dozwolony host
+import "gitlab/owner/repo"        // second allowed host
 ```
 
-## Zachowanie MVP
+## MVP behavior
 
-- Remote **tylko** gdy pierwszy segment to `github` lub `gitlab` (3 segmenty: `host/owner/repo`).
-- Inne `import "…"` = lokalne (048).
-- Hosty zarezerwowane — lokalny katalog `github/` **nie** cieniuje remote.
-- **`klin run` / `test` bez sieci:** pakiet z cache albo błąd + `klin get …`.
-- Cache: `$KLIN_CACHE` lub `~/.klin/pkg/<host>/<owner>/<repo>/` + `.pin`.
-- Manifest projektu: **`klin.mod`** (jak `go.mod` / `v.mod`):
+- Remote **only** when the first segment is `github` or `gitlab` (3 segments: `host/owner/repo`).
+- Other `import "…"` = local (048).
+- Hosts reserved — local directory `github/` does **not** shadow remote.
+- **`klin run` / `test` without network:** package from cache or error + `klin get …`.
+- Cache: `$KLIN_CACHE` or `~/.klin/pkg/<host>/<owner>/<repo>/` + `.pin`.
+- Project manifest: **`klin.mod`** (like `go.mod` / `v.mod`):
 
 ```text
 klin 1
 require github/mrhiden/osa v0.1.0
 ```
 
-| Komenda | Sens |
+| Command | Meaning |
 |---|---|
-| `klin get path[@ref]` | pobierz; bez `@ref` i bez wpisu → najnowsza + zapis `klin.mod` |
-| `klin get` | zainstaluj wszystkie `require` z `klin.mod` |
-| `klin update [path[@ref]…]` | force ponowne pobranie (bez args = wszystkie z mod) |
+| `klin get path[@ref]` | fetch; without `@ref` and without entry → latest + write `klin.mod` |
+| `klin get` | install all `require` from `klin.mod` |
+| `klin update [path[@ref]…]` | force re-fetch (no args = all from mod) |
 
-Po pobraniu: katalog-pakiet jak [047](047-directory-modules.md).
+After fetch: package directory as in [047](047-directory-modules.md).
 
-## Checklista
+## Checklist
 
-- [x] rozpoznanie `github` / `gitlab`
-- [x] cache + błąd bez `klin get`
+- [x] recognize `github` / `gitlab`
+- [x] cache + error without `klin get`
 - [x] `klin.mod` + get/update
-- [x] e2e offline (preseed) + sieciowy `osa@v0.1.0`
-- [x] nota CLI / biblioteki
+- [x] e2e offline (preseed) + network `osa@v0.1.0`
+- [x] CLI / libraries note
 
-## Później
+## Later
 
-- lock/sumy → [065](065-project-lockfile.md) ✅
+- lock/checksums → [065](065-project-lockfile.md) ✅
 - `klin upgrade` / outdated → [066](066-klin-upgrade-outdated.md) ✅
-- Homebrew kompilatora → [067](067-homebrew.md) ✅
-- artefakty SVD → [053](053-device-board-assets.md)
+- Homebrew for compiler → [067](067-homebrew.md) ✅
+- SVD artifacts → [053](053-device-board-assets.md)

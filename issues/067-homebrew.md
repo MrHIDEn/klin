@@ -1,43 +1,43 @@
 # 067 — Homebrew: `brew install klin`
 
-**Status:** ✅ zrobione (formula + CI; publiczny tap/release = krok operatorski)
-**Zależy od:** — (publiczne release’y odblokowują *stable*; HEAD działa z dostępem do repo)
+**Status:** ✅ done (formula + CI; public tap/release = operator step)
+**Depends on:** — (public releases unlock *stable*; HEAD works with repo access)
 
-## Nazwa
+## Name
 
-`klin` **wolne** w homebrew-core (brak formula/cask). Podobne, ale inne:
+`klin` is **free** in homebrew-core (no formula/cask). Similar but different:
 `kin`, `klim`.
 
-## Dostarczone w repo
+## Delivered in repo
 
-| Artefakt | Sens |
+| Artifact | Meaning |
 |---|---|
 | [`Formula/klin.rb`](../Formula/klin.rb) | build from source (`dart compile exe`) + `pkgshare` stdlib |
-| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | tag `v*` → binarki macOS/Linux + GitHub Release |
-| [`note/17-homebrew.md`](../note/17-homebrew.md) | instalacja / tap / sha256 |
+| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | tag `v*` → macOS/Linux binaries + GitHub Release |
+| [`docs/17-homebrew.md`](../docs/17-homebrew.md) | install / tap / sha256 |
 
-Odkrywanie stdlib przy binarke / Homebrew `share/klin`: `lib/project.dart`.
+Stdlib discovery for binary / Homebrew `share/klin`: `lib/project.dart`.
 
 ```sh
 brew tap dart-lang/dart
 brew install --HEAD --formula Formula/klin.rb
 ```
 
-**Zalecenie na stałe:** tap `MrHIDEn/homebrew-klin` → `brew install mrhiden/klin/klin`.
-homebrew-core później.
+**Recommended long-term:** tap `MrHIDEn/homebrew-klin` → `brew install mrhiden/klin/klin`.
+homebrew-core later.
 
-`brew upgrade klin` = upgrade **kompilatora**, nie pakietów `.kl`
+`brew upgrade klin` = upgrade the **compiler**, not `.kl` packages
 ([066](066-klin-upgrade-outdated.md)).
 
-## Checklista
+## Checklist
 
-- [x] `Formula/klin.rb` (HEAD + miejsce na stable url/sha256)
-- [x] workflow release przy tagu `v*`
-- [x] stdlib obok instalacji (pkgshare + search paths)
-- [x] nota + README
-- [ ] operatorsko: publiczne repo i/lub `homebrew-klin` + tag `v0.1.0` + wypełnienie sha256
+- [x] `Formula/klin.rb` (HEAD + room for stable url/sha256)
+- [x] release workflow on tag `v*`
+- [x] stdlib next to install (pkgshare + search paths)
+- [x] note + README
+- [ ] operator step: public repo and/or `homebrew-klin` + tag `v0.1.0` + fill in sha256
 
-## Poza zakresem
+## Out of scope
 
-- PR do homebrew-core
-- Windows (Homebrew nie jest ścieżką; `task release` / scoop później)
+- PR to homebrew-core
+- Windows (Homebrew is not the path; `task release` / scoop later)

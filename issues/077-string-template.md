@@ -1,82 +1,82 @@
-# 077 — Podmiana w napisach / szablony runtime (`format` / `template`)
+# 077 — String substitution / runtime templates (`format` / `template`)
 
-**Status:** 💭 do rozważenia (niski priorytet — nieblokujące)
-**Zależy od:** [007](007-wskazniki-tablice-slice.md) (slice/bufory), [057](057-allocator.md) (heap jawnie); w kontraście do [016](016-string-interpolation.md); KV jak [060](060-map-kv.md); miejsce/API jak [017](017-collection-methods.md), [012](012-stdlib-io.md)
+**Status:** 💭 under consideration (low priority — non-blocking)
+**Depends on:** [007](007-pointers-arrays-slices.md) (slice/buffers), [057](057-allocator.md) (heap explicit); contrast [016](016-string-interpolation.md); KV like [060](060-map-kv.md); placement/API like [017](017-collection-methods.md), [012](012-stdlib-io.md)
 
-## Pomysł (z rozmowy)
+## Idea (from discussion)
 
-Chcę lib albo część w Klinie, która **podmienia wąsy** w napisie **w runtime**:
+I want a lib or part of Klin that **substitutes braces** in a string **at runtime**:
 
-- **pozycyjnie**: `"{0}, {1}"`, `arg1`, `arg2`
-- **słownikowo (KV)**: `"{aaa}, {bbb}"`, lista_kv
+- **positional**: `"{0}, {1}"`, `arg1`, `arg2`
+- **dictionary (KV)**: `"{aaa}, {bbb}"`, kv_list
 
-Czyli szablon-jako-**dane** (napis może być zmienną / z pliku / z konfiguracji),
-a nie znany w czasie kompilacji.
+Template-as-**data** (string may be variable / from file / from config),
+not known at compile time.
 
-## Różnica względem 016 (to nie to samo)
+## Difference from 016 (not the same)
 
-[016](016-string-interpolation.md) = **interpolacja compile-time**: `"$name"`,
-`"${expr}"`, `"${x:0.00}"`. Wąsy i wyrażenia są znane kompilatorowi → emisja to
-`printf` (zero alokacji, zero runtime). Tu przeciwnie: **wzorzec jest wartością**,
-więc podmiana dzieje się w czasie działania (skan napisu, dopasowanie klucza).
-Oba mają rację bytu i się uzupełniają.
+[016](016-string-interpolation.md) = **compile-time interpolation**: `"$name"`,
+`"${expr}"`, `"${x:0.00}"`. Braces and expressions are known to compiler → emission is
+`printf` (zero allocation, zero runtime). Here the opposite: **pattern is a value**,
+so substitution happens at runtime (scan string, match key).
+Both are valid and complement each other.
 
-## Zasada nadrzędna (kształtuje API)
+## Overarching principle (shapes API)
 
-Brak ukrytej alokacji / kontroli / kosztu. Zatem **nie** `str format(...)`
-z magicznym heapem, tylko:
+No hidden allocation / control / cost. Therefore **not** `str format(...)`
+with magic heap, only:
 
-- **warstwa 1 (zero-alloc)** — pisanie do bufora dostarczonego przez callera:
-  `fn render(tmpl: str, ..., out: []u8): !i32` (zwraca liczbę zapisanych bajtów;
-  `!` = przepełnienie/zły wzorzec),
-- **warstwa 2 (heap jawnie)** — przez `Allocator` ([057](057-allocator.md)), jak
+- **layer 1 (zero-alloc)** — write to caller-provided buffer:
+  `fn render(tmpl: str, ..., out: []u8): !i32` (returns bytes written;
+  `!` = overflow/bad pattern),
+- **layer 2 (heap explicit)** — via `Allocator` ([057](057-allocator.md)), like
   `slice_alloc`: `fn render_alloc(a: Allocator, tmpl: str, ...): !str` + `defer`
-  u callera.
+  at caller.
 
-## Warianty
+## Variants
 
-### A. Pozycyjne `{0} {1} …`
+### A. Positional `{0} {1} …`
 
-- Argumenty jako `[]str` (MVP: same napisy — bez generyków w gramatyce, D3).
-- Typy inne niż `str` woła się po uprzednim sformatowaniu (`time.fmt`,
-  interpolacja 016) → dostajemy `str` i wkładamy do listy.
-- `{0}` może wystąpić wiele razy; indeks poza zakresem → błąd (`!`).
+- Arguments as `[]str` (MVP: strings only — no generics in grammar, D3).
+- Non-`str` types formatted first (`time.fmt`,
+  016 interpolation) → get `str` and put in list.
+- `{0}` may appear many times; index out of range → error (`!`).
 
-### B. Słownikowe `{klucz}`
+### B. Dictionary `{key}`
 
-- Lista par KV: `[]KV` gdzie `struct KV { key: str; val: str }` (proste,
-  liniowe wyszukiwanie) — bez pełnej mapy z [060](060-map-kv.md).
-- Klucz nieznaleziony → decyzja: błąd (`!`) czy pusto/„zostaw wąsy”
-  (do ustalenia; MVP: błąd).
+- KV pair list: `[]KV` where `struct KV { key: str; val: str }` (simple,
+  linear search) — not full map from [060](060-map-kv.md).
+- Key not found → decision: error (`!`) or empty/“leave braces”
+  (TBD; MVP: error).
 
-## Do ustalenia
+## To decide
 
-- **Escapowanie**: `{{` / `}}` → literalne `{` / `}` (jak .NET/Rust `format!`).
-- **Brak dopasowania**: błąd vs zostawienie `{x}` w wyjściu.
-- **Jeden skan czy dwa** (najpierw policz rozmiar, potem pisz) dla warstwy 2.
-- **Tylko `str`** w MVP (typowane wartości → wcześniej przez 016/`time`), czy
-  później warianty typowane przez `$fn` (`render_i32`, …).
-- **Nazwa/moduł**: `stdlib/strfmt`? `stdlib/template`? część `str`/`io`?
+- **Escaping**: `{{` / `}}` → literal `{` / `}` (like .NET/Rust `format!`).
+- **No match**: error vs leaving `{x}` in output.
+- **One scan or two** (count size first, then write) for layer 2.
+- **Only `str`** in MVP (typed values → earlier via 016/`time`), or
+  later typed variants via `$fn` (`render_i32`, …).
+- **Name/module**: `stdlib/strfmt`? `stdlib/template`? part of `str`/`io`?
 
-## Szkic (później — nie teraz)
+## Sketch (later — not now)
 
 ```
 struct KV { key: str; val: str }
 
-# pozycyjne, zero-alloc: "{0}, {1}" + [arg0, arg1] -> out
-fn render_pos(tmpl: str, args: []str, out: []u8): !i32 { /* skan {N} */ }
+# positional, zero-alloc: "{0}, {1}" + [arg0, arg1] -> out
+fn render_pos(tmpl: str, args: []str, out: []u8): !i32 { /* scan {N} */ }
 
-# słownikowe, zero-alloc: "{aaa}, {bbb}" + [KV{...}, ...] -> out
-fn render_kv(tmpl: str, kvs: []KV, out: []u8): !i32 { /* skan {klucz} */ }
+# dictionary, zero-alloc: "{aaa}, {bbb}" + [KV{...}, ...] -> out
+fn render_kv(tmpl: str, kvs: []KV, out: []u8): !i32 { /* scan {key} */ }
 
-# warstwa 2 (heap jawnie)
+# layer 2 (heap explicit)
 fn render_pos_alloc(a: Allocator, tmpl: str, args: []str): !str { /* + defer */ }
 ```
 
-## Poza zakresem
+## Out of scope
 
-- implementacja w tym issue (placeholder w roadmapie),
-- pełna mapa KV / hash ([060](060-map-kv.md)) — MVP to liniowa lista par,
-- typowane argumenty mieszane (`{0:%.2f}`) jako wymóg MVP — najpierw same `str`,
-- format-specyfikatory w wąsach (`{0:...}`) — to raczej rozszerzenie 016,
-- lokalizacja / pluralizacja / ICU MessageFormat.
+- implementation in this issue (roadmap placeholder),
+- full KV map / hash ([060](060-map-kv.md)) — MVP is linear pair list,
+- mixed typed arguments (`{0:%.2f}`) as MVP requirement — strings first,
+- format specifiers in braces (`{0:...}`) — rather 016 extension,
+- localization / pluralization / ICU MessageFormat.

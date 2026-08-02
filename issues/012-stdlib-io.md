@@ -1,19 +1,19 @@
-# 012 — Opcjonalny moduł I/O (`println` itd.)
+# 012 — Optional I/O module (`println` etc.)
 
-**Status:** ✅ zrobione
-**Zależy od:** 006 (moduły)
+**Status:** ✅ done
+**Depends on:** 006 (modules)
 
-## Kontekst
+## Context
 
-W 001 hello world idzie przez C-owe `puts` — to świadomie cienkie FFI,
-nie biblioteka standardowa Klina.
+In 001 hello world goes through C `puts` — that is deliberately thin FFI,
+not Klin's standard library.
 
-V ma builtin `print` / `println` / `eprint` / `eprintln`. Klin **nie**
-powinien mieć dwóch równorzędnych API w rdzeniu (`puts` + `println`).
+V has builtin `print` / `println` / `eprint` / `eprintln`. Klin **should not**
+have two parallel APIs in the core (`puts` + `println`).
 
-## Decyzja
+## Decision
 
-Opcjonalny moduł `stdlib/io.kl`, importowany jawnie — nie w builtinach:
+Optional module `stdlib/io.kl`, imported explicitly — not in builtins:
 
 ```
 import io
@@ -24,15 +24,15 @@ fn main() {
 }
 ```
 
-- Nazwa: `io` (nie `vstd`).
-- `println` → `@[cimport, codename("puts")]` (z newline, zero narzutu).
-- `print` → cienki wrapper `printf("%s", …)` (bez newline).
-- Typ `str` = `const char*` (parametry FFI / stdlib; literały napisów).
-- Na bare-metalu po prostu nie importujesz.
-- Szukanie: sibling → `$KLIN_STDLIB` → `<repo>/stdlib/`.
+- Name: `io` (not `vstd`).
+- `println` → `@[cimport, codename("puts")]` (with newline, zero overhead).
+- `print` → thin `printf("%s", …)` wrapper (no newline).
+- Type `str` = `const char*` (FFI / stdlib parameters; string literals).
+- On bare metal simply do not import.
+- Search: sibling → `$KLIN_STDLIB` → `<repo>/stdlib/`.
 
-## Kryterium ukończenia
+## Completion criteria
 
-- [x] `import io` + `io.print` / `io.println` w teście złotym
-- [x] `println` emituje `puts` (nie `io_println(`)
-- [x] `puts` w rdzeniu nadal działa bez importu (cienkie FFI jak w 001)
+- [x] `import io` + `io.print` / `io.println` in golden test
+- [x] `println` emits `puts` (not `io_println(`)
+- [x] `puts` in core still works without import (thin FFI as in 001)

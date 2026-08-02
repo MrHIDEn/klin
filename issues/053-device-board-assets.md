@@ -1,33 +1,33 @@
-# 053 — `$device` + Go-like fetch SVD (IOC / board)
+# 053 — `$device` + Go-like SVD fetch (IOC / board)
 
-**Status:** ✅ MVP (SVD + `device` w `klin.mod`); board / `.ioc` → [074](074-board-ioc-klin-mod.md)  
-**Zależy od:** [027](027-svd-ergonomic-api.md); [049](049-remote-imports.md)
+**Status:** ✅ MVP (SVD + `device` in `klin.mod`); board / `.ioc` → [074](074-board-ioc-klin-mod.md)  
+**Depends on:** [027](027-svd-ergonomic-api.md); [049](049-remote-imports.md)
 
-## Kontekst
+## Context
 
-Dziś aplikacja (np. blink) woła wprost:
+Today an app (e.g. blink) calls directly:
 
 ```klin
 $peripherals_from_svd("../../../third_party/svd/stm32f411.svd", "RCC,GPIOA,STK")
 ```
 
-To działa i jest zero-cost, ale UX miesza **lokalną ścieżkę do XML** z kodem
-i wymaga ręcznego vendorowania SVD. Chcemy czystszego modelu: jak w Go —
-**podajesz identyfikator / path artefaktu, Klin ściąga i cache’uje**.
+That works and is zero-cost, but UX mixes a **local path to XML** with code
+and requires manual SVD vendoring. We want a cleaner model: like Go —
+**you provide an artifact id / path, Klin fetches and caches**.
 
-`import` = moduły Klin (symbole, `pub`, mangling) — [048](048-import-aliases.md) /
+`import` = Klin modules (symbols, `pub`, mangling) — [048](048-import-aliases.md) /
 [049](049-remote-imports.md).  
-`$device` / `$board` = **artefakty vendora** (SVD, ewent. IOC) → codegen —
-ten sam styl stringów co Go/`import "…"`, ale **inna komenda**, żeby nie
-mieszać modeli.
+`$device` / `$board` = **vendor artifacts** (SVD, optionally IOC) → codegen —
+same string style as Go/`import "…"`, but **different command** so models
+are not mixed.
 
-## Cel A — Go-style fetch SVD (priorytet UX) — MVP ✅
+## Goal A — Go-style SVD fetch (UX priority) — MVP ✅
 
-Użytkownik (lub cienka paczka) pisze path jak moduł Go; Klin resolvuje →
-cache → codegen. Bez ręcznego kopiowania `third_party/svd/`.
+User (or thin package) writes a path like a Go module; Klin resolves →
+cache → codegen. No manual copying of `third_party/svd/`.
 
 ```klin
-// top-level — nie w main
+// top-level — not in main
 $device("github/tinygo-org/stm32-svd/svd/stm32f411.svd", "RCC,GPIOA,STK")
 // alias: $peripherals_from_svd(…)
 
@@ -36,15 +36,15 @@ fn main() {
 }
 ```
 
-**Resolucja:**
+**Resolution:**
 
-1. lokalny plik / ścieżka względna (027)
-2. cache `$KLIN_CACHE/asset/host/owner/repo/…` (po `klin get`)
-3. sieć tylko przez `klin get` / `klin update` — allowlista
-   `github/tinygo-org/stm32-svd` (nie surowe ST; patrz [011](011-svd.md))
-4. pin w `klin.mod` (`device path ref`) + `klin.lock` (commit + sha256 pliku)
+1. local file / relative path (027)
+2. cache `$KLIN_CACHE/asset/host/owner/repo/…` (after `klin get`)
+3. network only via `klin get` / `klin update` — allowlist
+   `github/tinygo-org/stm32-svd` (not raw ST; see [011](011-svd.md))
+4. pin in `klin.mod` (`device path ref`) + `klin.lock` (commit + sha256 of file)
 
-**Manifest — jeden `klin.mod`:**
+**Manifest — one `klin.mod`:**
 
 ```
 klin 1
@@ -52,64 +52,64 @@ require github/mrhiden/osa v0.1.0
 device github/tinygo-org/stm32-svd/svd/stm32f411.svd main
 ```
 
-`klin get github/tinygo-org/stm32-svd/svd/stm32f411.svd@main` dopisuje `device`.
-Bez args odświeża `require` **i** `device`. Kompilacja / `run` bez sieci;
-brak cache → błąd z hintem `klin get`.
+`klin get github/tinygo-org/stm32-svd/svd/stm32f411.svd@main` appends `device`.
+Without args refreshes `require` **and** `device`. Compile / `run` without network;
+missing cache → error with `klin get` hint.
 
-## Cel B — warstwa paczek (opcjonalnie, później)
-
-```klin
-import stm32_f411          // w środku: $device("github/…/….svd", …)
-import board_nucleo_f411re // stałe pinów; ewent. $board("…")
-```
-
-## Składnia built-inów
+## Goal B — package layer (optional, later)
 
 ```klin
-$device("…" /* lokalnie | github/…/….svd */, "RCC,GPIOA")
-$board("…")   // później — wąski .ioc → stałe; nie pełny CubeMX
+import stm32_f411          // inside: $device("github/…/….svd", …)
+import board_nucleo_f411re // pin constants; optionally $board("…")
 ```
 
-- top-level, rodzina `$` (D3); `$device` = alias `$peripherals_from_svd`
-- **nie** `import "foo.svd"` — string remote dla SVD idzie przez `$device("…")`
+## Built-in syntax
 
-## Szkic ewolucji
+```klin
+$device("…" /* local | github/…/….svd */, "RCC,GPIOA")
+$board("…")   // later — narrow .ioc → constants; not full CubeMX
+```
 
-1. ~~Lokalne `$peripherals_from_svd` ([027](027-svd-ergonomic-api.md)).~~
-2. ~~`$device` + resolucja lokalna.~~
-3. ~~Remote path + cache + allowlista + widoczny fetch + `device` w mod.~~
-4. **Później:** `board` / wąski `.ioc` → [074](074-board-ioc-klin-mod.md); krótkie ID chipów; paczki board.
-5. Remote paczek Klin z `$device` w środku (049).
+- top-level, `$` family (D3); `$device` = alias for `$peripherals_from_svd`
+- **not** `import "foo.svd"` — remote string for SVD goes through `$device("…")`
 
-## Czego nie robić
+## Evolution sketch
 
-- `import "x.svd"` jako składnia modułów — miesza z [048](048-import-aliases.md);
-  fetch SVD = `$device("…")` (Go-like string, nie słowo `import`)
-- osobne keyword `svd` / `ioc` / `device` poza rodziną `$` (linia `device` w
-  **modzie** jest OK — to nie keyword języka)
-- pełny CubeMX `.ioc` → Klin — pinout / `$board` / dyrektywa `board` → [074](074-board-ioc-klin-mod.md)
-- cichy download przy `run` / kompilacji
-- domyślnie surowe SVD ST (błędy — [011](011-svd.md)); mirror z łatkami
-- HAL przez ten mechanizm — [031](031-biblioteki-hal.md)
+1. ~~Local `$peripherals_from_svd` ([027](027-svd-ergonomic-api.md)).~~
+2. ~~`$device` + local resolution.~~
+3. ~~Remote path + cache + allowlist + visible fetch + `device` in mod.~~
+4. **Later:** `board` / narrow `.ioc` → [074](074-board-ioc-klin-mod.md); short chip IDs; board packages.
+5. Remote Klin packages with `$device` inside (049).
 
-## Kryterium
+## What not to do
+
+- `import "x.svd"` as module syntax — mixes with [048](048-import-aliases.md);
+  SVD fetch = `$device("…")` (Go-like string, not the `import` keyword)
+- separate keyword `svd` / `ioc` / `device` outside the `$` family (`device` line in
+  **mod** is OK — not a language keyword)
+- full CubeMX `.ioc` → Klin — pinout / `$board` / `board` directive → [074](074-board-ioc-klin-mod.md)
+- silent download on `run` / compile
+- raw ST SVD by default (errors — [011](011-svd.md)); mirror with patches
+- HAL through this mechanism — [031](031-hal-libraries.md)
+
+## Criteria
 
 - [x] `$device("github/…/….svd", …)` → `klin get` + cache + codegen
-- [x] ponowna kompilacja offline z cache; brak pliku = błąd z `klin get`
-- [x] allowlista (`github/tinygo-org/stm32-svd`); pin w mod + lock
-- [x] lokalna ścieżka nadal działa (`$device` / `$peripherals_from_svd`)
-- [x] zero-cost jak 027 (ten sam emitter)
-- [x] dokumentacja: `import` = Klin; `$device("github/…")` = artefakt
-- [x] przykład: [`examples/stm32/device_f411/`](../examples/stm32/device_f411/)
-- [x] dyrektywa `device` w `klin.mod` (obok `require`; jawne + niejawne jak 049)
-- [ ] (opcjonalnie) paczki `import stm32_…` / krótkie ID chipa — board → [074](074-board-ioc-klin-mod.md)
+- [x] recompile offline from cache; missing file = error with `klin get`
+- [x] allowlist (`github/tinygo-org/stm32-svd`); pin in mod + lock
+- [x] local path still works (`$device` / `$peripherals_from_svd`)
+- [x] zero-cost like 027 (same emitter)
+- [x] documentation: `import` = Klin; `$device("github/…")` = artifact
+- [x] example: [`examples/stm32/device_f411/`](../examples/stm32/device_f411/)
+- [x] `device` directive in `klin.mod` (beside `require`; explicit + implicit like 049)
+- [ ] (optional) packages `import stm32_…` / short chip ID — board → [074](074-board-ioc-klin-mod.md)
 
-## Powiązane
+## Related
 
-- [011](011-svd.md) / [027](027-svd-ergonomic-api.md) — generator i fluent API
+- [011](011-svd.md) / [027](027-svd-ergonomic-api.md) — generator and fluent API
 - [023](023-examples.md) — `examples/stm32/`
-- [054](054-embedded-project-layout.md) — układ katalogów / scaffold (osobno od SVD)
-- [031](031-biblioteki-hal.md) — HAL osobno
-- [048](048-import-aliases.md) / [049](049-remote-imports.md) — string/remote dla
-  **modułów** Klin; ten issue = ten sam *styl* fetch dla **artefaktów** `$device`
-- [074](074-board-ioc-klin-mod.md) — `board` w `klin.mod` + wąski `.ioc` (po 053)
+- [054](054-embedded-project-layout.md) — directory layout / scaffold (separate from SVD)
+- [031](031-hal-libraries.md) — HAL separately
+- [048](048-import-aliases.md) / [049](049-remote-imports.md) — string/remote for
+  **Klin modules**; this issue = same *fetch style* for **artifacts** `$device`
+- [074](074-board-ioc-klin-mod.md) — `board` in `klin.mod` + narrow `.ioc` (after 053)

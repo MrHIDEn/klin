@@ -1,26 +1,26 @@
 # 008 — defer
 
-**Status:** ✅ zrobione
-**Zależy od:** 007
+**Status:** ✅ done
+**Depends on:** 007
 
-## Zakres
+## Scope
 
 ```
 let buf = a.alloc(u8, n)
 defer a.free(buf)
 ```
 
-Emisja: wspólny epilog + `goto cleanup`.
+Emission: shared epilogue + `goto cleanup`.
 
-## Pułapki
+## Pitfalls
 
-Kolejność odwrotna. Musi zadziałać przed **każdym** wyjściem z zakresu:
-`return`, `break`, `continue`, normalne zakończenie bloku.
-Konflikt z wczesnymi wyjściami to główne źródło błędów w implementacji.
+Reverse order. Must work before **every** exit from scope:
+`return`, `break`, `continue`, normal end of block.
+Conflict with early exits is the main source of implementation bugs.
 
-## Kryterium ukończenia
+## Completion criteria
 
-- [x] `defer` przed `return` w środku pętli
-- [x] `defer` przed `break`
-- [x] dwa `defer` w jednym zakresie — kolejność odwrotna
-- [x] testy złote na wszystkie trzy
+- [x] `defer` before `return` inside a loop
+- [x] `defer` before `break`
+- [x] two `defer`s in one scope — reverse order
+- [x] golden tests for all three

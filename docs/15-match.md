@@ -1,0 +1,98 @@
+# `match` — pattern matching with default break
+
+Issue: [014](../issues/014-match.md).
+
+## Syntax
+
+Statement:
+
+```
+match x {
+    1, 2, 3 {
+        puts("small")
+    }
+    4..=10 {
+        puts("mid")
+    }
+    else {
+        puts("big")
+    }
+}
+```
+
+Expression (only as `let` initializer or right-hand side of assignment):
+
+```
+let fee = match x {
+    0      { 0 }
+    1..=5  { 10 }
+    else   { 25 }
+}
+```
+
+Arm patterns:
+
+- value group: `1, 2, 3`
+- **closed on both ends** range: `4..=10` (separate token `..=`;
+  `..<` remains half-open range for `for`)
+- `else` — must be last
+
+## Semantics
+
+- **Default break.** The first matching arm runs; no fallthrough
+  and no `fallthrough` keyword.
+- Subject must be **integral** (`i8`…`u64`, `int`). `f64`, struct,
+  pointer → checker error.
+- An arm is a block, not `case`: `break` / `continue` in an arm refer to the
+  enclosing loop, `return` returns from the function (and runs `defer`).
+- In a statement `else` is optional — no match does nothing. In an expression `else` is **required** (there is no “otherwise"
+  value).
+- Expression type: common type of arms (unification like array literals);
+  `match` counts as returning on all paths only when
+  it has `else` and every arm returns.
+
+## Emission
+
+Chain of `if` / `else if` / `else`. Subject lands **once** in a temporary
+variable, so multi-value patterns and ranges do not re-evaluate it:
+
+```c
+int32_t klin_val_0 = x;
+if (klin_val_0 == 1 || klin_val_0 == 2 || klin_val_0 == 3) {
+    puts("small");
+} else if ((klin_val_0 >= 4 && klin_val_0 <= 10)) {
+    puts("mid");
+} else {
+    puts("big");
+}
+```
+
+Expression form lowers to target declaration + assignment in branches
+(hence allowed only in `let` / assignment position):
+
+```c
+int32_t fee;
+int32_t klin_val_0 = x;
+if (klin_val_0 == 0) { fee = 0; } else if (…) { fee = 10; } else { fee = 25; }
+```
+
+Deliberately **not** `switch`: `switch` does not handle ranges portably
+(`case 4 ... 10` is a GCC extension), and `break` in `case` would clash with
+loop `break`. An `if` chain gives the same machine code as hand-written C —
+overarching principle satisfied.
+
+## MVP limitations
+
+- no relational patterns (`>= 4`), no `|` as alternative — use `,`
+- no matching on strings and structs (`str` is not yet a value
+  type)
+- no exhaustiveness checking (beyond required `else` in expression) and
+  dead-arm warnings
+- `match` as expression only in `let` / assignment; in call argument
+  → checker error with hint
+- subject in header does not accept bare struct literal
+  (`match Point{…}.x` — use parentheses: `match (Point{…}).x`), because `{`
+  opens the arm block
+
+Example: [`examples/match.kl`](../examples/match.kl).
+Tests: `test/match_stmt.kl`, `test/match_expr.kl`, `test/fmt_match.kl`.

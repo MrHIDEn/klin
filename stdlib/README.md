@@ -12,7 +12,7 @@ directory `io/` — both at once is an error):
 5. `$KLIN_STDLIB/…` if set
 6. `<repo>/stdlib/…` (package root with `pubspec.yaml`)
 
-User libraries / directory packages: [note/11-biblioteki-klin.md](../note/11-biblioteki-klin.md).
+User libraries / directory packages: [docs/11-klin-libraries.md](../docs/11-klin-libraries.md).
 
 | Module | Role |
 |---|---|
@@ -55,7 +55,7 @@ Bare-metal programs simply do not import these modules.
 
 ## `time`
 
-Host clocks and formatting ([note/08-time.md](../note/08-time.md)):
+Host clocks and formatting ([docs/08-time.md](../docs/08-time.md)):
 
 ```klin
 import time
@@ -74,7 +74,7 @@ Do **not** import on freestanding targets without libc `time`.
 
 ## `mem`
 
-Explicit heap allocator ([note/14-allocator.md](../note/14-allocator.md), D1):
+Explicit heap allocator ([docs/14-allocator.md](../docs/14-allocator.md), D1):
 
 ```klin
 import mem
@@ -93,7 +93,7 @@ Do **not** import on freestanding targets without a heap.
 ## `slice`
 
 Zero-alloc helpers via fn-pointers ([issue 017](../issues/017-collection-methods.md),
-[note/16-slice.md](../note/16-slice.md), [note/13-fn-ptr.md](../note/13-fn-ptr.md)).
+[docs/16-slice.md](../docs/16-slice.md), [docs/13-fn-ptr.md](../docs/13-fn-ptr.md)).
 Names are monomorphized (`_i32`, `_u8`):
 
 ```klin
@@ -113,7 +113,7 @@ Does **not** import `mem` — freestanding-safe. For heap results use `slice_all
 ## `slice_alloc`
 
 Allocating helpers ([issue 017](../issues/017-collection-methods.md) layer 2,
-[note/16-slice.md](../note/16-slice.md)). Separate from `slice` so zero-alloc
+[docs/16-slice.md](../docs/16-slice.md)). Separate from `slice` so zero-alloc
 code stays free of `malloc`. Caller frees:
 
 ```klin

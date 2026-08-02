@@ -1,23 +1,22 @@
-# 041 — Locale dat + relative strings
+# 041 — Date locale + relative strings
 
-**Status:** 💭 do rozważenia
-**Zależy od:** [037](037-datetime-format.md)
+**Status:** 💭 under consideration
+**Depends on:** [037](037-datetime-format.md)
 
-## Kontekst
+## Context
 
-MVP formatu = `strftime` bez nazw zależnych od języka (`%A` itd.) i bez
-relative („2 days ago” / Luxon `toRelative`).
+MVP formatting = `strftime` without language-dependent names (`%A`, etc.) and without
+relative strings (“2 days ago” / Luxon `toRelative`).
 
-## Propozycja
+## Proposal
 
-- nazwy dni/miesięcy dla wybranego locale (jawny argument / stała — nie
-  globalny ukryty stan, jeśli da się uniknąć)
-- `to_relative` → zapis do bufora użytkownika (jak `format`), nie `str` z
-  heapu
-- bez `n3`-style number formats w datach (osobna decyzja vs 016)
+- day/month names for a chosen locale (explicit argument / constant — not
+  global hidden state, if avoidable)
+- `to_relative` → write into a user buffer (like `format`), not a heap `str`
+- no `n3`-style number formats in dates (separate decision vs 016)
 
-## Czego nie robić
+## What not to do
 
-- Ukrytej alokacji przy formatowaniu.
-- Wciągania IANA (040) „przy okazji”, jeśli nie jest konieczne.
-- Cukru `${t:…}` w interpolacji 016.
+- Hidden allocation during formatting.
+- Pulling in IANA (040) “on the side” when not necessary.
+- `${t:…}` sugar in 016 interpolation.

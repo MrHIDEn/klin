@@ -1,31 +1,31 @@
-# 033 — Formatowanie w stylu Go (`gofmt`)
+# 033 — Go-style formatting (`gofmt`)
 
-**Status:** ✅ zrobione
-**Zależy od:** stabilna gramatyka (praktycznie po 005+); nie blokuje kolejki głównej
+**Status:** ✅ done
+**Depends on:** stable grammar (practically after 005+); does not block main queue
 
-## Cel
+## Goal
 
-Jeden kanoniczny styl źródła Klina — jak `gofmt` w Go: **mało opcji,
-zawsze ten sam wynik**, żeby dało się formatować automatycznie bez dyskusji
-o tabach, nawiasach i łamaniu linii.
+One canonical Klin source style — like `gofmt` in Go: **few options,
+always the same result**, so you can format automatically without debate
+about tabs, braces, and line breaks.
 
-## MVP (zrobione)
+## MVP (done)
 
-- CLI: `klin fmt [-w] <plik.kl…>` — domyślnie stdout, `-w` zapis na miejscu
-- `lib/fmt.dart`: lex → `parseUnit` → pretty-print (4 spacje, K&R, spacje przy op)
-- Kolejność deklaracji zachowana (`ModuleUnit.decls`)
-- Styl: [note/05-fmt.md](../note/05-fmt.md)
-- Golden: `test/fmt_ugly.kl` → `test/fmt_ugly.fmt.kl` + idempotencja
+- CLI: `klin fmt [-w] <file.kl…>` — default stdout, `-w` write in place
+- `lib/fmt.dart`: lex → `parseUnit` → pretty-print (4 spaces, K&R, spaces around op)
+- Declaration order preserved (`ModuleUnit.decls`)
+- Style: [docs/05-fmt.md](../docs/05-fmt.md)
+- Golden: `test/fmt_ugly.kl` → `test/fmt_ugly.fmt.kl` + idempotence
 
-## Poza MVP (na później)
+## Outside MVP (later)
 
-- Formatowanie **ciał makr** / wyniku `--emit-pp` (dedent + `fmt`)
-- Zachowanie komentarzy (`//`)
+- Formatting **macro bodies** / `--emit-pp` result (dedent + `fmt`)
+- Preserving comments (`//`)
 - LSP / editor `formatDocument`
-- `klin fmt ./...` rekursywnie
+- `klin fmt ./...` recursively
 
-## Kryterium
+## Criteria
 
-- [x] `klin fmt` na przykładach bez `$` daje powtarzalny wynik
-- [x] dokument stylu w `note/05-fmt.md`
-- [x] golden brzydki → sformatowany
+- [x] `klin fmt` on examples without `$` gives repeatable result
+- [x] style document in `docs/05-fmt.md`
+- [x] golden ugly → formatted

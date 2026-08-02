@@ -1,66 +1,66 @@
-# 068 — Wspólna adnotacja typu (`a, b: i32`)
+# 068 — Shared type annotation (`a, b: i32`)
 
-**Status:** ✅ (parametry + pola struktur; `let` poza zakresem)
-**Zależy od:** [002](002-tablica-symboli-checker.md), [004](004-funkcje.md), [005](005-struktury-metody.md)
+**Status:** ✅ (parameters + struct fields; `let` out of scope)
+**Depends on:** [002](002-symbol-table-checker.md), [004](004-functions.md), [005](005-structs-methods.md)
 
-## Motywacja
+## Motivation
 
-Dziś każda nazwa niesie własny typ:
+Today each name carries its own type:
 
 ```
 fn add(a: i32, b: i32) -> i32 { … }
 struct Point { x: f64, y: f64 }
-let a: i32 = 1, b: i32 = 2   // jeśli kiedyś multi-let
+let a: i32 = 1, b: i32 = 2   // if multi-let ever exists
 ```
 
-W Go (i podobnie w V) ten sam typ można podać raz dla grupy nazw:
+In Go (and similarly in V) the same type can be given once for a group of names:
 
 ```
 fn add(a, b: i32) -> i32 { … }
 struct Point { x, y: f64 }
 ```
 
-Skrót znika w AST / emisji C — to tylko cukier parsera (D1 OK).
+The shorthand disappears in AST / C emission — parser sugar only (D1 OK).
 
-## Reguła
+## Rule
 
-**Oba podejścia są legalne** i oznaczają to samo:
+**Both forms are legal** and mean the same thing:
 
-| Forma | Znaczenie |
+| Form | Meaning |
 |---|---|
-| `a: i32, b: i32` | jawnie, jak dziś |
-| `a, b: i32` | wspólny typ dla listy nazw |
+| `a: i32, b: i32` | explicit, as today |
+| `a, b: i32` | shared type for a list of names |
 
-Mieszanie w jednej liście OK, np. `a, b: i32, c: f64` ≡ `a: i32, b: i32, c: f64`.
-Każda grupa kończy się `: typ`; nazwy bez typu przed przecinkiem należą do
-następnej grupy z adnotacją.
+Mixing in one list OK, e.g. `a, b: i32, c: f64` ≡ `a: i32, b: i32, c: f64`.
+Each group ends with `: type`; names without a type before a comma belong to
+the next annotated group.
 
-## Zakres (propozycja)
+## Scope (proposal)
 
-1. **Parametry funkcji** — MVP, największy zysk czytelności.
-2. **Pola struktur** — naturalne rozszerzenie (`x, y: f64`).
-3. **Lokalne `let` / `let mut`** — tylko jeśli kiedyś będzie multi-deklaracja
-   w jednym zdaniu; dziś nie wymuszać.
+1. **Function parameters** — MVP, biggest readability win.
+2. **Struct fields** — natural extension (`x, y: f64`).
+3. **Local `let` / `let mut`** — only if multi-declaration in one statement
+   ever exists; do not force today.
 
-`klin fmt` może zostawić formę źródłową (nie rozwijać `a, b: T` do
-`a: T, b: T`), albo normalizować — decyzja przy implementacji (jak przy [055](055-short-decl.md)).
+`klin fmt` may keep the source form (do not expand `a, b: T` to
+`a: T, b: T`), or normalize — decision at implementation time (as with [055](055-short-decl.md)).
 
-## Poza zakresem
+## Out of scope
 
-- zmiana semantyki typów / domyślnych wartości
-- generyki / wspólny typ jako „parametr typu” ([034](034-typy-generyczne.md))
-- wymuszanie jednej formy — obie zostają
+- changing type semantics / default values
+- generics / shared type as a “type parameter” ([034](034-generic-types.md))
+- mandating one form — both remain
 
-## Kryterium ukończenia
+## Completion criteria
 
-- [x] parser: `a, b: T` w parametrach i polach struct (nazwy kumulują się do
-  `: typ`; mieszanie `a, b: i32, c: f64` OK)
-- [x] checker / emisja: identyczne jak przy rozwinięciu do osobnych `name: T`
-  (czysty cukier parsera — ten sam AST)
-- [x] złoty test [`test/shared_type.kl`](../test/shared_type.kl) + błędy przy
-  `a, b` bez `: typ` (params i pola)
-- [x] wpis w README (składnia)
+- [x] parser: `a, b: T` in parameters and struct fields (names accumulate until
+  `: type`; mixing `a, b: i32, c: f64` OK)
+- [x] checker / emission: identical to expanding into separate `name: T`
+  (pure parser sugar — same AST)
+- [x] golden test [`test/shared_type.kl`](../test/shared_type.kl) + errors for
+  `a, b` without `: type` (params and fields)
+- [x] README entry (syntax)
 
-`let` / `let mut`: poza zakresem (brak multi-deklaracji w jednym zdaniu).
-`klin fmt` normalizuje do formy rozwiniętej (`a: T, b: T`) — AST nie przechowuje
-grupowania.
+`let` / `let mut`: out of scope (no multi-declaration in one statement).
+`klin fmt` normalizes to expanded form (`a: T, b: T`) — AST does not store
+grouping.

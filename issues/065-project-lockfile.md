@@ -1,15 +1,15 @@
-# 065 — Lockfile projektu (`klin.lock` / sumy)
+# 065 — Project lockfile (`klin.lock` / checksums)
 
-**Status:** ✅ zrobione
-**Zależy od:** [049](049-remote-imports.md) (`klin.mod` już jest)
+**Status:** ✅ done
+**Depends on:** [049](049-remote-imports.md) (`klin.mod` already exists)
 
-## Cel
+## Goal
 
-Jak `go.sum` / `pubspec.lock`: commitowany plik z **dokładnymi** pinami
-(commit SHA) i sumami integralności pobranych źródeł.
+Like `go.sum` / `pubspec.lock`: committed file with **exact** pins
+(commit SHA) and integrity checksums of fetched sources.
 
-`klin.mod` (049) = żądane wersje (`require path ref`).  
-`klin.lock` (065) = zamrożony wynik resolve + weryfikacja.
+`klin.mod` (049) = requested versions (`require path ref`).  
+`klin.lock` (065) = frozen resolve result + verification.
 
 ## Format
 
@@ -18,32 +18,32 @@ klin lock 1
 github/mrhiden/osa v0.1.0 <40-hex-commit> sha256:<64-hex>
 ```
 
-- **version** — pin z `klin.mod` (tag / branch / ref użytkownika)
-- **commit** — pełne SHA po `git rev-parse HEAD`
-- **sha256** — hash zainstalowanych `.kl` (basename posortowany; `name\0`+bytes+`\0`)
+- **version** — pin from `klin.mod` (tag / branch / user ref)
+- **commit** — full SHA after `git rev-parse HEAD`
+- **sha256** — hash of installed `.kl` (sorted basename; `name\0`+bytes+`\0`)
 
-Plik leży obok `klin.mod`. Cache pakietu ma też `.commit` obok `.pin`.
+File lives beside `klin.mod`. Package cache also has `.commit` beside `.pin`.
 
-## Zachowanie
+## Behavior
 
-| Komenda | Sens |
+| Command | Meaning |
 |---|---|
-| `klin get` | gdy wpis locka ma ten sam `version` co `klin.mod` → fetch po **commit SHA** + sprawdzenie hash |
-| `klin get path@ref` | po udanym fetchu zapis / aktualizacja wpisu |
-| `klin update` | force po pinie z moda (nie po SHA z locka) → przepisanie locka |
+| `klin get` | when lock entry has same `version` as `klin.mod` → fetch by **commit SHA** + hash check |
+| `klin get path@ref` | after successful fetch write / update entry |
+| `klin update` | force by pin from mod (not by SHA from lock) → rewrite lock |
 
-`klin run` / `test` nadal bez sieci i bez czytania locka (tylko cache).
+`klin run` / `test` still without network and without reading lock (cache only).
 
-## Checklista
+## Checklist
 
 - [x] parse / format `klin.lock`
-- [x] generowanie przy `get` / `update`
-- [x] `get` preferuje SHA z locka
-- [x] weryfikacja sha256; błąd przy mismatch
-- [x] e2e sieciowy (`osa@v0.1.0`) + testy jednostkowe hash/format
-- [x] nota CLI / biblioteki
+- [x] generation on `get` / `update`
+- [x] `get` prefers SHA from lock
+- [x] sha256 verification; error on mismatch
+- [x] network e2e (`osa@v0.1.0`) + unit tests hash/format
+- [x] CLI / libraries note
 
-## Poza zakresem
+## Out of scope
 
-- semver ranges, registry, prywatne git bez konfiguracji
+- semver ranges, registry, private git without configuration
 - `klin upgrade` / outdated → [066](066-klin-upgrade-outdated.md)

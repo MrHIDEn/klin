@@ -1,64 +1,64 @@
-# 061 — API w stylu MicroPython `machine` (PWM, UART, …)
+# 061 — MicroPython `machine`-style API (PWM, UART, …)
 
-**Status:** 💭 do rozważenia (niski priorytet — nieblokujące)
-**Zależy od:** [010](010-bare-metal.md); mile [031](031-biblioteki-hal.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
+**Status:** 💭 under consideration (low priority — non-blocking)
+**Depends on:** [010](010-bare-metal.md); nice to have [031](031-hal-libraries.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
 
-## Kontekst
+## Context
 
 [MicroPython](https://docs.micropython.org/en/latest/library/machine.html)
-daje w module `machine` **gotowe klasy peryferiów** — ten sam kształt API na
-wielu portach (STM32, RP2, ESP, …). Programista woła PWM/UART bez ręcznego
-MMIO ani Cubemx.
+provides **ready-made peripheral classes** in the `machine` module — same API shape on
+many ports (STM32, RP2, ESP, …). Programmer calls PWM/UART without manual
+MMIO or CubeMX.
 
-Klin dziś: SVD / rejestry ([011](011-svd.md) / [027](027-svd-ergonomic-api.md))
-albo vendor HAL przez FFI ([031](031-biblioteki-hal.md)). Brak warstwy
-„jak `machine.PWM`” w stdlib.
+Klin today: SVD / registers ([011](011-svd.md) / [027](027-svd-ergonomic-api.md))
+or vendor HAL via FFI ([031](031-hal-libraries.md)). No
+“like `machine.PWM`” layer in stdlib.
 
-To issue = **katalog inspiracji + decyzja**, czy Klin chce cienką, jawną
-warstwę board/chip API (bez ukrytej alokacji / magii), nie port MicroPythona.
+This issue = **inspiration catalog + decision** whether Klin wants a thin, explicit
+board/chip API (no hidden allocation / magic), not a MicroPython port.
 
-## Co MicroPython ma w `machine` (gotowce)
+## What MicroPython has in `machine` (off-the-shelf)
 
-Źródło: dokumentacja `machine` (porty różnią się kompletnością).
+Source: `machine` documentation (ports differ in completeness).
 
-### Klasy peryferiów (rdzeń)
+### Peripheral classes (core)
 
-| Klasa | Sens |
+| Class | Meaning |
 |---|---|
 | `Pin` | GPIO in/out/open-drain, pull, irq |
-| `Signal` | Pin + logika odwrócona (aktywny niski) |
-| `PWM` | częstotliwość + duty (`duty_u16` / `duty_ns`) |
-| `ADC` / `ADCBlock` | pomiar analogowy |
-| `DAC` | wyjście analogowe (gdy MCU ma) |
+| `Signal` | Pin + inverted logic (active low) |
+| `PWM` | frequency + duty (`duty_u16` / `duty_ns`) |
+| `ADC` / `ADCBlock` | analog measurement |
+| `DAC` | analog output (when MCU has it) |
 | `UART` | serial duplex (baud, tx/rx, read/write) |
 | `SPI` / `SoftSPI` | SPI (HW vs bit-bang) |
 | `I2C` / `SoftI2C` / `I2CTarget` | I²C controller / target |
 | `I2S` | audio bus |
 | `CAN` | Controller Area Network |
-| `Timer` | hardwartowe timery / callbacki |
-| `Counter` / `Encoder` | zliczanie impulsów / kwadratura |
-| `RTC` | zegar czasu rzeczywistego → też [043](043-rtc.md) |
+| `Timer` | hardware timers / callbacks |
+| `Counter` / `Encoder` | pulse counting / quadrature |
+| `RTC` | real-time clock → also [043](043-rtc.md) |
 | `WDT` | watchdog |
-| `SD` / `SDCard` | karta SD (port-specific) |
-| `USBDevice` | USB device (nowsze porty) |
+| `SD` / `SDCard` | SD card (port-specific) |
+| `USBDevice` | USB device (newer ports) |
 
-### Funkcje „płyta / CPU” (wybrane)
+### “Board / CPU” functions (selected)
 
 `reset`, `soft_reset`, `freq`, `idle`, `sleep` / `lightsleep` /
 `deepsleep`, `disable_irq` / `enable_irq`, `time_pulse_us`, `bitstream`, …
-(zestaw zależy od portu).
+(set depends on port).
 
-### Poza `machine`, ale „gotowe” na embedded
+### Outside `machine`, but “ready” on embedded
 
 - `time` / `utime` — sleep, ticks  
-- `network` — Wi‑Fi/Ethernet (ESP itd.)  
+- `network` — Wi‑Fi/Ethernet (ESP etc.)  
 - `bluetooth`, `esp*`, `rp2`, `stm` — port-specific  
-- `uos` / VFS — pliki na flash/SD  
+- `uos` / VFS — files on flash/SD  
 
-Na potrzeby Klina najważniejsze na start: **Pin, PWM, UART, I2C, SPI, ADC,
-Timer, WDT** (to, czego ludzie oczekują po „jak w MicroPythonie”).
+For Klin most important initially: **Pin, PWM, UART, I2C, SPI, ADC,
+Timer, WDT** (what people expect from “like MicroPython”).
 
-## Przykład UX (MicroPython)
+## UX example (MicroPython)
 
 ```python
 from machine import Pin, PWM, UART
@@ -69,35 +69,35 @@ uart = UART(1, baudrate=115200, tx=Pin(4), rx=Pin(5))
 uart.write(b"hi\n")
 ```
 
-## Co to znaczy dla Klina
+## What it means for Klin
 
-| Podejście | Sens |
+| Approach | Meaning |
 |---|---|
-| **A. Tylko SVD + przykłady** | status quo; zero „machine” |
-| **B. FFI do vendor HAL/LL** | [031](031-biblioteki-hal.md) — C obok, cienkie `@[cimport]` |
-| **C. Cienki `stdlib` / pakiet `machine` Klin** | Pin/PWM/UART… jako jawne API nad MMIO albo HAL; **bez** GC, bez ukrytego heapa; init/clock nadal świadomy (startup / board pack [053](053-device-board-assets.md)) |
+| **A. SVD + examples only** | status quo; zero “machine” |
+| **B. FFI to vendor HAL/LL** | [031](031-hal-libraries.md) — C alongside, thin `@[cimport]` |
+| **C. Thin `stdlib` / Klin `machine` package** | Pin/PWM/UART… as explicit API over MMIO or HAL; **no** GC, no hidden heap; init/clock still explicit (startup / board pack [053](053-device-board-assets.md)) |
 
-Preferencja zgodna z zasadą nadrzędną: jeśli C, to **jawne** strojenie
-zegarów / pin mux / błędów; nie obiecywać pełnej przenośności jak µPython
-(różne MCU = różne ograniczenia PWM/timerów).
+Preference aligned with overarching rule: if C, then **explicit** clock tuning
+/ pin mux / errors; do not promise full portability like µPython
+(different MCUs = different PWM/timer limits).
 
-## Szkic (później)
+## Sketch (later)
 
-1. Wybrać MVP klas: `Pin`, `PWM`, `Uart` (nazewnictwo Klin).
-2. Jedna płyta referencyjna (np. Nucleo-F411 / RP2040) + przykład blink/PWM/UART
-   — cele poza STM32: [062](062-targets-esp-rp.md).
-3. Decyzja implementacji: czysty MMIO (SVD) vs LL vs mieszanka.
-4. Dokumentacja: „to nie jest port MicroPythona; podobny kształt API”.
+1. Choose MVP classes: `Pin`, `PWM`, `Uart` (Klin naming).
+2. One reference board (e.g. Nucleo-F411 / RP2040) + blink/PWM/UART example
+   — targets beyond STM32: [062](062-targets-esp-rp.md).
+3. Implementation decision: pure MMIO (SVD) vs LL vs mix.
+4. Documentation: “this is not a MicroPython port; similar API shape”.
 
-## Poza zakresem
+## Out of scope
 
-- Interpreter / GC / dynamiczne typy jak w µPython  
-- Pełny parity wszystkich portów i klas (`CAN`, `I2S`, `USBDevice` w MVP)  
-- Ukryte callbacki z alokacją w IRQ  
-- Priorytet względem rdzenia języka  
+- Interpreter / GC / dynamic types like µPython  
+- Full parity of all ports and classes (`CAN`, `I2S`, `USBDevice` in MVP)  
+- Hidden callbacks with allocation in IRQ  
+- Priority relative to language core  
 
-## Linki
+## Links
 
 - MicroPython `machine`: https://docs.micropython.org/en/latest/library/machine.html  
-- Klin HAL vendora: [031](031-biblioteki-hal.md)  
-- Layout projektu embedded: [054](054-embedded-project-layout.md)  
+- Klin vendor HAL: [031](031-hal-libraries.md)  
+- Embedded project layout: [054](054-embedded-project-layout.md)  

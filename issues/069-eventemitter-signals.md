@@ -1,44 +1,44 @@
-# 069 — Observer / EventEmitter / Signals (biblioteka)
+# 069 — Observer / EventEmitter / Signals (library)
 
-**Status:** 💭 do rozważenia
-**Zależy od:** fn-ptr ([note/13](../note/13-fn-ptr.md)), `Allocator` ([057](057-allocator.md) / [note/14](../note/14-allocator.md)), wzorce z [017](017-collection-methods.md); miejsce jak [024](024-rtos.md)/[029](029-async-event-loop.md)
+**Status:** 💭 under consideration
+**Depends on:** fn-ptr ([docs/13](../docs/13-fn-ptr.md)), `Allocator` ([057](057-allocator.md) / [docs/14](../docs/14-allocator.md)), patterns from [017](017-collection-methods.md); placement like [024](024-rtos.md)/[029](029-async-event-loop.md)
 
-## Pytanie
+## Question
 
-Czy da się w Klinie dorobić komunikację w stylu obserwatora — `EventEmitter`,
-a nawet „signal" (w tym reaktywne signale z propozycji JS/TC39) — **bez** ukrytej
-alokacji / ukrytego runtime (zasada nadrzędna).
+Can Klin get observer-style communication — `EventEmitter`,
+even “signals” (including reactive signals from the JS/TC39 proposal) — **without**
+hidden allocation / hidden runtime (overarching principle).
 
-## A. Ograniczenia z rdzenia (kształtują całe API)
+## A. Core constraints (shape the whole API)
 
-- **Brak capture** (D7, [note/13](../note/13-fn-ptr.md)): callback to `fn(...)`
-  top-level, nie domyka stanu. Kontekst przenosimy **jawnym wskaźnikiem**:
-  listener = para `{ cb: fn(*mut u8, Ev): void, ctx: *mut u8 }`.
-- **Brak ukrytej alokacji/kontroli/kosztu**: `emit`/`notify` to jawna pętla po
-  slotach; żadnego auto-schedulera.
-- **Pamięć jawnie**: zero-alloc (tablica slotów o stałej pojemności, `on()` →
-  `!i32` przy przepełnieniu) **lub** dynamicznie przez `Allocator` (warstwa 2,
-  jak `slice_alloc`; `defer` u callera).
-- **Brak generyków w gramatyce**: monomorfizacja `$fn` per typ zdarzenia
+- **No capture** (D7, [docs/13](../docs/13-fn-ptr.md)): callback is a top-level `fn(...)`
+  , not closing over state. Context is passed via an **explicit pointer**:
+  listener = pair `{ cb: fn(*mut u8, Ev): void, ctx: *mut u8 }`.
+- **No hidden allocation/control/cost**: `emit`/`notify` is an explicit loop over
+  slots; no auto-scheduler.
+- **Memory explicit**: zero-alloc (fixed-capacity slot array, `on()` →
+  `!i32` on overflow) **or** dynamically via `Allocator` (layer 2,
+  like `slice_alloc`; `defer` at caller).
+- **No generics in grammar**: monomorphization `$fn` per event type
   (`Emitter_i32`, `State_f64`, …).
-- **Miejsce**: biblioteka (opcjonalny moduł stdlib lub zewnętrzna przez
-  [049](049-remote-imports.md)), nie rdzeń — jak ustalono dla RTOS/loop
+- **Placement**: library (optional stdlib module or external via
+  [049](049-remote-imports.md)), not core — as agreed for RTOS/loop
   ([024](024-rtos.md), [029](029-async-event-loop.md)).
 
-### Status: bloker checkera usunięty
+### Status: checker blocker removed
 
-Wcześniej `on()` nie dało się napisać, bo checker odrzucał zapis do
-zagnieżdżonego miejsca przez `mut` receiver (`self.slots[i] = …`). Analiza
-mutowalności celu przypisania (`_requireMutable*Place` w `lib/checker.dart`)
-przyjmowała jako bazę tylko gołą zmienną. Naprawione: sprawdzanie jest teraz
-rekurencyjne (jak `_isMutablePlace` dla `&`) — dozwolone są pola zagnieżdżone,
-elementy tablic przez `mut` receiver/zmienną i zapis przez `*mut`. Emiter bez
-zmian. Odblokowuje implementację emittera.
+Previously `on()` could not be written because the checker rejected writes to
+nested places through a `mut` receiver (`self.slots[i] = …`). Assignment-target
+mutability analysis (`_requireMutable*Place` in `lib/checker.dart`)
+only accepted a bare variable as the base. Fixed: checking is now
+recursive (like `_isMutablePlace` for `&`) — nested fields allowed,
+array elements through `mut` receiver/variable, and writes through `*mut`. Emitter unchanged.
+Unblocks emitter implementation.
 
-## B. Observer / EventEmitter — tak, biblioteka
+## B. Observer / EventEmitter — yes, library
 
-`EventEmitter` to po prostu wzorzec obserwatora (subject + wielu listenerów) —
-wykonalny wprost:
+`EventEmitter` is simply the observer pattern (subject + many listeners) —
+straightforward:
 
 ```
 struct Listener_i32 {
@@ -47,41 +47,41 @@ struct Listener_i32 {
 }
 
 $fn emitter(T) {
-  pub struct Emitter_$T { /* sloty: [N]Listener_$T + n: i32 */ }
-  pub fn (mut e: Emitter_$T) on(cb: fn(*mut u8, $T): void, ctx: *mut u8): !i32 { /* dodaj slot */ }
-  pub fn (e: Emitter_$T) emit(ev: $T) { /* for i: sloty[i].cb(sloty[i].ctx, ev) */ }
+  pub struct Emitter_$T { /* slots: [N]Listener_$T + n: i32 */ }
+  pub fn (mut e: Emitter_$T) on(cb: fn(*mut u8, $T): void, ctx: *mut u8): !i32 { /* add slot */ }
+  pub fn (e: Emitter_$T) emit(ev: $T) { /* for i: slots[i].cb(slots[i].ctx, ev) */ }
 }
 ```
 
-Zero ukrytego kosztu; `off`/`once` opcjonalnie (jawne).
+Zero hidden cost; `off`/`once` optional (explicit).
 
-## C. Warianty „signal"
+## C. “Signal” variants
 
-1. **Explicit signal / Qt-like** (wartość + jawne `subscribe`/`notify`): to ten
-   sam obserwator (wartość + lista slotów; `set(x)` woła sloty). Tak, biblioteka.
-2. **Reaktywny signal (propozycja JS/TC39: `State`/`Computed`/`Watcher`)**: 1:1
-   się NIE przenosi — sedno propozycji to **automatyczne śledzenie zależności**
-   (sam `get()` w `Computed` rejestruje zależność), leniwa memoizacja i
-   glitch-free propagacja. To ukryta kontrola + koszt na każdym odczycie +
-   dynamiczny graf (heap). Da się tylko jako **wariant jawny** (niżej).
-3. **Signal systemowy** (POSIX / RTOS event flags): to FFI do C — inny temat
-   ([024](024-rtos.md)/[031](031-biblioteki-hal.md)).
+1. **Explicit signal / Qt-like** (value + explicit `subscribe`/`notify`): same
+   observer (value + slot list; `set(x)` calls slots). Yes, library.
+2. **Reactive signal (JS/TC39 proposal: `State`/`Computed`/`Watcher`)**: does **not**
+   port 1:1 — the essence of the proposal is **automatic dependency tracking**
+   (`get()` in `Computed` registers a dependency), lazy memoization, and
+   glitch-free propagation. That is hidden control + cost on every read +
+   dynamic graph (heap). Only feasible as an **explicit variant** (below).
+3. **System signal** (POSIX / RTOS event flags): FFI to C — different topic
+   ([024](024-rtos.md)/[031](031-hal-libraries.md)).
 
-## D. „JS Signals" po klinowemu — explicit signals (propozycja)
+## D. “JS Signals” the Klin way — explicit signals (proposal)
 
-Zostawiamy ergonomię (State/Computed/Effect, leniwość, memoizację), ale
-**zależności wiążemy jawnie** (bez auto-trackingu):
+Keep ergonomics (State/Computed/Effect, laziness, memoization), but
+**bind dependencies explicitly** (no auto-tracking):
 
-| JS Signals (TC39) | Klin (jawnie) |
+| JS Signals (TC39) | Klin (explicit) |
 |---|---|
 | `Signal.State(v)` | `State_$T { value, subs }` + `get`/`set`; `set` → `notify` |
-| `Signal.Computed(fn)` | `Computed_$T { value, dirty, compute: fn(*mut u8): $T, ctx }`; deps wpisane ręcznie (subskrypcja na wejściach → `dirty = true`); `get` przelicza gdy `dirty` (memoizacja) |
-| auto-tracking | brak — jawne `depend_on(input)` przy budowie |
-| `Watcher` / effect | `fn(*mut u8): void` (+ ctx) zasubskrybowany do sygnału |
-| propagacja | pull-based: `set` oznacza `dirty`, przelicza się na `get` |
-| graf na stercie | jawny `Allocator` (warstwa 2) albo sloty o stałej pojemności |
+| `Signal.Computed(fn)` | `Computed_$T { value, dirty, compute: fn(*mut u8): $T, ctx }`; deps recorded manually (subscribe to inputs → `dirty = true`); `get` recomputes when `dirty` (memoization) |
+| auto-tracking | none — explicit `depend_on(input)` at build time |
+| `Watcher` / effect | `fn(*mut u8): void` (+ ctx) subscribed to signal |
+| propagation | pull-based: `set` marks `dirty`, recompute on `get` |
+| heap graph | explicit `Allocator` (layer 2) or fixed-capacity slots |
 
-Szkic:
+Sketch:
 
 ```
 $fn signals(T) {
@@ -105,18 +105,18 @@ $fn signals(T) {
 }
 ```
 
-## E. Wniosek
+## E. Conclusion
 
-- Observer / EventEmitter oraz explicit signal (Qt-like) → tak, biblioteka
-  (fn-ptr + jawny `ctx`; zero-alloc lub `Allocator`; `$fn` per typ).
-- Reaktywny signal (JS/TC39) → tylko jako wariant **jawny** (bez auto-trackingu);
-  reszta ergonomii zostaje.
-- Wszystko poza rdzeniem: opcjonalny moduł / biblioteka zewnętrzna (049).
+- Observer / EventEmitter and explicit signal (Qt-like) → yes, library
+  (fn-ptr + explicit `ctx`; zero-alloc or `Allocator`; `$fn` per type).
+- Reactive signal (JS/TC39) → only as an **explicit** variant (no auto-tracking);
+  rest of ergonomics remains.
+- Everything outside core: optional module / external library (049).
 
 ## Non-goals
 
-- Auto-tracking zależności / globalny „current computation" (ukryty koszt na
-  każdym `get()`).
-- Promise-GC, ukryty scheduler, „reactive magic" bez jawnych zależności.
-- Domknięcia w callbackach (D7) — zawsze `ctx`.
-- Signale systemowe/RTOS jako składnia — to FFI ([024](024-rtos.md)).
+- Auto-tracking dependencies / global “current computation” (hidden cost on
+  every `get()`).
+- Promise-GC, hidden scheduler, “reactive magic” without explicit dependencies.
+- Closures in callbacks (D7) — always `ctx`.
+- System/RTOS signals as syntax — that is FFI ([024](024-rtos.md)).

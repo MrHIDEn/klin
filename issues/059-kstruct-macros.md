@@ -1,19 +1,19 @@
-# 059 — Makra / codegen pod bogatsze `klinstruct` (`$kstruct`)
+# 059 — Macros / codegen for richer `klinstruct` (`$kstruct`)
 
-**Status:** 💭 do rozważenia (niski priorytet — nieblokujące)
-**Zależy od:** [026](026-preprocessor.md); [052](052-klinstruct.md); mile wzmocnienie `$fn` (export przez `import`, lepsze diagnostyki); nie [034](034-typy-generyczne.md)
+**Status:** 💭 under consideration (low priority — non-blocking)
+**Depends on:** [026](026-preprocessor.md); [052](052-klinstruct.md); nice to have stronger `$fn` (export via `import`, better diagnostics); not [034](034-generic-types.md)
 
-## Kontekst
+## Context
 
-MVP [`klinstruct`](https://github.com/MrHIDEn/klinstruct) = atomy `read_*` /
-`write_*` + `Cursor` (native endian; JS: `CStructLE`/`BE`). Schematy ramek =
-ręczne metody. [`@mrhiden/cstruct`](https://github.com/MrHIDEn/cstruct) ma
-bogatszą deklarację (model → `make`/`read`).
+MVP [`klinstruct`](https://github.com/MrHIDEn/klinstruct) = `read_*` /
+`write_*` atoms + `Cursor` (native endian; JS: `CStructLE`/`BE`). Frame schemas =
+hand-written methods. [`@mrhiden/cstruct`](https://github.com/MrHIDEn/cstruct) has
+richer declaration (model → `make`/`read`).
 
-Cel: ta sama ergonomia w Klinie przez **expand czasu kompilacji** (D3), bez
-runtime DSL i bez ukrytego kosztu na MCU.
+Goal: same ergonomics in Klin via **compile-time expand** (D3), without
+runtime DSL and without hidden cost on MCU.
 
-## Cel UX
+## UX goal
 
 ```klin
 import "github.com/mrhiden/klinstruct" kstruct
@@ -31,63 +31,63 @@ fn main() {
 }
 ```
 
-Albo builtin jak SVD ([027](027-svd-ergonomic-api.md)):
+Or builtin like SVD ([027](027-svd-ergonomic-api.md)):
 
 ```klin
 $kstruct_from("protocol/telemetry.kspec")
 ```
 
-Expand → `struct` + `pack`/`unpack` wołające atomy. Emisja C monomorficzna.
+Expand → `struct` + `pack`/`unpack` calling atoms. C emission monomorphic.
 
-## Co napisać gdzie (ścieżka dojścia)
+## What to write where (path forward)
 
-### A. Repo `klin` — język / preprocessor
+### A. `klin` repo — language / preprocessor
 
-| Krok | Gdzie | Co |
+| Step | Where | What |
 |---|---|---|
-| A1 | `lib/preprocess.dart` (+ testy) | Makra widoczne przez `import` / pakiet (dziś expand per plik) |
-| A2 | `lib/preprocess.dart`, `note/04-makra.md` | Argument „blok pól” / lista `(name, type)` albo variadic |
-| A3 | preprocess lub builtin jak `027` | Iteracja po polach w expandzie → tekst `write_*` / `read_*` |
-| A4 | checker / preprocess | Diagnostyki zmapowane na wywołanie `$kstruct` |
-| A5 | opcjonalnie `lib/…` builtin | `$kstruct_from("….kspec")` — parser pliku modelu → ten sam expand co A3 |
+| A1 | `lib/preprocess.dart` (+ tests) | Macros visible via `import` / package (today expand per file) |
+| A2 | `lib/preprocess.dart`, `docs/04-macros.md` | “Field block” argument / list `(name, type)` or variadic |
+| A3 | preprocess or builtin like `027` | Iterate fields in expand → `write_*` / `read_*` text |
+| A4 | checker / preprocess | Diagnostics mapped to `$kstruct` call site |
+| A5 | optional `lib/…` builtin | `$kstruct_from("….kspec")` — model file parser → same expand as A3 |
 | A6 | [048](048-import-aliases.md) / [049](049-remote-imports.md) | `import "github.com/mrhiden/klinstruct" kstruct` |
 
-**Nie:** generyki w gramatyce ([034](034-typy-generyczne.md)), refleksja runtime.
+**Not:** generics in grammar ([034](034-generic-types.md)), runtime reflection.
 
-### B. Repo `klinstruct` — biblioteka
+### B. `klinstruct` repo — library
 
-| Krok | Gdzie | Co |
+| Step | Where | What |
 |---|---|---|
 | B0 | ✅ MVP | `klinstruct/atoms*.kl`, `atoms_host.c`, `Cursor` |
-| B1 | `klinstruct/*.kl` lub makro w pakiecie | Po A1–A3: definicja `$kstruct` (albo tylko dokumentacja + przykłady jeśli builtin w `klin`) |
-| B2 | testy + `fixtures/` | Golden hex vs cstruct dla wygenerowanego `pack`/`unpack` |
-| B3 | później | Length-prefix, `sN`; `j*` z [051](051-json-wrapper.md) |
+| B1 | `klinstruct/*.kl` or macro in package | After A1–A3: `$kstruct` definition (or docs + examples only if builtin in `klin`) |
+| B2 | tests + `fixtures/` | Golden hex vs cstruct for generated `pack`/`unpack` |
+| B3 | later | Length-prefix, `sN`; `j*` from [051](051-json-wrapper.md) |
 
-### C. Wspólny artefakt modelu (opcjonalnie, ścieżka „jak SVD”)
+### C. Shared model artifact (optional, “like SVD” path)
 
-| Krok | Gdzie | Co |
+| Step | Where | What |
 |---|---|---|
-| C1 | np. `protocol/*.kspec` / JSON jak cstruct `jsonModel` | Jedno źródło dla Klin (`$kstruct_from`) i TS (`fromCompiled`) |
-| C2 | tooling poza MCU | Opcjonalny generator / check zgodności hex — nie w firmware |
+| C1 | e.g. `protocol/*.kspec` / JSON like cstruct `jsonModel` | Single source for Klin (`$kstruct_from`) and TS (`fromCompiled`) |
+| C2 | tooling outside MCU | Optional generator / hex compatibility check — not in firmware |
 
-## Kolejność implementacji
+## Implementation order
 
-1. B0 atomy — zrobione w klinstruct  
-2. A1 makra z pakietu  
-3. A2–A3 `$kstruct { pola }` → expand  
-4. B1–B2 przykłady + golden  
-5. A5 `$kstruct_from` (gdy chcesz plik jak SVD)  
+1. B0 atoms — done in klinstruct  
+2. A1 macros from package  
+3. A2–A3 `$kstruct { fields }` → expand  
+4. B1–B2 examples + golden  
+5. A5 `$kstruct_from` (when you want file like SVD)  
 6. A6 remote import  
-7. B3 bogatsze typy pól  
+7. B3 richer field types  
 
-## Kontrakt binarny
+## Binary contract
 
-Jak [052](052-klinstruct.md): packed, native endian; makro tylko generuje to,
-co dziś pisze się ręcznie.
+As in [052](052-klinstruct.md): packed, native endian; macro only generates what
+is written by hand today.
 
-## Poza zakresem
+## Out of scope
 
-- Runtime model parser jak w TS cstruct  
-- Generyki w gramatyce jako warunek  
-- Bitfieldy; wymuszanie LE/BE ≠ native  
-- Priorytet względem rdzenia / embedded LED  
+- Runtime model parser like TS cstruct  
+- Generics in grammar as a prerequisite  
+- Bitfields; forcing LE/BE ≠ native  
+- Priority relative to core / embedded LED  

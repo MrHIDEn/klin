@@ -22,5 +22,5 @@ dart run ../../bin/klin.dart run app.kl
 # → 25
 ```
 
-Search paths: [note/11-biblioteki-klin.md](../../note/11-biblioteki-klin.md).
-Modules / `pub`: [note/12-moduly.md](../../note/12-moduly.md).
+Search paths: [docs/11-klin-libraries.md](../../docs/11-klin-libraries.md).
+Modules / `pub`: [docs/12-modules.md](../../docs/12-modules.md).

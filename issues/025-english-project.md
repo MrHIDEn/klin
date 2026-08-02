@@ -1,30 +1,29 @@
 # 025 — English project (except pl-PL)
 
-**Status:** ✅ zrobione
-**Zależy od:** —
+**Status:** ✅ done (PL exception for design/roadmap **superseded by [082](082-english-issues-docs.md)**)
+**Depends on:** —
 
-## Cel
+## Goal
 
-Przegląd repo i przeniesienie na angielski **wszystkiego poza korpusem polskim**.
+Review the repo and move to English **everything except the Polish corpus**.
 
-## PL zostaje (pl-PL)
+## PL stayed (pl-PL) — superseded by 082
 
-- `issues/`
-- `note/`
+Originally `issues/` and `note/` (later `docs/`) were the official PL corpus
+(roadmap, decisions, architecture) and were not translated in 025.
+**[082](082-english-issues-docs.md)** completed the migration: `note/` → `docs/`,
+and both `docs/` and `issues/` are English (including English file slugs).
 
-To oficjalny korpus PL (roadmapa, decyzje, architektura). Nie tłumaczyć w 025.
-Ewentualny późniejszy move do `docs/pl-PL/{issues,note}` tylko jeśli nie
-rozwali linków — poza zakresem 025 albo osobny mikro-krok.
+## Moved to English (025)
 
-## Na angielski
+- [x] frontend / CLI messages (`lib/*`, `bin/*`, `svd2klin`)
+- [x] tests: assertions on error text, `test(...)` descriptions, comments in `test/`
+- [x] `README.md`, `pubspec.yaml` description, CLI help
+- [x] `CLAUDE.md` / agent rules: EN
+- [x] compiler code comments (eventually all EN; when editing a file — EN)
 
-- [x] komunikaty frontendu / CLI (`lib/*`, `bin/*`, `svd2klin`)
-- [x] testy: asercje na treść błędów, opisy `test(...)`, komentarze w `test/`
-- [x] `README.md`, opis w `pubspec.yaml`, help CLI
-- [x] `CLAUDE.md` / reguły agenta: EN + linki do pl-PL `note/` / `issues/`
-- [x] komentarze w kodzie kompilatora (docelowo całość EN; przy edycji pliku — EN)
+## Criteria
 
-## Kryterium
+Contributor without Polish can handle build/test/diagnostics **and** read
+design (`docs/`) + roadmap (`issues/`) — see 082.
 
-Contributor bez PL ogarnia build/test/diagnostics; design czyta z
-`issues/` + `note/` (PL).

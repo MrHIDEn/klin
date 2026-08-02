@@ -1,51 +1,51 @@
-# 062 — Cele MCU poza STM32: ESP32, RP2040, RP2350
+# 062 — MCU targets beyond STM32: ESP32, RP2040, RP2350
 
-**Status:** 💭 do rozważenia (niski priorytet — nieblokujące)
-**Zależy od:** [010](010-bare-metal.md); mile [022](022-biblioteki-asm.md), [027](027-svd-ergonomic-api.md), [031](031-biblioteki-hal.md), [053](053-device-board-assets.md), [054](054-embedded-project-layout.md)
+**Status:** 💭 under consideration (low priority — non-blocking)
+**Depends on:** [010](010-bare-metal.md); nice to have [022](022-asm-libraries.md), [027](027-svd-ergonomic-api.md), [031](031-hal-libraries.md), [053](053-device-board-assets.md), [054](054-embedded-project-layout.md)
 
-## Kontekst (notatki z rozmowy)
+## Context (conversation notes)
 
-Klin emituje **C** — frontend nie jest „tylko STM32”. Dziś gotowy tor
-bare-metal to głównie **STM32 Cortex-M** (`examples/stm32/…`). Pytanie: czy da
-się celować w **ESP32**, **RP2040**, **RP2350**?
+Klin emits **C** — frontend is not “STM32 only”. Today the ready
+bare-metal path is mainly **STM32 Cortex-M** (`examples/stm32/…`). Question: can we
+target **ESP32**, **RP2040**, **RP2350**?
 
-## Werdykt skrótowy
+## Short verdict
 
-| Cel | Realne? | Uwagi |
+| Target | Realistic? | Notes |
 |---|---|---|
-| **RP2040** | Najbliżej „tak” | Cortex-M0+, `arm-none-eabi`, pico-sdk / własny startup+`ld`, SVD. Ten sam model co blink F411: Klin → `.c` + `.s` / `@[link]` + linker. |
-| **RP2350** | Tak samo w modelu | M33 (i na części wariantów RISC-V) — inny SDK/toolchain niż 2040, nadal „C + startup”. |
-| **ESP32** | Możliwe, ciężej | Klasyczny ESP32 = **Xtensa**; C3/C6… = **RISC-V**. Zwykle **ESP-IDF** (init, partycje, często Wi‑Fi). Brak przykładu Klin+ESP; FFI do IDF albo freestanding bez stacka sieciowego. |
+| **RP2040** | Closest to “yes” | Cortex-M0+, `arm-none-eabi`, pico-sdk / own startup+`ld`, SVD. Same model as blink F411: Klin → `.c` + `.s` / `@[link]` + linker. |
+| **RP2350** | Same model | M33 (and on some variants RISC-V) — different SDK/toolchain than 2040, still “C + startup”. |
+| **ESP32** | Possible, harder | Classic ESP32 = **Xtensa**; C3/C6… = **RISC-V**. Usually **ESP-IDF** (init, partitions, often Wi‑Fi). No Klin+ESP example; FFI to IDF or freestanding without network stack. |
 
-## Co już przenosi się na te MCU
+## What already carries to these MCUs
 
-- emit jednego `.c`, checker, `#line`
-- `@[codename]` / ISR, `@[cimport]` / `@[link]` (C i ASM)
-- SVD → typowane rejestry ([011](011-svd.md) / [027](027-svd-ergonomic-api.md)), gdy jest SVD chipu
-- zasada: startup / tablica wektorów / clock zostają świadome (nie magia języka)
+- single `.c` emit, checker, `#line`
+- `@[codename]` / ISR, `@[cimport]` / `@[link]` (C and ASM)
+- SVD → typed registers ([011](011-svd.md) / [027](027-svd-ergonomic-api.md)), when chip SVD exists
+- rule: startup / vector table / clock stay explicit (not language magic)
 
-## Czego nie ma z pudełka
+## What is not out of the box
 
-- board pack / przykład `examples/rp2040/…` ani `examples/esp32/…`
-- automatycznego ESP-IDF ani pico-sdk w CLI Klin
-- API „jak MicroPython `machine`” — osobny backlog [061](061-micropython-machine-api.md)
+- board pack / `examples/rp2040/…` or `examples/esp32/…` example
+- automatic ESP-IDF or pico-sdk in Klin CLI
+- “like MicroPython `machine`” API — separate backlog [061](061-micropython-machine-api.md)
 
-## Szkic kolejności (gdy kiedyś)
+## Order sketch (whenever)
 
-1. **RP2040** blink (najbliższy STM32) — Makefile + startup + opcjonalnie SVD/pico-sdk.  
-2. **RP2350** — wariant M33 tej samej ścieżki (albo osobny przykład).  
-3. **ESP32** — najpierw „hello UART/LED” freestanding lub minimal IDF + `@[cimport]`; Wi‑Fi poza MVP.
+1. **RP2040** blink (closest to STM32) — Makefile + startup + optional SVD/pico-sdk.  
+2. **RP2350** — M33 variant of same path (or separate example).  
+3. **ESP32** — first “hello UART/LED” freestanding or minimal IDF + `@[cimport]`; Wi‑Fi out of MVP.
 
-## Poza zakresem
+## Out of scope
 
-- implementacja w tym issue (tylko placeholder / decyzja)
-- obietnica pełnej przenośności jak µPython między portami
-- priorytet względem rdzenia języka / obecnego toru STM32
+- implementation in this issue (placeholder / decision only)
+- promise of full portability like µPython between ports
+- priority relative to language core / current STM32 path
 
-## Linki
+## Links
 
 - Bare-metal STM32: [010](010-bare-metal.md)  
-- Layout projektów: [054](054-embedded-project-layout.md)  
+- Project layout: [054](054-embedded-project-layout.md)  
 - Device/board assets: [053](053-device-board-assets.md)  
-- HAL vendora: [031](031-biblioteki-hal.md)  
-- API w stylu `machine`: [061](061-micropython-machine-api.md)  
+- Vendor HAL: [031](031-hal-libraries.md)  
+- `machine`-style API: [061](061-micropython-machine-api.md)  

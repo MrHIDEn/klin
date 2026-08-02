@@ -1,27 +1,27 @@
-# 032 — `klin run <plik.kl>`
+# 032 — `klin run <file.kl>`
 
-**Status:** ✅ zrobione
-**Zależy od:** 001 (rurociąg compile→run już istnieje)
+**Status:** ✅ done
+**Depends on:** 001 (compile→run pipeline already exists)
 
-## Cel
+## Goal
 
-Wygodna komenda jak `go run` / `cargo run`:
+Convenient command like `go run` / `cargo run`:
 
 ```bash
 klin run an-file.kl
 ```
 
-od razu: parse → check → emit → cc → uruchomienie (stdout/stderr procesu).
+immediately: parse → check → emit → cc → run (process stdout/stderr).
 
-## Decyzja
+## Decision
 
-- Subcommand **`run`** — jawna ścieżka compile→run.
-- Bare `klin <plik.kl>` zostaje **aliasem** `run` (bez deprecate na razie).
-- Flagi: `--cc gcc|clang|tcc`; `--emit-c` jak wcześniej (bez uruchamiania).
-- `build` / `check` — później, nie w tym kroku.
+- Subcommand **`run`** — explicit compile→run path.
+- Bare `klin <file.kl>` remains **alias** of `run` (no deprecate for now).
+- Flags: `--cc gcc|clang|tcc`; `--emit-c` as before (without running).
+- `build` / `check` — later, not in this step.
 
-## Kryterium ukończenia
+## Completion criteria
 
-- [x] `klin run test/hello.kl` wypisuje oczekiwane wyjście
-- [x] bare `klin test/hello.kl` nadal działa
-- [x] `klin run` bez pliku → usage, exit ≠ 0
+- [x] `klin run test/hello.kl` prints expected output
+- [x] bare `klin test/hello.kl` still works
+- [x] `klin run` without file → usage, exit ≠ 0

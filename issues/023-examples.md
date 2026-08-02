@@ -1,44 +1,44 @@
-# 023 — Katalog `examples/`
+# 023 — `examples/` directory
 
-**Status:** ✅ zrobione (zalążek + układ STM32)
-**Zależy od:** bieżącego stanu języka (001–012+)
+**Status:** ✅ done (seed + STM32 layout)
+**Depends on:** current language state (001–012+)
 
-## Cel
+## Goal
 
-Katalog **`examples/`** z krótkimi, uruchamialnymi programami Klina —
-nie testami złotymi (`test/`), tylko materiałem do nauki i demo:
+Directory **`examples/`** with short, runnable Klin programs —
+not golden tests (`test/`), but material for learning and demos:
 
 ```bash
 dart run bin/klin.dart run examples/hello.kl
 ```
 
-## Układ
+## Layout
 
 ```
 examples/
   README.md
   hello.kl, vec2.kl, slice_sum.kl, modules/
   stm32/
-    blink_f411/     # Nucleo-F411RE — lokalne SVD
-    device_f411/    # to samo przez $device + klin.mod (053)
+    blink_f411/     # Nucleo-F411RE — local SVD
+    device_f411/    # same via $device + klin.mod (053)
 ```
 
 - Host: `klin run examples/…`
-- MCU: `examples/stm32/<nazwa>/` + Makefile freestanding
-- Kolejne dema STM32 / FreeRTOS (028): też pod `stm32/`
+- MCU: `examples/stm32/<name>/` + freestanding Makefile
+- Further STM32 / FreeRTOS demos (028): also under `stm32/`
 
-## Kryterium ukończenia
+## Completion criteria
 
-- [x] `examples/stm32/blink_f411/` (przeniesione z `examples/blink_f411/`)
-- [x] ścieżki Makefile / test ARM zaktualizowane
-- [x] krótki `examples/README.md`
+- [x] `examples/stm32/blink_f411/` (moved from `examples/blink_f411/`)
+- [x] Makefile paths / ARM test updated
+- [x] short `examples/README.md`
 
-## Czego nie mieszać
+## What not to mix
 
-- Nie zastępować `test/*.kl` — złote zostają w `test/`.
-- Nie obiecywać pełnego tutoriala (to bliżej README / 013).
+- Do not replace `test/*.kl` — goldens stay in `test/`.
+- Do not promise a full tutorial (that is closer to README / 013).
 
-## Potem
+## Later
 
-Czytelniejszy układ dem / scaffold embedded (app vs board vs boilerplate):
+Cleaner demo layout / embedded scaffold (app vs board vs boilerplate):
 [054](054-embedded-project-layout.md).

@@ -1,37 +1,37 @@
-# 051 — Opakowanie JSON w module Klin (+ ścieżki `$…`)
+# 051 — JSON wrapper in a Klin module (+ `$…` paths)
 
-**Status:** 💭 do rozważenia (niski priorytet — nieblokujące)
-**Zależy od:** [021](021-biblioteki-c.md); mile [020](020-biblioteki-klin.md) / [047](047-directory-modules.md); ścieżki `$` → [026](026-preprocessor.md)
+**Status:** 💭 under consideration (low priority — non-blocking)
+**Depends on:** [021](021-c-libraries.md); nice to have [020](020-klin-libraries.md) / [047](047-directory-modules.md); `$` paths → [026](026-preprocessor.md)
 
-## Kontekst
+## Context
 
-JSON zostaje w bibliotece **C** (np. cJSON / yyjson / jansson). Klin może dać
-cienki moduł (`import json`) z FFI — nie portować parsera do Klina.
+JSON stays in a **C** library (e.g. cJSON / yyjson / jansson). Klin can provide
+a thin module (`import json`) with FFI — do not port the parser to Klin.
 
-Alokacja / ownership = kontrakt C (jawny). Bez ukrytego GC / map z JSON.
+Allocation / ownership = explicit C contract. No hidden GC / maps from JSON.
 
-## Szkic A — wrapper FFI
+## Sketch A — FFI wrapper
 
-- pakiet `json/` lub `json.kl`: `@[cinclude]` + `@[cimport]` + `@[link]`
-- `pub` API: parse do uchwytu C, get string/int, free — bez cukru „object → dict”
-- przykład host
+- package `json/` or `json.kl`: `@[cinclude]` + `@[cimport]` + `@[link]`
+- `pub` API: parse to C handle, get string/int, free — no “object → dict” sugar
+- host example
 
-## Szkic B — dostęp ścieżką przez `$` (opcjonalnie, później)
+## Sketch B — path access via `$` (optional, later)
 
-Ergonomia w stylu `$json_get(doc, a.b.c)` / podobne — **makro preprocessora**
-([026](026-preprocessor.md)), które rozwija się do wywołań FFI (np. kolejne
-`cJSON_GetObjectItem`), nie do magicznego typu runtime.
+Ergonomics like `$json_get(doc, a.b.c)` / similar — **preprocessor macro**
+([026](026-preprocessor.md)) that expands to FFI calls (e.g. successive
+`cJSON_GetObjectItem`), not to a magic runtime type.
 
 ```klin
-// szkic — nie składnia MVP:
-let n = $json_path(root, user.profile.age)   // → jawne get’y C po expand
+// sketch — not MVP syntax:
+let n = $json_path(root, user.profile.age)   // → explicit C gets after expand
 ```
 
-Wymaga ustalonego API wrappera (A) + makr ścieżkowych; zero ukrytej alokacji
-w expandzie poza tym, co robi lib C.
+Requires a settled wrapper API (A) + path macros; zero hidden allocation
+in the expand beyond what the C lib does.
 
-## Poza zakresem
+## Out of scope
 
-- natywny typ `json` / dynamiczne mapy w języku
-- ORM / schema codegen z JSON Schema (osobna decyzja)
-- priorytet względem rdzenia / embedded / FFI podstaw
+- native `json` type / dynamic maps in the language
+- ORM / schema codegen from JSON Schema (separate decision)
+- priority relative to core / embedded / basic FFI

@@ -1,39 +1,39 @@
-# 010 — Bare metal: mrugający LED na STM32
+# 010 — Bare metal: blinking LED on STM32
 
-**Status:** ✅ zrobione
-**Zależy od:** 009
-**Kamień milowy:** pierwszy realny cel projektu
+**Status:** ✅ done
+**Depends on:** 009
+**Milestone:** first real target of the project
 
-## Zakres
+## Scope
 
-- `-ffreestanding`, brak libc
-- adnotacje `@[codename("...")]` — mangling wyłączalny
-- adnotacje `@[cimport]`, `@[cinclude]`, `@[link]`
+- `-ffreestanding`, no libc
+- annotations `@[codename("...")]` — mangling disableable
+- annotations `@[cimport]`, `@[cinclude]`, `@[link]`
 - inline ASM
-- integracja ze skryptem linkera i startupem w `.s`
+- integration with linker script and startup in `.s`
 
-## Uwagi krytyczne
+## Critical notes
 
-**Nazwy symboli muszą zgadzać się co do znaku** z tablicą wektorów
-(`TIM2_IRQHandler`, `SysTick_Handler`). Stąd `codename`.
+**Symbol names must match exactly** the vector table
+(`TIM2_IRQHandler`, `SysTick_Handler`). Hence `codename`.
 
-**Startup zostaje surowym `.s` obok.** Tablica wektorów, reset handler,
-kopiowanie `.data` z flash do RAM, zerowanie `.bss`. Nie opakowywać.
+**Startup stays raw `.s` alongside.** Vector table, reset handler,
+copying `.data` from flash to RAM, zeroing `.bss`. Do not wrap it.
 
-**Nie parsować nagłówków CMSIS** — są zbudowane z makr i bitfieldów.
-Rejestry STM32F411 pochodzą teraz z generatora SVD ([011](011-svd.md));
-sygnatury pozostałego FFI nadal są deklarowane ręcznie.
+**Do not parse CMSIS headers** — they are built from macros and bitfields.
+STM32F411 registers now come from the SVD generator ([011](011-svd.md));
+signatures for remaining FFI are still declared manually.
 
-Flagi: `-Os`, `-ffunction-sections -fdata-sections`, `--gc-sections`.
+Flags: `-Os`, `-ffunction-sections -fdata-sections`, `--gc-sections`.
 
-## Kryterium ukończenia
+## Completion criteria
 
-- [x] przykład `examples/stm32/blink_f411/` (SysTick → PA5) + Makefile freestanding
-- [x] `arm-none-eabi-objdump` / `nm`: symbol `SysTick_Handler` (test skip bez toolchaína)
+- [x] example `examples/stm32/blink_f411/` (SysTick → PA5) + freestanding Makefile
+- [x] `arm-none-eabi-objdump` / `nm`: symbol `SysTick_Handler` (test skipped without toolchain)
 
-Weryfikacja ręczna (LED na Nucleo) jest opcjonalna — poza kryterium CI.
+Manual verification (LED on Nucleo) is optional — outside CI criteria.
 
-Układ katalogu: [023](023-examples.md). Czytelniejszy wygląd projektu /
+Directory layout: [023](023-examples.md). Cleaner project look /
 scaffold: [054](054-embedded-project-layout.md). Board pack / `klin init` vs
-host (laptop nie potrzebuje ld/startup): [075](075-board-pack-init-host.md).
-Inne MCU (ESP32, RP2040/2350): [062](062-targets-esp-rp.md).
+host (laptop does not need ld/startup): [075](075-board-pack-init-host.md).
+Other MCUs (ESP32, RP2040/2350): [062](062-targets-esp-rp.md).

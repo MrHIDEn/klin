@@ -1,70 +1,70 @@
-# 028 — Ładna współpraca z FreeRTOS
+# 028 — Ergonomic FreeRTOS integration
 
-**Status:** 💭 do rozważenia
-**Zależy od:** 024, 010, 021, 022?; 026 mile widziane
+**Status:** 💭 to consider
+**Depends on:** 024, 010, 021, 022?; 026 welcome
 
-Osobno od ogólnego [024](024-rtos.md) (FFI + hipoteza „klient C API”).
+Separate from general [024](024-rtos.md) (FFI + "C API client" hypothesis).
 
-## Cel
+## Goal
 
-Ergonomiczna warstwa Klin nad FreeRTOS na znanym porcie (np. Nucleo + F411),
-bez własnego schedulera i bez ukrytej alokacji.
+Ergonomic Klin layer over FreeRTOS on a known port (e.g. Nucleo + F411),
+without own scheduler and without hidden allocation.
 
-- cienki opcjonalny moduł / przykłady: task create, delay, queue, mutex, `FromISR`
-- entry pointy: `@[codename("…")]` (010); stack/TCB/queue **jawne**
-- vendor FreeRTOS jako C obok; opcjonalnie D3 (026) pod wzorce
+- thin optional module / examples: task create, delay, queue, mutex, `FromISR`
+- entry points: `@[codename("…")]` (010); stack/TCB/queue **explicit**
+- vendor FreeRTOS as C alongside; optionally D3 (026) for patterns
 
-## Rozważania / przykłady myślowe (nie speć)
+## Considerations / thought examples (not spec)
 
-- oznaczanie tasków: `@[task]` / `@[rtos]` / `@[task(id=0)]` na zwykłych `fn`,
-  **albo** konwencja `main` + `task_N` / `main_N`
-- wariant do dyskusji: jedno `main` (init + start scheduler) + dowolne nazwy
-  tasków z dekoratorami vs sztywne `task_0`…
-- most do [029](029-async-event-loop.md): event-loop **opcjonalny** na `main`
-  i/lub na wybranych taskach
+- marking tasks: `@[task]` / `@[rtos]` / `@[task(id=0)]` on plain `fn`,
+  **or** convention `main` + `task_N` / `main_N`
+- variant for discussion: single `main` (init + start scheduler) + arbitrary task
+  names with decorators vs fixed `task_0`…
+- bridge to [029](029-async-event-loop.md): event-loop **optional** on `main`
+  and/or on selected tasks
 
-## Biblioteka `klinrtos` a „dekoratory” tasków (ustalone)
+## `klinrtos` library vs task "decorators" (settled)
 
-Pytanie: czy zewnętrzna lib Klin (wiązania RTOS, nie stdlib — [024](024-rtos.md))
-może dostarczać dekoratory do oznaczania fn/metod jako tasków?
+Question: can external Klin lib (RTOS bindings, not stdlib — [024](024-rtos.md))
+provide decorators to mark fn/methods as tasks?
 
-**Atrybuty (`@[…]`) obsługuje kompilator**, nie paczka `.kl`. Sama biblioteka
-**nie** dodaje prawdziwego `@[task]`, jeśli frontend tego nie zna (por. ISR:
-[030](030-isr-decorators.md)).
+**Attributes (`@[…]`) are handled by the compiler**,
+not a `.kl` package. The library alone **cannot** add real `@[task]` if the frontend
+does not know it (cf. ISR: [030](030-isr-decorators.md)).
 
-Co lib **może** (bez magii w rdzeniu):
+What the lib **can** (without core magic):
 
-| Mechanizm | Realizm |
+| Mechanism | Realism |
 |---|---|
-| API + fn-pointer: `rtos.create(blink_task, stack[:], prio)` | tak |
-| Makra `$…` (026) generujące entry + rejestrację („dekorator-like”) | tak |
-| `@[codename("…")]` na entry (jak 010) | tak — już w języku |
-| Prawdziwy `@[task(stack=…, prio=…)]` w checkerze/emit | tylko ze wsparciem kompilatora albo ekspandem makra do znanego kodu |
+| API + fn-pointer: `rtos.create(blink_task, stack[:], prio)` | yes |
+| `$…` macros (026) generating entry + registration ("decorator-like") | yes |
+| `@[codename("…")]` on entry (like 010) | yes — already in language |
+| Real `@[task(stack=…, prio=…)]` in checker/emit | only with compiler support or macro expand to known code |
 
-**Metody jako taski:** FreeRTOS zwykle chce `void task(void*)` (prototyp C), nie
-metodę na `self`. Sensowniej: wolna `fn` + kontekst w `arg`, ewentualnie makro
-generujące wrapper. Magiczne `fn (mut app: App) run()` jako task bez wrappera
-ABI — słabo.
+**Methods as tasks:** FreeRTOS usually wants `void task(void*)` (C prototype), not
+a method on `self`. Sensible: free `fn` + context in `arg`, optionally macro
+generating wrapper. Magic `fn (mut app: App) run()` as task without wrapper
+ABI — weak.
 
-Zasada nadrzędna: dekorator / makro **nie** ukrywa alokacji TCB/stacku ani
-startu schedulera — stack/TCB/prio pozostają jawne.
+Prime rule: decorator / macro **does not** hide TCB/stack allocation or
+scheduler start — stack/TCB/prio stay explicit.
 
-### Preferowany kierunek ergonomii: makro w lib (nie user-`@[…]`)
+### Preferred ergonomics direction: macro in lib (not user-`@[…]`)
 
-Cel „lib upraszcza app” jest OK. Otwarte dekoratory jak w Python/TS
-(`@[moj]` zdefiniowany w libce) — **nie**: atrybuty to allowlista kompilatora;
-owijanie fn w runtime nie pasuje do modelu C / zasady nadrzędnej.
+Goal "lib simplifies app" is OK. Open decorators like Python/TS
+(`@[moj]` defined in lib) — **no**: attributes are compiler allowlist;
+wrapping fn at runtime does not fit C model / prime rule.
 
-Narzędzie w Klinie: **makra `$…` ([026](026-preprocessor.md))** albo jawne API.
-Preferowany szkic składni (ustalenie kierunkowe — nie speć implementacji):
+Tool in Klin: **`$…` macros ([026](026-preprocessor.md))** or explicit API.
+Preferred syntax sketch (directional — not implementation spec):
 
 ```klin
 $rtos_task("blink", 512, 2) {
-    // ciało taska — expand → fn + codename + rejestracja / tabela
+    // task body — expand → fn + codename + registration / table
 }
 ```
 
-Równoważnie, bez makra (nadal proste, zero magii):
+Equivalently, without macro (still simple, zero magic):
 
 ```klin
 @[codename("blink_task")]
@@ -76,46 +76,46 @@ fn main() {
 }
 ```
 
-`@[task(…)]` w kompilatorze — tylko gdy ten sam wzorzec wraca w wielu libkach
-i chcemy jedną składnię atrybutów; domyślnie **nie** budować ogólnego systemu
-user-dekoratorów. Por. ISR: [030](030-isr-decorators.md).
+`@[task(…)]` in compiler — only when same pattern recurs in many libs
+and we want one attribute syntax; by default **do not** build general
+user-decorator system. Cf. ISR: [030](030-isr-decorators.md).
 
-Porównanie cukru (ten sam efekt pod spodem: fn + stack + rejestracja):
+Sugar comparison (same effect underneath: fn + stack + registration):
 
 | | `$rtos_task` (lib / 026) | `@[meta("rtos.task", …)]` | `@[task(…)]` |
 |---|---|---|---|
-| Działa bez nowego atrybutu w rdzeniu | tak | nie (hook / plugin) | nie (allowlista) |
-| Składnia „jak dekorator” | średnio (`$` + blok) | bliżej TS/Python | bliżej TS/Python |
-| Parametry stack/prio jawne | tak | tak | tak |
-| Lib bez forka kompilatora | tak | słabo | nie |
+| Works without new core attribute | yes | no (hook / plugin) | no (allowlist) |
+| Syntax "like decorator" | medium (`$` + block) | closer to TS/Python | closer to TS/Python |
+| stack/prio params explicit | yes | yes | yes |
+| Lib without compiler fork | yes | weak | no |
 
-Szkic `@[meta]` (hipotetyczny — **nie** w języku dziś):
+`@[meta]` sketch (hypothetical — **not** in language today):
 
 ```klin
 @[meta("rtos.task", stack=512, prio=2)]
 fn blink(arg: *mut u8) { … }
 ```
 
-Albo stringowo: `@[meta("rtos.task:stack=512,prio=2")]`. Kto czyta `meta`?
-Albo makro/skaner w libce, albo kompilator z hookiem — prawie plugin system.
-Dlatego preferowane `$rtos_task`, nie ogólne user-`@[…]`.
+Or string form: `@[meta("rtos.task:stack=512,prio=2")]`. Who reads `meta`?
+Either macro/scanner in lib, or compiler with hook — almost a plugin system.
+Hence preferred `$rtos_task`, not general user-`@[…]`.
 
-Event-loop w tasku: to samo podejście makrami — [029](029-async-event-loop.md)
-(`$event_loop`, zagnieżdżalne w `$rtos_task`).
+Event-loop in task: same macro approach — [029](029-async-event-loop.md)
+(`$event_loop`, nestable in `$rtos_task`).
 
-## Mutexy / dane współdzielone (krytyczne)
+## Mutexes / shared data (critical)
 
-- wiele tasków + wspólny stan = wyścigi, torn reads, deadlocks, inwersja
-  priorytetu — **poważne kryzysy**, nie edge case
-- Klin **nie** ukrywa synchronizacji: brak magicznego „async-safe” ani
-  automatycznych locków przy globalach
-- warianty: jawne FFI `xSemaphoreTake` / cienkie `@[mutex]` + `lock`/`unlock`
-  z widocznym kosztem; `FromISR` osobno
-- event-loop **nie zastępuje** mutexa między taskami
-- ewentualny checker później (global mutowany z >1 taska bez sekcji krytycznej)
-  — tylko idea
-- zasada nadrzędna: mutex = wywołanie RTOS / jawna sekcja
+- multiple tasks + shared state = races, torn reads, deadlocks, priority
+  inversion — **serious crises**, not edge case
+- Klin **does not** hide synchronization: no magical "async-safe" or
+  automatic locks on globals
+- variants: explicit FFI `xSemaphoreTake` / thin `@[mutex]` + `lock`/`unlock`
+  with visible cost; `FromISR` separately
+- event-loop **does not replace** mutex between tasks
+- eventual checker later (global mutated from >1 task without critical section)
+  — idea only
+- prime rule: mutex = RTOS call / explicit section
 
-## Kryterium
+## Criteria
 
-`examples/stm32/freertos_blink/` — ≥2 taski, delay, LED; bez narzutu vs C+FreeRTOS.
+`examples/stm32/freertos_blink/` — ≥2 tasks, delay, LED; no overhead vs C+FreeRTOS.

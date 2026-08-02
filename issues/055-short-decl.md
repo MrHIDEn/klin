@@ -1,41 +1,40 @@
-# 055 — Skrót `:=` (= `let mut`)
+# 055 — `:=` shorthand (= `let mut`)
 
-**Status:** ✅ zrobione
-**Zależy od:** 002
+**Status:** ✅ done
+**Depends on:** 002
 
-## Opis
+## Description
 
-Składnia w stylu Go/V: `name := expr` jako cukier składniowy dla
+Go/V-style syntax: `name := expr` as syntactic sugar for
 `let mut name = expr`.
 
 ```
 x := 1          // ≡ let mut x = 1
-x = x + 1       // przypisanie (bez zmian)
+x = x + 1       // assignment (unchanged)
 ```
 
-`let` / `let mut` zostają. `:=` **nie** wprowadza niemutowalnej zmiennej
-(w przeciwieństwie do V, gdzie `:=` domyślnie jest immutable, a `mut`
-trzeba dopisać). W Klinie niezmienność domyślna to `let`; `:=` jest
-wyłącznie skrótem mutowalnej deklaracji.
+`let` / `let mut` remain. `:=` does **not** introduce an immutable variable
+(unlike V, where `:=` is immutable by default and you must add `mut`).
+In Klin default immutability is `let`; `:=` is solely a shorthand for a mutable declaration.
 
-## Zakres
+## Scope
 
-- token `:=` w lexerze
-- `name := expr` → `LetStmt(isMut: true, …)` (wymagany initializer)
-- w C-`for`: `for i := 0; …` obok istniejącego `for i = 0; …`
-- `klin fmt` zachowuje `:=` (nie rozwija do `let mut`)
-- brak adnotacji typu przy `:=` w MVP (`x: i32 := 1` — poza zakresem;
-  użyj `let mut x: i32 = 1`)
+- `:=` token in lexer
+- `name := expr` → `LetStmt(isMut: true, …)` (initializer required)
+- in C-`for`: `for i := 0; …` alongside existing `for i = 0; …`
+- `klin fmt` preserves `:=` (does not expand to `let mut`)
+- no type annotation with `:=` in MVP (`x: i32 := 1` — out of scope;
+  use `let mut x: i32 = 1`)
 
-## Poza zakresem
+## Out of scope
 
-- `:=` w destrukturyzacji / multi-assign
-- przeładowanie `:=` na typach użytkownika
-- zmiana semantyki istniejącego `let` / `let mut`
+- `:=` in destructuring / multi-assign
+- overloading `:=` on user types
+- changing semantics of existing `let` / `let mut`
 
-## Kryterium ukończenia
+## Completion criteria
 
-- [x] złoty test: `:=` + mutacja działa, emisja bez `mut` w C
-- [x] `klin fmt` zachowuje `:=`
-- [x] frontend łapie `:=` bez prawej strony
-- [x] wpis w `issues/sorted.md` + krótka wzmianka w README / note
+- [x] golden test: `:=` + mutation works, emission without `mut` in C
+- [x] `klin fmt` preserves `:=`
+- [x] frontend catches `:=` without RHS
+- [x] entry in `issues/sorted.md` + short mention in README / note
