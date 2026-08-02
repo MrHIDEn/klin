@@ -5,11 +5,34 @@
 
 ## Status
 
-- Formula in repo: [`Formula/klin.rb`](../Formula/klin.rb)
+- Public tap: [`MrHIDEn/homebrew-klin`](https://github.com/MrHIDEn/homebrew-klin)
+  → `brew tap mrhiden/klin`
+- Formula copy in this repo: [`Formula/klin.rb`](../Formula/klin.rb) (keep in sync)
 - CI release on tag `v*`: [`.github/workflows/release.yml`](../.github/workflows/release.yml)
-- Name `klin` free in homebrew-core; own **tap** first, core later
-- Repo `klin` may be private — then `brew` works only for people with access
-  (HTTPS token / SSH) or after going public + release
+- Name `klin` free in homebrew-core; own tap first, core later
+
+## Install (recommended)
+
+Requires [Dart tap](https://github.com/dart-lang/homebrew-dart) to build from source:
+
+```sh
+brew tap dart-lang/dart
+brew tap mrhiden/klin
+brew install klin
+klin --version
+```
+
+HEAD (`main`):
+
+```sh
+brew install --HEAD klin
+```
+
+Upgrade:
+
+```sh
+brew upgrade klin
+```
 
 ## Platforms in Release ([076](../issues/076-release-windows-arm.md))
 
@@ -26,43 +49,27 @@ Each asset has `.sha256`. Homebrew covers macOS/Linux; Windows for now via
 `.zip` from Release (Scoop/WinGet — future). On Windows host C compiler for
 `klin run` is MSVC / clang / mingw.
 
-## Install (HEAD / from clone)
+## Releasing a new stable formula
 
-Requires [Dart tap](https://github.com/dart-lang/homebrew-dart) to build:
-
-```sh
-brew tap dart-lang/dart
-# from this repository directory:
-brew install --HEAD --formula Formula/klin.rb
-klin --version
-```
-
-Or a separate tap (recommended long-term):
-
-```sh
-# once: create public MrHIDEn/homebrew-klin and copy Formula/klin.rb
-brew tap mrhiden/klin
-brew install --HEAD mrhiden/klin/klin
-```
-
-## Stable (after public tag)
-
-1. Make repo public (or host tarball) and push tag `v0.1.0`
-2. `release` workflow builds binaries + assets
-3. Compute source sha:
+1. Push tag `vX.Y.Z` on `klin` → `release` workflow publishes binaries
+2. Compute source sha:
 
 ```sh
 curl -sL \
-  "https://github.com/MrHIDEn/klin/archive/refs/tags/v0.1.0.tar.gz" \
+  "https://github.com/MrHIDEn/klin/archive/refs/tags/vX.Y.Z.tar.gz" \
   | shasum -a 256
 ```
 
-4. In `Formula/klin.rb` uncomment `url` / `sha256` and update checksum
-5. Copy formula to `homebrew-klin` (if separate tap)
+3. Update `url` / `sha256` / `version` in **both**:
+   - [`Formula/klin.rb`](../Formula/klin.rb) (this repo)
+   - [`MrHIDEn/homebrew-klin`](https://github.com/MrHIDEn/homebrew-klin) `Formula/klin.rb`
+
+## Install from clone (no tap)
 
 ```sh
-brew install mrhiden/klin/klin
-brew upgrade klin
+brew tap dart-lang/dart
+brew install --formula Formula/klin.rb          # stable (tag in formula)
+brew install --HEAD --formula Formula/klin.rb   # main
 ```
 
 ## Install layout
