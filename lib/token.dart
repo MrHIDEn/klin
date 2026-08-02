@@ -62,8 +62,11 @@ enum TokenKind {
   slash,
   percent,
   ampersand, // unary address / binary bitwise AND
+  ampEqual, // `&=`
   pipe, // bitwise OR `|`
+  pipeEqual, // `|=`
   caret, // bitwise XOR `^`
+  caretEqual, // `^=`
   tilde, // bitwise NOT `~`
   atSign,
   colon,
@@ -74,9 +77,11 @@ enum TokenKind {
   bangEqual,
   less,
   lessLess, // `<<`
+  lessLessEqual, // `<<=`
   lessEqual,
   greater,
   greaterGreater, // `>>`
+  greaterGreaterEqual, // `>>=`
   greaterEqual,
   dot,
   dotDotLess, // ..<

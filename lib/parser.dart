@@ -403,13 +403,19 @@ final class Parser {
     if (_check(TokenKind.comma)) {
       return _multiAssign(expr);
     }
-    if (_check(TokenKind.equal)) {
+    final compoundOp = _compoundAssignOp();
+    if (_check(TokenKind.equal) || compoundOp != null) {
       if (!_isAssignableTarget(expr)) {
         throw ParseError(
             'left side of assignment must be assignable', expr.pos);
       }
       _advance();
-      return AssignStmt(target: expr, value: _expr(), pos: expr.pos);
+      return AssignStmt(
+        target: expr,
+        value: _expr(),
+        pos: expr.pos,
+        compoundOp: compoundOp,
+      );
     }
     if (expr is CallExpr) {
       return CallStmt(
@@ -421,6 +427,17 @@ final class Parser {
     }
     if (expr is MethodCallExpr) return MethodCallStmt(expr);
     throw ParseError('expected assignment `=` or call', expr.pos);
+  }
+
+  /// Returns the binary op (`&`, `|`, …) when the next token is a bitwise
+  /// compound-assign token; otherwise `null`.
+  String? _compoundAssignOp() {
+    if (_check(TokenKind.ampEqual)) return '&';
+    if (_check(TokenKind.pipeEqual)) return '|';
+    if (_check(TokenKind.caretEqual)) return '^';
+    if (_check(TokenKind.lessLessEqual)) return '<<';
+    if (_check(TokenKind.greaterGreaterEqual)) return '>>';
+    return null;
   }
 
   static bool _isAssignableTarget(Expr expr) =>

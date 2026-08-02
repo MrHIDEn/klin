@@ -578,10 +578,16 @@ fn main() {
     expect(c, contains('(0x8 >> 2)'));
     // Rust-like: `&` binds tighter than `==`.
     expect(c, contains('((flags & 0x4) == 0x4)'));
+    // Compound assigns emit 1:1 as C `op=`.
+    expect(c, contains('f |= 0x1;'));
+    expect(c, contains('f &= 0x5;'));
+    expect(c, contains('f ^= 0x1;'));
+    expect(c, contains('f <<= 1;'));
+    expect(c, contains('f >>= 1;'));
   });
 
-  test('lexer: bitwise tokens << >> | ^ ~ (issue 078)', () {
-    final tokens = Lexer('a<<b>>c|d^e~f&g').tokenize();
+  test('lexer: bitwise tokens << >> | ^ ~ and compounds (issue 078)', () {
+    final tokens = Lexer('a<<b>>c|d^e~f&g a&=b|=c^=d<<=e>>=f').tokenize();
     expect(
       tokens.map((t) => t.kind).toList(),
       [
@@ -597,6 +603,17 @@ fn main() {
         TokenKind.tilde,
         TokenKind.ident,
         TokenKind.ampersand,
+        TokenKind.ident,
+        TokenKind.ident,
+        TokenKind.ampEqual,
+        TokenKind.ident,
+        TokenKind.pipeEqual,
+        TokenKind.ident,
+        TokenKind.caretEqual,
+        TokenKind.ident,
+        TokenKind.lessLessEqual,
+        TokenKind.ident,
+        TokenKind.greaterGreaterEqual,
         TokenKind.ident,
         TokenKind.eof,
       ],
@@ -624,9 +641,11 @@ fn main() {
   });
 
   test('klin fmt: bitwise operators (issue 078)', () {
-    const ugly = 'fn main(){let x=1<<2|3&4^~5}';
+    const ugly = 'fn main(){let x=1<<2|3&4^~5\nlet mut y=0\ny|=1\ny<<=2}';
     final once = formatSource(ugly);
     expect(once, contains('1 << 2 | 3 & 4 ^ ~5'));
+    expect(once, contains('y |= 1'));
+    expect(once, contains('y <<= 2'));
     expect(formatSource(once), once);
   });
 

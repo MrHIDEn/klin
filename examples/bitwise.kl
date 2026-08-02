@@ -19,4 +19,14 @@ fn main() {
     if flags & mask == mask {
         printf("bit2 set\n")
     }
+
+    // Compound assigns emit 1:1 as C `op=` (LHS evaluated once).
+    let mut f: u32 = 0
+    f |= 0b0001
+    f |= 0b0100
+    f &= 0b0101
+    f ^= 0b0001
+    f <<= 1
+    f >>= 1
+    printf("flags=%d\n", f)
 }
