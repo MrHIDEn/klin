@@ -40,17 +40,19 @@ Use `dart run bin/klin.dart …` while developing. Details:
 ### Homebrew
 
 Tap: [`MrHIDEn/homebrew-klin`](https://github.com/MrHIDEn/homebrew-klin)
-(needs the [Dart tap](https://github.com/dart-lang/homebrew-dart) to build):
+(needs the [Dart tap](https://github.com/dart-lang/homebrew-dart) to build).
+
+Short form (Homebrew auto-taps `mrhiden/klin`):
 
 ```sh
 brew tap dart-lang/dart
-brew tap mrhiden/klin
-brew install klin
+brew install mrhiden/klin/klin
 klin --version
-klin run examples/hello.kl
 ```
 
-Latest `main`: `brew install --HEAD klin`. Upgrade: `brew upgrade klin`.
+Or step by step: `brew tap mrhiden/klin` then `brew install klin`.
+Latest `main`: `brew install --HEAD mrhiden/klin/klin` (or `--HEAD klin` after tap).
+Upgrade: `brew upgrade klin`.
 
 Formula source of truth in this repo: [`Formula/klin.rb`](Formula/klin.rb)
 (keep in sync with the tap). Details: [docs/17-homebrew.md](docs/17-homebrew.md).

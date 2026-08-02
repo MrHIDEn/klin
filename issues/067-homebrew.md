@@ -20,10 +20,10 @@ Stdlib discovery for binary / Homebrew `share/klin`: `lib/project.dart`.
 
 ```sh
 brew tap dart-lang/dart
-brew install --HEAD --formula Formula/klin.rb
+brew install mrhiden/klin/klin          # stable (tap MrHIDEn/homebrew-klin)
+brew install --HEAD mrhiden/klin/klin   # main
 ```
 
-**Recommended long-term:** tap `MrHIDEn/homebrew-klin` → `brew install mrhiden/klin/klin`.
 homebrew-core later.
 
 `brew upgrade klin` = upgrade the **compiler**, not `.kl` packages
