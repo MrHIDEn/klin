@@ -1531,6 +1531,65 @@ puts("hi $name ${n:%d} ${x:0.00} ${t:s8}")
     );
   });
 
+  test(r'$fn block param + integer args (rtos_task shape)', () {
+    final expanded = preprocess(r'''
+$fn rtos_task(name: name, stack: name, prio: name, body: block) {
+@[codename("task_$name")]
+fn task_$name(arg: *mut void) {
+$body
+}
+fn start_$name() {
+  let n: i32 = $stack
+  let p: i32 = $prio
+}
+}
+$rtos_task(blink, 512, 2) {
+  let x: i32 = 1
+}
+fn main() {}
+''', path: 'mod/rtos_shape.kl');
+    expect(expanded, contains('@[codename("task_blink")]'));
+    expect(expanded, contains('fn task_blink(arg: *mut void)'));
+    expect(expanded, contains('let x: i32 = 1'));
+    expect(expanded, contains('fn start_blink()'));
+    expect(expanded, contains('let n: i32 = 512'));
+    expect(expanded, contains('let p: i32 = 2'));
+    expect(expanded, isNot(contains(r'$rtos_task')));
+  });
+
+  test(r'macros from path import + $mod qualifier (059 A1 lite)', () {
+    final dir = Directory.systemTemp.createTempSync('klin_macro_import_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final pkg = Directory('${dir.path}/mylib')..createSync();
+    File('${pkg.path}/macros.kl').writeAsStringSync(r'''
+module mylib
+$fn greet(name: name, body: block) {
+fn hello_$name() {
+  $mod.ping()
+$body
+}
+}
+pub fn ping() {}
+''');
+    File('${dir.path}/app.kl').writeAsStringSync(r'''
+import "mylib" lib
+$greet(world) {
+  let z: i32 = 0
+}
+fn main() {
+  hello_world()
+}
+''');
+    final expanded = preprocess(
+      File('${dir.path}/app.kl').readAsStringSync(),
+      path: '${dir.path}/app.kl',
+    );
+    expect(expanded, contains('fn hello_world()'));
+    expect(expanded, contains('lib.ping()'));
+    expect(expanded, contains('let z: i32 = 0'));
+    expect(expanded, isNot(contains(r'$mod')));
+  });
+
   test('klin fmt: ugly source matches golden and is idempotent (issue 033)',
       () async {
     final ugly = await File('test/fmt_ugly.kl').readAsString();

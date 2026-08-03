@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'remote.dart';
 import 'svd/fluent.dart';
 import 'svd/model.dart';
 import 'token.dart';
@@ -14,10 +17,14 @@ export 'token.dart' show PreprocessError;
 /// }
 /// $point(Vec2i, i32)
 /// ```
+///
+/// Path imports (`import "…"`) may export `$fn` definitions (059 A1 lite).
+/// A trailing `block` parameter accepts `$name(args) { … }`.
+/// Imported macros may use `$mod` for the import qualifier.
 
 final class _MacroParam {
   final String name;
-  final String kind; // `type` | `name` | `str`
+  final String kind; // `type` | `name` | `str` | `block`
 
   const _MacroParam(this.name, this.kind);
 }
@@ -28,12 +35,23 @@ final class _MacroDef {
   final String body;
   final SourcePos pos;
 
+  /// Import qualifier when this `$fn` was loaded from `import "…" [alias]`.
+  final String? packageQualifier;
+
   const _MacroDef({
     required this.name,
     required this.params,
     required this.body,
     required this.pos,
+    this.packageQualifier,
   });
+}
+
+final class _ScannedPathImport {
+  final String spec;
+  final String qualifier;
+
+  const _ScannedPathImport(this.spec, this.qualifier);
 }
 
 /// Expands `$fn` definitions and `$name(...)` invocations in [source].
@@ -41,8 +59,14 @@ String preprocess(
   String source, {
   String path = '<input>',
   String? klinCacheDir,
+  List<String> klinPathDirs = const [],
 }) {
-  final scanner = _PpScanner(source, path, klinCacheDir: klinCacheDir);
+  final scanner = _PpScanner(
+    source,
+    path,
+    klinCacheDir: klinCacheDir,
+    klinPathDirs: klinPathDirs,
+  );
   return scanner.expand();
 }
 
@@ -50,17 +74,24 @@ final class _PpScanner {
   final String source;
   final String path;
   final String? klinCacheDir;
+  final List<String> klinPathDirs;
   int _i = 0;
   int _line = 1;
   int _col = 1;
 
-  _PpScanner(this.source, this.path, {this.klinCacheDir});
+  _PpScanner(
+    this.source,
+    this.path, {
+    this.klinCacheDir,
+    this.klinPathDirs = const [],
+  });
 
   Never _err(String message, [SourcePos? pos]) =>
       throw PreprocessError(message, pos ?? _pos, path: path);
 
   String expand() {
     final macros = <String, _MacroDef>{};
+    _loadMacrosFromPathImports(macros);
     final out = StringBuffer();
     SvdDevice? svdDevice;
 
@@ -110,6 +141,7 @@ final class _PpScanner {
             _err('unknown macro `\$$name`', start);
           }
           final args = _parseArgList();
+          _appendTrailingBlockArg(def, args, start);
           out.write(_expandCall(def, args, start));
           continue;
         }
@@ -132,6 +164,171 @@ final class _PpScanner {
     final text = out.toString();
     if (svdDevice == null) return text;
     return rewriteSvdFluent(text, svdDevice, path: path);
+  }
+
+  void _loadMacrosFromPathImports(Map<String, _MacroDef> macros) {
+    final fromDir = path == '<input>'
+        ? Directory.current.path
+        : File(path).parent.path;
+    for (final imp in _scanPathImports(source)) {
+      final files = _resolvePathImportKlFiles(imp.spec, fromDir);
+      for (final filePath in files) {
+        final text = File(filePath).readAsStringSync();
+        for (final def in _extractMacroDefs(text, filePath)) {
+          if (macros.containsKey(def.name)) {
+            _err(
+              'redefinition of macro `\$${def.name}` via import '
+              '`${imp.spec}`',
+              def.pos,
+            );
+          }
+          macros[def.name] = _MacroDef(
+            name: def.name,
+            params: def.params,
+            body: def.body,
+            pos: def.pos,
+            packageQualifier: imp.qualifier,
+          );
+        }
+      }
+    }
+  }
+
+  /// `import "path"` / `import "path" alias` (string path imports only).
+  static List<_ScannedPathImport> _scanPathImports(String source) {
+    final out = <_ScannedPathImport>[];
+    final re = RegExp(
+      r'^\s*import\s+"([^"]+)"(?:\s+([A-Za-z_][A-Za-z0-9_]*))?\s*$',
+      multiLine: true,
+    );
+    for (final m in re.allMatches(source)) {
+      final lineStart =
+          m.start == 0 ? 0 : source.lastIndexOf('\n', m.start - 1) + 1;
+      final prefix = source.substring(lineStart, m.start).trim();
+      if (prefix.startsWith('//')) continue;
+      final spec = m.group(1)!;
+      final alias = m.group(2);
+      final key = spec.endsWith('.kl')
+          ? spec.substring(0, spec.length - 3)
+          : spec;
+      final slash = key.lastIndexOf('/');
+      final defaultQ = slash >= 0 ? key.substring(slash + 1) : key;
+      out.add(_ScannedPathImport(spec, alias ?? defaultQ));
+    }
+    return out;
+  }
+
+  List<String> _resolvePathImportKlFiles(String spec, String fromDir) {
+    final sep = Platform.pathSeparator;
+    if (isRemoteImportPath(spec)) {
+      final RemoteImport remote;
+      try {
+        remote = parseRemoteImport(spec);
+      } on FormatException {
+        return const [];
+      }
+      final pkgDir = packageCacheDir(remote, cacheRoot: klinCacheDir);
+      if (!isPackageInstalled(pkgDir)) return const [];
+      return _listPackageKlFiles(pkgDir);
+    }
+
+    final roots = <String>[
+      fromDir,
+      '$fromDir${sep}lib',
+      ...klinPathDirs,
+    ];
+    for (final root in roots) {
+      final filePath = spec.endsWith('.kl')
+          ? '$root$sep$spec'
+          : '$root$sep$spec.kl';
+      final dirPath = spec.endsWith('.kl')
+          ? null
+          : '$root$sep$spec';
+      if (File(filePath).existsSync()) {
+        return [File(filePath).absolute.path];
+      }
+      if (dirPath != null) {
+        final files = _listPackageKlFiles(dirPath);
+        if (files.isNotEmpty) return files;
+      }
+    }
+    // Absolute / relative path as written (e.g. ../../pkg).
+    final directFile = File('$fromDir$sep$spec');
+    if (spec.endsWith('.kl') && directFile.existsSync()) {
+      return [directFile.absolute.path];
+    }
+    final directDir = Directory('$fromDir$sep$spec');
+    if (directDir.existsSync()) {
+      return _listPackageKlFiles(directDir.path);
+    }
+    return const [];
+  }
+
+  static List<String> _listPackageKlFiles(String dir) {
+    final directory = Directory(dir);
+    if (!directory.existsSync()) return const [];
+    final out = <String>[];
+    for (final entity in directory.listSync(followLinks: false)) {
+      if (entity is! File) continue;
+      final name = entity.path.split(Platform.pathSeparator).last;
+      if (!name.endsWith('.kl')) continue;
+      if (name.endsWith('_test.kl')) continue;
+      out.add(entity.absolute.path);
+    }
+    out.sort();
+    return out;
+  }
+
+  static List<_MacroDef> _extractMacroDefs(String source, String path) {
+    final scanner = _PpScanner(source, path);
+    final defs = <_MacroDef>[];
+    while (!scanner._atEnd) {
+      if (scanner._startsWithFn()) {
+        defs.add(scanner._parseFnDef());
+        continue;
+      }
+      if (scanner._peek == '"') {
+        scanner._readStringLiteral();
+        continue;
+      }
+      if (scanner._peek == '/' &&
+          scanner._i + 1 < scanner.source.length &&
+          scanner.source[scanner._i + 1] == '/') {
+        scanner._readLineComment();
+        continue;
+      }
+      scanner._advance();
+    }
+    return defs;
+  }
+
+  void _appendTrailingBlockArg(
+    _MacroDef def,
+    List<String> args,
+    SourcePos callPos,
+  ) {
+    final blockIdx = def.params.indexWhere((p) => p.kind == 'block');
+    if (blockIdx < 0) return;
+    if (blockIdx != def.params.length - 1) {
+      _err(
+        'macro `\$${def.name}`: `block` parameter must be last',
+        def.pos,
+      );
+    }
+    if (def.params.where((p) => p.kind == 'block').length > 1) {
+      _err(
+        'macro `\$${def.name}`: at most one `block` parameter',
+        def.pos,
+      );
+    }
+    _skipSpace();
+    if (_atEnd || _peek != '{') {
+      _err(
+        'macro `\$${def.name}` expects a trailing `{ … }` block',
+        callPos,
+      );
+    }
+    args.add(_readBalanced('{', '}'));
   }
 
   bool _startsWithFn() {
@@ -170,8 +367,13 @@ final class _PpScanner {
         _advance();
         _skipSpace();
         final kind = _readIdent();
-        if (kind != 'type' && kind != 'name' && kind != 'str') {
-          _err('macro parameter kind must be `type`, `name`, or `str`');
+        if (kind != 'type' &&
+            kind != 'name' &&
+            kind != 'str' &&
+            kind != 'block') {
+          _err(
+            'macro parameter kind must be `type`, `name`, `str`, or `block`',
+          );
         }
         params.add(_MacroParam(pname, kind));
         _skipSpace();
@@ -232,6 +434,14 @@ final class _PpScanner {
       // Strip quotes for substitution into `$name` / `$T` slots.
       return lit.substring(1, lit.length - 1);
     }
+    // Integer literal (e.g. stack depth / priority for `$rtos_task`).
+    if (_isDigit(_peek)) {
+      final start = _i;
+      while (!_atEnd && _isDigit(_peek)) {
+        _advance();
+      }
+      return source.substring(start, _i);
+    }
     // Bare identifier or type name (i32, *mut u8 — MVP: single ident only).
     final id = _readIdent();
     if (id.isEmpty) {
@@ -257,6 +467,12 @@ final class _PpScanner {
         (_) => value,
       );
     }
+    if (def.packageQualifier != null) {
+      body = body.replaceAllMapped(
+        RegExp(r'\$mod\b'),
+        (_) => def.packageQualifier!,
+      );
+    }
     final leftover = _firstCodeSlot(body);
     if (leftover != null) {
       _err(
@@ -275,8 +491,11 @@ final class _PpScanner {
       if (c == '"') {
         i++;
         while (i < text.length && text[i] != '"') {
-          if (text[i] == '\\' && i + 1 < text.length) i += 2;
-          else i++;
+          if (text[i] == '\\' && i + 1 < text.length) {
+            i += 2;
+          } else {
+            i++;
+          }
         }
         if (i < text.length) i++;
         continue;
@@ -422,5 +641,10 @@ final class _PpScanner {
   }
 
   static bool _isIdentContinue(String c) =>
-      _isIdentStart(c) || (c.codeUnitAt(0) >= 48 && c.codeUnitAt(0) <= 57);
+      _isIdentStart(c) || _isDigit(c);
+
+  static bool _isDigit(String c) {
+    final u = c.codeUnitAt(0);
+    return u >= 48 && u <= 57;
+  }
 }

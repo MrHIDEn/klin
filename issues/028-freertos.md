@@ -28,6 +28,9 @@ without own scheduler and without hidden allocation.
 Package: [`github.com/MrHIDEn/klin_freertos`](https://github.com/MrHIDEn/klin_freertos)
 (portable FreeRTOS C API client — not STM32-only; board HAL stays in `machine_*`).
 
+`$rtos_task(name, stack, prio) { … }` ships in the package (needs Klin path-import
+macros + `block` params). Board blink demo still open.
+
 Question: can external Klin lib (RTOS bindings, not stdlib — [024](024-rtos.md))
 provide decorators to mark fn/methods as tasks?
 
