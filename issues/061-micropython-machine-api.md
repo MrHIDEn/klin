@@ -2,7 +2,7 @@
 
 **Status:** ✅ decided (external package; not Klin stdlib)
 **Depends on:** [010](010-bare-metal.md); nice to have [031](031-hal-libraries.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
-**Packages:** [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` `@v0.2.0`), [`machine_rp`](https://github.com/klin-lang/machine_rp) (`Pin` + `Pwm` `@v0.4.0`), [`machine_esp`](https://github.com/klin-lang/machine_esp) (ESP32-C3 Pin + minimal IDF blink)
+**Packages:** [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` `@v0.2.0`), [`machine_rp`](https://github.com/klin-lang/machine_rp) (`Pin` + `Pwm` `@v0.4.0`), [`machine_esp`](https://github.com/klin-lang/machine_esp) (`Pin` + `Pwm` `@v0.2.0`)
 
 ## Verdict
 
@@ -12,7 +12,7 @@
 | Where does the code live? | External repos (not `stdlib/`): **`machine_stm32`**, **`machine_rp`**, **`machine_esp`** |
 | STM32? | **Yes** — [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` `@v0.2.0`; F411/F401-class MMIO, no runtime chip detect) |
 | RP2040 / RP2350? | **`machine_rp`** — Pin ✅; **Pwm** ✅ `@v0.4.0` (`pwm_out` / `pwm_out_rp2350`); ([062](062-targets-esp-rp.md)) |
-| ESP32-C3? | **`machine_esp`** — Pin MMIO ✅; blink via **minimal ESP-IDF** (not freestanding); Wi‑Fi later ([062](062-targets-esp-rp.md)) |
+| ESP32-C3? | **`machine_esp`** — Pin ✅; **Pwm** ✅ `@v0.2.0` (LEDC MMIO); blink/PWM via **minimal ESP-IDF** boot; Wi‑Fi / freestanding later ([062](062-targets-esp-rp.md)) |
 | Atmel / PIC? | Separate ports if/when needed — not one library for all MCUs |
 | Approach | **C** (thin Klin package over explicit MMIO) — not A, not full vendor HAL as the API |
 
@@ -57,7 +57,8 @@ led.duty_u16(32768)
 ```
 
 Examples: [`machine_stm32/examples/pwm_f411`](https://github.com/klin-lang/machine_stm32/tree/main/examples/pwm_f411),
-[`machine_rp/examples/pwm_pico`](https://github.com/klin-lang/machine_rp/tree/main/examples/pwm_pico).
+[`machine_rp/examples/pwm_pico`](https://github.com/klin-lang/machine_rp/tree/main/examples/pwm_pico),
+[`machine_esp/examples/pwm_c3`](https://github.com/klin-lang/machine_esp/tree/main/examples/pwm_c3).
 
 `machine_rp` `@v0.4.0`:
 
@@ -67,6 +68,15 @@ let led = machine.pwm_out(25, 6000000)
 led.freq(1000)
 led.duty_u16(32768)
 // RP2350: machine.pwm_out_rp2350(25, 150000000)
+```
+
+`machine_esp` `@v0.2.0`:
+
+```klin
+// GPIO 8, LEDC ch 0, timer 0, APB 80 MHz
+let led = machine.pwm_out(8, 0, 0, 80000000)
+led.freq(1000)
+led.duty_u16(32768)
 ```
 
 ### Roadmap
@@ -89,7 +99,8 @@ led.duty_u16(32768)
 **`machine_esp`**
 
 1. **Pin** + blink ESP32-C3 (DevKitM-1 GPIO8) — ✅ (MMIO Pin; example boot via ESP-IDF)  
-2. Freestanding (no IDF) / other ESP chips / PWM / UART / Wi‑Fi — later  
+2. **PWM** (LEDC MMIO) — ✅ `@v0.2.0` (`pwm_c3`)  
+3. Freestanding (no IDF) / other ESP chips / UART / Wi‑Fi — later  
 
 Other MCU families = other repos — not “one machine for everything”.
 
