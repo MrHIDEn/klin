@@ -2,7 +2,7 @@
 
 **Status:** ✅ decided (external package; not Klin stdlib)
 **Depends on:** [010](010-bare-metal.md); nice to have [031](031-hal-libraries.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
-**Packages:** [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` `@v0.2.0`), [`machine_rp`](https://github.com/klin-lang/machine_rp) (RP2040 + RP2350 Arm/RISC-V Pin), [`machine_esp`](https://github.com/klin-lang/machine_esp) (ESP32-C3 Pin + minimal IDF blink)
+**Packages:** [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` `@v0.2.0`), [`machine_rp`](https://github.com/klin-lang/machine_rp) (`Pin` + `Pwm` `@v0.4.0`), [`machine_esp`](https://github.com/klin-lang/machine_esp) (ESP32-C3 Pin + minimal IDF blink)
 
 ## Verdict
 
@@ -11,7 +11,7 @@
 | Change the Klin compiler? | **No** for the library itself |
 | Where does the code live? | External repos (not `stdlib/`): **`machine_stm32`**, **`machine_rp`**, **`machine_esp`** |
 | STM32? | **Yes** — [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` `@v0.2.0`; F411/F401-class MMIO, no runtime chip detect) |
-| RP2040 / RP2350? | **`machine_rp`** — RP2040 ✅; RP2350 Arm ✅; RP2350 RISC-V ✅ (`pin_out_rp2350` + `blink_pico2_riscv`) ([062](062-targets-esp-rp.md)) |
+| RP2040 / RP2350? | **`machine_rp`** — Pin ✅; **Pwm** ✅ `@v0.4.0` (`pwm_out` / `pwm_out_rp2350`); ([062](062-targets-esp-rp.md)) |
 | ESP32-C3? | **`machine_esp`** — Pin MMIO ✅; blink via **minimal ESP-IDF** (not freestanding); Wi‑Fi later ([062](062-targets-esp-rp.md)) |
 | Atmel / PIC? | Separate ports if/when needed — not one library for all MCUs |
 | Approach | **C** (thin Klin package over explicit MMIO) — not A, not full vendor HAL as the API |
@@ -56,7 +56,18 @@ led.freq(1000)
 led.duty_u16(32768)
 ```
 
-Example: [`machine_stm32/examples/pwm_f411`](https://github.com/klin-lang/machine_stm32/tree/main/examples/pwm_f411).
+Examples: [`machine_stm32/examples/pwm_f411`](https://github.com/klin-lang/machine_stm32/tree/main/examples/pwm_f411),
+[`machine_rp/examples/pwm_pico`](https://github.com/klin-lang/machine_rp/tree/main/examples/pwm_pico).
+
+`machine_rp` `@v0.4.0`:
+
+```klin
+// GPIO 25 → slice/channel from pin; sys_clk_hz explicit
+let led = machine.pwm_out(25, 6000000)
+led.freq(1000)
+led.duty_u16(32768)
+// RP2350: machine.pwm_out_rp2350(25, 150000000)
+```
 
 ### Roadmap
 
@@ -72,7 +83,8 @@ Example: [`machine_stm32/examples/pwm_f411`](https://github.com/klin-lang/machin
 1. **Pin** + blink RP2040 (Pico GPIO 25) — ✅  
 2. **Pin** + blink RP2350 Arm (Pico 2) — ✅ (`pin_out_rp2350`, `blink_pico2`)  
 3. **Pin** + blink RP2350 RISC-V — ✅ (`blink_pico2_riscv`, same Pin API)  
-4. PWM / UART when needed (same Pwm shape as above)  
+4. **PWM** (`pwm_out` / `pwm_out_rp2350`) — ✅ `@v0.4.0`  
+5. UART when needed  
 
 **`machine_esp`**
 

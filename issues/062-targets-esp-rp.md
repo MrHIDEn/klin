@@ -13,8 +13,8 @@ target **ESP32**, **RP2040**, **RP2350**?
 
 | Target | Realistic? | Notes |
 |---|---|---|
-| **RP2040** | ✅ path exists | Cortex-M0+, `arm-none-eabi`, freestanding + boot2 (no pico-sdk cmake). Package: [`machine_rp`](https://github.com/klin-lang/machine_rp) + `examples/blink_pico`. |
-| **RP2350** | ✅ Arm + RISC-V | Arm M33: `blink_pico2`. RISC-V Hazard3: `blink_pico2_riscv` (`riscv64-unknown-elf-gcc` `-march=rv32imac`). Same `pin_out_rp2350`. |
+| **RP2040** | ✅ path exists | Cortex-M0+, `arm-none-eabi`, freestanding + boot2 (no pico-sdk cmake). Package: [`machine_rp`](https://github.com/klin-lang/machine_rp) `@v0.4.0` — Pin + Pwm (`blink_pico`, `pwm_pico`). |
+| **RP2350** | ✅ Arm + RISC-V | Arm M33: `blink_pico2`. RISC-V Hazard3: `blink_pico2_riscv` (`riscv64-unknown-elf-gcc` `-march=rv32imac`). Same `pin_out_rp2350` / `pwm_out_rp2350`. |
 | **ESP32-C3** | ✅ Pin MVP | RISC-V. Package: [`machine_esp`](https://github.com/klin-lang/machine_esp) — MMIO `Pin` + `examples/blink_c3` (minimal **ESP-IDF** boot/flash; no Wi‑Fi). Freestanding later. |
 | **ESP32** (classic / other) | Later | Classic = **Xtensa**; C6/S3 etc. separate from C3 MVP. |
 
