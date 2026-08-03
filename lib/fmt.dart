@@ -272,7 +272,9 @@ void _writeStmt(StringBuffer buf, Stmt stmt, int indent) {
     case MatchStmt(:final subject, :final arms):
       buf.write('${pad}match ${_expr(subject, indent)} {\n');
       for (final arm in arms) {
-        buf.writeln('$pad$indentUnit${_patternText(arm.pattern, indent)} {');
+        buf.writeln(
+          '$pad$indentUnit${_armPatternText(arm.pattern, arm.when, indent)} {',
+        );
         for (final s in arm.body.stmts) {
           _writeStmt(buf, s, indent + 2);
         }
@@ -282,12 +284,20 @@ void _writeStmt(StringBuffer buf, Stmt stmt, int indent) {
   }
 }
 
+String _armPatternText(MatchPattern pattern, Expr? when, int indent) {
+  final base = _patternText(pattern, indent);
+  if (when == null) return base;
+  return '$base when ${_expr(when, indent)}';
+}
+
 String _patternText(MatchPattern pattern, int indent) {
   return switch (pattern) {
     LitPattern(:final values) =>
       values.map((v) => _expr(v, indent)).join(', '),
     RangePattern(:final start, :final endInclusive) =>
       '${_expr(start, indent)}..=${_expr(endInclusive, indent)}',
+    RelPattern(:final op, :final rhs) => '$op ${_expr(rhs, indent)}',
+    WildPattern() => '_',
     ElsePattern() => 'else',
   };
 }
@@ -400,7 +410,7 @@ String _formatMatchExpr(Expr subject, List<MatchExprArm> arms, int indent) {
   final buf = StringBuffer('match ${_expr(subject, indent)} {\n');
   for (final arm in arms) {
     buf.writeln(
-      '$inner${_patternText(arm.pattern, indent + 1)} { ${_expr(arm.body, indent + 1)} }',
+      '$inner${_armPatternText(arm.pattern, arm.when, indent + 1)} { ${_expr(arm.body, indent + 1)} }',
     );
   }
   buf.write('$pad}');

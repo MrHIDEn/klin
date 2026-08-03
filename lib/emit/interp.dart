@@ -28,7 +28,9 @@ bool _stmtNeedsTrimFrac(Stmt stmt) => switch (stmt) {
       DeferStmt(:final body) => _stmtNeedsTrimFrac(body),
       MethodCallStmt(:final call) => _exprNeedsTrimFrac(call),
       MatchStmt(:final subject, :final arms) => _exprNeedsTrimFrac(subject) ||
-          arms.any((arm) => _blockNeedsTrimFrac(arm.body)),
+          arms.any((arm) =>
+              (arm.when != null && _exprNeedsTrimFrac(arm.when!)) ||
+              _blockNeedsTrimFrac(arm.body)),
       _ => false,
     };
 
@@ -44,7 +46,9 @@ bool _exprNeedsTrimFrac(Expr expr) => switch (expr) {
       MethodCallExpr(:final receiver, :final args) =>
         _exprNeedsTrimFrac(receiver) || args.any(_exprNeedsTrimFrac),
       MatchExpr(:final subject, :final arms) => _exprNeedsTrimFrac(subject) ||
-          arms.any((arm) => _exprNeedsTrimFrac(arm.body)),
+          arms.any((arm) =>
+              (arm.when != null && _exprNeedsTrimFrac(arm.when!)) ||
+              _exprNeedsTrimFrac(arm.body)),
       _ => false,
     };
 

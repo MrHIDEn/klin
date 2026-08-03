@@ -1,6 +1,7 @@
 # `match` — pattern matching with default break
 
-Issue: [014](../issues/014-match.md).
+Issue: [014](../issues/014-match.md) (MVP), [084](../issues/084-match-when-rel.md)
+(`when` guards + relational patterns).
 
 ## Syntax
 
@@ -14,6 +15,12 @@ match x {
     4..=10 {
         puts("mid")
     }
+    > 0 when ready != 0 {
+        puts("ready-pos")
+    }
+    _ when special {
+        puts("guarded catch")
+    }
     else {
         puts("big")
     }
@@ -26,6 +33,7 @@ Expression (only as `let` initializer or right-hand side of assignment):
 let fee = match x {
     0      { 0 }
     1..=5  { 10 }
+    >= 10 when ready != 0 { 40 }
     else   { 25 }
 }
 ```
@@ -35,14 +43,28 @@ Arm patterns:
 - value group: `1, 2, 3`
 - **closed on both ends** range: `4..=10` (separate token `..=`;
   `..<` remains half-open range for `for`)
-- `else` — must be last
+- relational: `> e`, `>= e`, `< e`, `<= e`, `!= e` (no `==` — use a
+  value group)
+- wildcard `_` — always matches the subject; **requires** a `when` guard
+  (use `else` for an unguarded catch-all)
+- `else` — must be last; cannot have `when`
+
+Optional guard on any non-`else` arm:
+
+```
+pattern when <bool expr> { … }
+```
 
 ## Semantics
 
 - **Default break.** The first matching arm runs; no fallthrough
   and no `fallthrough` keyword.
-- Subject must be **integral** (`i8`…`u64`, `int`). `f64`, struct,
-  pointer → checker error.
+- An arm matches when its pattern matches the subject **and** its `when`
+  guard (if any) is true.
+- Subject must be **integral** (`i8`…`u64`, `int`) or an **enum**. `f64`,
+  struct, pointer → checker error.
+- Relational and range patterns are **not** allowed on enum subjects
+  (only value groups + `when` + `else`).
 - An arm is a block, not `case`: `break` / `continue` in an arm refer to the
   enclosing loop, `return` returns from the function (and runs `defer`).
 - In a statement `else` is optional — no match does nothing. In an expression `else` is **required** (there is no “otherwise"
@@ -54,7 +76,9 @@ Arm patterns:
 ## Emission
 
 Chain of `if` / `else if` / `else`. Subject lands **once** in a temporary
-variable, so multi-value patterns and ranges do not re-evaluate it:
+variable, so multi-value patterns and ranges do not re-evaluate it.
+A `when` guard is AND-ed into the same condition (`_ when g` emits only
+`(g)`):
 
 ```c
 int32_t klin_val_0 = x;
@@ -62,6 +86,10 @@ if (klin_val_0 == 1 || klin_val_0 == 2 || klin_val_0 == 3) {
     puts("small");
 } else if ((klin_val_0 >= 4 && klin_val_0 <= 10)) {
     puts("mid");
+} else if (((klin_val_0 > 0) && (ready != 0))) {
+    puts("ready-pos");
+} else if ((special)) {
+    puts("guarded catch");
 } else {
     puts("big");
 }
@@ -81,9 +109,9 @@ Deliberately **not** `switch`: `switch` does not handle ranges portably
 loop `break`. An `if` chain gives the same machine code as hand-written C —
 overarching principle satisfied.
 
-## MVP limitations
+## Limitations
 
-- no relational patterns (`>= 4`), no `|` as alternative — use `,`
+- no `|` as alternative — use `,`
 - no matching on strings and structs (`str` is not yet a value
   type)
 - no exhaustiveness checking (beyond required `else` in expression) and
@@ -95,4 +123,5 @@ overarching principle satisfied.
   opens the arm block
 
 Example: [`examples/match.kl`](../examples/match.kl).
-Tests: `test/match_stmt.kl`, `test/match_expr.kl`, `test/fmt_match.kl`.
+Tests: `test/match_stmt.kl`, `test/match_expr.kl`, `test/match_when.kl`,
+`test/match_rel.kl`, `test/fmt_match.kl`.

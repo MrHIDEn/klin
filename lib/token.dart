@@ -48,6 +48,7 @@ enum TokenKind {
   error_,
   asm_,
   match_,
+  when_,
   async_,
   await_,
 

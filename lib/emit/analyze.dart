@@ -89,7 +89,9 @@ bool _stmtCallsStdio(Stmt stmt) => switch (stmt) {
       DeferStmt(:final body) => _stmtCallsStdio(body),
       BlockStmt(:final block) => block.stmts.any(_stmtCallsStdio),
       MatchStmt(:final subject, :final arms) => _exprCallsStdio(subject) ||
-          arms.any((arm) => arm.body.stmts.any(_stmtCallsStdio)),
+          arms.any((arm) =>
+              (arm.when != null && _exprCallsStdio(arm.when!)) ||
+              arm.body.stmts.any(_stmtCallsStdio)),
       _ => false,
     };
 
@@ -122,7 +124,9 @@ bool _exprCallsStdio(Expr expr) => switch (expr) {
         namedFields?.values.any(_exprCallsStdio) ??
             positionalFields!.any(_exprCallsStdio),
       MatchExpr(:final subject, :final arms) => _exprCallsStdio(subject) ||
-          arms.any((arm) => _exprCallsStdio(arm.body)),
+          arms.any((arm) =>
+              (arm.when != null && _exprCallsStdio(arm.when!)) ||
+              _exprCallsStdio(arm.body)),
       _ => false,
     };
 

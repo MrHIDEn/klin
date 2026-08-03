@@ -638,8 +638,9 @@ final class Parser {
     final arms = <MatchStmtArm>[];
     while (!_check(TokenKind.rBrace) && !_check(TokenKind.eof)) {
       final pattern = _matchPattern();
+      final when = _matchWhenGuard(pattern);
       final body = _block();
-      arms.add(MatchStmtArm(pattern: pattern, body: body));
+      arms.add(MatchStmtArm(pattern: pattern, when: when, body: body));
     }
     _expect(TokenKind.rBrace, 'expected `}` closing `match`');
     if (arms.isEmpty) {
@@ -655,10 +656,11 @@ final class Parser {
     final arms = <MatchExprArm>[];
     while (!_check(TokenKind.rBrace) && !_check(TokenKind.eof)) {
       final pattern = _matchPattern();
+      final when = _matchWhenGuard(pattern);
       _expect(TokenKind.lBrace, 'expected `{` before the arm value');
       final body = _expr();
       _expect(TokenKind.rBrace, 'expected `}` after the arm value');
-      arms.add(MatchExprArm(pattern: pattern, body: body));
+      arms.add(MatchExprArm(pattern: pattern, when: when, body: body));
     }
     _expect(TokenKind.rBrace, 'expected `}` closing `match`');
     if (arms.isEmpty) {
@@ -667,10 +669,45 @@ final class Parser {
     return MatchExpr(subject: subject, arms: arms, pos: tok.pos);
   }
 
+  /// Optional `when <expr>` after a pattern. Forbidden on `else`; required on `_`.
+  Expr? _matchWhenGuard(MatchPattern pattern) {
+    if (_check(TokenKind.when_)) {
+      if (pattern is ElsePattern) {
+        throw ParseError('`else` cannot have a `when` guard', _current.pos);
+      }
+      _advance();
+      final saved = _noStructLit;
+      _noStructLit = true;
+      final guard = _expr();
+      _noStructLit = saved;
+      return guard;
+    }
+    if (pattern is WildPattern) {
+      throw ParseError(
+        'wildcard `_` requires a `when` guard (use `else` for a catch-all)',
+        pattern.pos,
+      );
+    }
+    return null;
+  }
+
   MatchPattern _matchPattern() {
     if (_check(TokenKind.else_)) {
       final t = _advance();
       return ElsePattern(t.pos);
+    }
+    if (_check(TokenKind.ident) && _current.lexeme == '_') {
+      final t = _advance();
+      return WildPattern(t.pos);
+    }
+    final relOp = _matchRelOp();
+    if (relOp != null) {
+      final opTok = _advance();
+      final saved = _noStructLit;
+      _noStructLit = true;
+      final rhs = _expr();
+      _noStructLit = saved;
+      return RelPattern(relOp, rhs, opTok.pos);
     }
     final saved = _noStructLit;
     _noStructLit = true;
@@ -690,6 +727,19 @@ final class Parser {
     }
     _noStructLit = saved;
     return result;
+  }
+
+  /// Returns the relational pattern operator lexeme, or null if the next token
+  /// is not a relational pattern opener (`>`, `>=`, `<`, `<=`, `!=`).
+  String? _matchRelOp() {
+    return switch (_current.kind) {
+      TokenKind.greater => '>',
+      TokenKind.greaterEqual => '>=',
+      TokenKind.less => '<',
+      TokenKind.lessEqual => '<=',
+      TokenKind.bangEqual => '!=',
+      _ => null,
+    };
   }
 
   Stmt _forStmt() {

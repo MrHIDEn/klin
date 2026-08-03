@@ -49,7 +49,7 @@ let a = match x {
 ## Decisions
 
 - Emission: chain of `if` / `else if` (subject once into a temp variable)
-- Patterns `>= 4` etc. — later
+- Patterns `>= 4` / `when` guards — later → [084](084-match-when-rel.md)
 - `else` required in expression form; optional in statement form
 - Subject must be integral (`i8`…`u64`, `int`); `f64` / structs —
   checker error
