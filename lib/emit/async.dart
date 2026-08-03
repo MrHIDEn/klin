@@ -307,6 +307,8 @@ String _emitAsyncExpr(Expr expr, _AsyncEmitCtx ctx) {
       '$op(${_emitAsyncExpr(operand, ctx)})',
     BinaryExpr(:final left, :final op, :final right) =>
       '(${_emitAsyncExpr(left, ctx)} $op ${_emitAsyncExpr(right, ctx)})',
+    PickExpr(:final cond, :final thenExpr, :final elseExpr) =>
+      '(${_emitAsyncExpr(cond, ctx)} ? ${_emitAsyncExpr(thenExpr, ctx)} : ${_emitAsyncExpr(elseExpr, ctx)})',
     GroupExpr(:final inner) => '(${_emitAsyncExpr(inner, ctx)})',
     CallExpr(:final callee, :final args, :final resolvedCallee) =>
       '${resolvedCallee ?? callee}(${args.map((a) => _emitAsyncExpr(a, ctx)).join(', ')})',

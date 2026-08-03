@@ -2290,6 +2290,8 @@ final class Checker {
       GroupExpr(:final inner) => _inferExpr(inner),
       MatchExpr(:final subject, :final arms, :final pos) =>
         _inferMatchExpr(subject, arms, pos),
+      PickExpr(:final cond, :final thenExpr, :final elseExpr, :final pos) =>
+        _inferPickExpr(cond, thenExpr, elseExpr, pos),
     };
     if (type is PrimType ||
         type is StrType ||
@@ -2537,7 +2539,105 @@ final class Checker {
         for (final arm in arms) {
           _materialize(arm.body, type);
         }
+      case PickExpr(:final thenExpr, :final elseExpr):
+        _materialize(thenExpr, type);
+        _materialize(elseExpr, type);
     }
+  }
+
+  KlinType _inferPickExpr(
+    Expr cond,
+    Expr thenExpr,
+    Expr elseExpr,
+    SourcePos pos,
+  ) {
+    _expectBoolCond(cond);
+    _forbidStmtLoweringInPick(cond, 'condition');
+    _forbidStmtLoweringInPick(thenExpr, 'then-expression');
+    _forbidStmtLoweringInPick(elseExpr, 'else-expression');
+    final thenType = _inferExpr(thenExpr);
+    final elseType = _inferExpr(elseExpr);
+    final unified = _unifyNumeric(thenType, elseType, pos);
+    final concrete = _defaultConcrete(unified, pos);
+    _materialize(thenExpr, concrete);
+    _materialize(elseExpr, concrete);
+    return concrete;
+  }
+
+  /// `pick` emits as a C ternary, so arms cannot contain forms that lower to
+  /// statements (`match` / `or` / `!`).
+  void _forbidStmtLoweringInPick(Expr expr, String role) {
+    void walk(Expr e) {
+      final node = _unwrapGroups(e);
+      if (node is MatchExpr || node is OrExpr || node is PropagateExpr) {
+        final kind = switch (node) {
+          MatchExpr() => '`match`',
+          OrExpr() => '`or`',
+          PropagateExpr() => '`!`',
+          _ => 'this expression',
+        };
+        throw CheckError(
+          '`pick` $role cannot contain $kind (it emits as a C ternary)',
+          node.pos,
+        );
+      }
+      switch (node) {
+        case PickExpr(:final cond, :final thenExpr, :final elseExpr):
+          walk(cond);
+          walk(thenExpr);
+          walk(elseExpr);
+        case BinaryExpr(:final left, :final right):
+          walk(left);
+          walk(right);
+        case UnaryExpr(:final operand):
+          walk(operand);
+        case CallExpr(:final args):
+          for (final arg in args) {
+            walk(arg);
+          }
+        case MethodCallExpr(:final receiver, :final args):
+          walk(receiver);
+          for (final arg in args) {
+            walk(arg);
+          }
+        case FieldExpr(:final object):
+          walk(object);
+        case IndexExpr(:final object, :final index):
+          walk(object);
+          walk(index);
+        case SliceFromExpr(:final array):
+          walk(array);
+        case ArrayLitExpr(:final elements):
+          for (final element in elements) {
+            walk(element);
+          }
+        case CastExpr(:final expr):
+          walk(expr);
+        case StructLitExpr(:final namedFields, :final positionalFields):
+          if (namedFields != null) {
+            for (final value in namedFields.values) {
+              walk(value);
+            }
+          }
+          if (positionalFields != null) {
+            for (final value in positionalFields) {
+              walk(value);
+            }
+          }
+        case InterpolatedStringExpr(:final parts):
+          for (final part in parts) {
+            if (part is InterpSlot) walk(part.expr);
+          }
+        case ErrorExpr(:final code):
+          walk(code);
+        case AwaitExpr(:final operand):
+          walk(operand);
+        default:
+          break;
+      }
+    }
+
+    walk(expr);
   }
 
   /// Infers a `let` initializer / assignment RHS. `match` is allowed only when

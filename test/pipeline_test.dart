@@ -1175,6 +1175,72 @@ fn main() {
     );
   });
 
+  test('golden: pick expression emits C ternary (issue 085)', () async {
+    final result = await _compileAndRun('test/pick_expr.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/pick_expr.out').readAsString());
+
+    final source = File('test/pick_expr.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/pick_expr.kl');
+    expect(c, contains('?'));
+    expect(c, contains(':'));
+    expect(c, isNot(contains('if (')));
+    final tokens = Lexer('pick').tokenize();
+    expect(tokens[0].kind, TokenKind.pick_);
+  });
+
+  test('klin fmt: formats pick expression (issue 085)', () {
+    final ugly = File('test/fmt_pick.kl').readAsStringSync();
+    final expected = File('test/fmt_pick.fmt.kl').readAsStringSync();
+    final once = formatSource(ugly);
+    expect(once, expected);
+    expect(formatSource(once), once);
+  });
+
+  test('error: pick condition must be bool (issue 085)', () {
+    const source = 'fn main() { let a = pick 1 { 2 } { 3 } }';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) =>
+            e is CheckError &&
+            e.toString().contains('condition requires type `bool`')),
+      ),
+    );
+  });
+
+  test('error: pick arms must share a type (issue 085)', () {
+    const source = 'fn main() { let a = pick true { true } { 1 } }';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) =>
+            e is CheckError && e.toString().contains('type mismatch')),
+      ),
+    );
+  });
+
+  test('error: pick arm cannot contain match (issue 085)', () {
+    const source = '''
+fn main() {
+  let a = pick true { match 1 { 1 { 2 } else { 3 } } } { 0 }
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) =>
+            e is CheckError &&
+            e.toString().contains('cannot contain `match`')),
+      ),
+    );
+  });
+
   test('assignment from or-block resolves the target type', () async {
     const source = '''
 fn fallible(): !i32 { return error(1) }
@@ -1395,12 +1461,12 @@ fn id(x: i32): i32 {
     return x
 }
 
-fn pick(): fn(i32): i32 {
+fn choose(): fn(i32): i32 {
     return id
 }
 
 fn main() {
-    let f = pick()
+    let f = choose()
     printf("%d\n", f(7))
 }
 ''');

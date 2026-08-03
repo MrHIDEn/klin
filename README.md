@@ -158,6 +158,12 @@ only; lowers to an `if`/`else if` chain with the subject in one temp, so
 [docs/15-match.md](docs/15-match.md), [`examples/match.kl`](examples/match.kl).
 An enum subject is also allowed (arms use `Enum.Variant`, no ranges).
 
+### `pick`
+
+Two-way expression choice (`pick cond { a } { b }` → C `?:`). Nested freely;
+statement `if` is unchanged. See [docs/18-pick.md](docs/18-pick.md),
+[`examples/pick.kl`](examples/pick.kl).
+
 ### Enums
 
 `enum Color { Red, Green, Blue }` is a distinct named type over an integer base

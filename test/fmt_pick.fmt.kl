@@ -1,0 +1,5 @@
+fn main() {
+    let ready = 1
+    let fee = pick ready != 0 { 10 } { 0 }
+    printf("%d\n", fee)
+}

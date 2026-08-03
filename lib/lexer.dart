@@ -235,6 +235,7 @@ final class Lexer {
       'asm' => Token(TokenKind.asm_, lexeme, start),
       'match' => Token(TokenKind.match_, lexeme, start),
       'when' => Token(TokenKind.when_, lexeme, start),
+      'pick' => Token(TokenKind.pick_, lexeme, start),
       'async' => Token(TokenKind.async_, lexeme, start),
       'await' => Token(TokenKind.await_, lexeme, start),
       _ => Token(TokenKind.ident, lexeme, start),

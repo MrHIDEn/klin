@@ -928,6 +928,22 @@ final class MatchExpr extends Expr {
   MatchExpr({required this.subject, required this.arms, required this.pos});
 }
 
+/// `pick cond { thenExpr } { elseExpr }` — expression form of a two-way
+/// choice. Emits as C ternary `(cond ? thenExpr : elseExpr)`.
+final class PickExpr extends Expr {
+  final Expr cond;
+  final Expr thenExpr;
+  final Expr elseExpr;
+  final SourcePos pos;
+
+  PickExpr({
+    required this.cond,
+    required this.thenExpr,
+    required this.elseExpr,
+    required this.pos,
+  });
+}
+
 final class MatchExprArm {
   final MatchPattern pattern;
   /// Optional `when <bool expr>` guard; null means no guard.

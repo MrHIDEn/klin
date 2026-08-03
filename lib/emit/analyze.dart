@@ -127,6 +127,10 @@ bool _exprCallsStdio(Expr expr) => switch (expr) {
           arms.any((arm) =>
               (arm.when != null && _exprCallsStdio(arm.when!)) ||
               _exprCallsStdio(arm.body)),
+      PickExpr(:final cond, :final thenExpr, :final elseExpr) =>
+          _exprCallsStdio(cond) ||
+          _exprCallsStdio(thenExpr) ||
+          _exprCallsStdio(elseExpr),
       _ => false,
     };
 

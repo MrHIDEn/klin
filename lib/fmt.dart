@@ -393,6 +393,8 @@ String _expr(Expr expr, [int indent = 0]) {
       'cast($typeName, ${_expr(expr, indent)})',
     BinaryExpr(:final left, :final op, :final right) =>
       '${_expr(left, indent)} $op ${_expr(right, indent)}',
+    PickExpr(:final cond, :final thenExpr, :final elseExpr) =>
+      'pick ${_expr(cond, indent)} { ${_expr(thenExpr, indent)} } { ${_expr(elseExpr, indent)} }',
     GroupExpr(:final inner) => '(${_expr(inner, indent)})',
     ErrorExpr(:final code) => 'error(${_expr(code, indent)})',
     PropagateExpr(:final result) => '${_expr(result, indent)}!',
