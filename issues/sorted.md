@@ -90,7 +90,7 @@ building the core from scratch.
 | [058](058-source-file-split.md) | Split large compiler source files (tech debt) | 💭 | — |
 | [059](059-kstruct-macros.md) | `$kstruct` / `$kstruct_from` macros (richer klinstruct) | 💭 | 026, 052 |
 | [060](060-map-kv.md) | KV map (hash map) — language / stdlib / C | 💭 | 007, 057? |
-| [061](061-micropython-machine-api.md) | MicroPython-style `machine` API (PWM, UART, …) | 💭 | 010, 031? |
+| [061](061-micropython-machine-api.md) | MicroPython-style `machine` API (PWM, UART, …) | ✅ (external `machine-stm32`; MVP Pin) | 010, 031? |
 | [062](062-targets-esp-rp.md) | MCU targets: ESP32 / RP2040 / RP2350 | 💭 | 010 |
 | [064](064-if-cond-struct-literal-parse.md) | `if`/`while` condition ending in a name mistaken for a struct literal | ✅ | — |
 | [068](068-shared-type-decl.md) | Shared type annotation (`a, b: i32` like Go; both forms OK) | ✅ | 002, 004, 005 |

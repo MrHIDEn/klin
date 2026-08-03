@@ -1,7 +1,41 @@
 # 061 — MicroPython `machine`-style API (PWM, UART, …)
 
-**Status:** 💭 under consideration (low priority — non-blocking)
+**Status:** ✅ decided (external package; not Klin stdlib)
 **Depends on:** [010](010-bare-metal.md); nice to have [031](031-hal-libraries.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
+**Package:** https://github.com/MrHIDEn/machine-stm32
+
+## Verdict
+
+| Question | Answer |
+|---|---|
+| Change the Klin compiler? | **No** for the library itself |
+| Where does the code live? | External repo **`MrHIDEn/machine-stm32`**, not `stdlib/` |
+| STM32? | **Yes** — first port (MVP: `Pin` + blink) |
+| RP2040 / Atmel / PIC? | Same Klin language; **separate ports** later ([062](062-targets-esp-rp.md)). Not one library for all MCUs |
+| Approach | **C** (thin Klin package over explicit MMIO) — not A, not full vendor HAL as the API |
+
+Chosen over A/B: MicroPython-like **shape** (`Pin`, later `Pwm` / `Uart`), with no GC, no hidden heap, no hidden clock magic. Clock / startup / linker stay in the app (board pack later: [074](074-board-ioc-klin-mod.md), [075](075-board-pack-init-host.md)).
+
+### Import note (repo hyphen)
+
+Klin remote imports require the last path segment to be a valid module identifier.
+`machine-stm32` contains `-`, so `import "github/mrhiden/machine-stm32"` cannot match `module …` today.
+
+**Use today:** relative / `KLIN_PATH` import of the `machine/` directory:
+
+```klin
+import "../../machine"   // from examples/… in that repo
+// or: KLIN_PATH=<clone> → import machine
+```
+
+Optional later: rename the GitHub repo to `machine_stm32` (underscore) for `klin get` parity with `osa` / `eventloop`.
+
+### Roadmap (in `machine-stm32`)
+
+1. **Pin** + blink (Nucleo-F411 PA5) — started  
+2. PWM + UART on the same STM32  
+3. I2C / SPI / ADC when needed  
+4. Other chips = other repos / ports, not “one machine for everything”
 
 ## Context
 
@@ -75,19 +109,11 @@ uart.write(b"hi\n")
 |---|---|
 | **A. SVD + examples only** | status quo; zero “machine” |
 | **B. FFI to vendor HAL/LL** | [031](031-hal-libraries.md) — C alongside, thin `@[cimport]` |
-| **C. Thin `stdlib` / Klin `machine` package** | Pin/PWM/UART… as explicit API over MMIO or HAL; **no** GC, no hidden heap; init/clock still explicit (startup / board pack [053](053-device-board-assets.md)) |
+| **C. Thin Klin `machine` package (external)** | Pin/PWM/UART… as explicit API over MMIO; **no** GC, no hidden heap; init/clock still explicit (startup / board pack [053](053-device-board-assets.md)) — **chosen**; lives outside the compiler repo |
 
 Preference aligned with overarching rule: if C, then **explicit** clock tuning
 / pin mux / errors; do not promise full portability like µPython
 (different MCUs = different PWM/timer limits).
-
-## Sketch (later)
-
-1. Choose MVP classes: `Pin`, `PWM`, `Uart` (Klin naming).
-2. One reference board (e.g. Nucleo-F411 / RP2040) + blink/PWM/UART example
-   — targets beyond STM32: [062](062-targets-esp-rp.md).
-3. Implementation decision: pure MMIO (SVD) vs LL vs mix.
-4. Documentation: “this is not a MicroPython port; similar API shape”.
 
 ## Out of scope
 
@@ -95,9 +121,12 @@ Preference aligned with overarching rule: if C, then **explicit** clock tuning
 - Full parity of all ports and classes (`CAN`, `I2S`, `USBDevice` in MVP)  
 - Hidden callbacks with allocation in IRQ  
 - Priority relative to language core  
+- Putting `machine` into Klin `stdlib/`
 
 ## Links
 
+- Package: https://github.com/MrHIDEn/machine-stm32  
 - MicroPython `machine`: https://docs.micropython.org/en/latest/library/machine.html  
 - Klin vendor HAL: [031](031-hal-libraries.md)  
 - Embedded project layout: [054](054-embedded-project-layout.md)  
+- Other MCU targets: [062](062-targets-esp-rp.md)  
