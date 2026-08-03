@@ -43,6 +43,8 @@ are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), n
 | `remote_osa/` | Remote `import "github/klin-lang/osa"` after `klin get` ([049](../issues/049-remote-imports.md)) |
 | `remote_eventloop/` | Remote `github/klin-lang/eventloop@v0.2.0` — callbacks + async (`app.kl` / `async_app.kl`) ([029](../issues/029-async-event-loop.md)) |
 | `sketch_async_eventloop.kl` | `async`/`await` + remote eventloop v0.2 ([029](../issues/029-async-event-loop.md)) |
+| `freertos_eventloop/` | FreeRTOS + eventloop callbacks in one `$rtos_task` (emit-c / stubs; [029](../issues/029-async-event-loop.md) phase 3) |
+| `freertos_eventloop_async/` | Same RTOS layout with `async` / `spawn` / `sleep_ms` ([029](../issues/029-async-event-loop.md) phase 3+4) |
 | `modules/` | `module` / `import` ([docs/12-modules.md](../docs/12-modules.md)) |
 | `stm32/blink_f411/` | Nucleo-F411RE LED — local `$peripherals_from_svd` + `@[link("startup.s")]` → `out/*.link` |
 | `stm32/device_f411/` | Same via `$device` + `klin.mod` / `klin get` ([053](../issues/053-device-board-assets.md)) |

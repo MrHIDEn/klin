@@ -65,7 +65,7 @@ building the core from scratch.
 |---|---|---|---|
 | [018](018-generators-yield.md) | Generators / `yield` | 💭 | 004+ |
 | [028](028-freertos.md) | FreeRTOS (`klin_freertos` ✅; blink / `FromISR` open) | 🔨 | 024, 010, 021 |
-| [029](029-async-event-loop.md) | Event loop / async·await (lib `@v0.2.0` ✅; phase 4 async MVP ✅; IDE ⏳) | 🔨 | 018?, 028?, 049? |
+| [029](029-async-event-loop.md) | Event loop / async·await (lib `@v0.2.0` ✅; phase 3 RTOS examples ✅; phase 4 async MVP ✅; IDE ⏳) | 🔨 | 018?, 028?, 049? |
 | [030](030-isr-decorators.md) | Interrupts via decorators | 💭 | 010 |
 | [031](031-hal-libraries.md) | HAL libraries (Cube / LL) | 💭 | 010, 021 |
 | [034](034-generic-types.md) | Generics in the grammar — not now (D3/`$fn`; maybe sugar later) | 💭 | 026 |
