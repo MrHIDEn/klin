@@ -1,7 +1,9 @@
 # 029 — Event loop / `async`·`await` (big beast)
 
 **Status:** 🔨 phase 2 MVP lib published (`github/mrhiden/eventloop@v0.1.0`);
-async / `$event_loop` / RTOS still open
+phase 4 **async/await MVP in core** + local `eventloop` v0.2 package
+([`examples/pkg_eventloop/`](../examples/pkg_eventloop/)) — tag remote
+`@v0.2.0` when publish token allows; `$event_loop` / RTOS still open
 **Depends on:** D1/D3 decisions; probably 018, 026, 028; remote lib → 049
 
 ## Question
@@ -166,34 +168,35 @@ plain `fn` suffice (+ optional `$rtos_task` / `$event_loop`).
 
 ### Single-file sketch: `async`/`await` (Rust style) + remote lib
 
-**Not compilable today.** Working file:
-[`examples/sketch_async_eventloop.kl`](../examples/sketch_async_eventloop.kl).
-Requires core feature (`async`/`await`) and package via
-`klin get github/mrhiden/eventloop@…` ([049](049-remote-imports.md)).
+**Runnable** (phase 4 MVP): 
+[`examples/sketch_async_eventloop.kl`](../examples/sketch_async_eventloop.kl)
+(with eventloop v0.2 in `$KLIN_CACHE`) or local
+[`examples/pkg_eventloop/async_app.kl`](../examples/pkg_eventloop/async_app.kl).
 
 ```klin
-/// SKETCH — Rust-like state machine + explicit executor (no JS Promise).
+/// Rust-like state machine + explicit executor (no JS Promise).
 
 import "github/mrhiden/eventloop"
 import io
 
-async fn delay_ms(ms: i32) {
+async fn delay_ms(ms: i64) {
     eventloop.sleep_ms(ms).await
 }
 
 async fn ticker() {
-    while true {
+    let mut n: i32 = 0
+    while n < 3 {
         io.println("tick")
-        delay_ms(100).await
+        n = n + 1
+        delay_ms(50).await
     }
 }
 
 fn main() {
-    let mut queue_buf: [64]u8
-    let mut ex = eventloop.Executor{}
-    ex.init(queue_buf[:])
-    ex.spawn(ticker)   // state machine in executor / buffer — not heap Promise
-    ex.run()           // here is "life": poll timers → resume after await
+    let mut ex: eventloop.Executor
+    let _ = eventloop.init(&ex) or { 1 }
+    let _ = eventloop.spawn(&ex, ticker) or { 1 }  // task slot, not Promise
+    eventloop.run(&ex)             // poll timers + async tasks
 }
 ```
 
@@ -202,9 +205,9 @@ What happens where:
 | Fragment | Role |
 |---|---|
 | `async fn ticker` | core sugar → state struct + `poll` (like Rust) |
-| `delay_ms(100).await` | suspend `ticker`, return to executor |
-| `eventloop.Executor` / `run` | **remote library** — explicit loop |
-| `queue_buf` | caller memory — zero hidden malloc |
+| `delay_ms(50).await` | suspend `ticker`, return to executor |
+| `eventloop.Executor` / `run` | **library** — explicit loop |
+| task slot `state: [256]u8` | fixed buffer in `Executor` — zero hidden malloc |
 
 ### Alongside: same effect **without** `async`/`await` (works today)
 
@@ -251,16 +254,18 @@ functions on `*mut Executor` (nested mut methods double the pointer in emit).
 | Where "tick" | `on_tick(ctx)` from inside `run()` | `ticker` body after `.await` |
 | Klin language change | no | yes |
 
-**Ecosystem MVP = left column** — implemented. Async sketch = "later, if ever".
+**Ecosystem MVP = left column** — implemented (`@v0.1.0`). Async column = phase 4
+MVP in Klin + local [`examples/pkg_eventloop/`](../examples/pkg_eventloop/) v0.2
+(remote `@v0.2.0` tag pending publish access).
 
-### `async`/`await` syntax (if ever in core) — Rust style, not JS
+### `async`/`await` syntax (phase 4) — Rust style, not JS
 
 - `async` on **function**: `async fn ticker() { … }`
 - `await` is **postfix** at end of expression: `delay_ms(100).await`
 - **not** JS style: `await delay_ms(100)`
 
 ```klin
-// Rust-style (goal):
+// Rust-style (MVP):
 delay_ms(100).await
 
 // NOT JS:
@@ -271,15 +276,17 @@ delay_ms(100).await
 
 | | Current Klin |
 |---|---|
-| Parser `async` / `.await` | **no** |
-| Desugar → state machine | **no** |
+| Phase 4 **spec** (contract below) | **yes** |
+| Parser `async` / `.await` | **yes** (MVP) |
+| Desugar → state machine | **yes** (MVP: top-level void `async fn`) |
 | Callback lib | **yes** — [`MrHIDEn/eventloop@v0.1.0`](https://github.com/MrHIDEn/eventloop) |
-| Example | [`examples/remote_eventloop/`](../examples/remote_eventloop/) after `klin get` |
-| `klin run` on `sketch_async_eventloop.kl` | **will not pass** |
+| Async lib (`sleep_ms` / `spawn`) | **yes** locally — [`examples/pkg_eventloop/`](../examples/pkg_eventloop/); remote `@v0.2.0` ⏳ |
+| Example (callbacks) | [`examples/remote_eventloop/`](../examples/remote_eventloop/) after `klin get` |
+| `klin run` async ticker | **yes** — `examples/pkg_eventloop/async_app.kl` / sketch + cache |
+| IDE keywords | **no** — update after syntax on `main` |
 
-IntelliJ plugin (highlight / parser) would need to know `async` / `.await` **only
-when** they enter the language — not "eventloop plugin"; lib alone does not teach IDE
-keywords. Until then IDE does not need them.
+IntelliJ plugin (highlight / parser) should learn `async` / `.await` after this
+lands on `main` — not via an "eventloop plugin".
 
 ### Multiple loops: RTOS tasks and CPU cores (SMP)
 
@@ -317,22 +324,89 @@ Shared data between tasks/cores → still explicit mutex / RTOS queue
 
 Avoid: one global Node-loop for entire firmware.
 
+### Phase 4 spec — `async` / `await` (implementation contract)
+
+Direction was already Rust-like (above). This section locks the **first
+implementation contract** so the Klin compiler and `eventloop@v0.2` do not
+diverge. No Promise / GC / hidden scheduler.
+
+#### 1. Awaitable = convention + core desugar (not a grammar-level `Poll` enum)
+
+- In an `async fn`, `expr.await` means: drive `expr` through a `poll` step
+  inside the generated state machine.
+- Poll outcome (MVP): **Pending** (suspend; return to executor) or **Ready**
+  (continue). Represented as a small tag/`i32` in emitted C / lib helpers —
+  not a new user-facing enum feature in the grammar for the first PR.
+- There is **no** heap `Promise`, no microtask queue, no built-in Future GC type.
+
+#### 2. State machine storage = executor task slot (no hidden malloc)
+
+- `async fn ticker` lowers to roughly:
+  - `struct ticker_State { /* live locals */ stage: i32 }`
+  - `ticker_poll(st: *mut ticker_State): i32` — `0` = Pending, `1` = Ready/done
+    (exact names are emit details; behavior is fixed).
+- `spawn` places that state in a **fixed task slot** inside `Executor`
+  (separate from the v0.1 timer callback slots; explicit capacity / overflow
+  → `error` like a full timer queue).
+- Zero `malloc` inside the lib for task state. Caller still owns the
+  `Executor` value (stack / static).
+
+#### 3. `eventloop` v0.2 API (alongside existing callbacks)
+
+Keep v0.1: `init` / `every_ms` / `once_ms` / `cancel` / `stop` / `run`.
+
+Add for async:
+
+| API | Role |
+|---|---|
+| `sleep_ms(ms)` | returns an awaitable timer future; `poll` → Pending until deadline, then Ready |
+| `spawn(…)` | register an async state machine in a task slot (user writes `spawn(ticker)`; emit lowers to `poll` fn + state storage) |
+| `run` (extended) | due timer callbacks **and** `poll` of active async tasks until idle / `stop` |
+
+Async does **not** replace callbacks; both coexist in one `run()`.
+
+#### 4. Core vs lib boundary
+
+| Klin core | `eventloop` lib |
+|---|---|
+| `async fn`, postfix `.await` | `sleep_ms`, `spawn`, queues, `run` |
+| desugar → `State` + `poll` | wake on deadline; invoke `poll` |
+| checker: `await` only inside `async fn` | no async syntax |
+
+Not in core: global default loop, auto-async `main`, Promise, hidden scheduler.
+
+#### 5. Hard no for the first async PR (scope cap)
+
+- Top-level `async fn` only — **no** async methods on structs yet.
+- Body MVP: `let`, `if` / `while`, calls, `.await`, `return`.
+- Async result MVP: **void** (sketch `ticker`); `!T` / value-returning async later.
+- No recursive async; no `yield` ([018](018-generators-yield.md) separate).
+- IDE keyword highlight only after syntax lands on `main`.
+
+#### Success criterion
+
+`klin run` on an updated
+[`examples/sketch_async_eventloop.kl`](../examples/sketch_async_eventloop.kl)
+(against `github/mrhiden/eventloop@v0.2.x`) prints ticks via `async` /
+`.await` + explicit `run()`, with readable `#line` state-machine `.c`.
+
 ### Phases (so roadmap is not eaten)
 
 1. **Docs / model** (this issue) — ✅ direction written  
 2. **Callback lib** (`every_ms` / `run`, remote or local) — ✅
    `github/mrhiden/eventloop@v0.1.0`  
-
 3. **RTOS example** — loop in one task, second without  
-4. **Optionally later:** `async`/`await` in core + IDE + sketch → real example  
+4. **`async`/`await` in core** — ✅ **spec** + ✅ **MVP implementation**
+   (parser/checker/emit State+poll; local `eventloop` v0.2 with `sleep_ms`/
+   `spawn`; runnable sketch). Remote tag `@v0.2.0` + IDE keywords still open.
 
-Steps 2–3 do not wait for async. Step 4 = separate, big beast.
+Steps 2–3 do not wait for async. Step 4 MVP landed; IDE / remote tag follow.
 
-## Technical hypotheses (not commitment)
+## Technical hypotheses (aligned with phase 4 spec)
 
-- **A)** optional module + explicit executor / `Allocator` (rather host)
-- **B)** desugar to explicit state machine in `.c`
-- **C)** sugar over FreeRTOS (028), not "Node on MCU"
+- **A)** optional lib executor + explicit task slots (no hidden `Allocator` in MVP async)
+- **B)** desugar to explicit state machine in `.c` (core)
+- **C)** sugar over FreeRTOS (028) later — not "Node on MCU"
 
 Entry points (variants from 028): `main` + decorated `fn` **or** `main_N` / `task_N`.
 

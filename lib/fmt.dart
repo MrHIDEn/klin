@@ -100,6 +100,7 @@ void _writeFunc(StringBuffer buf, FuncDecl decl, int indent) {
   final pad = indentUnit * indent;
   buf.write(pad);
   if (decl.isPub) buf.write('pub ');
+  if (decl.isAsync) buf.write('async ');
   buf.write('fn ');
   final recv = decl.receiver;
   if (recv != null) {
@@ -213,6 +214,8 @@ void _writeStmt(StringBuffer buf, Stmt stmt, int indent) {
       buf.writeln('$pad$name(${_argList(args, indent)})');
     case MethodCallStmt(:final call):
       buf.writeln('$pad${_expr(call, indent)}');
+    case AwaitStmt(:final expr):
+      buf.writeln('$pad${_expr(expr, indent)}');
     case IfStmt():
       _writeIf(buf, stmt, indent, chained: false);
     case WhileStmt(:final cond, :final body):
@@ -383,6 +386,7 @@ String _expr(Expr expr, [int indent = 0]) {
     GroupExpr(:final inner) => '(${_expr(inner, indent)})',
     ErrorExpr(:final code) => 'error(${_expr(code, indent)})',
     PropagateExpr(:final result) => '${_expr(result, indent)}!',
+    AwaitExpr(:final operand) => '${_expr(operand, indent)}.await',
     OrExpr(:final result, :final fallback) =>
       '${_expr(result, indent)} or ${_formatOrBlock(fallback, indent)}',
     MatchExpr(:final subject, :final arms) =>

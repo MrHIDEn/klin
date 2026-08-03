@@ -1,11 +1,5 @@
-/// Runnable with Klin async/await + eventloop v0.2 (issue 029 phase 4).
-/// Local package: `dart run bin/klin.dart run examples/pkg_eventloop/async_app.kl`
-/// Remote (after publish): `klin get github/mrhiden/eventloop@v0.2.0` then
-/// `klin run` this file (uses the same API).
-///
-/// Model: Rust-like state machine + explicit executor. No JS Promise/GC.
-
-import "github/mrhiden/eventloop"
+/// Async ticker via compiler desugar + eventloop spawn/sleep_ms (issue 029).
+import eventloop
 import io
 
 async fn delay_ms(ms: i64) {

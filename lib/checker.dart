@@ -59,6 +59,7 @@ final class _FuncSignature {
   final SourcePos pos;
   final bool isMutReceiver;
   final bool isPub;
+  final bool isAsync;
 
   const _FuncSignature({
     required this.paramTypes,
@@ -66,14 +67,16 @@ final class _FuncSignature {
     required this.pos,
     this.isMutReceiver = false,
     this.isPub = false,
+    this.isAsync = false,
   });
 }
 
 final class _CheckedCall {
   final KlinType type;
   final String? cName;
+  final bool isAsync;
 
-  const _CheckedCall(this.type, this.cName);
+  const _CheckedCall(this.type, this.cName, {this.isAsync = false});
 }
 
 /// Symbol table and type checker. Mutates `resolvedType` on AST nodes.
@@ -91,6 +94,10 @@ final class Checker {
   KlinType _currentReturn = const VoidType();
   String _currentFunction = '';
   String _currentModule = '';
+  bool _currentIsAsync = false;
+
+  /// Names already reserved in the flat async state struct (params + lets).
+  final Set<String> _asyncFlatNames = {};
 
   /// `match` as an expression is only valid as a `let` initializer or an
   /// assignment right-hand side (it lowers to statements in emission).
@@ -130,14 +137,22 @@ final class Checker {
 
     for (final func in program.funcs) {
       if (_hasAttr(func.attrs, 'cimport')) continue;
+      if (func.isAsync && func.name == 'main') {
+        throw CheckError('`main` cannot be `async`', func.pos);
+      }
       _scope = _Scope(null);
       _loopDepth = 0;
       _deferDepth = 0;
       _currentFunction = func.name;
       _currentModule = func.moduleName;
+      _currentIsAsync = func.isAsync;
       _currentReturn = func.resolvedReturnType!;
+      _asyncFlatNames
+        ..clear()
+        ..addAll(func.params.map((p) => p.name));
       final receiver = func.receiver;
       if (receiver != null) {
+        _asyncFlatNames.add(receiver.name);
         _scope.define(
           _Symbol(
             name: receiver.name,
@@ -348,6 +363,7 @@ final class Checker {
         pos: func.pos,
         isMutReceiver: receiver?.isMut ?? false,
         isPub: func.isPub,
+        isAsync: func.isAsync,
       );
     }
   }
@@ -759,6 +775,16 @@ final class Checker {
         }
 
         stmt.resolvedType = resolved;
+        if (_currentIsAsync) {
+          if (_asyncFlatNames.contains(name)) {
+            throw CheckError(
+              'async fn MVP does not allow reused `let $name` '
+              '(flat state struct — including sibling scopes)',
+              pos,
+            );
+          }
+          _asyncFlatNames.add(name);
+        }
         _scope.define(
           _Symbol(name: name, type: resolved, isMut: isMut, pos: pos),
         );
@@ -978,7 +1004,21 @@ final class Checker {
             onResolved: (cName) => stmt.resolvedCallee = cName)) {
           break;
         }
+        final spawn = _tryCheckAsyncSpawn(moduleName, callee, args, pos);
+        if (spawn != null) {
+          throw CheckError(
+            'result `${spawn.returnType.displayName}` from function `$callee` '
+            'must be handled with `!` or `or`',
+            pos,
+          );
+        }
         final call = _checkCall(callee, args, pos, moduleName: moduleName);
+        if (call.isAsync) {
+          throw CheckError(
+            'async function `$callee` can only be used with `.await`',
+            pos,
+          );
+        }
         if (call.type is ResultType) {
           throw CheckError(
             'result `${call.type.displayName}` from function `$callee` must be handled with `!` or `or`',
@@ -995,6 +1035,9 @@ final class Checker {
             call.pos,
           );
         }
+
+      case AwaitStmt(:final expr):
+        _inferExpr(expr);
 
       case IfStmt(:final cond, :final thenBlock, :final elseBranch):
         _expectBoolCond(cond);
@@ -1447,8 +1490,145 @@ final class Checker {
       _expectAssignable(expected, actual, arg.pos);
       _materialize(arg, expected);
     }
-    return _CheckedCall(signature.returnType, _cNameForFunction(decl));
+    return _CheckedCall(
+      signature.returnType,
+      _cNameForFunction(decl),
+      isAsync: signature.isAsync,
+    );
   }
+
+  /// `mod.spawn(ex, async_fn)` — second arg is an async function name.
+  /// Returns spawn C name + async fn base, or null if not that sugar form.
+  ({String spawnCName, String asyncFnBase, KlinType returnType})?
+      _tryCheckAsyncSpawn(
+    String? moduleName,
+    String callee,
+    List<Expr> args,
+    SourcePos pos,
+  ) {
+    if (callee != 'spawn' || args.length != 2) return null;
+    if (moduleName == null) return null;
+    final module = _resolveModuleQualifier(moduleName, pos);
+    final signature = _functions[_key(module, callee)];
+    if (signature == null) return null;
+    // Prefer dedicated spawn signature: (*mut Executor, …) — if lib exposes
+    // `spawn`, treat name-arg form specially when arg1 is an async fn name.
+    final fnArg = args[1];
+    if (fnArg is! NameExpr) return null;
+    final asyncName = fnArg.name;
+    final asyncSig = _functions[_key(_currentModule, asyncName)] ??
+        _functions[_key(module, asyncName)];
+    // Also search all modules for the async fn (user code module).
+    FuncDecl? asyncDecl;
+    for (final func in _allFunctions) {
+      if (func.receiver == null &&
+          func.associatedType == null &&
+          func.name == asyncName &&
+          func.isAsync) {
+        asyncDecl = func;
+        break;
+      }
+    }
+    if (asyncDecl == null && (asyncSig == null || !asyncSig.isAsync)) {
+      return null;
+    }
+    final decl = asyncDecl ??
+        _allFunctions.firstWhere((f) =>
+            f.name == asyncName && f.isAsync && f.receiver == null);
+    if (decl.params.isNotEmpty) {
+      throw CheckError(
+        '`spawn` MVP requires a zero-parameter `async fn` (got `$asyncName`)',
+        fnArg.pos,
+      );
+    }
+    // Typecheck executor pointer arg against spawn's first param if present.
+    if (signature.paramTypes.isNotEmpty) {
+      final expected = signature.paramTypes[0];
+      final actual = _inferExpr(args[0]);
+      _expectAssignable(expected, actual, args[0].pos);
+      _materialize(args[0], expected);
+    } else {
+      _inferExpr(args[0]);
+    }
+    final spawnDecl = _functionDecl(module, callee);
+    if (module != _currentModule && !spawnDecl.isPub) {
+      throw CheckError('function `$moduleName.$callee` is private', pos);
+    }
+    return (
+      spawnCName: _cNameForFunction(spawnDecl),
+      asyncFnBase: _cNameForFunction(decl),
+      returnType: signature.returnType,
+    );
+  }
+
+  KlinType _checkAwait(AwaitExpr expr) {
+    final operand = expr.operand;
+    if (operand is CallExpr) {
+      final call = _checkCall(
+        operand.callee,
+        operand.args,
+        operand.pos,
+        moduleName: operand.moduleName,
+      );
+      operand.resolvedCallee = call.cName;
+      operand.resolvedType = call.type;
+      if (call.isAsync) {
+        expr.asyncCallee = call.cName;
+        return const VoidType();
+      }
+      return _bindPollableAwait(expr, call.type);
+    }
+    final type = _inferExpr(operand);
+    return _bindPollableAwait(expr, type);
+  }
+
+  KlinType _bindPollableAwait(AwaitExpr expr, KlinType type) {
+    if (type is! StructType) {
+      throw CheckError(
+        '`.await` requires an async call or a pollable struct (got `${type.displayName}`)',
+        expr.pos,
+      );
+    }
+    expr.operand.resolvedType = type;
+    final key = '${type.displayName}.poll';
+    final poll = _methods[key];
+    if (poll == null) {
+      throw CheckError(
+        'type `${type.displayName}` is not awaitable (missing `poll` method)',
+        expr.pos,
+      );
+    }
+    if (poll.paramTypes.isNotEmpty) {
+      throw CheckError(
+        'awaitable `poll` must take no arguments (besides receiver)',
+        expr.pos,
+      );
+    }
+    if (poll.returnType is! PrimType ||
+        (poll.returnType as PrimType).kind != PrimKind.i32) {
+      throw CheckError(
+        'awaitable `poll` must return `i32` (0=Pending, 1=Ready)',
+        expr.pos,
+      );
+    }
+    if (!poll.isMutReceiver) {
+      throw CheckError(
+        'awaitable `poll` must use a `mut` receiver',
+        expr.pos,
+      );
+    }
+    final structKey = _key(type.moduleName, type.name);
+    final struct = _structs[structKey];
+    if (struct == null) {
+      throw CheckError('unknown struct `${type.displayName}`', expr.pos);
+    }
+    expr.pollMangled = _methodCName(struct.moduleName, struct.name, 'poll');
+    expr.pollByRef = true;
+    return const VoidType();
+  }
+
+  String _methodCName(String module, String typeName, String method) =>
+      module.isEmpty ? '${typeName}_$method' : '${module}_${typeName}_$method';
 
   _CheckedCall _checkFnTypeCall(
     FnType fnType,
@@ -1957,8 +2137,21 @@ final class Checker {
             // printf returns i32; treat like FFI.
             return const PrimType(PrimKind.i32);
           }
+          final spawn = _tryCheckAsyncSpawn(moduleName, callee, args, pos);
+          if (spawn != null) {
+            expr.resolvedCallee = spawn.spawnCName;
+            expr.asyncSpawnFn = spawn.asyncFnBase;
+            return spawn.returnType;
+          }
           final call = _checkCall(callee, args, pos, moduleName: moduleName);
           expr.resolvedCallee = call.cName;
+          if (call.isAsync) {
+            // Async calls are only valid as `.await` operands (handled there).
+            throw CheckError(
+              'async function `$callee` can only be used with `.await`',
+              pos,
+            );
+          }
           if (call.type is VoidType) {
             throw CheckError(
               'result of void function `$callee` cannot be used as a value',
@@ -1966,6 +2159,15 @@ final class Checker {
             );
           }
           return call.type;
+        }(),
+      AwaitExpr() => () {
+          if (!_currentIsAsync) {
+            throw CheckError(
+              '`.await` is only allowed inside `async fn`',
+              expr.pos,
+            );
+          }
+          return _checkAwait(expr);
         }(),
       ErrorExpr(:final code, :final pos) => () {
           final current = _currentReturn;
@@ -2305,7 +2507,7 @@ final class Checker {
         _materialize(right, type);
       case GroupExpr(:final inner):
         _materialize(inner, type);
-      case PropagateExpr() || OrExpr() || ErrorExpr():
+      case PropagateExpr() || OrExpr() || ErrorExpr() || AwaitExpr():
         break;
       case IntLit() ||
             FloatLit() ||

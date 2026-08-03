@@ -2689,14 +2689,14 @@ fn main() {
     addTearDown(() => cache.deleteSync(recursive: true));
     final pkg = Directory('${cache.path}/pkg/github/mrhiden/eventloop')
       ..createSync(recursive: true);
-    // Preseed cache from fixture mirroring github/mrhiden/eventloop@v0.1.0.
+    // Preseed cache from fixture mirroring eventloop v0.2 (keeps v0.1 callbacks).
     File('${pkg.path}/version.kl').writeAsStringSync(
       await File('test/fixtures/mrhiden_eventloop/version.kl').readAsString(),
     );
     File('${pkg.path}/executor.kl').writeAsStringSync(
       await File('test/fixtures/mrhiden_eventloop/executor.kl').readAsString(),
     );
-    File('${pkg.path}/.pin').writeAsStringSync('v0.1.0\n');
+    File('${pkg.path}/.pin').writeAsStringSync('v0.2.0\n');
 
     final result = await _compileAndRun(
       'examples/remote_eventloop/app.kl',
@@ -2704,7 +2704,171 @@ fn main() {
       klinCacheDir: cache.path,
     );
     expect(result.exitCode, 0, reason: result.stderr);
-    expect(result.stdout, 'tick\ntick\ntick\nticks=3 version=1\n');
+    expect(result.stdout, 'tick\ntick\ntick\nticks=3 version=2\n');
+  });
+
+  test('golden: async fn emits State + poll (issue 029)', () {
+    const source = '''
+struct Fut {
+  done: i32
+}
+
+fn (mut f: Fut) poll(): i32 {
+  if f.done != 0 { return 1 }
+  f.done = 1
+  return 0
+}
+
+fn make_fut(): Fut {
+  return Fut{ done: 0 }
+}
+
+async fn work() {
+  make_fut().await
+}
+
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'async_work.kl');
+    expect(c, contains('typedef struct {'));
+    expect(c, contains('__stage'));
+    expect(c, contains('work_State'));
+    expect(c, contains('work_init'));
+    expect(c, contains('work_poll'));
+    expect(c, contains('work_init_erased'));
+    expect(c, contains('work_poll_erased'));
+    expect(c, contains('#line '));
+    expect(c, contains('case 1:'));
+  });
+
+  test('error: await outside async fn (issue 029)', () {
+    const source = '''
+struct Fut { done: i32 }
+fn (mut f: Fut) poll(): i32 { return 1 }
+fn main() {
+  let mut f = Fut{ done: 1 }
+  f.await
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError &&
+          e.toString().contains('only allowed inside `async fn`'))),
+    );
+  });
+
+  test('error: async main rejected (issue 029)', () {
+    final program = Parser(Lexer('async fn main() {}\n').tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError && e.toString().contains('cannot be `async`'))),
+    );
+  });
+
+  test('error: async methods rejected (issue 029)', () {
+    const source = '''
+struct S {}
+async fn (s: S) go() {}
+fn main() {}
+''';
+    expect(
+      () => Parser(Lexer(source).tokenize()).parse(),
+      throwsA(predicate((e) =>
+          e is ParseError && e.toString().contains('async'))),
+    );
+  });
+
+  test('error: bare async call statement (issue 029)', () {
+    const source = '''
+async fn work() {}
+fn main() {
+  work()
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError &&
+          e.toString().contains('can only be used with `.await`'))),
+    );
+  });
+
+  test('error: async shadowed let rejected (issue 029)', () {
+    const source = '''
+async fn work() {
+  let x: i32 = 1
+  if true {
+    let x: i32 = 2
+  }
+}
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError && e.toString().contains('reused `let x`'))),
+    );
+  });
+
+  test('error: async sibling-scope let reuse rejected (issue 029)', () {
+    const source = '''
+async fn work() {
+  if true {
+    let x: i32 = 1
+  } else {
+    let x: i32 = 2
+  }
+}
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError && e.toString().contains('reused `let x`'))),
+    );
+  });
+
+  test('pkg_eventloop: callback every_ms (issue 029)', () async {
+    final result = await _compileAndRun('examples/pkg_eventloop/app.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, 'tick\ntick\ntick\nticks=3 version=2\n');
+  });
+
+  test('pkg_eventloop: async spawn + sleep_ms (issue 029)', () async {
+    final result =
+        await _compileAndRun('examples/pkg_eventloop/async_app.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, 'tick\ntick\ntick\nticks done version=2\n');
+  });
+
+  test('remote sketch_async_eventloop (issue 029 phase 4)', () async {
+    final cache = Directory.systemTemp.createTempSync('klin_cache_async_');
+    addTearDown(() => cache.deleteSync(recursive: true));
+    final pkg = Directory('${cache.path}/pkg/github/mrhiden/eventloop')
+      ..createSync(recursive: true);
+    File('${pkg.path}/version.kl').writeAsStringSync(
+      await File('test/fixtures/mrhiden_eventloop/version.kl').readAsString(),
+    );
+    File('${pkg.path}/executor.kl').writeAsStringSync(
+      await File('test/fixtures/mrhiden_eventloop/executor.kl').readAsString(),
+    );
+    File('${pkg.path}/.pin').writeAsStringSync('v0.2.0\n');
+
+    final result = await _compileAndRun(
+      'examples/sketch_async_eventloop.kl',
+      tmp,
+      klinCacheDir: cache.path,
+    );
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, 'tick\ntick\ntick\nticks done version=2\n');
   });
 
   test('entry loads same-module sibling files (issue 047)', () async {

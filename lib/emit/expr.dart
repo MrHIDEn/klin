@@ -65,10 +65,18 @@ String _emitExprRaw(Expr expr, _ExprCtx ctx) {
       namedFields != null
           ? '(${_cType(resolvedType ?? (throw StateError('emit: literal without type `$typeName`')))}){ ${namedFields.entries.map((entry) => '.${entry.key} = ${_emitExpr(entry.value, ctx)}').join(', ')} }'
           : '(${_cType(resolvedType ?? (throw StateError('emit: literal without type `$typeName`')))}){ ${positionalFields!.map((field) => _emitExpr(field, ctx)).join(', ')} }',
-    CallExpr(:final callee, :final args, :final resolvedCallee) =>
-      args.length == 1 && args[0] is InterpolatedStringExpr
-          ? _emitInterpPrintfExpr(args[0] as InterpolatedStringExpr, ctx)
-          : '${resolvedCallee ?? callee}(${args.map((arg) => _emitExpr(arg, ctx)).join(', ')})',
+    CallExpr(
+      :final callee,
+      :final args,
+      :final resolvedCallee,
+      :final asyncSpawnFn,
+    ) =>
+      asyncSpawnFn != null
+          ? '${resolvedCallee ?? 'eventloop_spawn'}(${_emitExpr(args[0], ctx)}, '
+              '${asyncSpawnFn}_poll_erased, ${asyncSpawnFn}_init_erased)'
+          : args.length == 1 && args[0] is InterpolatedStringExpr
+              ? _emitInterpPrintfExpr(args[0] as InterpolatedStringExpr, ctx)
+              : '${resolvedCallee ?? callee}(${args.map((arg) => _emitExpr(arg, ctx)).join(', ')})',
     InterpolatedStringExpr() => throw StateError(
         'emit: interpolated string must be lowered via printf sink',
       ),
@@ -112,6 +120,9 @@ String _emitExprRaw(Expr expr, _ExprCtx ctx) {
         final temp = _emitPropagate(result, ctx);
         return '$temp.u.ok';
       }(),
+    AwaitExpr() => throw StateError(
+          'emit: `.await` must be lowered inside an async poll function',
+        ),
     OrExpr(:final resolvedType) => () {
         final outType = resolvedType;
         if (outType == null) {

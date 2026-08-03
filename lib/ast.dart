@@ -186,6 +186,9 @@ final class FuncDecl {
   final Block? body;
   final List<Attr> attrs;
   final SourcePos pos;
+
+  /// Issue 029 phase 4: `async fn` — lowered to state struct + `poll` in emit.
+  final bool isAsync;
   bool isPub;
   String moduleName;
   String? sourcePath;
@@ -202,6 +205,7 @@ final class FuncDecl {
     required this.pos,
     this.associatedType,
     this.attrs = const [],
+    this.isAsync = false,
     this.isPub = false,
     this.moduleName = '',
     this.sourcePath,
@@ -415,6 +419,10 @@ final class CallStmt extends Stmt {
   final SourcePos pos;
   String? resolvedCallee;
 
+  /// When set, this is `eventloop.spawn(&ex, async_fn)` — emit uses init/poll
+  /// wrappers for [asyncSpawnFn] (issue 029).
+  String? asyncSpawnFn;
+
   CallStmt({
     this.moduleName,
     required this.callee,
@@ -430,6 +438,16 @@ final class MethodCallStmt extends Stmt {
 
   @override
   SourcePos get pos => call.pos;
+}
+
+/// Statement form of `expr.await` inside an `async fn`.
+final class AwaitStmt extends Stmt {
+  final AwaitExpr expr;
+
+  AwaitStmt(this.expr);
+
+  @override
+  SourcePos get pos => expr.pos;
 }
 
 /// if cond block [else (block | if)]
@@ -754,6 +772,9 @@ final class CallExpr extends Expr {
   /// Call through a fn-pointer variable (not a known top-level function).
   bool isFnPtrCall = false;
 
+  /// When set, emit rewrites to `spawn(ex, fn_poll_erased, fn_init_erased)`.
+  String? asyncSpawnFn;
+
   CallExpr({
     this.moduleName,
     required this.callee,
@@ -838,6 +859,23 @@ final class PropagateExpr extends Expr {
   final SourcePos pos;
 
   PropagateExpr(this.result, this.pos);
+}
+
+/// Postfix `.await` (issue 029). Operand is an async call or a pollable value.
+final class AwaitExpr extends Expr {
+  final Expr operand;
+  final SourcePos pos;
+
+  /// Filled by checker: async callee mangled base when operand is `async_fn(...)`.
+  String? asyncCallee;
+
+  /// Filled by checker: mangled `Type_poll` when operand is a pollable future.
+  String? pollMangled;
+
+  /// True when poll takes `*mut` / by-ref receiver.
+  bool pollByRef = true;
+
+  AwaitExpr(this.operand, this.pos);
 }
 
 /// Error branch body of `or`: statements and a required final value.

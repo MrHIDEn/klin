@@ -102,6 +102,14 @@ final class Parser {
         final decl = _enum(isPub, attrs);
         enums.add(decl);
         decls.add(decl);
+      } else if (_check(TokenKind.async_)) {
+        _advance();
+        if (!_check(TokenKind.fn)) {
+          throw ParseError('expected `fn` after `async`', _current.pos);
+        }
+        final decl = _func(isPub, attrs, isAsync: true);
+        funcs.add(decl);
+        decls.add(decl);
       } else if (_check(TokenKind.fn)) {
         final decl = _func(isPub, attrs);
         funcs.add(decl);
@@ -263,7 +271,7 @@ final class Parser {
     );
   }
 
-  FuncDecl _func(bool isPub, List<Attr> attrs) {
+  FuncDecl _func(bool isPub, List<Attr> attrs, {bool isAsync = false}) {
     final fn = _expect(TokenKind.fn, 'oczekiwano `fn`');
     Receiver? receiver;
     if (_check(TokenKind.lParen)) {
@@ -285,6 +293,9 @@ final class Parser {
         pos: receiverName.pos,
       );
     }
+    if (isAsync && receiver != null) {
+      throw ParseError('async methods are not supported in MVP', receiver.pos);
+    }
     var name = _expect(TokenKind.ident, 'expected function name');
     _rejectCKeyword(name, 'a function name');
     // Associated (static) function: `fn Type.name(…)` — the first identifier is
@@ -295,6 +306,10 @@ final class Parser {
       associatedType = name.lexeme;
       name = _expect(TokenKind.ident, 'expected associated function name');
       _rejectCKeyword(name, 'a function name');
+    }
+    if (isAsync && associatedType != null) {
+      throw ParseError(
+          'async associated functions are not supported in MVP', fn.pos);
     }
     _expect(TokenKind.lParen, 'oczekiwano `(`');
     final params = <Param>[];
@@ -329,6 +344,10 @@ final class Parser {
       _advance();
       returnTypeName = _typeName();
     }
+    if (isAsync && returnTypeName != null) {
+      throw ParseError(
+          'async fn MVP returns void — omit `: T` (issue 029)', fn.pos);
+    }
     return FuncDecl(
       name: name.lexeme,
       receiver: receiver,
@@ -338,6 +357,7 @@ final class Parser {
       body: attrs.any((attr) => attr.name == 'cimport') ? null : _block(),
       pos: fn.pos,
       attrs: attrs,
+      isAsync: isAsync,
       isPub: isPub,
     );
   }
@@ -426,6 +446,7 @@ final class Parser {
       );
     }
     if (expr is MethodCallExpr) return MethodCallStmt(expr);
+    if (expr is AwaitExpr) return AwaitStmt(expr);
     throw ParseError('expected assignment `=` or call', expr.pos);
   }
 
@@ -1258,6 +1279,11 @@ final class Parser {
         continue;
       }
       _advance();
+      if (_check(TokenKind.await_)) {
+        final aw = _advance();
+        expr = AwaitExpr(expr, aw.pos);
+        continue;
+      }
       final member = _expect(TokenKind.ident, 'expected field name lub metody');
       if (_callParenSameLine(member.pos)) {
         expr = MethodCallExpr(
