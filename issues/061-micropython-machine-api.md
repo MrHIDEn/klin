@@ -2,7 +2,7 @@
 
 **Status:** ✅ decided (external package; not Klin stdlib)
 **Depends on:** [010](010-bare-metal.md); nice to have [031](031-hal-libraries.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
-**Packages:** [`machine_stm32`](https://github.com/klin-lang/machine_stm32), [`machine_rp`](https://github.com/klin-lang/machine_rp) (RP2040 + RP2350 Arm/RISC-V Pin), [`machine_esp`](https://github.com/klin-lang/machine_esp) (ESP32-C3 Pin + minimal IDF blink)
+**Packages:** [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` `@v0.2.0`), [`machine_rp`](https://github.com/klin-lang/machine_rp) (RP2040 + RP2350 Arm/RISC-V Pin), [`machine_esp`](https://github.com/klin-lang/machine_esp) (ESP32-C3 Pin + minimal IDF blink)
 
 ## Verdict
 
@@ -10,7 +10,7 @@
 |---|---|
 | Change the Klin compiler? | **No** for the library itself |
 | Where does the code live? | External repos (not `stdlib/`): **`machine_stm32`**, **`machine_rp`**, **`machine_esp`** |
-| STM32? | **Yes** — [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (MVP: `Pin` + blink) |
+| STM32? | **Yes** — [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` `@v0.2.0`; F411/F401-class MMIO, no runtime chip detect) |
 | RP2040 / RP2350? | **`machine_rp`** — RP2040 ✅; RP2350 Arm ✅; RP2350 RISC-V ✅ (`pin_out_rp2350` + `blink_pico2_riscv`) ([062](062-targets-esp-rp.md)) |
 | ESP32-C3? | **`machine_esp`** — Pin MMIO ✅; blink via **minimal ESP-IDF** (not freestanding); Wi‑Fi later ([062](062-targets-esp-rp.md)) |
 | Atmel / PIC? | Separate ports if/when needed — not one library for all MCUs |
@@ -32,23 +32,47 @@ fn main() {
 ```
 
 ```sh
-klin get github/klin-lang/machine_stm32@main
+klin get github/klin-lang/machine_stm32@v0.2.0
 ```
+
+### Pwm shape (shared convention, not one runtime)
+
+Same *method names* across `machine_*` ports; **separate MMIO** per MCU
+(no shared `machine` package, no `#ifdef` mega-driver):
+
+| Piece | Role |
+|---|---|
+| `pwm_out(…)` | factory — chip-specific args OK |
+| `freq(hz)` | frequency in Hz |
+| `duty_u16(d)` | duty `0..=65535` (MicroPython-style) |
+| `deinit()` | stop this PWM (explicit) |
+
+`machine_stm32` `@v0.2.0`:
+
+```klin
+// PA5 = TIM2_CH1 AF1; tim_clk_hz explicit (HSI 16 MHz at reset)
+let led = machine.pwm_out(machine.Port.A, 5, 2, 1, 1, 16000000)
+led.freq(1000)
+led.duty_u16(32768)
+```
+
+Example: [`machine_stm32/examples/pwm_f411`](https://github.com/klin-lang/machine_stm32/tree/main/examples/pwm_f411).
 
 ### Roadmap
 
 **`machine_stm32`**
 
 1. **Pin** + blink (Nucleo-F411 PA5) — ✅  
-2. PWM + UART on the same STM32  
-3. I2C / SPI / ADC when needed  
+2. **PWM** (TIM2–TIM5, explicit tim/ch/af/clk) — ✅ `@v0.2.0`  
+3. UART on the same STM32 — next  
+4. I2C / SPI / ADC when needed  
 
 **`machine_rp`**
 
 1. **Pin** + blink RP2040 (Pico GPIO 25) — ✅  
 2. **Pin** + blink RP2350 Arm (Pico 2) — ✅ (`pin_out_rp2350`, `blink_pico2`)  
 3. **Pin** + blink RP2350 RISC-V — ✅ (`blink_pico2_riscv`, same Pin API)  
-4. PWM / UART when needed  
+4. PWM / UART when needed (same Pwm shape as above)  
 
 **`machine_esp`**
 
