@@ -1,7 +1,8 @@
-# Modules — `module` / `import` / `pub` (issue 006)
+# Modules — `module` / `import` / `pub`
 
-Three files = three modules. `app` imports `geom` and `util`; only `pub`
-symbols are visible across module boundaries.
+Three files = three modules; only `pub` symbols cross boundaries.
+
+## What
 
 ```text
 examples/modules/
@@ -10,6 +11,16 @@ examples/modules/
   util.kl    # module util — pub add
 ```
 
+`app` imports `geom` and `util`.
+
+## Why
+
+Classic multi-module layout (issue [006](../../issues/006-modules.md)) before
+directory packages. Contrast with [`../pkg_geom/`](../pkg_geom/) (many files,
+one module).
+
+## How
+
 ```sh
 cd examples/modules
 dart run ../../bin/klin.dart run app.kl
@@ -17,7 +28,8 @@ dart run ../../bin/klin.dart run app.kl
 # → 2+3=5
 ```
 
-Details: [docs/12-modules.md](../../docs/12-modules.md).
+## Links
 
-Directory package (many files, one module): [`../pkg_geom/`](../pkg_geom/) —
-[docs/11-klin-libraries.md](../../docs/11-klin-libraries.md).
+- [docs/12-modules.md](../../docs/12-modules.md)
+- [docs/11-klin-libraries.md](../../docs/11-klin-libraries.md)
+- Directory package: [`../pkg_geom/`](../pkg_geom/)

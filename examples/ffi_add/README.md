@@ -1,6 +1,19 @@
-# Host FFI: link a C static library
+# Host FFI: C static library
 
-Build a tiny `.a`, then run Klin with `@[cimport]` + `@[link]`:
+Call a tiny C function from Klin through `@[cimport]` + `@[link]`.
+
+## What
+
+Build `libadd.a` from `add.c`, then `main.kl` imports `add` and links the
+archive.
+
+## Why
+
+Demonstrates issue [021](../../issues/021-c-libraries.md) / host FFI: Klin does
+not wrap libc for you — you declare the C symbol and pass the library to the
+host linker.
+
+## How
 
 ```sh
 cd examples/ffi_add
@@ -10,10 +23,13 @@ dart run ../../bin/klin.dart run main.kl
 # → 5
 ```
 
-Equivalent CLI without `@[link]` on the function:
+Equivalent without `@[link]` on the function (still needs `@[cimport]`):
 
 ```sh
 dart run ../../bin/klin.dart run -L. -ladd main.kl
 ```
 
-(still needs `@[cimport]` for `add`). Details: [docs/09-ffi-c.md](../../docs/09-ffi-c.md).
+## Links
+
+- [docs/09-ffi-c.md](../../docs/09-ffi-c.md)
+- [issues/021](../../issues/021-c-libraries.md)
