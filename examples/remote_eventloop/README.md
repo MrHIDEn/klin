@@ -1,6 +1,8 @@
 # Remote eventloop (`github/klin-lang/eventloop@v0.2.0`)
 
 Host-runnable cooperative executor — callbacks and `async` / `.await`.
+Manual `init` / `run` API. For `$event_loop` sugar see
+[`../remote_eventloop_macro/`](../remote_eventloop_macro/) (`@v0.3.0`).
 
 ## What
 
@@ -32,6 +34,7 @@ Network once for `get`. Later `run` uses `$KLIN_CACHE` / `~/.klin`.
 ## Links
 
 - Package: https://github.com/klin-lang/eventloop
+- `$event_loop` variant: [`../remote_eventloop_macro/`](../remote_eventloop_macro/)
 - [issues/029](../../issues/029-async-event-loop.md)
 - FreeRTOS + callbacks: [`../freertos_eventloop/`](../freertos_eventloop/)
 - FreeRTOS + async: [`../freertos_eventloop_async/`](../freertos_eventloop_async/)

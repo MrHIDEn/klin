@@ -14,6 +14,8 @@ loop — issue [029](../../issues/029-async-event-loop.md) phase 3 (layer 3).
 Callback style (same API as [`../remote_eventloop/app.kl`](../remote_eventloop/app.kl)).
 For `async` / `.await` in a FreeRTOS task, see
 [`../freertos_eventloop_async/`](../freertos_eventloop_async/).
+For `$event_loop` sugar (nested in `$rtos_task`), see
+[`../freertos_eventloop_macro/`](../freertos_eventloop_macro/).
 
 ## Why
 
@@ -62,3 +64,4 @@ port, `FreeRTOSConfig.h`, and board/host bring-up. Board blink with LED remains
 - Issues: [024](../../issues/024-rtos.md), [028](../../issues/028-freertos.md), [029](../../issues/029-async-event-loop.md)
 - Packages: [klin_freertos](https://github.com/klin-lang/klin_freertos), [eventloop](https://github.com/klin-lang/eventloop)
 - Sibling (async): [`../freertos_eventloop_async/`](../freertos_eventloop_async/)
+- Sibling (`$event_loop`): [`../freertos_eventloop_macro/`](../freertos_eventloop_macro/)

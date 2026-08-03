@@ -16,6 +16,7 @@ callbacks.
 Async API matches [`../remote_eventloop/async_app.kl`](../remote_eventloop/async_app.kl),
 nested inside a FreeRTOS task. Callback variant:
 [`../freertos_eventloop/`](../freertos_eventloop/).
+`$event_loop` sugar: [`../freertos_eventloop_macro/`](../freertos_eventloop_macro/).
 
 ## Why
 
@@ -56,3 +57,4 @@ Same as the callback sibling: replace stubs with real includes, link the kernel
 - Issues: [024](../../issues/024-rtos.md), [028](../../issues/028-freertos.md), [029](../../issues/029-async-event-loop.md)
 - Packages: [klin_freertos](https://github.com/klin-lang/klin_freertos), [eventloop](https://github.com/klin-lang/eventloop)
 - Sibling (callbacks): [`../freertos_eventloop/`](../freertos_eventloop/)
+- Sibling (`$event_loop`): [`../freertos_eventloop_macro/`](../freertos_eventloop_macro/)

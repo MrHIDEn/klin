@@ -1,0 +1,34 @@
+/// Host eventloop via `$event_loop` (issue 029).
+/// Manual init/run variant: [`../remote_eventloop/app.kl`](../remote_eventloop/app.kl)
+/// Prerequisites: klin get github/klin-lang/eventloop@v0.3.0
+import "github/klin-lang/eventloop"
+import io
+
+struct App {
+    ticks: i32
+    ex: *mut u8
+}
+
+fn on_tick(ctx: *mut u8) {
+    let app = cast(*mut App, ctx)
+    (*app).ticks = (*app).ticks + 1
+    io.println("tick")
+    if (*app).ticks >= 3 {
+        eventloop.stop(cast(*mut eventloop.Executor, (*app).ex))
+    }
+}
+
+fn main() {
+    let mut app = App{ ticks: 0, ex: cast(*mut u8, 0) }
+    $event_loop(ex) {
+        app.ex = cast(*mut u8, &ex)
+        let arm_rc = eventloop.every_ms(&ex, 50, on_tick, cast(*mut u8, &app)) or {
+            io.println("every_ms failed")
+            0
+        }
+        if arm_rc == 0 {
+            return
+        }
+    }
+    printf("ticks=%d version=%d\n", app.ticks, eventloop.version())
+}

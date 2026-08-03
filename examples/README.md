@@ -64,9 +64,11 @@ are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), n
 | Path | Notes |
 |---|---|
 | [`remote_osa/`](remote_osa/) | `klin get` + `import "github/klin-lang/osa"` ([049](../issues/049-remote-imports.md)) |
-| [`remote_eventloop/`](remote_eventloop/) | Host eventloop callbacks + async ([029](../issues/029-async-event-loop.md)) |
+| [`remote_eventloop/`](remote_eventloop/) | Host eventloop callbacks + async (manual `init`/`run`; [029](../issues/029-async-event-loop.md)) |
+| [`remote_eventloop_macro/`](remote_eventloop_macro/) | Same via `$event_loop` (`eventloop@v0.3.0`) |
 | [`freertos_eventloop/`](freertos_eventloop/) | FreeRTOS + eventloop callbacks (emit-c / stubs; [029](../issues/029-async-event-loop.md) phase 3) |
 | [`freertos_eventloop_async/`](freertos_eventloop_async/) | Same with `async` / `spawn` / `sleep_ms` |
+| [`freertos_eventloop_macro/`](freertos_eventloop_macro/) | FreeRTOS + `$rtos_task` + `$event_loop` (callbacks + async) |
 
 ## Bare-metal
 

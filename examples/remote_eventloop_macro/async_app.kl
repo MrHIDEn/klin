@@ -1,0 +1,31 @@
+/// Async ticker via `$event_loop` + spawn/sleep_ms (issue 029).
+/// Manual init/run variant: [`../remote_eventloop/async_app.kl`](../remote_eventloop/async_app.kl)
+/// Prerequisites: klin get github/klin-lang/eventloop@v0.3.0
+import "github/klin-lang/eventloop"
+import io
+
+async fn delay_ms(ms: i64) {
+    eventloop.sleep_ms(ms).await
+}
+
+async fn ticker() {
+    let mut n: i32 = 0
+    while n < 3 {
+        io.println("tick")
+        n = n + 1
+        delay_ms(50).await
+    }
+}
+
+fn main() {
+    $event_loop(ex) {
+        let spawn_rc = eventloop.spawn(&ex, ticker) or {
+            io.println("spawn failed")
+            0 - 1
+        }
+        if spawn_rc < 0 {
+            return
+        }
+    }
+    printf("ticks done version=%d\n", eventloop.version())
+}

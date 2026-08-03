@@ -1590,6 +1590,34 @@ fn main() {
     expect(expanded, isNot(contains(r'$mod')));
   });
 
+  test(r'nested macros: block body may invoke another $fn (rtos+event_loop)',
+      () {
+    final expanded = preprocess(r'''
+$fn event_loop(ex: name, body: block) {
+let mut $ex: Executor
+$body
+run(&$ex)
+}
+$fn rtos_task(name: name, body: block) {
+fn task_$name() {
+$body
+}
+}
+$rtos_task(net) {
+  $event_loop(ex) {
+    every_ms(&ex)
+  }
+}
+fn main() {}
+''', path: 'mod/nested_macros.kl');
+    expect(expanded, contains('fn task_net()'));
+    expect(expanded, contains('let mut ex: Executor'));
+    expect(expanded, contains('every_ms(&ex)'));
+    expect(expanded, contains('run(&ex)'));
+    expect(expanded, isNot(contains(r'$rtos_task')));
+    expect(expanded, isNot(contains(r'$event_loop')));
+  });
+
   test('klin fmt: ugly source matches golden and is idempotent (issue 033)',
       () async {
     final ugly = await File('test/fmt_ugly.kl').readAsString();
