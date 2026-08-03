@@ -2,7 +2,7 @@
 
 **Status:** ✅ decided (external package; not Klin stdlib)
 **Depends on:** [010](010-bare-metal.md); nice to have [031](031-hal-libraries.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
-**Packages:** [`machine_stm32`](https://github.com/MrHIDEn/machine_stm32), [`machine_rp`](https://github.com/MrHIDEn/machine_rp) (RP2040 + RP2350 Arm Pin)
+**Packages:** [`machine_stm32`](https://github.com/MrHIDEn/machine_stm32), [`machine_rp`](https://github.com/MrHIDEn/machine_rp) (RP2040 + RP2350 Arm/RISC-V Pin)
 
 ## Verdict
 
