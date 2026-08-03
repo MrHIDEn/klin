@@ -996,6 +996,10 @@ final class Checker {
           if (arm.pattern is! ElsePattern) {
             _checkMatchPattern(arm.pattern, subjectType);
           }
+          final when = arm.when;
+          if (when != null) {
+            _expectBoolCond(when);
+          }
           _checkBlock(arm.body);
         }
 
@@ -2610,6 +2614,18 @@ final class Checker {
         _expectAssignable(subjectType, endType, endInclusive.pos);
         _materialize(start, subjectType);
         _materialize(endInclusive, subjectType);
+      case RelPattern(:final rhs, :final pos):
+        if (subjectType is EnumType) {
+          throw CheckError(
+            'relational patterns are not allowed for enum `${subjectType.displayName}`',
+            pos,
+          );
+        }
+        final rhsType = _inferExpr(rhs);
+        _expectAssignable(subjectType, rhsType, rhs.pos);
+        _materialize(rhs, subjectType);
+      case WildPattern():
+        break;
       case ElsePattern():
         break;
     }
@@ -2645,6 +2661,10 @@ final class Checker {
       for (final arm in arms) {
         if (arm.pattern is! ElsePattern) {
           _checkMatchPattern(arm.pattern, subjectType);
+        }
+        final when = arm.when;
+        if (when != null) {
+          _expectBoolCond(when);
         }
         final bodyType = _inferExpr(arm.body);
         resultType = resultType == null

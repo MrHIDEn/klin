@@ -828,6 +828,100 @@ fn main() {
     expect(formatSource(once), once);
   });
 
+  test('golden: match when guards (issue 084)', () async {
+    final result = await _compileAndRun('test/match_when.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/match_when.out').readAsString());
+
+    final source = File('test/match_when.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/match_when.kl');
+    expect(c, isNot(contains('switch (')));
+    expect(c, contains('flag != 0'));
+    final tokens = Lexer('when').tokenize();
+    expect(tokens[0].kind, TokenKind.when_);
+  });
+
+  test('golden: match relational patterns (issue 084)', () async {
+    final result = await _compileAndRun('test/match_rel.kl', tmp);
+    expect(result.exitCode, 0, reason: result.stderr);
+    expect(result.stdout, await File('test/match_rel.out').readAsString());
+
+    final source = File('test/match_rel.kl').readAsStringSync();
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'test/match_rel.kl');
+    expect(c, matches(RegExp(r'if \(\w+ > 0\)')));
+    expect(c, matches(RegExp(r'else if \(\w+ < 0\)')));
+    expect(c, matches(RegExp(r'\w+ >= lim')));
+    expect(c, matches(RegExp(r'\w+ != 0')));
+  });
+
+  test('error: bare match wildcard requires when (issue 084)', () {
+    expect(
+      () => Parser(Lexer('fn main() { match 1 { _ { puts("x") } } }').tokenize())
+          .parse(),
+      throwsA(
+        predicate((e) =>
+            e is ParseError &&
+            e.toString().contains('requires a `when`') &&
+            e.toString().contains('else')),
+      ),
+    );
+  });
+
+  test('error: else cannot have when guard (issue 084)', () {
+    expect(
+      () => Parser(Lexer(
+              'fn main() { match 1 { else when 1 != 0 { puts("x") } } }')
+          .tokenize())
+          .parse(),
+      throwsA(
+        predicate((e) =>
+            e is ParseError && e.toString().contains('cannot have a `when`')),
+      ),
+    );
+  });
+
+  test('error: when guard must be bool (issue 084)', () {
+    const source = '''
+fn main() {
+  match 1 {
+    1 when 2 { puts("x") }
+    else { puts("y") }
+  }
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(
+        predicate((e) =>
+            e is CheckError && e.toString().contains('condition requires type `bool`')),
+      ),
+    );
+  });
+
+  test('error: relational pattern not allowed for enum (issue 084)', () {
+    const source = '''
+enum Color { Red, Green, Blue }
+fn main() {
+  let c: Color = Color.Red
+  match c {
+    > Color.Red { puts("x") }
+    else { puts("y") }
+  }
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError && e.toString().contains('relational patterns'))),
+    );
+  });
+
   test('klin fmt: formats enum declarations (issue 072)', () {
     const ugly =
         'enum Color{Red,Green,Blue}\nenum Status : u8 { Ok , Warn = 5 , Err }\nfn main(){}';

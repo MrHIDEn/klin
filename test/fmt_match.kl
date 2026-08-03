@@ -1,15 +1,17 @@
 fn main() {
 let mut x = 2
+let flag = 1
 match x {
-1, 2, 3 {
+1, 2, 3 when flag != 0 {
 puts("small")
 }
-4..=10 { puts("mid") }
+>= 4 when flag == 0 { puts("mid") }
+_ when x == 99 { puts("wild") }
 else { puts("big") }
 }
 let a = match x {
 1 { 10 }
-2..=4 { 20 }
+> 0 when flag != 0 { 20 }
 else { 30 }
 }
 printf("%d\n", a)

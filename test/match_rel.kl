@@ -1,0 +1,56 @@
+fn sign(x: i32) {
+    match x {
+        > 0 {
+            puts("pos")
+        }
+        < 0 {
+            puts("neg")
+        }
+        else {
+            puts("zero")
+        }
+    }
+}
+
+fn main() {
+    sign(5)
+    sign(-3)
+    sign(0)
+
+    let lim = 10
+    match 10 {
+        >= lim {
+            puts("ge")
+        }
+        else {
+            puts("lt")
+        }
+    }
+    match 9 {
+        >= lim {
+            puts("ge2")
+        }
+        <= 9 {
+            puts("le")
+        }
+        else {
+            puts("x")
+        }
+    }
+
+    match 0 {
+        != 0 {
+            puts("nz")
+        }
+        else {
+            puts("z")
+        }
+    }
+
+    let v = match 7 {
+        > 10 { 1 }
+        >= 5 when (7 & 1) != 0 { 2 }
+        else { 3 }
+    }
+    printf("%d\n", v)
+}

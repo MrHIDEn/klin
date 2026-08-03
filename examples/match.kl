@@ -1,5 +1,6 @@
-// `match` — default break (no fallthrough), value groups and inclusive ranges.
-// Lowers to a plain if/else chain; the subject is evaluated once.
+// `match` — default break (no fallthrough), value groups, ranges,
+// relational patterns, and `when` guards. Lowers to a plain if/else chain;
+// the subject is evaluated once.
 
 fn classify(x: i32) {
     match x {
@@ -28,6 +29,26 @@ fn main() {
         else { 25 }
     }
     printf("fee=%d\n", fee)
+
+    // Relational patterns and `when` guards.
+    let ready = 1
+    match x {
+        > 0 when ready != 0 {
+            puts("ready-pos")
+        }
+        _ when x == 0 {
+            puts("zero-guard")
+        }
+        else {
+            puts("other")
+        }
+    }
+    let kind = match x {
+        < 0 { -1 }
+        > 10 { 2 }
+        else { 1 }
+    }
+    printf("kind=%d\n", kind)
 
     // `break` / `continue` inside an arm belong to the enclosing loop,
     // because an arm is an `if` branch, not a C `case`.

@@ -574,12 +574,15 @@ final class MatchStmt extends Stmt {
 
 final class MatchStmtArm {
   final MatchPattern pattern;
+  /// Optional `when <bool expr>` guard; null means no guard.
+  final Expr? when;
   final Block body;
 
-  MatchStmtArm({required this.pattern, required this.body});
+  MatchStmtArm({required this.pattern, this.when, required this.body});
 }
 
-/// A single arm's pattern: literal group, inclusive range, or `else`.
+/// A single arm's pattern: literal group, inclusive range, relational,
+/// wildcard (`_`), or `else`.
 sealed class MatchPattern {
   SourcePos get pos;
 }
@@ -601,6 +604,25 @@ final class RangePattern extends MatchPattern {
   final SourcePos pos;
 
   RangePattern(this.start, this.endInclusive, this.pos);
+}
+
+/// `> 0`, `>= n`, `< 0`, `<= 0`, `!= 0`
+final class RelPattern extends MatchPattern {
+  /// One of `>`, `>=`, `<`, `<=`, `!=`.
+  final String op;
+  final Expr rhs;
+  @override
+  final SourcePos pos;
+
+  RelPattern(this.op, this.rhs, this.pos);
+}
+
+/// `_` — always matches the subject; requires a `when` guard on the arm.
+final class WildPattern extends MatchPattern {
+  @override
+  final SourcePos pos;
+
+  WildPattern(this.pos);
 }
 
 /// `else`
@@ -908,7 +930,9 @@ final class MatchExpr extends Expr {
 
 final class MatchExprArm {
   final MatchPattern pattern;
+  /// Optional `when <bool expr>` guard; null means no guard.
+  final Expr? when;
   final Expr body;
 
-  MatchExprArm({required this.pattern, required this.body});
+  MatchExprArm({required this.pattern, this.when, required this.body});
 }

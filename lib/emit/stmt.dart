@@ -631,14 +631,13 @@ void _emitMatchStmt(
   for (var i = 0; i < stmt.arms.length; i++) {
     final arm = stmt.arms[i];
     final isElse = arm.pattern is ElsePattern;
+    final cond = isElse
+        ? null
+        : _armCond(temp, arm.pattern, arm.when, ctx);
     if (i == 0) {
-      buf.writeln(isElse
-          ? '$pad{'
-          : '${pad}if (${_patternCond(temp, arm.pattern, ctx)}) {');
+      buf.writeln(isElse ? '$pad{' : '${pad}if ($cond) {');
     } else {
-      buf.writeln(isElse
-          ? '$pad} else {'
-          : '$pad} else if (${_patternCond(temp, arm.pattern, ctx)}) {');
+      buf.writeln(isElse ? '$pad} else {' : '$pad} else if ($cond) {');
     }
     _emitBlock(
       buf,
@@ -683,14 +682,13 @@ void _emitMatchAssign(
   for (var i = 0; i < match.arms.length; i++) {
     final arm = match.arms[i];
     final isElse = arm.pattern is ElsePattern;
+    final cond = isElse
+        ? null
+        : _armCond(temp, arm.pattern, arm.when, ctx);
     if (i == 0) {
-      buf.writeln(isElse
-          ? '$pad{'
-          : '${pad}if (${_patternCond(temp, arm.pattern, ctx)}) {');
+      buf.writeln(isElse ? '$pad{' : '${pad}if ($cond) {');
     } else {
-      buf.writeln(isElse
-          ? '$pad} else {'
-          : '$pad} else if (${_patternCond(temp, arm.pattern, ctx)}) {');
+      buf.writeln(isElse ? '$pad} else {' : '$pad} else if ($cond) {');
     }
     _emitValueAssignment(
       buf,
@@ -707,12 +705,34 @@ void _emitMatchAssign(
   buf.writeln('$pad}');
 }
 
+/// Pattern condition optionally AND-ed with a `when` guard.
+String _armCond(
+  String temp,
+  MatchPattern pattern,
+  Expr? when,
+  _ExprCtx ctx,
+) {
+  if (pattern is WildPattern) {
+    if (when == null) {
+      throw StateError('emit: wildcard pattern needs a `when` guard');
+    }
+    return '(${_emitExpr(when, ctx)})';
+  }
+  final patternCond = _patternCond(temp, pattern, ctx);
+  if (when == null) return patternCond;
+  return '(($patternCond) && (${_emitExpr(when, ctx)}))';
+}
+
 String _patternCond(String temp, MatchPattern pattern, _ExprCtx ctx) {
   return switch (pattern) {
     LitPattern(:final values) =>
       values.map((v) => '$temp == ${_emitExpr(v, ctx)}').join(' || '),
     RangePattern(:final start, :final endInclusive) =>
       '($temp >= ${_emitExpr(start, ctx)} && $temp <= ${_emitExpr(endInclusive, ctx)})',
+    RelPattern(:final op, :final rhs) =>
+      '$temp $op ${_emitExpr(rhs, ctx)}',
+    WildPattern() =>
+      throw StateError('emit: wildcard pattern needs a `when` guard'),
     ElsePattern() =>
       throw StateError('emit: `else` pattern has no condition'),
   };

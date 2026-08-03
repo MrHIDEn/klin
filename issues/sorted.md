@@ -32,6 +32,7 @@ building the core from scratch.
 |---|---|---|---|
 | [012](012-stdlib-io.md) | Optional I/O module (`io.print` / `println`) | ✅ | 006 |
 | [014](014-match.md) | `match` (default break, `1,2,3` / `4..=10`, stmt+expr) | ✅ | 003 |
+| [084](084-match-when-rel.md) | `match`: `when` guards + relational patterns (`>`, `>=`, …) + `_ when` | ✅ | 014 |
 | [016](016-string-interpolation.md) | Interpolated strings | ✅ | 012 |
 | [017](017-collection-methods.md) | Collection methods (`slice` + `slice_alloc`; +i64/f64 types, +ops) | ✅ | 007, 057 |
 | [019](019-default-int-types.md) | Default types (`int` / `float` → `i32` / `f64`) | ✅ | 002 |
