@@ -2,7 +2,7 @@
 
 **Status:** ✅ decided (external package; not Klin stdlib)
 **Depends on:** [010](010-bare-metal.md); nice to have [031](031-hal-libraries.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
-**Packages:** [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` + `Rc` + `Uart` `@v0.4.0`), [`machine_rp`](https://github.com/klin-lang/machine_rp) (`Pin` + `Pwm` + `Rc` `@v0.5.0`), [`machine_esp`](https://github.com/klin-lang/machine_esp) (`Pin` + `Pwm` + `Rc` `@v0.3.0`), [`machine_xmega`](https://github.com/klin-lang/machine_xmega) (`Pin` `@v0.1.1`), [`machine_avr`](https://github.com/klin-lang/machine_avr) (`Pin` `@v0.1.0`), [`machine_pic16`](https://github.com/klin-lang/machine_pic16) (`Pin` `@v0.1.0`)
+**Packages:** [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` + `Rc` + `Uart` + `I2c` + `Spi` + `Adc` `@v0.5.0`), [`machine_rp`](https://github.com/klin-lang/machine_rp) (`Pin` + `Pwm` + `Rc` `@v0.5.0`), [`machine_esp`](https://github.com/klin-lang/machine_esp) (`Pin` + `Pwm` + `Rc` `@v0.3.0`), [`machine_xmega`](https://github.com/klin-lang/machine_xmega) (`Pin` `@v0.1.1`), [`machine_avr`](https://github.com/klin-lang/machine_avr) (`Pin` `@v0.1.0`), [`machine_pic16`](https://github.com/klin-lang/machine_pic16) (`Pin` `@v0.1.0`)
 
 ## Verdict
 
@@ -10,7 +10,7 @@
 |---|---|
 | Change the Klin compiler? | **No** for the library itself |
 | Where does the code live? | External repos (not `stdlib/`): **`machine_stm32`**, **`machine_rp`**, **`machine_esp`**, **`machine_xmega`**, **`machine_avr`**, **`machine_pic16`** |
-| STM32? | **Yes** — [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` + `Rc` + `Uart` `@v0.4.0`; F411/F401-class MMIO, no runtime chip detect) |
+| STM32? | **Yes** — [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` + `Rc` + `Uart` + `I2c` + `Spi` + `Adc` `@v0.5.0`; F411/F401-class MMIO, no runtime chip detect) |
 | RP2040 / RP2350? | **`machine_rp`** — Pin ✅; **Pwm** ✅; **Rc** ✅ `@v0.5.0` (`rc_out` / `rc_out_rp2350`); ([062](062-targets-esp-rp.md)) |
 | ESP32-C3? | **`machine_esp`** — Pin ✅; **Pwm** ✅; **Rc** ✅ `@v0.3.0` (LEDC); blink/PWM/RC via **minimal ESP-IDF** boot; Wi‑Fi / freestanding later ([062](062-targets-esp-rp.md)) |
 | ATxmega? | **`machine_xmega`** — Pin ✅ `@v0.1.1` (ATxmega128A1U-class PORT MMIO; formerly `machine_atmel`); Pwm later |
@@ -35,7 +35,7 @@ fn main() {
 ```
 
 ```sh
-klin get github/klin-lang/machine_stm32@v0.4.0
+klin get github/klin-lang/machine_stm32@v0.5.0
 ```
 
 ### Pwm shape (shared convention, not one runtime)
@@ -73,7 +73,18 @@ Pin-only ports (`machine_avr` / `xmega` / `pic16`) have no `rc_out` until they g
 | `any()` | RXNE / byte waiting |
 | `deinit()` | disable USART (explicit) |
 
-`machine_stm32` `@v0.4.0`:
+### I2c / Spi / Adc shape (shared convention)
+
+| Piece | Role |
+|---|---|
+| `i2c_out(…, i2c_clk_hz, freq_hz)` | I²C controller — chip-specific instance/pins/AF |
+| `writeto` / `readfrom_into` / `write_readfrom_into` | blocking; caller buffers (`[]u8`, no heap) |
+| `spi_out(…, spi_clk_hz, baud_hz, mode)` | SPI master — soft NSS; CS is a separate `Pin` |
+| `write_read_u8` / `write` / `readinto` / `write_readinto` | full-duplex / fill buffer |
+| `adc_out(port, num, channel)` | ADC — channel explicit (no hidden pin map) |
+| `read_u12` / `read_u16` | raw `0..=4095` / MicroPython-scaled `0..=65535` |
+
+`machine_stm32` `@v0.5.0`:
 
 ```klin
 // PA5 = TIM2_CH1 AF1; tim_clk_hz explicit (HSI 16 MHz at reset)
@@ -94,11 +105,20 @@ let u = machine.uart_out(
     115200
 )
 u.write_u8(65)
+
+// I2C1 PB8/PB9 AF4; SPI2 PB13/14/15 AF5; ADC1 PA0 CH0
+let bus = machine.i2c_out(1, machine.Port.B, 8, 4, machine.Port.B, 9, 4, 16000000, 100000)
+let s = machine.spi_out(2, machine.Port.B, 13, 5, machine.Port.B, 14, 5, machine.Port.B, 15, 5, 16000000, 1000000, 0)
+let adc = machine.adc_out(machine.Port.A, 0, 0)
+let v = adc.read_u16()
 ```
 
 Examples: [`pwm_f411`](https://github.com/klin-lang/machine_stm32/tree/main/examples/pwm_f411),
 [`rc_f411`](https://github.com/klin-lang/machine_stm32/tree/main/examples/rc_f411),
 [`uart_f411`](https://github.com/klin-lang/machine_stm32/tree/main/examples/uart_f411),
+[`i2c_f411`](https://github.com/klin-lang/machine_stm32/tree/main/examples/i2c_f411),
+[`spi_f411`](https://github.com/klin-lang/machine_stm32/tree/main/examples/spi_f411),
+[`adc_f411`](https://github.com/klin-lang/machine_stm32/tree/main/examples/adc_f411),
 [`machine_rp/examples/pwm_pico`](https://github.com/klin-lang/machine_rp/tree/main/examples/pwm_pico),
 [`rc_pico`](https://github.com/klin-lang/machine_rp/tree/main/examples/rc_pico),
 [`machine_esp/examples/pwm_c3`](https://github.com/klin-lang/machine_esp/tree/main/examples/pwm_c3),
@@ -131,7 +151,8 @@ let servo = machine.rc_out(8, 0, 0, 80000000, 50, 1000, 2000)
 2. **PWM** (TIM2–TIM5, explicit tim/ch/af/clk) — ✅ `@v0.2.0`  
 3. **Rc** (servo / RC pulse on Pwm) — ✅ `@v0.3.0` (`rc_f411`)  
 4. **Uart** (USART1/2/6, explicit clk/baud) — ✅ `@v0.4.0` (`uart_f411`)  
-5. I2C / SPI / ADC when needed  
+5. **I2c** / **Spi** / **Adc** — ✅ `@v0.5.0` (`i2c_f411`, `spi_f411`, `adc_f411`)  
+6. Further peripherals / boards when needed  
 
 **`machine_rp`**
 
