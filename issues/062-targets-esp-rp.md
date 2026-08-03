@@ -1,6 +1,6 @@
 # 062 — MCU targets beyond STM32: ESP32, RP2040, RP2350
 
-**Status:** 💭 under consideration (low priority — non-blocking)
+**Status:** 🚧 in progress — RP2040 blink path via [`machine_rp`](https://github.com/MrHIDEn/machine_rp) (Pin MVP)
 **Depends on:** [010](010-bare-metal.md); nice to have [022](022-asm-libraries.md), [027](027-svd-ergonomic-api.md), [031](031-hal-libraries.md), [053](053-device-board-assets.md), [054](054-embedded-project-layout.md)
 
 ## Context (conversation notes)
@@ -13,7 +13,7 @@ target **ESP32**, **RP2040**, **RP2350**?
 
 | Target | Realistic? | Notes |
 |---|---|---|
-| **RP2040** | Closest to “yes” | Cortex-M0+, `arm-none-eabi`, pico-sdk / own startup+`ld`, SVD. Same model as blink F411: Klin → `.c` + `.s` / `@[link]` + linker. |
+| **RP2040** | ✅ path exists | Cortex-M0+, `arm-none-eabi`, freestanding + boot2 (no pico-sdk cmake). Package: [`machine_rp`](https://github.com/MrHIDEn/machine_rp) + `examples/blink_pico`. |
 | **RP2350** | Same model | M33 (and on some variants RISC-V) — different SDK/toolchain than 2040, still “C + startup”. |
 | **ESP32** | Possible, harder | Classic ESP32 = **Xtensa**; C3/C6… = **RISC-V**. Usually **ESP-IDF** (init, partitions, often Wi‑Fi). No Klin+ESP example; FFI to IDF or freestanding without network stack. |
 
@@ -26,14 +26,14 @@ target **ESP32**, **RP2040**, **RP2350**?
 
 ## What is not out of the box
 
-- board pack / `examples/rp2040/…` or `examples/esp32/…` example
+- board pack / Klin-tree `examples/rp2040/…` (lives in [`machine_rp`](https://github.com/MrHIDEn/machine_rp) instead)
 - automatic ESP-IDF or pico-sdk in Klin CLI
-- “like MicroPython `machine`” API — separate backlog [061](061-micropython-machine-api.md)
+- RP2350 / ESP32 examples
 
-## Order sketch (whenever)
+## Order sketch
 
-1. **RP2040** blink (closest to STM32) — Makefile + startup + optional SVD/pico-sdk.  
-2. **RP2350** — M33 variant of same path (or separate example).  
+1. **RP2040** blink + `machine` Pin — ✅ [`machine_rp`](https://github.com/MrHIDEn/machine_rp)  
+2. **RP2350** — same repo, separate example (M33 / boot differs).  
 3. **ESP32** — first “hello UART/LED” freestanding or minimal IDF + `@[cimport]`; Wi‑Fi out of MVP.
 
 ## Out of scope
@@ -44,6 +44,7 @@ target **ESP32**, **RP2040**, **RP2350**?
 
 ## Links
 
+- RP package: https://github.com/MrHIDEn/machine_rp  
 - Bare-metal STM32: [010](010-bare-metal.md)  
 - Project layout: [054](054-embedded-project-layout.md)  
 - Device/board assets: [053](053-device-board-assets.md)  
