@@ -1,0 +1,48 @@
+/// FreeRTOS + eventloop async/await (issue 029 phase 3 + 4).
+/// One task owns Executor.run() with spawn/sleep_ms; another only task_delay.
+/// Prerequisites: klin get github/klin-lang/klin_freertos@v0.2.0
+///                klin get github/klin-lang/eventloop@v0.2.0
+/// Emit-c / expand against FreeRTOS headers (stubs OK). Not a host `klin run` demo.
+import "github/klin-lang/klin_freertos" freertos
+import "github/klin-lang/eventloop"
+import io
+
+async fn delay_ms(ms: i64) {
+    eventloop.sleep_ms(ms).await
+}
+
+async fn ticker() {
+    let mut n: i32 = 0
+    while n < 3 {
+        io.println("async tick")
+        n = n + 1
+        delay_ms(50).await
+    }
+}
+
+$rtos_task(net, 1024, 3) {
+    let mut ex: eventloop.Executor
+    let init_rc = eventloop.init(&ex) or { 1 }
+    if init_rc != 0 {
+        return
+    }
+    let spawn_rc = eventloop.spawn(&ex, ticker) or {
+        0 - 1
+    }
+    if spawn_rc < 0 {
+        return
+    }
+    eventloop.run(&ex)
+}
+
+$rtos_task(idle_work, 512, 2) {
+    while true {
+        freertos.task_delay(100)
+    }
+}
+
+fn main() {
+    start_net()
+    start_idle_work()
+    freertos.task_start_scheduler()
+}

@@ -1,8 +1,8 @@
 # 029 — Event loop / `async`·`await` (big beast)
 
 **Status:** 🔨 lib published (`github/klin-lang/eventloop@v0.2.0` — callbacks +
-`sleep_ms`/`spawn`); phase 4 **async/await MVP in core** ✅; `$event_loop` /
-RTOS / IDE keywords still open
+`sleep_ms`/`spawn`); phase 4 **async/await MVP in core** ✅; phase 3 RTOS
+examples ✅ (emit-c sketches); `$event_loop` / IDE keywords / board blink still open
 **Depends on:** D1/D3 decisions; probably 018, 026, 028; remote lib → 049
 
 ## Question
@@ -391,7 +391,10 @@ Not in core: global default loop, auto-async `main`, Promise, hidden scheduler.
 
 1. **Docs / model** (this issue) — ✅ direction written  
 2. **Callback lib** (`every_ms` / `run`) — ✅ `github/klin-lang/eventloop@v0.1.0`  
-3. **RTOS example** — loop in one task, second without  
+3. **RTOS example** — loop in one task, second without — ✅ emit-c sketches  
+   [`examples/freertos_eventloop/`](../examples/freertos_eventloop/) (callbacks) +  
+   [`examples/freertos_eventloop_async/`](../examples/freertos_eventloop_async/) (`async`/`spawn`).  
+   Real kernel / board blink still [028](028-freertos.md).  
 4. **`async`/`await` in core** + lib `sleep_ms`/`spawn` — ✅ MVP
    (`github/klin-lang/eventloop@v0.2.0` + runnable examples). IDE keywords still open.
 
