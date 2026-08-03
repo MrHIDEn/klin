@@ -272,11 +272,12 @@ delay_ms(100).await
 
 | | Current Klin |
 |---|---|
+| Phase 4 **spec** (contract below) | **yes** — written; not implemented |
 | Parser `async` / `.await` | **no** |
 | Desugar → state machine | **no** |
 | Callback lib | **yes** — [`MrHIDEn/eventloop@v0.1.0`](https://github.com/MrHIDEn/eventloop) |
-| Example | [`examples/remote_eventloop/`](../examples/remote_eventloop/) after `klin get` |
-| `klin run` on `sketch_async_eventloop.kl` | **will not pass** |
+| Example (callbacks) | [`examples/remote_eventloop/`](../examples/remote_eventloop/) after `klin get` |
+| `klin run` on `sketch_async_eventloop.kl` | **will not pass** until phase 4 impl |
 
 IntelliJ plugin (highlight / parser) would need to know `async` / `.await` **only
 when** they enter the language — not "eventloop plugin"; lib alone does not teach IDE
