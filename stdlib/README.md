@@ -63,7 +63,12 @@ let a = math.abs(-2.5)
 let n = math.log(x)     // natural (ln)
 let p = math.pi()
 let t = math.di()       // 2π
+let c = math.clamp_i32(x, 0, 100_000)
+let f = math.clamp_f32(t, 0.0, 1.0)
 ```
+
+Typed `min_*` / `max_*` / `clamp_*` for `i32`/`i64`/`u8`/`u16`/`u32`/`u64`/`f32`/`f64`
+(no overloading). `min`/`max`/`clamp` remain f64 (libm / thin wrappers).
 
 Links with `-lm`. Do **not** import on bare metal without libm.
 

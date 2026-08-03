@@ -27,6 +27,8 @@ Thin `@[cimport]` over `<math.h>` + `@[link("-lm")]`. Cost is a call (libm).
 | `pow` | `pow` |
 | `log` / `log10` / `log2` | `log` (ln) / `log10` / `log2` |
 | `min` / `max` | `fmin` / `fmax` |
+| `clamp` | Klin over `min`/`max` (f64) |
+| `min_*` / `max_*` / `clamp_*` | typed (`i32`/`i64`/`u8`/`u16`/`u32`/`u64`/`f32`/`f64`) via `$fn` — comparison, no overload |
 | `pi()` / `di()` / `e()` | Klin literals (`di` = 2π; no module-level `const`) |
 
 ## Delivered
@@ -37,6 +39,7 @@ Thin `@[cimport]` over `<math.h>` + `@[link("-lm")]`. Cost is a call (libm).
 
 ## Out of scope
 
-- Integer `abs` / `i32` overloads
+- Language-level overloading of `min`/`max`/`clamp`
+- Integer `abs` (separate if needed)
 - `random`, full `<math.h>`, complex numbers
-- Bare-metal without libm (simply do not `import math`)
+- Bare-metal without libm (simply do not `import math` — module still carries `-lm` for trig)

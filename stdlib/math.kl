@@ -41,6 +41,43 @@ pub fn min(a, b: f64): f64
 @[cinclude("<math.h>"), cimport, codename("fmax")]
 pub fn max(a, b: f64): f64
 
+/// Clamp to `[lo, hi]` via libm `min`/`max` (f64).
+pub fn clamp(x, lo, hi: f64): f64 {
+    return min(max(x, lo), hi)
+}
+
+/// Typed `min` / `max` / `clamp` (no overloading). Comparison-based — not
+/// IEEE `fmin`/`fmax` NaN rules. Works without calling libm for integer types
+/// (module still links `-lm` if you use trig/etc.).
+$fn cmp_ops(T: type) {
+    pub fn min_$T(a, b: $T): $T {
+        if a < b {
+            return a
+        }
+        return b
+    }
+
+    pub fn max_$T(a, b: $T): $T {
+        if a > b {
+            return a
+        }
+        return b
+    }
+
+    pub fn clamp_$T(x, lo, hi: $T): $T {
+        return min_$T(max_$T(x, lo), hi)
+    }
+}
+
+$cmp_ops(i32)
+$cmp_ops(i64)
+$cmp_ops(u8)
+$cmp_ops(u16)
+$cmp_ops(u32)
+$cmp_ops(u64)
+$cmp_ops(f32)
+$cmp_ops(f64)
+
 pub fn pi(): f64 {
     return 3.141592653589793
 }

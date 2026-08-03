@@ -7,4 +7,6 @@ fn main() {
     printf("sin(pi/2)=%.4f\n", math.sin(x))
     printf("sqrt(2)=%.4f\n", math.sqrt(2.0))
     printf("abs(-3.5)=%.1f\n", math.abs(-3.5))
+    printf("clamp_i32=%d\n", math.clamp_i32(200_000, 0, 100_000))
+    printf("clamp=%.1f\n", math.clamp(1.5, 0.0, 1.0))
 }

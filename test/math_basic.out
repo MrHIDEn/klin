@@ -4,6 +4,14 @@ floor_ok
 ceil_ok
 min_ok
 max_ok
+clamp_ok
+min_i32_ok
+max_i32_ok
+clamp_i32_mid_ok
+clamp_i32_lo_ok
+clamp_i32_hi_ok
+clamp_f32_ok
+min_u8_ok
 pow_ok
 log_ok
 log10_ok
