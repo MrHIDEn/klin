@@ -540,7 +540,7 @@ fn main() {
     expect(c, contains('#include <stdio.h>'));
     expect(c, contains('int main(void) {'));
     expect(c, contains('puts("hello");'));
-    expect(c, contains('puts("z Klina");'));
+    expect(c, contains('puts("from Klin");'));
     expect(c, contains('return 0;'));
     expect(c, contains('#line '));
     expect(c, contains('test/hello.kl'));

@@ -17,7 +17,7 @@ Input `hello.kl`:
 ```
 fn main() {
     puts("hello")
-    puts("z Klina")
+    puts("from Klin")
 }
 ```
 
@@ -27,7 +27,7 @@ Output `out/hello.c`:
 #include <stdio.h>
 int main(void) {
     puts("hello");
-    puts("z Klina");
+    puts("from Klin");
     return 0;
 }
 ```
