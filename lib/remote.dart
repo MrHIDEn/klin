@@ -21,7 +21,7 @@ final class RemoteImport {
     this.ref,
   });
 
-  /// Import path without `@ref` (e.g. `github/mrhiden/osa`).
+  /// Import path without `@ref` (e.g. `github/klin-lang/osa`).
   String get path => '$host/$owner/$repo';
 
   String get gitUrl => switch (host) {

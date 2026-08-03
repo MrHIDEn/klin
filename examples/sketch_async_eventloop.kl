@@ -1,11 +1,11 @@
 /// Async ticker + remote eventloop v0.2 (issue 029 phase 4).
-///   dart run bin/klin.dart get github/mrhiden/eventloop@v0.2.0
+///   dart run bin/klin.dart get github/klin-lang/eventloop@v0.2.0
 ///   dart run bin/klin.dart run examples/sketch_async_eventloop.kl
 /// Same demo: examples/remote_eventloop/async_app.kl
 ///
 /// Model: Rust-like state machine + explicit executor. No JS Promise/GC.
 
-import "github/mrhiden/eventloop"
+import "github/klin-lang/eventloop"
 import io
 
 async fn delay_ms(ms: i64) {

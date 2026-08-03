@@ -15,7 +15,7 @@ Like `go.sum` / `pubspec.lock`: committed file with **exact** pins
 
 ```text
 klin lock 1
-github/mrhiden/osa v0.1.0 <40-hex-commit> sha256:<64-hex>
+github/klin-lang/osa v0.1.0 <40-hex-commit> sha256:<64-hex>
 ```
 
 - **version** — pin from `klin.mod` (tag / branch / user ref)

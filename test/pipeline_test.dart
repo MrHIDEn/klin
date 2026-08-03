@@ -2066,7 +2066,7 @@ fn main() {
     final cache = Directory.systemTemp.createTempSync('klin_cache049_');
     addTearDown(() => cache.deleteSync(recursive: true));
     final pkg = Directory(
-      '${cache.path}/pkg/github/mrhiden/osa',
+      '${cache.path}/pkg/github/klin-lang/osa',
     )..createSync(recursive: true);
     File('${pkg.path}/version.kl').writeAsStringSync('''
 module osa
@@ -2115,13 +2115,13 @@ pub fn clamp(v: i32, lo: i32, hi: i32): i32 {
     addTearDown(() => cache.deleteSync(recursive: true));
     final work = Directory.systemTemp.createTempSync('klin_work049_');
     addTearDown(() => work.deleteSync(recursive: true));
-    Directory('${work.path}/github/mrhiden/osa').createSync(recursive: true);
-    File('${work.path}/github/mrhiden/osa/bogus.kl').writeAsStringSync('''
+    Directory('${work.path}/github/klin-lang/osa').createSync(recursive: true);
+    File('${work.path}/github/klin-lang/osa/bogus.kl').writeAsStringSync('''
 module osa
 pub fn version(): i32 { return 99 }
 ''');
     File('${work.path}/app.kl').writeAsStringSync('''
-import "github/mrhiden/osa"
+import "github/klin-lang/osa"
 fn main() { printf("%d\\n", osa.version()) }
 ''');
     expect(
@@ -2143,7 +2143,7 @@ fn main() { printf("%d\\n", osa.version()) }
     final cache = Directory.systemTemp.createTempSync('klin_alias049_');
     addTearDown(() => cache.deleteSync(recursive: true));
     final pkg = Directory(
-      '${cache.path}/pkg/github/mrhiden/osa',
+      '${cache.path}/pkg/github/klin-lang/osa',
     )..createSync(recursive: true);
     File('${pkg.path}/lib.kl').writeAsStringSync('''
 module osa
@@ -2152,7 +2152,7 @@ pub fn version(): i32 { return 1 }
     final work = Directory.systemTemp.createTempSync('klin_aliasapp049_');
     addTearDown(() => work.deleteSync(recursive: true));
     File('${work.path}/app.kl').writeAsStringSync('''
-import "github/mrhiden/osa" o
+import "github/klin-lang/osa" o
 fn main() { printf("%d\\n", o.version()) }
 ''');
     final result = await _compileAndRun(
@@ -2177,9 +2177,9 @@ fn main() { printf("%d\\n", o.version()) }
   });
 
   test('klin.mod parse/format round-trip (issue 049)', () {
-    final mod = parseKlinMod('klin 1\nrequire github/mrhiden/osa v0.1.0\n');
-    expect(mod.requires['github/mrhiden/osa'], 'v0.1.0');
-    expect(formatKlinMod(mod), 'klin 1\nrequire github/mrhiden/osa v0.1.0\n');
+    final mod = parseKlinMod('klin 1\nrequire github/klin-lang/osa v0.1.0\n');
+    expect(mod.requires['github/klin-lang/osa'], 'v0.1.0');
+    expect(formatKlinMod(mod), 'klin 1\nrequire github/klin-lang/osa v0.1.0\n');
   });
 
   test('klin.mod device + parseRemoteAsset (issue 053)', () {
@@ -2187,14 +2187,14 @@ fn main() { printf("%d\\n", o.version()) }
         'github/tinygo-org/stm32-svd/svd/stm32f411.svd';
     final mod = parseKlinMod(
       'klin 1\n'
-      'require github/mrhiden/osa v0.1.0\n'
+      'require github/klin-lang/osa v0.1.0\n'
       'device $devicePath main\n',
     );
     expect(mod.devices[devicePath], 'main');
     expect(
       formatKlinMod(mod),
       'klin 1\n'
-      'require github/mrhiden/osa v0.1.0\n'
+      'require github/klin-lang/osa v0.1.0\n'
       'device $devicePath main\n',
     );
 
@@ -2206,7 +2206,7 @@ fn main() { printf("%d\\n", o.version()) }
     expect(asset.path, devicePath);
     expect(asset.ref, 'main');
     expect(isRemoteDevicePath(devicePath), isTrue);
-    expect(isRemoteDevicePath('github/mrhiden/osa'), isFalse);
+    expect(isRemoteDevicePath('github/klin-lang/osa'), isFalse);
 
     expect(
       () => parseRemoteAsset('github/acme/svd/chip.svd'),
@@ -2300,15 +2300,15 @@ fn main() { RCC.AHB1ENR.GPIOAEN.set(1) }
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     final lock = parseKlinLock(
       'klin lock 1\n'
-      'github/mrhiden/osa v0.1.0 $sha sha256:$hash\n',
+      'github/klin-lang/osa v0.1.0 $sha sha256:$hash\n',
     );
-    expect(lock.packages['github/mrhiden/osa']!.version, 'v0.1.0');
-    expect(lock.packages['github/mrhiden/osa']!.commit, sha);
-    expect(lock.packages['github/mrhiden/osa']!.hash, hash);
+    expect(lock.packages['github/klin-lang/osa']!.version, 'v0.1.0');
+    expect(lock.packages['github/klin-lang/osa']!.commit, sha);
+    expect(lock.packages['github/klin-lang/osa']!.hash, hash);
     expect(
       formatKlinLock(lock),
       'klin lock 1\n'
-      'github/mrhiden/osa v0.1.0 $sha sha256:$hash\n',
+      'github/klin-lang/osa v0.1.0 $sha sha256:$hash\n',
     );
   });
 
@@ -2389,22 +2389,22 @@ fn main() { RCC.AHB1ENR.GPIOAEN.set(1) }
     expect(isUpgradeTarget('main', 'main'), isFalse);
 
     final mod = KlinMod(requires: {
-      'github/mrhiden/osa': 'v0.1.0',
+      'github/klin-lang/osa': 'v0.1.0',
       'github/acme/lib': 'v1.0.0',
     });
     Future<String> fakeLatest(RemoteImport r) async => switch (r.path) {
-          'github/mrhiden/osa' => 'v0.2.0',
+          'github/klin-lang/osa' => 'v0.2.0',
           'github/acme/lib' => 'v1.0.0',
           _ => 'v0.0.0',
         };
     final rows = await collectOutdated(mod, resolveLatest: fakeLatest);
     expect(rows.length, 1);
-    expect(rows.single.path, 'github/mrhiden/osa');
+    expect(rows.single.path, 'github/klin-lang/osa');
     expect(rows.single.current, 'v0.1.0');
     expect(rows.single.latest, 'v0.2.0');
     expect(
       formatOutdatedReport(rows),
-      'github/mrhiden/osa\tv0.1.0\tv0.2.0\n',
+      'github/klin-lang/osa\tv0.1.0\tv0.2.0\n',
     );
     expect(formatOutdatedReport(const []), 'all packages up to date\n');
 
@@ -2431,7 +2431,7 @@ fn main() { RCC.AHB1ENR.GPIOAEN.set(1) }
 
     final get = await Process.run(
       'dart',
-      ['run', klinBin, 'get', 'github/mrhiden/osa@v0.1.0'],
+      ['run', klinBin, 'get', 'github/klin-lang/osa@v0.1.0'],
       workingDirectory: work.path,
       environment: {
         ...Platform.environment,
@@ -2441,15 +2441,15 @@ fn main() { RCC.AHB1ENR.GPIOAEN.set(1) }
     expect(get.exitCode, 0, reason: '${get.stderr}${get.stdout}');
     expect(File('${work.path}/klin.mod').existsSync(), isTrue);
     final mod = loadKlinMod(File('${work.path}/klin.mod'));
-    expect(mod.requires['github/mrhiden/osa'], 'v0.1.0');
+    expect(mod.requires['github/klin-lang/osa'], 'v0.1.0');
 
     expect(File('${work.path}/klin.lock').existsSync(), isTrue);
     final lock = loadKlinLock(File('${work.path}/klin.lock'));
-    final entry = lock.packages['github/mrhiden/osa']!;
+    final entry = lock.packages['github/klin-lang/osa']!;
     expect(entry.version, 'v0.1.0');
     expect(entry.commit, matches(RegExp(r'^[0-9a-f]{40}$')));
     expect(entry.hash, matches(RegExp(r'^[0-9a-f]{64}$')));
-    final pkgDir = '${cache.path}/pkg/github/mrhiden/osa';
+    final pkgDir = '${cache.path}/pkg/github/klin-lang/osa';
     expect(packageContentHash(pkgDir), entry.hash);
     expect(readCommit(pkgDir), entry.commit);
 
@@ -2466,7 +2466,7 @@ fn main() { RCC.AHB1ENR.GPIOAEN.set(1) }
     expect(get2.exitCode, 0, reason: '${get2.stderr}${get2.stdout}');
     expect(
       loadKlinLock(File('${work.path}/klin.lock'))
-          .packages['github/mrhiden/osa']!
+          .packages['github/klin-lang/osa']!
           .commit,
       entry.commit,
     );
@@ -2474,7 +2474,7 @@ fn main() { RCC.AHB1ENR.GPIOAEN.set(1) }
     // Tampered lock hash must fail.
     File('${work.path}/klin.lock').writeAsStringSync(
       'klin lock 1\n'
-      'github/mrhiden/osa v0.1.0 ${entry.commit} '
+      'github/klin-lang/osa v0.1.0 ${entry.commit} '
       'sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n',
     );
     final bad = await Process.run(
@@ -2568,7 +2568,7 @@ fn main() {
     final work = Directory.systemTemp.createTempSync('klin_outdatedwork066_');
     addTearDown(() => work.deleteSync(recursive: true));
     File('${work.path}/klin.mod').writeAsStringSync(
-      'klin 1\nrequire github/mrhiden/osa v0.1.0\n',
+      'klin 1\nrequire github/klin-lang/osa v0.1.0\n',
     );
     final repoRoot = Directory.current.path;
     final klinBin = '$repoRoot/bin/klin.dart';
@@ -2603,7 +2603,7 @@ fn main() {
     expect(upgrade.exitCode, 0, reason: '${upgrade.stderr}${upgrade.stdout}');
     expect(upgrade.stdout, 'all packages up to date\n');
     expect(
-      loadKlinMod(File('${work.path}/klin.mod')).requires['github/mrhiden/osa'],
+      loadKlinMod(File('${work.path}/klin.mod')).requires['github/klin-lang/osa'],
       'v0.1.0',
     );
   }, timeout: Timeout(Duration(minutes: 2)));
@@ -2746,7 +2746,7 @@ fn main() {
   test('remote eventloop: every_ms + run + stop (issue 029 MVP)', () async {
     final cache = Directory.systemTemp.createTempSync('klin_cache_eloop_');
     addTearDown(() => cache.deleteSync(recursive: true));
-    final pkg = Directory('${cache.path}/pkg/github/mrhiden/eventloop')
+    final pkg = Directory('${cache.path}/pkg/github/klin-lang/eventloop')
       ..createSync(recursive: true);
     // Preseed cache from fixture mirroring eventloop v0.2 (keeps v0.1 callbacks).
     File('${pkg.path}/version.kl').writeAsStringSync(
@@ -2898,7 +2898,7 @@ fn main() {}
   test('remote eventloop: async spawn + sleep_ms (issue 029)', () async {
     final cache = Directory.systemTemp.createTempSync('klin_cache_async_');
     addTearDown(() => cache.deleteSync(recursive: true));
-    final pkg = Directory('${cache.path}/pkg/github/mrhiden/eventloop')
+    final pkg = Directory('${cache.path}/pkg/github/klin-lang/eventloop')
       ..createSync(recursive: true);
     File('${pkg.path}/version.kl').writeAsStringSync(
       await File('test/fixtures/mrhiden_eventloop/version.kl').readAsString(),
@@ -2920,7 +2920,7 @@ fn main() {}
   test('remote sketch_async_eventloop (issue 029 phase 4)', () async {
     final cache = Directory.systemTemp.createTempSync('klin_cache_sketch_');
     addTearDown(() => cache.deleteSync(recursive: true));
-    final pkg = Directory('${cache.path}/pkg/github/mrhiden/eventloop')
+    final pkg = Directory('${cache.path}/pkg/github/klin-lang/eventloop')
       ..createSync(recursive: true);
     File('${pkg.path}/version.kl').writeAsStringSync(
       await File('test/fixtures/mrhiden_eventloop/version.kl').readAsString(),
@@ -3980,7 +3980,7 @@ fn test_color() {
     for (final flag in ['--version', '-v']) {
       final proc = await Process.run('dart', ['run', 'bin/klin.dart', flag]);
       expect(proc.exitCode, 0, reason: '$flag: ${proc.stderr}');
-      expect(proc.stdout.toString().trim(), 'klin 0.1.0');
+      expect(proc.stdout.toString().trim(), 'klin 0.1.1');
     }
   });
 

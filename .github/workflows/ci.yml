@@ -1,0 +1,32 @@
+# PR / main CI — required check name: `test` (ruleset protect-main).
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Install host C compiler
+        run: sudo apt-get update && sudo apt-get install -y gcc
+
+      - name: Pub get
+        run: dart pub get
+
+      - name: Analyze
+        run: dart analyze
+
+      - name: Test
+        run: dart test

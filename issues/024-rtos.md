@@ -32,7 +32,7 @@ async/await with runtime, GC, or "task" as a hidden language feature.
 
 ## FreeRTOS (done as the reference)
 
-Package: [`github.com/MrHIDEn/klin_freertos`](https://github.com/MrHIDEn/klin_freertos)
+Package: [`github.com/klin-lang/klin_freertos`](https://github.com/klin-lang/klin_freertos)
 (`@v0.2.0`: FFI tasks/queues/semaphores + `$rtos_task`).
 
 - Portable FreeRTOS **kernel** API client — not a board HAL
@@ -41,7 +41,7 @@ Package: [`github.com/MrHIDEn/klin_freertos`](https://github.com/MrHIDEn/klin_fr
 - Ergonomics / blink demo: [028](028-freertos.md)
 
 ```klin
-import "github/mrhiden/klin_freertos" freertos
+import "github/klin-lang/klin_freertos" freertos
 ```
 
 ## Zephyr / RT-Thread — summary (not now)

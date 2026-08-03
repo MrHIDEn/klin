@@ -2,7 +2,7 @@
 
 ```sh
 # from repo root — writes klin.mod + klin.lock in CWD
-dart run bin/klin.dart get github/mrhiden/osa@v0.1.0
+dart run bin/klin.dart get github/klin-lang/osa@v0.1.0
 dart run bin/klin.dart run examples/remote_osa/app.kl
 ```
 

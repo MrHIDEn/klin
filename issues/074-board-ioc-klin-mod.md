@@ -20,9 +20,9 @@ For now **no IOC implementation**. Here we record the model so decisions are not
 
 ```text
 klin 1
-require  github/mrhiden/osa v0.1.0
+require  github/klin-lang/osa v0.1.0
 device   github/tinygo-org/stm32-svd/stm32f411.svd v0.1.0
-board    github/mrhiden/boards/nucleo_f411re.ioc v0.1.0
+board    github/klin-lang/boards/nucleo_f411re.ioc v0.1.0
 ```
 
 | Directive | Artifact | Code |
@@ -37,7 +37,7 @@ Explicit (line in mod) and implicit (`klin get …@ref` appends `board`) — lik
 
 ```klin
 $device("github/tinygo-org/stm32-svd/stm32f411.svd", use: "RCC,GPIOA,STK")
-$board("github/mrhiden/boards/nucleo_f411re.ioc")
+$board("github/klin-lang/boards/nucleo_f411re.ioc")
 
 fn main() {
   // constants generated from IOC — pins only, e.g. LED → PA5

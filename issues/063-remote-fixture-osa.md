@@ -7,13 +7,13 @@
 ## Goal
 
 Separate, **public** GitHub repository with a minimal Klin package —
-stable source for e2e / `import "github/mrhiden/osa"` examples and
+stable source for e2e / `import "github/klin-lang/osa"` examples and
 `klin get` / `update` (049). Not part of Klin stdlib.
 
 | | |
 |---|---|
-| Repo | https://github.com/MrHIDEn/osa |
-| Import path | `github/mrhiden/osa` |
+| Repo | https://github.com/klin-lang/osa |
+| Import path | `github/klin-lang/osa` |
 | Form | package directory `osa/*.kl` (as in 047) |
 | Dependencies | none (pure Klin, no FFI) |
 | License | MIT |
@@ -47,7 +47,7 @@ osa/                 # repo root
 
 ## Checklist
 
-- [x] public repo `MrHIDEn/osa`
+- [x] public repo `klin-lang/osa`
 - [x] content (README, LICENSE, `osa/*.kl`) on `main`
 - [x] tag `v0.1.0` pushed
 - [x] this issue + entry in [sorted.md](sorted.md) + link in [049](049-remote-imports.md)

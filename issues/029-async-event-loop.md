@@ -1,6 +1,6 @@
 # 029 — Event loop / `async`·`await` (big beast)
 
-**Status:** 🔨 lib published (`github/mrhiden/eventloop@v0.2.0` — callbacks +
+**Status:** 🔨 lib published (`github/klin-lang/eventloop@v0.2.0` — callbacks +
 `sleep_ms`/`spawn`); phase 4 **async/await MVP in core** ✅; `$event_loop` /
 RTOS / IDE keywords still open
 **Depends on:** D1/D3 decisions; probably 018, 026, 028; remote lib → 049
@@ -167,14 +167,14 @@ plain `fn` suffice (+ optional `$rtos_task` / `$event_loop`).
 
 ### Single-file sketch: `async`/`await` (Rust style) + remote lib
 
-**Runnable** (phase 4 MVP): after `klin get github/mrhiden/eventloop@v0.2.0`,
+**Runnable** (phase 4 MVP): after `klin get github/klin-lang/eventloop@v0.2.0`,
 [`examples/remote_eventloop/async_app.kl`](../examples/remote_eventloop/async_app.kl)
 or [`examples/sketch_async_eventloop.kl`](../examples/sketch_async_eventloop.kl).
 
 ```klin
 /// Rust-like state machine + explicit executor (no JS Promise).
 
-import "github/mrhiden/eventloop"
+import "github/klin-lang/eventloop"
 import io
 
 async fn delay_ms(ms: i64) {
@@ -210,12 +210,12 @@ What happens where:
 ### Alongside: same effect **without** `async`/`await` (works today)
 
 Compiler **does not** need to know `async`. Lib + plain `fn` (fn-pointer) suffice.
-Remote package: [`github/mrhiden/eventloop@v0.2.0`](https://github.com/MrHIDEn/eventloop)
+Remote package: [`github/klin-lang/eventloop@v0.2.0`](https://github.com/klin-lang/eventloop)
 (still has v0.1 callbacks); consumer:
 [`examples/remote_eventloop/app.kl`](../examples/remote_eventloop/app.kl).
 
 ```klin
-import "github/mrhiden/eventloop"
+import "github/klin-lang/eventloop"
 import io
 
 struct App {
@@ -254,7 +254,7 @@ functions on `*mut Executor` (nested mut methods double the pointer in emit).
 | Klin language change | no | yes |
 
 **Both columns** — implemented: Klin async MVP +
-[`github/mrhiden/eventloop@v0.2.0`](https://github.com/MrHIDEn/eventloop).
+[`github/klin-lang/eventloop@v0.2.0`](https://github.com/klin-lang/eventloop).
 
 ### `async`/`await` syntax (phase 4) — Rust style, not JS
 
@@ -277,7 +277,7 @@ delay_ms(100).await
 | Phase 4 **spec** (contract below) | **yes** |
 | Parser `async` / `.await` | **yes** (MVP) |
 | Desugar → state machine | **yes** (MVP: top-level void `async fn`) |
-| Callback + async lib | **yes** — [`MrHIDEn/eventloop@v0.2.0`](https://github.com/MrHIDEn/eventloop) |
+| Callback + async lib | **yes** — [`klin-lang/eventloop@v0.2.0`](https://github.com/klin-lang/eventloop) |
 | Example (callbacks) | [`examples/remote_eventloop/app.kl`](../examples/remote_eventloop/app.kl) |
 | Example (async) | [`examples/remote_eventloop/async_app.kl`](../examples/remote_eventloop/async_app.kl) |
 | IDE keywords | **no** — still open |
@@ -384,16 +384,16 @@ Not in core: global default loop, auto-async `main`, Promise, hidden scheduler.
 
 `klin run` on an updated
 [`examples/sketch_async_eventloop.kl`](../examples/sketch_async_eventloop.kl)
-(against `github/mrhiden/eventloop@v0.2.x`) prints ticks via `async` /
+(against `github/klin-lang/eventloop@v0.2.x`) prints ticks via `async` /
 `.await` + explicit `run()`, with readable `#line` state-machine `.c`.
 
 ### Phases (so roadmap is not eaten)
 
 1. **Docs / model** (this issue) — ✅ direction written  
-2. **Callback lib** (`every_ms` / `run`) — ✅ `github/mrhiden/eventloop@v0.1.0`  
+2. **Callback lib** (`every_ms` / `run`) — ✅ `github/klin-lang/eventloop@v0.1.0`  
 3. **RTOS example** — loop in one task, second without  
 4. **`async`/`await` in core** + lib `sleep_ms`/`spawn` — ✅ MVP
-   (`github/mrhiden/eventloop@v0.2.0` + runnable examples). IDE keywords still open.
+   (`github/klin-lang/eventloop@v0.2.0` + runnable examples). IDE keywords still open.
 
 Steps 2–3 do not wait for async. Step 4 MVP landed; IDE follow.
 

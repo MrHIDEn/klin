@@ -5,8 +5,8 @@
 
 ## Status
 
-- Public tap: [`MrHIDEn/homebrew-klin`](https://github.com/MrHIDEn/homebrew-klin)
-  → `brew tap mrhiden/klin`
+- Public tap: [`klin-lang/homebrew-klin`](https://github.com/klin-lang/homebrew-klin)
+  → `brew tap klin-lang/klin`
 - Formula copy in this repo: [`Formula/klin.rb`](../Formula/klin.rb) (keep in sync)
 - CI release on tag `v*`: [`.github/workflows/release.yml`](../.github/workflows/release.yml)
 - Name `klin` free in homebrew-core; own tap first, core later
@@ -19,7 +19,7 @@ Short form — Homebrew adds the tap automatically:
 
 ```sh
 brew tap dart-lang/dart
-brew install mrhiden/klin/klin
+brew install klin-lang/klin/klin
 klin --version
 ```
 
@@ -27,15 +27,15 @@ Equivalent explicit taps:
 
 ```sh
 brew tap dart-lang/dart
-brew tap mrhiden/klin
+brew tap klin-lang/klin
 brew install klin
 ```
 
 HEAD (`main`):
 
 ```sh
-brew install --HEAD mrhiden/klin/klin
-# or, after `brew tap mrhiden/klin`:
+brew install --HEAD klin-lang/klin/klin
+# or, after `brew tap klin-lang/klin`:
 brew install --HEAD klin
 ```
 
@@ -67,13 +67,13 @@ Each asset has `.sha256`. Homebrew covers macOS/Linux; Windows for now via
 
 ```sh
 curl -sL \
-  "https://github.com/MrHIDEn/klin/archive/refs/tags/vX.Y.Z.tar.gz" \
+  "https://github.com/klin-lang/klin/archive/refs/tags/vX.Y.Z.tar.gz" \
   | shasum -a 256
 ```
 
 3. Update `url` / `sha256` / `version` in **both**:
    - [`Formula/klin.rb`](../Formula/klin.rb) (this repo)
-   - [`MrHIDEn/homebrew-klin`](https://github.com/MrHIDEn/homebrew-klin) `Formula/klin.rb`
+   - [`klin-lang/homebrew-klin`](https://github.com/klin-lang/homebrew-klin) `Formula/klin.rb`
 
 ## Install from clone (no tap)
 

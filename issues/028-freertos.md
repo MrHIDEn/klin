@@ -16,7 +16,7 @@ without own scheduler and without hidden allocation.
 
 ## Shipped: `klin_freertos`
 
-Package: [`github.com/MrHIDEn/klin_freertos`](https://github.com/MrHIDEn/klin_freertos)
+Package: [`github.com/klin-lang/klin_freertos`](https://github.com/klin-lang/klin_freertos)
 (portable FreeRTOS C API client — not STM32-only; board HAL stays in `machine_*`).
 
 | Piece | Status |
@@ -28,7 +28,7 @@ Package: [`github.com/MrHIDEn/klin_freertos`](https://github.com/MrHIDEn/klin_fr
 | Static create / `FromISR` sugar | open ([030](030-isr-decorators.md)) |
 
 ```klin
-import "github/mrhiden/klin_freertos" freertos
+import "github/klin-lang/klin_freertos" freertos
 
 $rtos_task(blink, 512, 2) {
     while true {
@@ -45,7 +45,7 @@ fn main() {
 Equivalently, without macro:
 
 ```klin
-import "github/mrhiden/klin_freertos" freertos
+import "github/klin-lang/klin_freertos" freertos
 
 @[codename("blink_task")]
 fn blink_task(arg: *mut void) { … }

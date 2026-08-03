@@ -1,4 +1,4 @@
-import "github/mrhiden/osa"
+import "github/klin-lang/osa"
 
 fn main() {
     printf("%d\n", osa.version())

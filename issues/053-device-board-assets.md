@@ -48,7 +48,7 @@ fn main() {
 
 ```
 klin 1
-require github/mrhiden/osa v0.1.0
+require github/klin-lang/osa v0.1.0
 device github/tinygo-org/stm32-svd/svd/stm32f411.svd main
 ```
 
