@@ -7,6 +7,7 @@ part 'emit/interp.dart';
 part 'emit/types.dart';
 part 'emit/stmt.dart';
 part 'emit/expr.dart';
+part 'emit/async.dart';
 
 /// Emits the AST as one readable .c file with `#line` directives.
 String emitC(Program program, String sourcePath) {
@@ -116,11 +117,14 @@ String emitC(Program program, String sourcePath) {
   for (final func in program.funcs) {
     // `@[cheader]` + `@[cimport]`: prototype lives in a C header (`cinclude`).
     if (func.attrs.any((a) => a.name == 'cheader')) continue;
+    if (func.isAsync) continue;
     buf.writeln('${_functionHeader(func)};');
   }
   buf.writeln();
+  _emitAsyncFunctions(buf, program, sourcePath);
   for (final func in program.funcs) {
     if (func.body == null) continue;
+    if (func.isAsync) continue;
     _line(buf, func.pos.line, func.sourcePath ?? sourcePath);
     buf.writeln('${_functionHeader(func)} {');
     _emitBlock(

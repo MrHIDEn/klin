@@ -234,6 +234,8 @@ final class Lexer {
       'error' => Token(TokenKind.error_, lexeme, start),
       'asm' => Token(TokenKind.asm_, lexeme, start),
       'match' => Token(TokenKind.match_, lexeme, start),
+      'async' => Token(TokenKind.async_, lexeme, start),
+      'await' => Token(TokenKind.await_, lexeme, start),
       _ => Token(TokenKind.ident, lexeme, start),
     };
   }

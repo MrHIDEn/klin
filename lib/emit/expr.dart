@@ -112,6 +112,9 @@ String _emitExprRaw(Expr expr, _ExprCtx ctx) {
         final temp = _emitPropagate(result, ctx);
         return '$temp.u.ok';
       }(),
+    AwaitExpr() => throw StateError(
+          'emit: `.await` must be lowered inside an async poll function',
+        ),
     OrExpr(:final resolvedType) => () {
         final outType = resolvedType;
         if (outType == null) {

@@ -353,10 +353,18 @@ void _emitStmt(
         :final callee,
         :final args,
         :final pos,
-        :final resolvedCallee
+        :final resolvedCallee,
+        :final asyncSpawnFn,
       ):
       _line(buf, pos.line, sourcePath);
-      if (args.length == 1 && args[0] is InterpolatedStringExpr) {
+      if (asyncSpawnFn != null) {
+        // eventloop.spawn(&ex, async_fn) → spawn(ex, poll_erased, init_erased)
+        final ex = _emitExpr(args[0], ctx);
+        buf.writeln(
+          '$pad(void)${resolvedCallee ?? 'eventloop_spawn'}($ex, '
+          '${asyncSpawnFn}_poll_erased, ${asyncSpawnFn}_init_erased);',
+        );
+      } else if (args.length == 1 && args[0] is InterpolatedStringExpr) {
         _emitInterpPrintf(
           buf,
           args[0] as InterpolatedStringExpr,
@@ -372,6 +380,11 @@ void _emitStmt(
     case MethodCallStmt(:final call):
       _line(buf, call.pos.line, sourcePath);
       buf.writeln('$pad${_emitExpr(call, ctx)};');
+
+    case AwaitStmt():
+      throw StateError(
+        'emit: AwaitStmt must be lowered inside an async poll function',
+      );
 
     case IfStmt(:final cond, :final thenBlock, :final elseBranch, :final pos):
       _line(buf, pos.line, sourcePath);

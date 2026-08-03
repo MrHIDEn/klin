@@ -60,6 +60,7 @@ bool _stmtCallsStdio(Stmt stmt) => switch (stmt) {
             _isStdioName(resolvedCallee) ||
             args.any(_exprCallsStdio),
       MethodCallStmt(:final call) => _exprCallsStdio(call),
+      AwaitStmt(:final expr) => _exprCallsStdio(expr),
       LetStmt(:final init) => init != null && _exprCallsStdio(init),
       LetDestructureStmt(:final source) => _exprCallsStdio(source),
       LetArrayDestructureStmt(:final source) => _exprCallsStdio(source),
@@ -113,6 +114,7 @@ bool _exprCallsStdio(Expr expr) => switch (expr) {
       GroupExpr(:final inner) => _exprCallsStdio(inner),
       ErrorExpr(:final code) => _exprCallsStdio(code),
       PropagateExpr(:final result) => _exprCallsStdio(result),
+      AwaitExpr(:final operand) => _exprCallsStdio(operand),
       OrExpr(:final result, :final fallback) => _exprCallsStdio(result) ||
           fallback.stmts.any(_stmtCallsStdio) ||
           _exprCallsStdio(fallback.value),
