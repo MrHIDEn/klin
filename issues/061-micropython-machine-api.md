@@ -2,16 +2,17 @@
 
 **Status:** ✅ decided (external package; not Klin stdlib)
 **Depends on:** [010](010-bare-metal.md); nice to have [031](031-hal-libraries.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
-**Packages:** [`machine_stm32`](https://github.com/MrHIDEn/machine_stm32), [`machine_rp`](https://github.com/MrHIDEn/machine_rp) (RP2040 + RP2350 Arm/RISC-V Pin)
+**Packages:** [`machine_stm32`](https://github.com/MrHIDEn/machine_stm32), [`machine_rp`](https://github.com/MrHIDEn/machine_rp) (RP2040 + RP2350 Arm/RISC-V Pin), [`machine_esp`](https://github.com/MrHIDEn/machine_esp) (ESP32-C3 Pin + minimal IDF blink)
 
 ## Verdict
 
 | Question | Answer |
 |---|---|
 | Change the Klin compiler? | **No** for the library itself |
-| Where does the code live? | External repos (not `stdlib/`): **`machine_stm32`**, **`machine_rp`** |
+| Where does the code live? | External repos (not `stdlib/`): **`machine_stm32`**, **`machine_rp`**, **`machine_esp`** |
 | STM32? | **Yes** — [`machine_stm32`](https://github.com/MrHIDEn/machine_stm32) (MVP: `Pin` + blink) |
 | RP2040 / RP2350? | **`machine_rp`** — RP2040 ✅; RP2350 Arm ✅; RP2350 RISC-V ✅ (`pin_out_rp2350` + `blink_pico2_riscv`) ([062](062-targets-esp-rp.md)) |
+| ESP32-C3? | **`machine_esp`** — Pin MMIO ✅; blink via **minimal ESP-IDF** (not freestanding); Wi‑Fi later ([062](062-targets-esp-rp.md)) |
 | Atmel / PIC? | Separate ports if/when needed — not one library for all MCUs |
 | Approach | **C** (thin Klin package over explicit MMIO) — not A, not full vendor HAL as the API |
 
@@ -49,6 +50,10 @@ klin get github/mrhiden/machine_stm32@main
 3. **Pin** + blink RP2350 RISC-V — ✅ (`blink_pico2_riscv`, same Pin API)  
 4. PWM / UART when needed  
 
+**`machine_esp`**
+
+1. **Pin** + blink ESP32-C3 (DevKitM-1 GPIO8) — ✅ (MMIO Pin; example boot via ESP-IDF)  
+2. Freestanding (no IDF) / other ESP chips / PWM / UART / Wi‑Fi — later  
 
 Other MCU families = other repos — not “one machine for everything”.
 
