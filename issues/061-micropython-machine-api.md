@@ -2,7 +2,7 @@
 
 **Status:** ✅ decided (external package; not Klin stdlib)
 **Depends on:** [010](010-bare-metal.md); nice to have [031](031-hal-libraries.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
-**Packages:** [`machine_stm32`](https://github.com/MrHIDEn/machine_stm32), [`machine_rp`](https://github.com/MrHIDEn/machine_rp) (RP2040 + RP2350 Arm Pin)
+**Packages:** [`machine_stm32`](https://github.com/MrHIDEn/machine_stm32), [`machine_rp`](https://github.com/MrHIDEn/machine_rp) (RP2040 + RP2350 Arm/RISC-V Pin)
 
 ## Verdict
 
@@ -11,7 +11,7 @@
 | Change the Klin compiler? | **No** for the library itself |
 | Where does the code live? | External repos (not `stdlib/`): **`machine_stm32`**, **`machine_rp`** |
 | STM32? | **Yes** — [`machine_stm32`](https://github.com/MrHIDEn/machine_stm32) (MVP: `Pin` + blink) |
-| RP2040 / RP2350? | **`machine_rp`** — RP2040 `pin_out` + Pico blink ✅; RP2350 Arm `pin_out_rp2350` + Pico 2 blink ✅ ([062](062-targets-esp-rp.md)) |
+| RP2040 / RP2350? | **`machine_rp`** — RP2040 ✅; RP2350 Arm ✅; RP2350 RISC-V ✅ (`pin_out_rp2350` + `blink_pico2_riscv`) ([062](062-targets-esp-rp.md)) |
 | Atmel / PIC? | Separate ports if/when needed — not one library for all MCUs |
 | Approach | **C** (thin Klin package over explicit MMIO) — not A, not full vendor HAL as the API |
 
@@ -45,8 +45,9 @@ klin get github/mrhiden/machine_stm32@main
 **`machine_rp`**
 
 1. **Pin** + blink RP2040 (Pico GPIO 25) — ✅  
-2. **Pin** + blink RP2350 Arm (Pico 2 GPIO 25) — ✅ (`pin_out_rp2350`)  
-3. PWM / UART when needed  
+2. **Pin** + blink RP2350 Arm (Pico 2) — ✅ (`pin_out_rp2350`, `blink_pico2`)  
+3. **Pin** + blink RP2350 RISC-V — ✅ (`blink_pico2_riscv`, same Pin API)  
+4. PWM / UART when needed  
 
 
 Other MCU families = other repos — not “one machine for everything”.
