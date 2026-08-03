@@ -1,9 +1,8 @@
 # 029 — Event loop / `async`·`await` (big beast)
 
-**Status:** 🔨 phase 2 MVP lib published (`github/mrhiden/eventloop@v0.1.0`);
-phase 4 **async/await MVP in core** + local `eventloop` v0.2 package
-([`examples/pkg_eventloop/`](../examples/pkg_eventloop/)) — tag remote
-`@v0.2.0` when publish token allows; `$event_loop` / RTOS still open
+**Status:** 🔨 lib published (`github/mrhiden/eventloop@v0.2.0` — callbacks +
+`sleep_ms`/`spawn`); phase 4 **async/await MVP in core** ✅; `$event_loop` /
+RTOS / IDE keywords still open
 **Depends on:** D1/D3 decisions; probably 018, 026, 028; remote lib → 049
 
 ## Question
@@ -168,10 +167,9 @@ plain `fn` suffice (+ optional `$rtos_task` / `$event_loop`).
 
 ### Single-file sketch: `async`/`await` (Rust style) + remote lib
 
-**Runnable** (phase 4 MVP): 
-[`examples/sketch_async_eventloop.kl`](../examples/sketch_async_eventloop.kl)
-(with eventloop v0.2 in `$KLIN_CACHE`) or local
-[`examples/pkg_eventloop/async_app.kl`](../examples/pkg_eventloop/async_app.kl).
+**Runnable** (phase 4 MVP): after `klin get github/mrhiden/eventloop@v0.2.0`,
+[`examples/remote_eventloop/async_app.kl`](../examples/remote_eventloop/async_app.kl)
+or [`examples/sketch_async_eventloop.kl`](../examples/sketch_async_eventloop.kl).
 
 ```klin
 /// Rust-like state machine + explicit executor (no JS Promise).
@@ -212,8 +210,9 @@ What happens where:
 ### Alongside: same effect **without** `async`/`await` (works today)
 
 Compiler **does not** need to know `async`. Lib + plain `fn` (fn-pointer) suffice.
-Remote package: [`github/mrhiden/eventloop@v0.1.0`](https://github.com/MrHIDEn/eventloop);
-consumer example: [`examples/remote_eventloop/`](../examples/remote_eventloop/).
+Remote package: [`github/mrhiden/eventloop@v0.2.0`](https://github.com/MrHIDEn/eventloop)
+(still has v0.1 callbacks); consumer:
+[`examples/remote_eventloop/app.kl`](../examples/remote_eventloop/app.kl).
 
 ```klin
 import "github/mrhiden/eventloop"
@@ -254,9 +253,8 @@ functions on `*mut Executor` (nested mut methods double the pointer in emit).
 | Where "tick" | `on_tick(ctx)` from inside `run()` | `ticker` body after `.await` |
 | Klin language change | no | yes |
 
-**Ecosystem MVP = left column** — implemented (`@v0.1.0`). Async column = phase 4
-MVP in Klin + local [`examples/pkg_eventloop/`](../examples/pkg_eventloop/) v0.2
-(remote `@v0.2.0` tag pending publish access).
+**Both columns** — implemented: Klin async MVP +
+[`github/mrhiden/eventloop@v0.2.0`](https://github.com/MrHIDEn/eventloop).
 
 ### `async`/`await` syntax (phase 4) — Rust style, not JS
 
@@ -279,11 +277,10 @@ delay_ms(100).await
 | Phase 4 **spec** (contract below) | **yes** |
 | Parser `async` / `.await` | **yes** (MVP) |
 | Desugar → state machine | **yes** (MVP: top-level void `async fn`) |
-| Callback lib | **yes** — [`MrHIDEn/eventloop@v0.1.0`](https://github.com/MrHIDEn/eventloop) |
-| Async lib (`sleep_ms` / `spawn`) | **yes** locally — [`examples/pkg_eventloop/`](../examples/pkg_eventloop/); remote `@v0.2.0` ⏳ |
-| Example (callbacks) | [`examples/remote_eventloop/`](../examples/remote_eventloop/) after `klin get` |
-| `klin run` async ticker | **yes** — `examples/pkg_eventloop/async_app.kl` / sketch + cache |
-| IDE keywords | **no** — update after syntax on `main` |
+| Callback + async lib | **yes** — [`MrHIDEn/eventloop@v0.2.0`](https://github.com/MrHIDEn/eventloop) |
+| Example (callbacks) | [`examples/remote_eventloop/app.kl`](../examples/remote_eventloop/app.kl) |
+| Example (async) | [`examples/remote_eventloop/async_app.kl`](../examples/remote_eventloop/async_app.kl) |
+| IDE keywords | **no** — still open |
 
 IntelliJ plugin (highlight / parser) should learn `async` / `.await` after this
 lands on `main` — not via an "eventloop plugin".
@@ -393,14 +390,12 @@ Not in core: global default loop, auto-async `main`, Promise, hidden scheduler.
 ### Phases (so roadmap is not eaten)
 
 1. **Docs / model** (this issue) — ✅ direction written  
-2. **Callback lib** (`every_ms` / `run`, remote or local) — ✅
-   `github/mrhiden/eventloop@v0.1.0`  
+2. **Callback lib** (`every_ms` / `run`) — ✅ `github/mrhiden/eventloop@v0.1.0`  
 3. **RTOS example** — loop in one task, second without  
-4. **`async`/`await` in core** — ✅ **spec** + ✅ **MVP implementation**
-   (parser/checker/emit State+poll; local `eventloop` v0.2 with `sleep_ms`/
-   `spawn`; runnable sketch). Remote tag `@v0.2.0` + IDE keywords still open.
+4. **`async`/`await` in core** + lib `sleep_ms`/`spawn` — ✅ MVP
+   (`github/mrhiden/eventloop@v0.2.0` + runnable examples). IDE keywords still open.
 
-Steps 2–3 do not wait for async. Step 4 MVP landed; IDE / remote tag follow.
+Steps 2–3 do not wait for async. Step 4 MVP landed; IDE follow.
 
 ## Technical hypotheses (aligned with phase 4 spec)
 

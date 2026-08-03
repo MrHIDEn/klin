@@ -1,5 +1,0 @@
-module eventloop
-
-pub fn version(): i32 {
-    return 2
-}

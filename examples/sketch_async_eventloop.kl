@@ -1,7 +1,7 @@
-/// Runnable with Klin async/await + eventloop v0.2 (issue 029 phase 4).
-/// Local package: `dart run bin/klin.dart run examples/pkg_eventloop/async_app.kl`
-/// Remote (after publish): `klin get github/mrhiden/eventloop@v0.2.0` then
-/// `klin run` this file (uses the same API).
+/// Async ticker + remote eventloop v0.2 (issue 029 phase 4).
+///   dart run bin/klin.dart get github/mrhiden/eventloop@v0.2.0
+///   dart run bin/klin.dart run examples/sketch_async_eventloop.kl
+/// Same demo: examples/remote_eventloop/async_app.kl
 ///
 /// Model: Rust-like state machine + explicit executor. No JS Promise/GC.
 
