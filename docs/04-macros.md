@@ -71,6 +71,9 @@ Call: `$name(args…)` or `$name(args…) { … }` when the last parameter is `b
 Unknown `$slot` in body after expand = error (except `$…` inside strings and
 `//` comments).
 
+Nested calls are expanded: a `block` argument may contain another `$name(…)`,
+so `$rtos_task(…) { $event_loop(ex) { … } }` works (issue 029).
+
 ### Macros from path imports (059 A1 lite)
 
 `$fn` definitions in a package reached by `import "…"` (relative or

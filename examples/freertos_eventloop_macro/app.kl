@@ -1,0 +1,46 @@
+/// FreeRTOS + `$rtos_task` + `$event_loop` callbacks (issue 029).
+/// Manual init/run variant: [`../freertos_eventloop/app.kl`](../freertos_eventloop/app.kl)
+/// Prerequisites: klin get github/klin-lang/klin_freertos@v0.2.0
+///                klin get github/klin-lang/eventloop@v0.3.0
+/// Emit-c / expand against FreeRTOS headers (stubs OK). Not a host `klin run` demo.
+import "github/klin-lang/klin_freertos" freertos
+import "github/klin-lang/eventloop"
+import io
+
+struct NetCtx {
+    ticks: i32
+    ex: *mut u8
+}
+
+fn on_net_tick(ctx: *mut u8) {
+    let c = cast(*mut NetCtx, ctx)
+    (*c).ticks = (*c).ticks + 1
+    io.println("net tick")
+    if (*c).ticks >= 3 {
+        eventloop.stop(cast(*mut eventloop.Executor, (*c).ex))
+    }
+}
+
+$rtos_task(net, 1024, 3) {
+    $event_loop(ex) {
+        let mut ctx = NetCtx{ ticks: 0, ex: cast(*mut u8, &ex) }
+        let arm_rc = eventloop.every_ms(&ex, 50, on_net_tick, cast(*mut u8, &ctx)) or {
+            0
+        }
+        if arm_rc == 0 {
+            return
+        }
+    }
+}
+
+$rtos_task(idle_work, 512, 2) {
+    while true {
+        freertos.task_delay(100)
+    }
+}
+
+fn main() {
+    start_net()
+    start_idle_work()
+    freertos.task_start_scheduler()
+}

@@ -79,6 +79,13 @@ final class _PpScanner {
   int _line = 1;
   int _col = 1;
 
+  /// Shared across nested expansion of macro bodies (e.g. `$event_loop` in
+  /// `$rtos_task` block). Set by [expand] before scanning.
+  Map<String, _MacroDef>? _macros;
+  int _nestDepth = 0;
+
+  static const int _maxNestDepth = 32;
+
   _PpScanner(
     this.source,
     this.path, {
@@ -92,6 +99,14 @@ final class _PpScanner {
   String expand() {
     final macros = <String, _MacroDef>{};
     _loadMacrosFromPathImports(macros);
+    _macros = macros;
+    _nestDepth = 0;
+    return _expandBody();
+  }
+
+  /// Expand `$fn` defs / `$name(...)` calls in [source] using [_macros].
+  String _expandBody() {
+    final macros = _macros!;
     final out = StringBuffer();
     SvdDevice? svdDevice;
 
@@ -473,6 +488,8 @@ final class _PpScanner {
         (_) => def.packageQualifier!,
       );
     }
+    // Nested calls in substituted text (e.g. `$event_loop` inside `$rtos_task`).
+    body = _expandNested(body);
     final leftover = _firstCodeSlot(body);
     if (leftover != null) {
       _err(
@@ -481,6 +498,38 @@ final class _PpScanner {
       );
     }
     return body;
+  }
+
+  /// Re-scan a macro expansion so `$name(...)` calls inside `block` bodies
+  /// expand too (issue 029: `$rtos_task` + `$event_loop`).
+  String _expandNested(String text) {
+    if (_macros == null) return text;
+    if (!_textMayContainMacroCall(text)) return text;
+    if (_nestDepth >= _maxNestDepth) {
+      _err('macro expansion nested too deeply');
+    }
+    final nested = _PpScanner(
+      text,
+      path,
+      klinCacheDir: klinCacheDir,
+      klinPathDirs: klinPathDirs,
+    );
+    nested._macros = _macros;
+    nested._nestDepth = _nestDepth + 1;
+    return nested._expandBody();
+  }
+
+  static bool _textMayContainMacroCall(String text) {
+    var i = 0;
+    while (i < text.length) {
+      if (text[i] == r'$' &&
+          i + 1 < text.length &&
+          _isIdentStart(text[i + 1])) {
+        return true;
+      }
+      i++;
+    }
+    return false;
   }
 
   /// First `$ident` outside string literals and `//` comments, if any.

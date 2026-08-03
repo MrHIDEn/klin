@@ -1,8 +1,9 @@
 # 029 — Event loop / `async`·`await` (big beast)
 
-**Status:** 🔨 lib published (`github/klin-lang/eventloop@v0.2.0` — callbacks +
-`sleep_ms`/`spawn`); phase 4 **async/await MVP in core** ✅; phase 3 RTOS
-examples ✅ (emit-c sketches); `$event_loop` / IDE keywords / board blink still open
+**Status:** 🔨 lib published (`github/klin-lang/eventloop@v0.3.0` — callbacks +
+`sleep_ms`/`spawn` + `$event_loop`); phase 4 **async/await MVP in core** ✅;
+phase 3 RTOS examples ✅ (manual + `$event_loop` sketches); IDE keywords /
+board blink still open
 **Depends on:** D1/D3 decisions; probably 018, 026, 028; remote lib → 049
 
 ## Question
@@ -53,44 +54,41 @@ event loop splits into two parts with different status:
 Conclusion: loop runtime alone → library (best in Klin); `async`/`await` →
 core, if at all. "Rather as library" applies only to point 1.
 
-## Preferred sugar: `$event_loop` (lib macro)
+## Preferred sugar: `$event_loop` (lib macro) — ✅ `@v0.3.0`
 
 Same direction as `$rtos_task` in 028 — ergonomics in library, explicit expand,
-no hidden scheduler / queue allocation.
+no hidden scheduler / queue allocation. Shipped in
+[`github/klin-lang/eventloop@v0.3.0`](https://github.com/klin-lang/eventloop);
+nested `$rtos_task` + `$event_loop` needs Klin nested-macro expand (026).
 
 ### `main` only + loop (no RTOS)
 
 ```klin
-$event_loop() {
-    fn main() {
-        // init; register timers / fd / IRQ → queue
+fn main() {
+    $event_loop(ex) {
+        let _ = eventloop.every_ms(&ex, 100, on_tick, ctx) or { 0 }
     }
-    fn on_tick() { … }
 }
 ```
 
-Or tighter (body ≈ setup + run):
-
-```klin
-$event_loop() {
-    eloop.every_ms(100, on_tick)
-    // expand → main with while { eloop.poll(); wfi() } / explicit run()
-}
-```
+Examples: [`examples/remote_eventloop_macro/`](../examples/remote_eventloop_macro/)
+(manual API sibling: [`remote_eventloop/`](../examples/remote_eventloop/)).
 
 ### With RTOS — loop only on selected task
 
 ```klin
-$rtos_task("net", 1024, 3) {
-    $event_loop() {
-        eloop.on(sock_readable, handle_pkt)
+$rtos_task(net, 1024, 3) {
+    $event_loop(ex) {
+        let _ = eventloop.every_ms(&ex, 50, on_net, ctx) or { 0 }
     }
 }
 
-$rtos_task("blink", 512, 2) {
+$rtos_task(blink, 512, 2) {
     // no loop — delay / toggle
 }
 ```
+
+Examples: [`examples/freertos_eventloop_macro/`](../examples/freertos_eventloop_macro/).
 
 | | `$event_loop` (lib / 026) | `async` / `await` |
 |---|---|---|
@@ -98,13 +96,17 @@ $rtos_task("blink", 512, 2) {
 | Explicit buffers / `Allocator` | yes | — |
 | Sugar `await foo()` | no | core feature (018 / here) |
 
-Minimal picture after expand (idea):
+Minimal picture after expand:
 
 ```klin
 fn main() {
-    eloop.init(queue_buf[:])
-    eloop.every_ms(100, on_tick)
-    eloop.run()   // while { poll(); } — explicit, in lib
+    let mut ex: eventloop.Executor
+    let rc_ex = eventloop.init(&ex) or { 1 }
+    if rc_ex != 0 {
+      return
+    }
+    let _ = eventloop.every_ms(&ex, 100, on_tick, ctx) or { 0 }
+    eventloop.run(&ex)
 }
 ```
 
@@ -277,9 +279,11 @@ delay_ms(100).await
 | Phase 4 **spec** (contract below) | **yes** |
 | Parser `async` / `.await` | **yes** (MVP) |
 | Desugar → state machine | **yes** (MVP: top-level void `async fn`) |
-| Callback + async lib | **yes** — [`klin-lang/eventloop@v0.2.0`](https://github.com/klin-lang/eventloop) |
-| Example (callbacks) | [`examples/remote_eventloop/app.kl`](../examples/remote_eventloop/app.kl) |
-| Example (async) | [`examples/remote_eventloop/async_app.kl`](../examples/remote_eventloop/async_app.kl) |
+| Callback + async lib | **yes** — [`klin-lang/eventloop@v0.3.0`](https://github.com/klin-lang/eventloop) |
+| `$event_loop` macro | **yes** — `@v0.3.0` (+ nested expand in Klin) |
+| Example (callbacks, manual) | [`examples/remote_eventloop/app.kl`](../examples/remote_eventloop/app.kl) |
+| Example (async, manual) | [`examples/remote_eventloop/async_app.kl`](../examples/remote_eventloop/async_app.kl) |
+| Example (`$event_loop`) | [`examples/remote_eventloop_macro/`](../examples/remote_eventloop_macro/) |
 | IDE keywords | **no** — still open |
 
 IntelliJ plugin (highlight / parser) should learn `async` / `.await` after this
@@ -392,13 +396,17 @@ Not in core: global default loop, auto-async `main`, Promise, hidden scheduler.
 1. **Docs / model** (this issue) — ✅ direction written  
 2. **Callback lib** (`every_ms` / `run`) — ✅ `github/klin-lang/eventloop@v0.1.0`  
 3. **RTOS example** — loop in one task, second without — ✅ emit-c sketches  
-   [`examples/freertos_eventloop/`](../examples/freertos_eventloop/) (callbacks) +  
-   [`examples/freertos_eventloop_async/`](../examples/freertos_eventloop_async/) (`async`/`spawn`).  
+   Manual: [`freertos_eventloop/`](../examples/freertos_eventloop/) +  
+   [`freertos_eventloop_async/`](../examples/freertos_eventloop_async/).  
+   `$event_loop`: [`freertos_eventloop_macro/`](../examples/freertos_eventloop_macro/).  
    Real kernel / board blink still [028](028-freertos.md).  
 4. **`async`/`await` in core** + lib `sleep_ms`/`spawn` — ✅ MVP
-   (`github/klin-lang/eventloop@v0.2.0` + runnable examples). IDE keywords still open.
+   (`eventloop@v0.2.0`+). IDE keywords still open.  
+5. **`$event_loop` lib macro** — ✅ `@v0.3.0` + host/RTOS examples
+   ([`remote_eventloop_macro/`](../examples/remote_eventloop_macro/),
+   [`freertos_eventloop_macro/`](../examples/freertos_eventloop_macro/)).
 
-Steps 2–3 do not wait for async. Step 4 MVP landed; IDE follow.
+Steps 2–3 do not wait for async. Steps 4–5 landed; IDE follow.
 
 ## Technical hypotheses (aligned with phase 4 spec)
 

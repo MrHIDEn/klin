@@ -89,7 +89,7 @@ Tool in Klin: **`$…` macros ([026](026-preprocessor.md))** or explicit API.
 user-decorator system. Cf. ISR: [030](030-isr-decorators.md).
 
 Event-loop in task: same macro approach — [029](029-async-event-loop.md)
-(`$event_loop`, nestable in `$rtos_task` later).
+(`$event_loop` ✅ `@v0.3.0`, nestable in `$rtos_task`).
 
 ## Mutexes / shared data (critical)
 
