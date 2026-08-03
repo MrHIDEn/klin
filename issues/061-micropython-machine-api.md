@@ -32,7 +32,8 @@ Optional later: rename the GitHub repo to `machine_stm32` (underscore) for `klin
 
 ### Roadmap (in `machine-stm32`)
 
-1. **Pin** + blink (Nucleo-F411 PA5) — started  
+1. **Pin** + blink (Nucleo-F411 PA5) — ✅ in [`machine-stm32`](https://github.com/MrHIDEn/machine-stm32)  
+
 2. PWM + UART on the same STM32  
 3. I2C / SPI / ADC when needed  
 4. Other chips = other repos / ports, not “one machine for everything”
