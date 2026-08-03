@@ -16,7 +16,7 @@ runtime DSL and without hidden cost on MCU.
 ## UX goal
 
 ```klin
-import "github.com/klin-lang/klinstruct" kstruct
+import "github/klin-lang/klinstruct" kstruct
 
 $kstruct Telemetry {
   seq: u16
@@ -50,7 +50,7 @@ Expand → `struct` + `pack`/`unpack` calling atoms. C emission monomorphic.
 | A3 | preprocess or builtin like `027` | Iterate fields in expand → `write_*` / `read_*` text |
 | A4 | checker / preprocess | Diagnostics mapped to `$kstruct` call site |
 | A5 | optional `lib/…` builtin | `$kstruct_from("….kspec")` — model file parser → same expand as A3 |
-| A6 | [048](048-import-aliases.md) / [049](049-remote-imports.md) | `import "github.com/klin-lang/klinstruct" kstruct` |
+| A6 | [048](048-import-aliases.md) / [049](049-remote-imports.md) | `import "github/klin-lang/klinstruct" kstruct` |
 
 **Not:** generics in grammar ([034](034-generic-types.md)), runtime reflection.
 

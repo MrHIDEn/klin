@@ -21,7 +21,7 @@ one binary contract.
 - endian LE/BE like cstruct; layout compatibility (order, sizes, padding)
 - cross tests: same buffer hex from cstruct and klinstruct
 - optional `$…` macros for models → [059](059-kstruct-macros.md) (depends on [026](026-preprocessor.md))
-- after [049](049-remote-imports.md): `import "github.com/klin-lang/klinstruct" kstruct`
+- after [049](049-remote-imports.md): `import "github/klin-lang/klinstruct" kstruct`
 
 ## Out of scope
 
