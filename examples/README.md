@@ -41,9 +41,8 @@ are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), n
 | `klin_lib/` | `lib/` + `-I` / `$KLIN_PATH` ([docs/11-klin-libraries.md](../docs/11-klin-libraries.md)) |
 | `pkg_geom/` | Directory = one module (`geom/*.kl`, [docs/11](../docs/11-klin-libraries.md) / [12](../docs/12-modules.md)) |
 | `remote_osa/` | Remote `import "github/mrhiden/osa"` after `klin get` ([049](../issues/049-remote-imports.md)) |
-| `remote_eventloop/` | Remote `import "github/mrhiden/eventloop"` after `klin get` ([029](../issues/029-async-event-loop.md)) |
-| `pkg_eventloop/` | Local eventloop v0.2 (callbacks + `async`/`spawn`/`sleep_ms`) — publish source for `@v0.2.0` ([029](../issues/029-async-event-loop.md)) |
-| `sketch_async_eventloop.kl` | `async`/`await` + remote eventloop v0.2 ([029](../issues/029-async-event-loop.md)); or run `pkg_eventloop/async_app.kl` |
+| `remote_eventloop/` | Remote `github/mrhiden/eventloop@v0.2.0` — callbacks + async (`app.kl` / `async_app.kl`) ([029](../issues/029-async-event-loop.md)) |
+| `sketch_async_eventloop.kl` | `async`/`await` + remote eventloop v0.2 ([029](../issues/029-async-event-loop.md)) |
 | `modules/` | `module` / `import` ([docs/12-modules.md](../docs/12-modules.md)) |
 | `stm32/blink_f411/` | Nucleo-F411RE LED — local `$peripherals_from_svd` + `@[link("startup.s")]` → `out/*.link` |
 | `stm32/device_f411/` | Same via `$device` + `klin.mod` / `klin get` ([053](../issues/053-device-board-assets.md)) |

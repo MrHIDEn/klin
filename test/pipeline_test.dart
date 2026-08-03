@@ -2836,21 +2836,30 @@ fn main() {}
     );
   });
 
-  test('pkg_eventloop: callback every_ms (issue 029)', () async {
-    final result = await _compileAndRun('examples/pkg_eventloop/app.kl', tmp);
-    expect(result.exitCode, 0, reason: result.stderr);
-    expect(result.stdout, 'tick\ntick\ntick\nticks=3 version=2\n');
-  });
+  test('remote eventloop: async spawn + sleep_ms (issue 029)', () async {
+    final cache = Directory.systemTemp.createTempSync('klin_cache_async_');
+    addTearDown(() => cache.deleteSync(recursive: true));
+    final pkg = Directory('${cache.path}/pkg/github/mrhiden/eventloop')
+      ..createSync(recursive: true);
+    File('${pkg.path}/version.kl').writeAsStringSync(
+      await File('test/fixtures/mrhiden_eventloop/version.kl').readAsString(),
+    );
+    File('${pkg.path}/executor.kl').writeAsStringSync(
+      await File('test/fixtures/mrhiden_eventloop/executor.kl').readAsString(),
+    );
+    File('${pkg.path}/.pin').writeAsStringSync('v0.2.0\n');
 
-  test('pkg_eventloop: async spawn + sleep_ms (issue 029)', () async {
-    final result =
-        await _compileAndRun('examples/pkg_eventloop/async_app.kl', tmp);
+    final result = await _compileAndRun(
+      'examples/remote_eventloop/async_app.kl',
+      tmp,
+      klinCacheDir: cache.path,
+    );
     expect(result.exitCode, 0, reason: result.stderr);
     expect(result.stdout, 'tick\ntick\ntick\nticks done version=2\n');
   });
 
   test('remote sketch_async_eventloop (issue 029 phase 4)', () async {
-    final cache = Directory.systemTemp.createTempSync('klin_cache_async_');
+    final cache = Directory.systemTemp.createTempSync('klin_cache_sketch_');
     addTearDown(() => cache.deleteSync(recursive: true));
     final pkg = Directory('${cache.path}/pkg/github/mrhiden/eventloop')
       ..createSync(recursive: true);

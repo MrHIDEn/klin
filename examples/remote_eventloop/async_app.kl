@@ -1,5 +1,5 @@
 /// Async ticker via compiler desugar + eventloop spawn/sleep_ms (issue 029).
-import eventloop
+import "github/mrhiden/eventloop"
 import io
 
 async fn delay_ms(ms: i64) {
