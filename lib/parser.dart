@@ -669,6 +669,25 @@ final class Parser {
     return MatchExpr(subject: subject, arms: arms, pos: tok.pos);
   }
 
+  /// `pick cond { then } { else }` — two-way expression choice.
+  PickExpr _pickExpr() {
+    final tok = _expect(TokenKind.pick_, 'expected `pick`');
+    // `_headerExpr` so `pick name {` does not parse `name {` as a struct lit.
+    final cond = _headerExpr();
+    _expect(TokenKind.lBrace, 'expected `{` after the `pick` condition');
+    final thenExpr = _expr();
+    _expect(TokenKind.rBrace, 'expected `}` after the `pick` then-expression');
+    _expect(TokenKind.lBrace, 'expected `{` before the `pick` else-expression');
+    final elseExpr = _expr();
+    _expect(TokenKind.rBrace, 'expected `}` after the `pick` else-expression');
+    return PickExpr(
+      cond: cond,
+      thenExpr: thenExpr,
+      elseExpr: elseExpr,
+      pos: tok.pos,
+    );
+  }
+
   /// Optional `when <expr>` after a pattern. Forbidden on `else`; required on `_`.
   Expr? _matchWhenGuard(MatchPattern pattern) {
     if (_check(TokenKind.when_)) {
@@ -858,7 +877,8 @@ final class Parser {
         TokenKind.ampersand ||
         TokenKind.cast ||
         TokenKind.error_ ||
-        TokenKind.match_ =>
+        TokenKind.match_ ||
+        TokenKind.pick_ =>
           true,
         _ => false,
       };
@@ -1187,6 +1207,7 @@ final class Parser {
   Expr _primary() {
     final t = _current;
     if (t.kind == TokenKind.match_) return _matchExpr();
+    if (t.kind == TokenKind.pick_) return _pickExpr();
     Expr expr;
     switch (t.kind) {
       case TokenKind.intLit:

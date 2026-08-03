@@ -1,0 +1,19 @@
+fn main() {
+    let ready = 1
+    let mut fee = pick ready != 0 { 10 } { 0 }
+    printf("%d\n", fee)
+
+    fee = pick ready == 0 { 1 } { 2 }
+    printf("%d\n", fee)
+
+    let x = 7
+    let nested = pick ready != 0 {
+        pick x > 10 { 40 } { 25 }
+    } { 0 }
+    printf("%d\n", nested)
+
+    let flag = pick x >= 7 { true } { false }
+    printf("%d\n", pick flag { 1 } { 0 })
+
+    printf("%d\n", pick x < 0 { -1 } { pick x == 0 { 0 } { 1 } })
+}

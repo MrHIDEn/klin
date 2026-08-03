@@ -49,6 +49,10 @@ bool _exprNeedsTrimFrac(Expr expr) => switch (expr) {
           arms.any((arm) =>
               (arm.when != null && _exprNeedsTrimFrac(arm.when!)) ||
               _exprNeedsTrimFrac(arm.body)),
+      PickExpr(:final cond, :final thenExpr, :final elseExpr) =>
+          _exprNeedsTrimFrac(cond) ||
+          _exprNeedsTrimFrac(thenExpr) ||
+          _exprNeedsTrimFrac(elseExpr),
       _ => false,
     };
 

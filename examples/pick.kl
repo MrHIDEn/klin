@@ -1,0 +1,17 @@
+// `pick` — two-way expression choice. Emits as C ternary (`?:`).
+// Nest freely; `if` stays a statement.
+
+fn main() {
+    let ready = 1
+    let x = 7
+
+    let fee = pick ready != 0 { 10 } { 0 }
+    printf("fee=%d\n", fee)
+
+    let kind = pick x < 0 {
+        -1
+    } {
+        pick x > 10 { 2 } { 1 }
+    }
+    printf("kind=%d\n", kind)
+}

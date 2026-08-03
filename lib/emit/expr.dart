@@ -109,6 +109,8 @@ String _emitExprRaw(Expr expr, _ExprCtx ctx) {
       }(),
     BinaryExpr(:final left, :final op, :final right) =>
       '(${_emitExpr(left, ctx)} $op ${_emitExpr(right, ctx)})',
+    PickExpr(:final cond, :final thenExpr, :final elseExpr) =>
+      '(${_emitExpr(cond, ctx)} ? ${_emitExpr(thenExpr, ctx)} : ${_emitExpr(elseExpr, ctx)})',
     GroupExpr(:final inner) => '(${_emitExpr(inner, ctx)})',
     ErrorExpr(:final code, :final resolvedType) => () {
         if (resolvedType is! ResultType) {
