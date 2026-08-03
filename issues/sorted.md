@@ -90,8 +90,8 @@ building the core from scratch.
 | [058](058-source-file-split.md) | Split large compiler source files (tech debt) | 💭 | — |
 | [059](059-kstruct-macros.md) | `$kstruct` / `$kstruct_from` macros (richer klinstruct) | 💭 | 026, 052 |
 | [060](060-map-kv.md) | KV map (hash map) — language / stdlib / C | 💭 | 007, 057? |
-| [061](061-micropython-machine-api.md) | MicroPython-style `machine` API (PWM, UART, …) | ✅ (`machine_stm32` Pin+Pwm `@v0.2.0`; `machine_rp`/`machine_esp` Pin; UART next) | 010, 031? |
-| [062](062-targets-esp-rp.md) | MCU targets: ESP32 / RP2040 / RP2350 | 🚧 (RP + ESP32-C3 Pin; Wi‑Fi/freestanding open) | 010 |
+| [061](061-micropython-machine-api.md) | MicroPython-style `machine` API (PWM, UART, …) | ✅ (stm32/rp/esp Pin+Pwm; UART next) | 010, 031? |
+| [062](062-targets-esp-rp.md) | MCU targets: ESP32 / RP2040 / RP2350 | 🚧 (RP+ESP Pin+Pwm; Wi‑Fi/freestanding open) | 010 |
 | [064](064-if-cond-struct-literal-parse.md) | `if`/`while` condition ending in a name mistaken for a struct literal | ✅ | — |
 | [068](068-shared-type-decl.md) | Shared type annotation (`a, b: i32` like Go; both forms OK) | ✅ | 002, 004, 005 |
 | [069](069-eventemitter-signals.md) | Observer / EventEmitter / Signals (library; JS-signals explicitly) | 💭 | 013, 057 |
