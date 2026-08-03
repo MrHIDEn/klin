@@ -2,16 +2,17 @@
 
 **Status:** ✅ decided (external package; not Klin stdlib)
 **Depends on:** [010](010-bare-metal.md); nice to have [031](031-hal-libraries.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
-**Package:** https://github.com/MrHIDEn/machine_stm32
+**Packages:** [`machine_stm32`](https://github.com/MrHIDEn/machine_stm32), [`machine_rp`](https://github.com/MrHIDEn/machine_rp) (RP2040 MVP; RP2350 later)
 
 ## Verdict
 
 | Question | Answer |
 |---|---|
 | Change the Klin compiler? | **No** for the library itself |
-| Where does the code live? | External repo **`MrHIDEn/machine_stm32`**, not `stdlib/` |
-| STM32? | **Yes** — first port (MVP: `Pin` + blink) |
-| RP2040 / Atmel / PIC? | Same Klin language; **separate ports** later ([062](062-targets-esp-rp.md)), e.g. shared `machine_rp`. Not one library for all MCUs |
+| Where does the code live? | External repos (not `stdlib/`): **`machine_stm32`**, **`machine_rp`** |
+| STM32? | **Yes** — [`machine_stm32`](https://github.com/MrHIDEn/machine_stm32) (MVP: `Pin` + blink) |
+| RP2040 / RP2350? | **`machine_rp`** — RP2040 Pin + Pico blink ✅; RP2350 later in the same repo ([062](062-targets-esp-rp.md)) |
+| Atmel / PIC? | Separate ports if/when needed — not one library for all MCUs |
 | Approach | **C** (thin Klin package over explicit MMIO) — not A, not full vendor HAL as the API |
 
 Chosen over A/B: MicroPython-like **shape** (`Pin`, later `Pwm` / `Uart`), with no GC, no hidden heap, no hidden clock magic. Clock / startup / linker stay in the app (board pack later: [074](074-board-ioc-klin-mod.md), [075](075-board-pack-init-host.md)).
@@ -33,12 +34,21 @@ fn main() {
 klin get github/mrhiden/machine_stm32@main
 ```
 
-### Roadmap (in `machine_stm32`)
+### Roadmap
 
-1. **Pin** + blink (Nucleo-F411 PA5) — ✅ in [`machine_stm32`](https://github.com/MrHIDEn/machine_stm32)  
+**`machine_stm32`**
+
+1. **Pin** + blink (Nucleo-F411 PA5) — ✅  
 2. PWM + UART on the same STM32  
 3. I2C / SPI / ADC when needed  
-4. Other chips = other repos / ports (e.g. `machine_rp`), not “one machine for everything”
+
+**`machine_rp`**
+
+1. **Pin** + blink (Pico GPIO 25, RP2040) — ✅ in [`machine_rp`](https://github.com/MrHIDEn/machine_rp)  
+2. RP2350 example in the same repo  
+3. PWM / UART when needed  
+
+Other MCU families = other repos — not “one machine for everything”.
 
 ## Context
 
@@ -128,7 +138,8 @@ Preference aligned with overarching rule: if C, then **explicit** clock tuning
 
 ## Links
 
-- Package: https://github.com/MrHIDEn/machine_stm32  
+- Packages: https://github.com/MrHIDEn/machine_stm32 , https://github.com/MrHIDEn/machine_rp  
+
 - MicroPython `machine`: https://docs.micropython.org/en/latest/library/machine.html  
 - Klin vendor HAL: [031](031-hal-libraries.md)  
 - Embedded project layout: [054](054-embedded-project-layout.md)  
