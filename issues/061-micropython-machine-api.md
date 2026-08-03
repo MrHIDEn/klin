@@ -2,20 +2,21 @@
 
 **Status:** ✅ decided (external package; not Klin stdlib)
 **Depends on:** [010](010-bare-metal.md); nice to have [031](031-hal-libraries.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
-**Packages:** [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` `@v0.2.0`), [`machine_rp`](https://github.com/klin-lang/machine_rp) (`Pin` + `Pwm` `@v0.4.0`), [`machine_esp`](https://github.com/klin-lang/machine_esp) (`Pin` + `Pwm` `@v0.2.0`), [`machine_xmega`](https://github.com/klin-lang/machine_xmega) (`Pin` `@v0.1.1`), [`machine_avr`](https://github.com/klin-lang/machine_avr) (`Pin` `@v0.1.0`)
+**Packages:** [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` `@v0.2.0`), [`machine_rp`](https://github.com/klin-lang/machine_rp) (`Pin` + `Pwm` `@v0.4.0`), [`machine_esp`](https://github.com/klin-lang/machine_esp) (`Pin` + `Pwm` `@v0.2.0`), [`machine_xmega`](https://github.com/klin-lang/machine_xmega) (`Pin` `@v0.1.1`), [`machine_avr`](https://github.com/klin-lang/machine_avr) (`Pin` `@v0.1.0`), [`machine_pic16`](https://github.com/klin-lang/machine_pic16) (`Pin` `@v0.1.0`)
 
 ## Verdict
 
 | Question | Answer |
 |---|---|
 | Change the Klin compiler? | **No** for the library itself |
-| Where does the code live? | External repos (not `stdlib/`): **`machine_stm32`**, **`machine_rp`**, **`machine_esp`**, **`machine_xmega`**, **`machine_avr`** |
+| Where does the code live? | External repos (not `stdlib/`): **`machine_stm32`**, **`machine_rp`**, **`machine_esp`**, **`machine_xmega`**, **`machine_avr`**, **`machine_pic16`** |
 | STM32? | **Yes** — [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` `@v0.2.0`; F411/F401-class MMIO, no runtime chip detect) |
 | RP2040 / RP2350? | **`machine_rp`** — Pin ✅; **Pwm** ✅ `@v0.4.0` (`pwm_out` / `pwm_out_rp2350`); ([062](062-targets-esp-rp.md)) |
 | ESP32-C3? | **`machine_esp`** — Pin ✅; **Pwm** ✅ `@v0.2.0` (LEDC MMIO); blink/PWM via **minimal ESP-IDF** boot; Wi‑Fi / freestanding later ([062](062-targets-esp-rp.md)) |
 | ATxmega? | **`machine_xmega`** — Pin ✅ `@v0.1.1` (ATxmega128A1U-class PORT MMIO; formerly `machine_atmel`); Pwm later |
 | megaAVR (Arduino Uno/Mega)? | **`machine_avr`** — Pin ✅ `@v0.1.0` (ATmega328P + ATmega2560 `DDRx`/`PORTx`/`PINx`); Pwm / tinyAVR later |
-| PIC? | Separate port if/when needed — not one library for all MCUs |
+| PIC16? | **`machine_pic16`** — Pin ✅ `@v0.1.0` (PIC16F18855-class enhanced mid-range `LAT`/`PORT`/`TRIS`/`ANSEL`); PIC18/24/32 separate |
+| Other PIC? | Separate ports if/when needed — not one library for all MCUs |
 | Approach | **C** (thin Klin package over explicit MMIO) — not A, not full vendor HAL as the API |
 
 Chosen over A/B: MicroPython-like **shape** (`Pin`, later `Pwm` / `Uart`), with no GC, no hidden heap, no hidden clock magic. Clock / startup / linker stay in the app (board pack later: [074](074-board-ioc-klin-mod.md), [075](075-board-pack-init-host.md)).
@@ -115,6 +116,11 @@ led.duty_u16(32768)
 2. **Pin** + blink ATmega2560 (Arduino Mega D13 = PB7) — ✅ `@v0.1.0` (`blink_mega`, `pin_out_2560`)  
 3. **PWM** / UART / tinyAVR — later  
 
+**`machine_pic16`**
+
+1. **Pin** + blink PIC16F18855 (Curiosity Nano RA0) — ✅ `@v0.1.0` (`blink_curiosity`)  
+2. **PWM** / UART / classic F877A — later  
+
 Other MCU families = other repos — not “one machine for everything”.
 
 ## Context
@@ -205,7 +211,8 @@ Preference aligned with overarching rule: if C, then **explicit** clock tuning
 
 ## Links
 
-- Packages: https://github.com/klin-lang/machine_stm32 , https://github.com/klin-lang/machine_rp , https://github.com/klin-lang/machine_esp , https://github.com/klin-lang/machine_xmega , https://github.com/klin-lang/machine_avr  
+- Packages: https://github.com/klin-lang/machine_stm32 , https://github.com/klin-lang/machine_rp , https://github.com/klin-lang/machine_esp , https://github.com/klin-lang/machine_xmega , https://github.com/klin-lang/machine_avr , https://github.com/klin-lang/machine_pic16  
+
 
 
 
