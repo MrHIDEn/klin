@@ -49,8 +49,13 @@ not stdlib:
 
 Consequence: Klin core provides only foundation (FFI/`codename`/link from 010/021/022);
 this issue remains **decision + FFI pattern**, and the "official" example
-([028](028-freertos.md)) as package/example (eventually repo with remote-import),
+([028](028-freertos.md)) as package/example (remote-import),
 not as stdlib module.
+
+**External package (portable FreeRTOS client, not a board HAL):**
+[`github.com/MrHIDEn/klin_freertos`](https://github.com/MrHIDEn/klin_freertos)
+— `import "github/mrhiden/klin_freertos"`. Same Klin FFI surface on STM32, Pico/RP,
+AVR, host POSIX, etc.; MCU port + `FreeRTOSConfig.h` stay in the app.
 
 ## What must come first
 
@@ -71,7 +76,7 @@ not as stdlib module.
   hide them
 - concrete FreeRTOS example described in [028](028-freertos.md), and
   ISR annotations to consider in [030](030-isr-decorators.md)
-- task "decorators" from `klinrtos` lib: API/macros/`codename` — yes; real
+- task "decorators" from `klin_freertos` lib: API/macros/`codename` — yes; real
   `@[task]` only with compiler — settled in [028](028-freertos.md);
   preferred sugar: `$rtos_task("blink", 512, 2) { … }` (not user-`@[…]`)
 
