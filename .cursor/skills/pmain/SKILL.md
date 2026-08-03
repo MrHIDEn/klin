@@ -1,32 +1,31 @@
 ---
 name: pmain
 description: >
-  Skrót "pmain" = zsynchronizuj lokalny `main` z origin. Użyj, gdy użytkownik
-  napisze "pmain", "sync main", "pull main" albo gdy trzeba odświeżyć `main`
-  przed założeniem nowego brancha feature/fix.
+  Shorthand "pmain" = sync local `main` with origin. Use when the user writes
+  "pmain", "sync main", "pull main", or when `main` must be refreshed before
+  creating a new feature/fix branch.
 ---
 
 # pmain — sync / pull `main`
 
-Gdy pojawi się `pmain` (lub "sync main" / "pull main"), wykonaj:
+When `pmain` (or "sync main" / "pull main") appears, run:
 
 ```sh
 git checkout main
 git pull origin main
 ```
 
-## Zasady
+## Rules
 
-- To operacja tylko na `main`: przełącz się na `main` i pociągnij z `origin`.
-- NIE commituj na `main` (zasada repo) — `pmain` służy wyłącznie do
-  aktualizacji, nie do pracy. Właściwą pracę rób na nowym branchu
-  `cursor/<opis>-...` założonym od świeżego `main`.
-- Sieć: przy błędach `git pull` ponów z backoffem (4s, 8s, 16s, 32s).
-- Po `pmain` zwykle następuje: `git checkout -b cursor/<opis>-...` i dopiero
-  potem zmiany.
+- This is a `main`-only operation: switch to `main` and pull from `origin`.
+- Do **not** commit on `main` (repo rule) — `pmain` is for updating only, not
+  for work. Do real work on a new `cursor/<desc>-...` branch created from a
+  fresh `main`.
+- Network: on `git pull` failures, retry with backoff (4s, 8s, 16s, 32s).
+- After `pmain`, usually: `git checkout -b cursor/<desc>-...`, then make changes.
 
-## Kiedy używać
+## When to use
 
-- Na starcie zadania, przed założeniem brancha (świeży punkt wyjścia).
-- Po scaleniu PR-a, by zaciągnąć zmiany do lokalnego `main`.
-- Gdy użytkownik prosi wprost ("pmain" / "sync main" / "pull main").
+- At the start of a task, before creating a branch (fresh base).
+- After a PR is merged, to bring local `main` up to date.
+- When the user asks explicitly ("pmain" / "sync main" / "pull main").

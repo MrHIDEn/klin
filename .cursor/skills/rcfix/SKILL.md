@@ -1,50 +1,58 @@
+---
+name: rcfix
+description: >
+  Shorthand "rcfix" = Bugbot code review + real fixes for the current branch,
+  then update the PR. Use when the user writes "rcfix", "review + fix",
+  "CR + fixes", or as the last step of the feature workflow after push + PR.
+---
+
 # rcfix — review code + fix
 
-Gdy pojawi się `rcfix` (lub "review + fix" / "CR + fixy"), wykonaj przegląd kodu
-Bugbotem dla zmian bieżącego brancha, nanieś realne poprawki i zaktualizuj PR.
+When `rcfix` (or "review + fix" / "CR + fixes") appears, run a Bugbot code
+review on the current branch changes, apply real fixes, and update the PR.
 
-To ostatni krok feature workflow z `CLAUDE.md`:
+This is the last step of the feature workflow in `CLAUDE.md`:
 `… → push + PR → rcfix (Bugbot, fixes, scoreboard)`.
 
-## Kroki
+## Steps
 
-1. Upewnij się, że zmiany są scommitowane i wypchnięte oraz istnieje PR
-   (najpierw `git status -sb`; jeśli trzeba — commit/push/`ManagePullRequest`).
-2. Uruchom Bugbota (Task, `subagent_type: bugbot`, `description: "Bugbot"`,
-   `run_in_background: false`) z promptem:
+1. Ensure changes are committed and pushed and a PR exists
+   (start with `git status -sb`; if needed — commit/push/`ManagePullRequest`).
+2. Run Bugbot (Task, `subagent_type: bugbot`, `description: "Bugbot"`,
+   `run_in_background: false`) with prompt:
    ```
    Full Repository Path: /workspace
    Diff: branch changes
-   Custom Instructions: <opcjonalnie: na czym się skupić>
+   Custom Instructions: <optional: what to focus on>
    ```
-3. Triage każdego znaleziska:
-   - realny bug → napraw,
-   - false positive → odnotuj krótko dlaczego (nie „naprawiaj" na siłę).
-4. Dla poprawek: edytuj → `dart analyze` + `dart test` (zielone) → osobny commit
-   per logiczna poprawka (`fix(review): …`) → push → zaktualizuj PR
+3. Triage each finding:
+   - real bug → fix it,
+   - false positive → note briefly why (do not "fix" forced).
+4. For fixes: edit → `dart analyze` + `dart test` (green) → separate commit
+   per logical fix (`fix(review): …`) → push → update the PR
    (`ManagePullRequest`).
-5. Jeśli poprawki były istotne, uruchom Bugbota ponownie — aż będzie czysto albo
-   zostaną tylko świadomie zaakceptowane false-positive'y.
-6. **Scoreboard**: w podsumowaniu podaj licznik: znalezione / naprawione /
-   odrzucone (z powodem), oraz link do PR.
+5. If fixes were material, run Bugbot again — until clean or only consciously
+   accepted false positives remain.
+6. **Scoreboard**: in the summary report counts: found / fixed / dismissed
+   (with reason), plus the PR link.
 
-## Zasady
+## Rules
 
-- **Nie** scalaj PR i **nie** oznaczaj „ready", chyba że użytkownik wprost prosi.
-- Naprawiaj tylko realne problemy z zakresu tej zmiany — bez rozszerzania zakresu
-  ani refaktorów przy okazji.
-- Poprawki minimalne, każda logiczna zmiana = osobny commit; po fixach **zawsze**
-  ponów testy.
-- Nie commituj na `main`/`develop` — poprawki idą na branchu feature/fix.
-- Jeśli Bugbot jest niedostępny, powiedz to wprost (nie udawaj przeglądu).
+- Do **not** merge the PR and do **not** mark it "ready" unless the user asks
+  explicitly.
+- Fix only real issues in scope of this change — no scope creep or drive-by
+  refactors.
+- Keep fixes minimal; each logical change = its own commit; after fixes
+  **always** re-run tests.
+- Do not commit on `main`/`develop` — fixes go on the feature/fix branch.
+- If Bugbot is unavailable, say so plainly (do not fake a review).
 
-## Kiedy używać
+## When to use
 
-- Zaraz po `push + PR` dla zmian z kodem (nie trzeba dla PR czysto
-  dokumentacyjnych, choć nie zaszkodzi).
-- Gdy użytkownik prosi wprost ("rcfix" / "CR + fixy" / "review + fix").
+- Right after `push + PR` for code changes (optional for pure docs PRs, though
+  harmless).
+- When the user asks explicitly ("rcfix" / "CR + fixes" / "review + fix").
 
 ## Output
 
-Krótko: scoreboard (znalezione/naprawione/odrzucone), stan testów po fixach,
-link do PR.
+Brief: scoreboard (found/fixed/dismissed), test status after fixes, PR link.
