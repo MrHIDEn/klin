@@ -63,10 +63,27 @@ dart run bin/klin.dart --emit-pp examples/point_macro.kl
 |---|---|---|
 | `type` | `i32`, `f64`, … | as written |
 | `name` / `str` | `Vec2i` or `"Vec2i"` | identifier (quotes from `str` are stripped) |
+| `name` (numeric) | `512` | digit token as written |
+| `block` (last only) | trailing `{ … }` after the call | body text (no outer braces) |
 
 Definition: `$fn name(param: kind, …) { … }`.  
-Call: `$name(args…)`. Unknown `$slot` in body after expand = error
-(except `$…` inside strings and `//` comments).
+Call: `$name(args…)` or `$name(args…) { … }` when the last parameter is `block`.
+Unknown `$slot` in body after expand = error (except `$…` inside strings and
+`//` comments).
+
+### Macros from path imports (059 A1 lite)
+
+`$fn` definitions in a package reached by `import "…"` (relative or
+`github`/`gitlab` cache) are visible in the importing file. The import
+qualifier (alias or last path segment) substitutes `$mod` in those macros.
+
+```klin
+import "../../mylib" lib
+$lib_helper(x)   // if mylib defines $fn lib_helper …
+```
+
+Ident imports (`import slice`) do not re-export `$fn`; those packages expand
+macros inside their own files (as today).
 
 ## Built-in: `$device` / `$peripherals_from_svd` (027, 053)
 

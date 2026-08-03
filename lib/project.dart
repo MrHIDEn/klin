@@ -81,6 +81,7 @@ Program loadProject(
         file.readAsStringSync(),
         path: path,
         klinCacheDir: klinCacheDir,
+        klinPathDirs: klinPathDirs,
       );
       final unit = Parser(Lexer(expanded).tokenize()).parseUnit();
       final moduleName = unit.declaredName ?? _fileStem(path);
@@ -178,6 +179,7 @@ Program loadProject(
     File(entryAbs).readAsStringSync(),
     path: entryAbs,
     klinCacheDir: klinCacheDir,
+    klinPathDirs: klinPathDirs,
   );
   final entryUnit = Parser(Lexer(entryExpanded).tokenize()).parseUnit();
   final entryModule = entryUnit.declaredName ?? _fileStem(entryAbs);
@@ -194,6 +196,7 @@ Program loadProject(
         raw,
         path: path,
         klinCacheDir: klinCacheDir,
+        klinPathDirs: klinPathDirs,
       );
       final unit = Parser(Lexer(expanded).tokenize()).parseUnit();
       final name = unit.declaredName ?? _fileStem(path);

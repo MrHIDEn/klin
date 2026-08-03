@@ -45,7 +45,7 @@ Expand → `struct` + `pack`/`unpack` calling atoms. C emission monomorphic.
 
 | Step | Where | What |
 |---|---|---|
-| A1 | `lib/preprocess.dart` (+ tests) | Macros visible via `import` / package (today expand per file) |
+| A1 | `lib/preprocess.dart` (+ tests) | Macros via path `import "…"` ✅ lite (block/`$mod`); ident imports still expand in-package |
 | A2 | `lib/preprocess.dart`, `docs/04-macros.md` | “Field block” argument / list `(name, type)` or variadic |
 | A3 | preprocess or builtin like `027` | Iterate fields in expand → `write_*` / `read_*` text |
 | A4 | checker / preprocess | Diagnostics mapped to `$kstruct` call site |
