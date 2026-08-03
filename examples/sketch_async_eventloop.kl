@@ -28,7 +28,13 @@ fn main() {
         io.println("init failed")
         return
     }
-    eventloop.spawn(&ex, ticker)
+    let spawn_rc = eventloop.spawn(&ex, ticker) or {
+        io.println("spawn failed")
+        0 - 1
+    }
+    if spawn_rc < 0 {
+        return
+    }
     eventloop.run(&ex)
     printf("ticks done version=%d\n", eventloop.version())
 }

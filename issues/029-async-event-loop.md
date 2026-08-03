@@ -195,7 +195,7 @@ async fn ticker() {
 fn main() {
     let mut ex: eventloop.Executor
     let _ = eventloop.init(&ex) or { 1 }
-    eventloop.spawn(&ex, ticker)   // state in task slot — not heap Promise
+    let _ = eventloop.spawn(&ex, ticker) or { 1 }  // task slot, not Promise
     eventloop.run(&ex)             // poll timers + async tasks
 }
 ```

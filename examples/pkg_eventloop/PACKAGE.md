@@ -72,7 +72,7 @@ async fn ticker() {
 fn main() {
     let mut ex: eventloop.Executor
     let _ = eventloop.init(&ex) or { 1 }
-    eventloop.spawn(&ex, ticker)
+    let _ = eventloop.spawn(&ex, ticker) or { 1 }
     eventloop.run(&ex)
 }
 ```

@@ -772,6 +772,9 @@ final class CallExpr extends Expr {
   /// Call through a fn-pointer variable (not a known top-level function).
   bool isFnPtrCall = false;
 
+  /// When set, emit rewrites to `spawn(ex, fn_poll_erased, fn_init_erased)`.
+  String? asyncSpawnFn;
+
   CallExpr({
     this.moduleName,
     required this.callee,

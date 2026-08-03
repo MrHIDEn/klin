@@ -18,6 +18,8 @@ struct Slot {
 }
 
 /// Fixed-size async task slot (state machine buffer + erased poll).
+/// MVP: 256-byte state — caller must keep async State within this limit
+/// (compiler does not sizeof-check yet).
 struct TaskSlot {
     active: bool
     poll: fn(*mut u8): i32

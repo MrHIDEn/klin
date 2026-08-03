@@ -768,6 +768,12 @@ final class Checker {
         }
 
         stmt.resolvedType = resolved;
+        if (_currentIsAsync && _scope.lookup(name) != null) {
+          throw CheckError(
+            'async fn MVP does not allow shadowed `let $name` (flat state struct)',
+            pos,
+          );
+        }
         _scope.define(
           _Symbol(name: name, type: resolved, isMut: isMut, pos: pos),
         );
@@ -987,13 +993,21 @@ final class Checker {
             onResolved: (cName) => stmt.resolvedCallee = cName)) {
           break;
         }
-        final spawnFn = _tryCheckAsyncSpawn(moduleName, callee, args, pos);
-        if (spawnFn != null) {
-          stmt.resolvedCallee = 'eventloop_spawn';
-          stmt.asyncSpawnFn = spawnFn;
-          break;
+        final spawn = _tryCheckAsyncSpawn(moduleName, callee, args, pos);
+        if (spawn != null) {
+          throw CheckError(
+            'result `${spawn.returnType.displayName}` from function `$callee` '
+            'must be handled with `!` or `or`',
+            pos,
+          );
         }
         final call = _checkCall(callee, args, pos, moduleName: moduleName);
+        if (call.isAsync) {
+          throw CheckError(
+            'async function `$callee` can only be used with `.await`',
+            pos,
+          );
+        }
         if (call.type is ResultType) {
           throw CheckError(
             'result `${call.type.displayName}` from function `$callee` must be handled with `!` or `or`',
@@ -1473,8 +1487,9 @@ final class Checker {
   }
 
   /// `mod.spawn(ex, async_fn)` — second arg is an async function name.
-  /// Returns mangled async fn C base name, or null if not a spawn call.
-  String? _tryCheckAsyncSpawn(
+  /// Returns spawn C name + async fn base, or null if not that sugar form.
+  ({String spawnCName, String asyncFnBase, KlinType returnType})?
+      _tryCheckAsyncSpawn(
     String? moduleName,
     String callee,
     List<Expr> args,
@@ -1524,13 +1539,15 @@ final class Checker {
     } else {
       _inferExpr(args[0]);
     }
-    if (module != _currentModule) {
-      final spawnDecl = _functionDecl(module, callee);
-      if (!spawnDecl.isPub) {
-        throw CheckError('function `$moduleName.$callee` is private', pos);
-      }
+    final spawnDecl = _functionDecl(module, callee);
+    if (module != _currentModule && !spawnDecl.isPub) {
+      throw CheckError('function `$moduleName.$callee` is private', pos);
     }
-    return _cNameForFunction(decl);
+    return (
+      spawnCName: _cNameForFunction(spawnDecl),
+      asyncFnBase: _cNameForFunction(decl),
+      returnType: signature.returnType,
+    );
   }
 
   KlinType _checkAwait(AwaitExpr expr) {
@@ -2108,6 +2125,12 @@ final class Checker {
               onResolved: (cName) => expr.resolvedCallee = cName)) {
             // printf returns i32; treat like FFI.
             return const PrimType(PrimKind.i32);
+          }
+          final spawn = _tryCheckAsyncSpawn(moduleName, callee, args, pos);
+          if (spawn != null) {
+            expr.resolvedCallee = spawn.spawnCName;
+            expr.asyncSpawnFn = spawn.asyncFnBase;
+            return spawn.returnType;
           }
           final call = _checkCall(callee, args, pos, moduleName: moduleName);
           expr.resolvedCallee = call.cName;

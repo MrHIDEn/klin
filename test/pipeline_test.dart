@@ -2783,6 +2783,40 @@ fn main() {}
     );
   });
 
+  test('error: bare async call statement (issue 029)', () {
+    const source = '''
+async fn work() {}
+fn main() {
+  work()
+}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError &&
+          e.toString().contains('can only be used with `.await`'))),
+    );
+  });
+
+  test('error: async shadowed let rejected (issue 029)', () {
+    const source = '''
+async fn work() {
+  let x: i32 = 1
+  if true {
+    let x: i32 = 2
+  }
+}
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError && e.toString().contains('shadowed'))),
+    );
+  });
+
   test('pkg_eventloop: callback every_ms (issue 029)', () async {
     final result = await _compileAndRun('examples/pkg_eventloop/app.kl', tmp);
     expect(result.exitCode, 0, reason: result.stderr);
