@@ -2,41 +2,43 @@
 
 **Status:** ✅ decided (external package; not Klin stdlib)
 **Depends on:** [010](010-bare-metal.md); nice to have [031](031-hal-libraries.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
-**Package:** https://github.com/MrHIDEn/machine-stm32
+**Package:** https://github.com/MrHIDEn/machine_stm32
 
 ## Verdict
 
 | Question | Answer |
 |---|---|
 | Change the Klin compiler? | **No** for the library itself |
-| Where does the code live? | External repo **`MrHIDEn/machine-stm32`**, not `stdlib/` |
+| Where does the code live? | External repo **`MrHIDEn/machine_stm32`**, not `stdlib/` |
 | STM32? | **Yes** — first port (MVP: `Pin` + blink) |
-| RP2040 / Atmel / PIC? | Same Klin language; **separate ports** later ([062](062-targets-esp-rp.md)). Not one library for all MCUs |
+| RP2040 / Atmel / PIC? | Same Klin language; **separate ports** later ([062](062-targets-esp-rp.md)), e.g. shared `machine_rp`. Not one library for all MCUs |
 | Approach | **C** (thin Klin package over explicit MMIO) — not A, not full vendor HAL as the API |
 
 Chosen over A/B: MicroPython-like **shape** (`Pin`, later `Pwm` / `Uart`), with no GC, no hidden heap, no hidden clock magic. Clock / startup / linker stay in the app (board pack later: [074](074-board-ioc-klin-mod.md), [075](075-board-pack-init-host.md)).
 
-### Import note (repo hyphen)
+### Import
 
-Klin remote imports require the last path segment to be a valid module identifier.
-`machine-stm32` contains `-`, so `import "github/mrhiden/machine-stm32"` cannot match `module …` today.
-
-**Use today:** relative / `KLIN_PATH` import of the `machine/` directory:
+Repo / module name uses underscore (valid Klin identifier), same pattern as `osa` / `eventloop`:
 
 ```klin
-import "../../machine"   // from examples/… in that repo
-// or: KLIN_PATH=<clone> → import machine
+import "github/mrhiden/machine_stm32" machine
+
+fn main() {
+    let led = machine.pin_out(machine.Port.A, 5)
+    led.toggle()
+}
 ```
 
-Optional later: rename the GitHub repo to `machine_stm32` (underscore) for `klin get` parity with `osa` / `eventloop`.
+```sh
+klin get github/mrhiden/machine_stm32@main
+```
 
-### Roadmap (in `machine-stm32`)
+### Roadmap (in `machine_stm32`)
 
-1. **Pin** + blink (Nucleo-F411 PA5) — ✅ in [`machine-stm32`](https://github.com/MrHIDEn/machine-stm32)  
-
+1. **Pin** + blink (Nucleo-F411 PA5) — ✅ in [`machine_stm32`](https://github.com/MrHIDEn/machine_stm32)  
 2. PWM + UART on the same STM32  
 3. I2C / SPI / ADC when needed  
-4. Other chips = other repos / ports, not “one machine for everything”
+4. Other chips = other repos / ports (e.g. `machine_rp`), not “one machine for everything”
 
 ## Context
 
@@ -126,7 +128,7 @@ Preference aligned with overarching rule: if C, then **explicit** clock tuning
 
 ## Links
 
-- Package: https://github.com/MrHIDEn/machine-stm32  
+- Package: https://github.com/MrHIDEn/machine_stm32  
 - MicroPython `machine`: https://docs.micropython.org/en/latest/library/machine.html  
 - Klin vendor HAL: [031](031-hal-libraries.md)  
 - Embedded project layout: [054](054-embedded-project-layout.md)  
