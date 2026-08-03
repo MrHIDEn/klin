@@ -2813,7 +2813,26 @@ fn main() {}
     expect(
       () => Checker().check(program),
       throwsA(predicate((e) =>
-          e is CheckError && e.toString().contains('shadowed'))),
+          e is CheckError && e.toString().contains('reused `let x`'))),
+    );
+  });
+
+  test('error: async sibling-scope let reuse rejected (issue 029)', () {
+    const source = '''
+async fn work() {
+  if true {
+    let x: i32 = 1
+  } else {
+    let x: i32 = 2
+  }
+}
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate((e) =>
+          e is CheckError && e.toString().contains('reused `let x`'))),
     );
   });
 

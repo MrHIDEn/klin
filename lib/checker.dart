@@ -96,6 +96,9 @@ final class Checker {
   String _currentModule = '';
   bool _currentIsAsync = false;
 
+  /// Names already reserved in the flat async state struct (params + lets).
+  final Set<String> _asyncFlatNames = {};
+
   /// `match` as an expression is only valid as a `let` initializer or an
   /// assignment right-hand side (it lowers to statements in emission).
   bool _allowMatchExpr = false;
@@ -144,8 +147,12 @@ final class Checker {
       _currentModule = func.moduleName;
       _currentIsAsync = func.isAsync;
       _currentReturn = func.resolvedReturnType!;
+      _asyncFlatNames
+        ..clear()
+        ..addAll(func.params.map((p) => p.name));
       final receiver = func.receiver;
       if (receiver != null) {
+        _asyncFlatNames.add(receiver.name);
         _scope.define(
           _Symbol(
             name: receiver.name,
@@ -768,11 +775,15 @@ final class Checker {
         }
 
         stmt.resolvedType = resolved;
-        if (_currentIsAsync && _scope.lookup(name) != null) {
-          throw CheckError(
-            'async fn MVP does not allow shadowed `let $name` (flat state struct)',
-            pos,
-          );
+        if (_currentIsAsync) {
+          if (_asyncFlatNames.contains(name)) {
+            throw CheckError(
+              'async fn MVP does not allow reused `let $name` '
+              '(flat state struct — including sibling scopes)',
+              pos,
+            );
+          }
+          _asyncFlatNames.add(name);
         }
         _scope.define(
           _Symbol(name: name, type: resolved, isMut: isMut, pos: pos),
