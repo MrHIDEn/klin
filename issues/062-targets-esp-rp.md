@@ -1,6 +1,6 @@
 # 062 — MCU targets beyond STM32: ESP32, RP2040, RP2350
 
-**Status:** 🚧 in progress — RP2040 blink path via [`machine_rp`](https://github.com/MrHIDEn/machine_rp) (Pin MVP)
+**Status:** 🚧 — RP2040 + RP2350 Arm blink via [`machine_rp`](https://github.com/MrHIDEn/machine_rp); ESP32 still open
 **Depends on:** [010](010-bare-metal.md); nice to have [022](022-asm-libraries.md), [027](027-svd-ergonomic-api.md), [031](031-hal-libraries.md), [053](053-device-board-assets.md), [054](054-embedded-project-layout.md)
 
 ## Context (conversation notes)
