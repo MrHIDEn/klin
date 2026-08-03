@@ -38,6 +38,7 @@ building the core from scratch.
 | [020](020-klin-libraries.md) | Klin libraries (`lib/` / `-I` / `KLIN_PATH`) | ✅ | 006 |
 | [021](021-c-libraries.md) | C libraries (FFI / link) | ✅ | 006, 010 |
 | [022](022-asm-libraries.md) | ASM units (`.s` via `@[link]`) | ✅ | 021 |
+| [024](024-rtos.md) | RTOS as C API client (`klin_freertos` ✅; Zephyr/RT-Thread ⏸) | ✅ | 010, 021 |
 | [023](023-examples.md) | `examples/` catalog (+ `stm32/`) | ✅ | 001+ |
 | [025](025-english-project.md) | English project (PL design/roadmap exception superseded by 082) | ✅ | — |
 | [082](082-english-issues-docs.md) | English `docs/` + `issues/` (`note/` → `docs/`, EN slugs) | ✅ | 025 |
@@ -63,8 +64,7 @@ building the core from scratch.
 | # | Task | Status | Depends on |
 |---|---|---|---|
 | [018](018-generators-yield.md) | Generators / `yield` | 💭 | 004+ |
-| [024](024-rtos.md) | RTOS (FreeRTOS / Zephyr / …) | 💭 | 010+ |
-| [028](028-freertos.md) | Clean FreeRTOS cooperation | 💭 | 024, 010, 021 |
+| [028](028-freertos.md) | FreeRTOS (`klin_freertos` ✅; blink / `FromISR` open) | 🔨 | 024, 010, 021 |
 | [029](029-async-event-loop.md) | Event loop / async·await (lib `@v0.2.0` ✅; phase 4 async MVP ✅; IDE ⏳) | 🔨 | 018?, 028?, 049? |
 | [030](030-isr-decorators.md) | Interrupts via decorators | 💭 | 010 |
 | [031](031-hal-libraries.md) | HAL libraries (Cube / LL) | 💭 | 010, 021 |
