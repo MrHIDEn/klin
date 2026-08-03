@@ -23,7 +23,10 @@ without own scheduler and without hidden allocation.
 - bridge to [029](029-async-event-loop.md): event-loop **optional** on `main`
   and/or on selected tasks
 
-## `klinrtos` library vs task "decorators" (settled)
+## `klin_freertos` library vs task "decorators" (settled)
+
+Package: [`github.com/MrHIDEn/klin_freertos`](https://github.com/MrHIDEn/klin_freertos)
+(portable FreeRTOS C API client — not STM32-only; board HAL stays in `machine_*`).
 
 Question: can external Klin lib (RTOS bindings, not stdlib — [024](024-rtos.md))
 provide decorators to mark fn/methods as tasks?
@@ -67,12 +70,15 @@ $rtos_task("blink", 512, 2) {
 Equivalently, without macro (still simple, zero magic):
 
 ```klin
+import "github/mrhiden/klin_freertos" freertos
+
 @[codename("blink_task")]
-fn blink_task(arg: *mut u8) { … }
+fn blink_task(arg: *mut void) { … }
 
 fn main() {
-    rtos.create(blink_task, stack[:], prio)
-    rtos.start()
+    let mut handle = freertos.null_ptr()
+    freertos.task_create(blink_task, "blink", 512, freertos.null_ptr(), 2, &handle)
+    freertos.task_start_scheduler()
 }
 ```
 
