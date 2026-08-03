@@ -75,15 +75,15 @@ Emission is still **one** `.c`. Modules: [12-modules.md](12-modules.md).
 ## Remote (`github` / `gitlab`) — issue 049
 
 ```klin
-import "github/mrhiden/osa"
+import "github/klin-lang/osa"
 ```
 
 - First segment `github` or `gitlab` → package from cache (`$KLIN_CACHE` / `~/.klin/pkg/…`).
-- Missing from cache → error; first `klin get github/mrhiden/osa@v0.1.0`
+- Missing from cache → error; first `klin get github/klin-lang/osa@v0.1.0`
   (writes `klin.mod` + `klin.lock`).
 - `klin run` without network. Manifest: `klin.mod` (`require path ref`).
 - Lock: `klin.lock` — commit SHA + `sha256` of sources ([065](../issues/065-project-lockfile.md) ✅).
-- Fixture: https://github.com/MrHIDEn/osa ([063](../issues/063-remote-fixture-osa.md)).
+- Fixture: https://github.com/klin-lang/osa ([063](../issues/063-remote-fixture-osa.md)).
 
 `outdated` / `upgrade` → [066](../issues/066-klin-upgrade-outdated.md) ✅.
 

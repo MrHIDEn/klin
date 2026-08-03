@@ -5,24 +5,24 @@
 #
 # Tap (recommended):
 #   brew tap dart-lang/dart
-#   brew install mrhiden/klin/klin
-#   brew install --HEAD mrhiden/klin/klin
+#   brew install klin-lang/klin/klin
+#   brew install --HEAD klin-lang/klin/klin
 #
 # From this clone:
 #   brew install --formula Formula/klin.rb
 #   brew install --HEAD --formula Formula/klin.rb
-# See docs/17-homebrew.md. Keep in sync with MrHIDEn/homebrew-klin.
+# See docs/17-homebrew.md. Keep in sync with klin-lang/homebrew-klin.
 class Klin < Formula
   desc "Systems language that compiles to C"
-  homepage "https://github.com/MrHIDEn/klin"
+  homepage "https://github.com/klin-lang/klin"
   license "MIT"
   # Pin the version-bump commit: GitHub may serve a stale
   # refs/tags/v0.1.1.tar.gz after the tag was moved.
-  url "https://github.com/MrHIDEn/klin/archive/0ea3216c03ce496aa11a8b5877f907dca99c1424.tar.gz"
+  url "https://github.com/klin-lang/klin/archive/0ea3216c03ce496aa11a8b5877f907dca99c1424.tar.gz"
   sha256 "dcf378b733e4cb7ba8d6d5fbe92c3f370c354592898a245b1eefb5df31221151"
   version "0.1.1"
 
-  head "https://github.com/MrHIDEn/klin.git", branch: "main"
+  head "https://github.com/klin-lang/klin.git", branch: "main"
 
   depends_on "dart-lang/dart/dart" => :build
 

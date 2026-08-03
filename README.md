@@ -27,7 +27,7 @@ Roadmap: [`issues/sorted.md`](issues/sorted.md).
 ### From source (development)
 
 ```sh
-git clone https://github.com/MrHIDEn/klin.git
+git clone https://github.com/klin-lang/klin.git
 cd klin
 dart pub get
 dart run bin/klin.dart run examples/hello.kl
@@ -39,19 +39,19 @@ Use `dart run bin/klin.dart …` while developing. Details:
 
 ### Homebrew
 
-Tap: [`MrHIDEn/homebrew-klin`](https://github.com/MrHIDEn/homebrew-klin)
+Tap: [`klin-lang/homebrew-klin`](https://github.com/klin-lang/homebrew-klin)
 (needs the [Dart tap](https://github.com/dart-lang/homebrew-dart) to build).
 
-Short form (Homebrew auto-taps `mrhiden/klin`):
+Short form (Homebrew auto-taps `klin-lang/klin`):
 
 ```sh
 brew tap dart-lang/dart
-brew install mrhiden/klin/klin
+brew install klin-lang/klin/klin
 klin --version
 ```
 
-Or step by step: `brew tap mrhiden/klin` then `brew install klin`.
-Latest `main`: `brew install --HEAD mrhiden/klin/klin` (or `--HEAD klin` after tap).
+Or step by step: `brew tap klin-lang/klin` then `brew install klin`.
+Latest `main`: `brew install --HEAD klin-lang/klin/klin` (or `--HEAD klin` after tap).
 Upgrade: `brew upgrade klin`.
 
 Formula source of truth in this repo: [`Formula/klin.rb`](Formula/klin.rb)
@@ -72,7 +72,7 @@ dart run bin/klin.dart run examples/hello.kl
 dart run bin/klin.dart examples/hello.kl          # alias for run
 dart run bin/klin.dart fmt -w examples/hello.kl
 dart run bin/klin.dart test examples/
-dart run bin/klin.dart get github/mrhiden/osa@v0.1.0   # remote deps → cache + klin.mod / klin.lock
+dart run bin/klin.dart get github/klin-lang/osa@v0.1.0   # remote deps → cache + klin.mod / klin.lock
 dart run bin/klin.dart outdated                        # report newer remote tags
 dart run bin/klin.dart upgrade                         # bump outdated requires + fetch
 dart run bin/klin.dart --emit-c examples/hello.kl
@@ -105,7 +105,7 @@ Optional host I/O, strings, math, clocks, heap, and slice helpers: [`stdlib/`](s
 [docs/16-slice.md](docs/16-slice.md)).
 Klin libraries (`lib/`, `-I`, `$KLIN_PATH`; directory packages; import aliases
 `import geom oso` and string path imports `import "sub/osa"`; remote
-`import "github/mrhiden/osa"` after `klin get`):
+`import "github/klin-lang/osa"` after `klin get`):
 [docs/11-klin-libraries.md](docs/11-klin-libraries.md),
 [`examples/klin_lib/`](examples/klin_lib/), [`examples/pkg_geom/`](examples/pkg_geom/),
 [`examples/remote_osa/`](examples/remote_osa/).

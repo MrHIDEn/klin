@@ -1,4 +1,4 @@
-import "github/mrhiden/eventloop"
+import "github/klin-lang/eventloop"
 import io
 
 struct App {

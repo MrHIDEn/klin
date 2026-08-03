@@ -1,6 +1,6 @@
 # 067 — Homebrew: `brew install klin`
 
-**Status:** ✅ done (formula + CI + public tap [`homebrew-klin`](https://github.com/MrHIDEn/homebrew-klin) + tag `v0.1.0`)
+**Status:** ✅ done (formula + CI + public tap [`homebrew-klin`](https://github.com/klin-lang/homebrew-klin) + tag `v0.1.0`)
 **Depends on:** — (public releases unlock *stable*; HEAD works with repo access)
 
 ## Name
@@ -20,8 +20,8 @@ Stdlib discovery for binary / Homebrew `share/klin`: `lib/project.dart`.
 
 ```sh
 brew tap dart-lang/dart
-brew install mrhiden/klin/klin          # stable (tap MrHIDEn/homebrew-klin)
-brew install --HEAD mrhiden/klin/klin   # main
+brew install klin-lang/klin/klin          # stable (tap klin-lang/homebrew-klin)
+brew install --HEAD klin-lang/klin/klin   # main
 ```
 
 homebrew-core later.
@@ -35,7 +35,7 @@ homebrew-core later.
 - [x] release workflow on tag `v*`
 - [x] stdlib next to install (pkgshare + search paths)
 - [x] note + README
-- [x] operator step: public repo + tag `v0.1.0` + fill in sha256 + tap [`homebrew-klin`](https://github.com/MrHIDEn/homebrew-klin)
+- [x] operator step: public repo + tag `v0.1.0` + fill in sha256 + tap [`homebrew-klin`](https://github.com/klin-lang/homebrew-klin)
 
 ## Out of scope
 

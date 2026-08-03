@@ -2,13 +2,13 @@
 
 **Status:** ✅ done (MVP)
 **Depends on:** [048](048-import-aliases.md), [020](020-klin-libraries.md), [047](047-directory-modules.md);
-e2e fixture: [063](063-remote-fixture-osa.md) (`github/mrhiden/osa`, tag `v0.1.0`)
+e2e fixture: [063](063-remote-fixture-osa.md) (`github/klin-lang/osa`, tag `v0.1.0`)
 
 ## Syntax
 
 ```klin
-import "github/mrhiden/osa"       // qualifier = osa
-import "github/mrhiden/osa" oso   // qualifier = oso
+import "github/klin-lang/osa"       // qualifier = osa
+import "github/klin-lang/osa" oso   // qualifier = oso
 import "gitlab/owner/repo"        // second allowed host
 ```
 
@@ -23,7 +23,7 @@ import "gitlab/owner/repo"        // second allowed host
 
 ```text
 klin 1
-require github/mrhiden/osa v0.1.0
+require github/klin-lang/osa v0.1.0
 ```
 
 | Command | Meaning |

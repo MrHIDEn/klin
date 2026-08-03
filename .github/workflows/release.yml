@@ -100,7 +100,7 @@ jobs:
           # exists, compute: curl -sL "$URL" | shasum -a 256
           ver="${GITHUB_REF_NAME#v}"
           echo "After publish, fill Formula/klin.rb sha256 from:"
-          echo "  https://github.com/MrHIDEn/klin/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
+          echo "  https://github.com/klin-lang/klin/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
           echo "version: ${ver}"
 
   publish:

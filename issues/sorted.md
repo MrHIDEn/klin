@@ -76,7 +76,7 @@ building the core from scratch.
 | [044](044-cpu-cycles.md) | CPU cycles / SysTick → `Duration` | 💭 | 010 |
 | [048](048-import-aliases.md) | Import aliases (+ local string) | ✅ | 006, 047 |
 | [049](049-remote-imports.md) | Remote imports + `klin.mod` + `klin get` / `update` | ✅ | 048, 020, 047, 063 |
-| [063](063-remote-fixture-osa.md) | Remote fixture `mrhiden/osa` (e2e 049) | ✅ | 047 |
+| [063](063-remote-fixture-osa.md) | Remote fixture `klin-lang/osa` (e2e 049) | ✅ | 047 |
 | [065](065-project-lockfile.md) | `klin.lock` / checksums (like go.sum) | ✅ | 049 |
 | [066](066-klin-upgrade-outdated.md) | `klin upgrade` / outdated (newer deps) | ✅ | 049 |
 | [067](067-homebrew.md) | Homebrew: `brew install klin` (formula + tap + v0.1.0) | ✅ | — |

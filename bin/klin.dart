@@ -265,7 +265,7 @@ Future<void> _runGet(List<String> args, {required bool force}) async {
       if (!modFile.existsSync() || mod.isEmpty) {
         stderr.writeln(
           'klin $cmd: no klin.mod requires/devices; pass path[@ref] '
-          '(e.g. github/mrhiden/osa@v0.1.0 or '
+          '(e.g. github/klin-lang/osa@v0.1.0 or '
           'github/tinygo-org/stm32-svd/svd/stm32f411.svd@main)',
         );
         exit(2);

@@ -2,7 +2,7 @@
 
 **Status:** ✅ decided (external package; not Klin stdlib)
 **Depends on:** [010](010-bare-metal.md); nice to have [031](031-hal-libraries.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
-**Packages:** [`machine_stm32`](https://github.com/MrHIDEn/machine_stm32), [`machine_rp`](https://github.com/MrHIDEn/machine_rp) (RP2040 + RP2350 Arm/RISC-V Pin), [`machine_esp`](https://github.com/MrHIDEn/machine_esp) (ESP32-C3 Pin + minimal IDF blink)
+**Packages:** [`machine_stm32`](https://github.com/klin-lang/machine_stm32), [`machine_rp`](https://github.com/klin-lang/machine_rp) (RP2040 + RP2350 Arm/RISC-V Pin), [`machine_esp`](https://github.com/klin-lang/machine_esp) (ESP32-C3 Pin + minimal IDF blink)
 
 ## Verdict
 
@@ -10,7 +10,7 @@
 |---|---|
 | Change the Klin compiler? | **No** for the library itself |
 | Where does the code live? | External repos (not `stdlib/`): **`machine_stm32`**, **`machine_rp`**, **`machine_esp`** |
-| STM32? | **Yes** — [`machine_stm32`](https://github.com/MrHIDEn/machine_stm32) (MVP: `Pin` + blink) |
+| STM32? | **Yes** — [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (MVP: `Pin` + blink) |
 | RP2040 / RP2350? | **`machine_rp`** — RP2040 ✅; RP2350 Arm ✅; RP2350 RISC-V ✅ (`pin_out_rp2350` + `blink_pico2_riscv`) ([062](062-targets-esp-rp.md)) |
 | ESP32-C3? | **`machine_esp`** — Pin MMIO ✅; blink via **minimal ESP-IDF** (not freestanding); Wi‑Fi later ([062](062-targets-esp-rp.md)) |
 | Atmel / PIC? | Separate ports if/when needed — not one library for all MCUs |
@@ -23,7 +23,7 @@ Chosen over A/B: MicroPython-like **shape** (`Pin`, later `Pwm` / `Uart`), with 
 Repo / module name uses underscore (valid Klin identifier), same pattern as `osa` / `eventloop`:
 
 ```klin
-import "github/mrhiden/machine_stm32" machine
+import "github/klin-lang/machine_stm32" machine
 
 fn main() {
     let led = machine.pin_out(machine.Port.A, 5)
@@ -32,7 +32,7 @@ fn main() {
 ```
 
 ```sh
-klin get github/mrhiden/machine_stm32@main
+klin get github/klin-lang/machine_stm32@main
 ```
 
 ### Roadmap
@@ -145,7 +145,7 @@ Preference aligned with overarching rule: if C, then **explicit** clock tuning
 
 ## Links
 
-- Packages: https://github.com/MrHIDEn/machine_stm32 , https://github.com/MrHIDEn/machine_rp  
+- Packages: https://github.com/klin-lang/machine_stm32 , https://github.com/klin-lang/machine_rp  
 
 - MicroPython `machine`: https://docs.micropython.org/en/latest/library/machine.html  
 - Klin vendor HAL: [031](031-hal-libraries.md)  
