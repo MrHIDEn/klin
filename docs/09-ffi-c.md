@@ -114,6 +114,11 @@ runtime remap. Klin does **not** translate “TIM2” → symbol; you pass the f
 Worked example (STM32): [`examples/stm32/blink_f411/`](../examples/stm32/blink_f411/).
 Issue: [030](../issues/030-isr-decorators.md).
 
+FreeRTOS ISR → task: use
+[`klin_freertos`](https://github.com/klin-lang/klin_freertos) `@v0.3.0`
+(`queue_*_from_isr` / `semaphore_*_from_isr` + explicit `task_yield_from_isr`)
+with `@[isr("…")]` — no auto-yield ([028](../issues/028-freertos.md)).
+
 ## Comparison
 
 | | Import | Export | ISR |
