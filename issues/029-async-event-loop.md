@@ -1,9 +1,8 @@
 # 029 — Event loop / `async`·`await` (big beast)
 
-**Status:** 🔨 lib published (`github/klin-lang/eventloop@v0.3.0` — callbacks +
-`sleep_ms`/`spawn` + `$event_loop`); phase 4 **async/await MVP in core** ✅;
-phase 3 RTOS examples ✅ (manual + `$event_loop` sketches); IDE keywords /
-board blink still open
+**Status:** 🔨 lib published (`github/klin-lang/eventloop@v0.4.0` — callbacks +
+`sleep_ms`/`spawn` + `$event_loop` + `flag_wait`); phase 4 **async/await MVP in
+core** ✅; phase 3 RTOS examples ✅; IDE keywords / board blink still open
 **Depends on:** D1/D3 decisions; probably 018, 026, 028; remote lib → 049
 
 ## Question
@@ -405,8 +404,34 @@ Not in core: global default loop, auto-async `main`, Promise, hidden scheduler.
 5. **`$event_loop` lib macro** — ✅ `@v0.3.0` + host/RTOS examples
    ([`remote_eventloop_macro/`](../examples/remote_eventloop_macro/),
    [`freertos_eventloop_macro/`](../examples/freertos_eventloop_macro/)).
+6. **`flag_wait` / `FlagFuture`** — ✅ `@v0.4.0` (ISR/producer → `.await` via poll;
+   host smoke in the eventloop package `examples/flag_wait/`).
 
-Steps 2–3 do not wait for async. Steps 4–5 landed; IDE follow.
+Steps 2–3 do not wait for async. Steps 4–6 landed; IDE follow.
+
+### `flag_wait` / ISR (v0.4) — out of scope
+
+Shipped: one-shot `Flag` + `flag_wait(f).await` (auto-reset; `*mut volatile i32`
+accessors). ISR may call `flag_set` / `flag_clear` only (never `run` / `spawn` /
+`.await`); continuation on the next `run()` **poll** (not a JS Promise resolve /
+push-wake).
+
+**Out of scope for `@v0.4.0`:**
+
+- Value-returning `.await` / typed channel (`recv().await → T`)
+- JS-style Promise / microtask queue / hidden global loop
+- Waker / push-wake from ISR
+- WFI / `nanosleep` / low-power idle while Pending on a flag (busy-poll today)
+- FreeRTOS task wake from ISR — use [028](028-freertos.md) FromISR; `flag_wait`
+  does **not** replace it
+- Sticky / level-triggered flag (MVP = auto-reset one-shot)
+- `@[isr]` on `async fn` (forbidden — ISR and async stay separate)
+- Atomics / memory-order API beyond `volatile` 0/1
+- Multi-waiter on one flag (undefined)
+- Board demo with a real IRQ (stub/host only; hardware → 028/030)
+
+Package: [`github.com/klin-lang/eventloop`](https://github.com/klin-lang/eventloop)
+`@v0.4.0`.
 
 ## Technical hypotheses (aligned with phase 4 spec)
 
