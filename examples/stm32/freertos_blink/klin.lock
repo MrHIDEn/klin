@@ -1,0 +1,3 @@
+klin lock 1
+github/klin-lang/klin_freertos v0.3.0 d6dd2d60522d4b66b507e703ddd1614cb15812ad sha256:dc5dbc78229af65db2470af66be157c38a9e79798963fb64d6b052c4059e88f0
+github/klin-lang/machine_stm32 v0.5.0 587fdbea976ae8a6af433ce69c526605d5cafc3d sha256:d8e1f5385b7d9f7ad011965d6e6dc22a12272e70254eea677ddc21462317020f

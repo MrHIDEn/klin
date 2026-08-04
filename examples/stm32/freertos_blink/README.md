@@ -1,0 +1,63 @@
+# FreeRTOS blink — Nucleo-F411RE (issue 028)
+
+Board-shaped demo: **`klin_freertos` + `machine_stm32`**, ≥2 tasks, LED on **PA5**.
+
+| Piece | Role |
+|---|---|
+| `$rtos_task(blink, …)` | `pin_out(A, 5)` + `toggle` + `task_delay` |
+| `$rtos_task(heartbeat, …)` | second runnable (`task_delay` only) |
+| `startup.s` / `linker.ld` | same F411 pack as other STM32 examples |
+| `FreeRTOSConfig.h` | board config for `make elf` (not used by stubs) |
+| `freertos_stubs/` | emit-c / object compile without a kernel |
+
+## Prerequisites
+
+```sh
+# from this directory
+dart run ../../../bin/klin.dart get
+```
+
+Pins (`klin.mod`): `klin_freertos@v0.3.0`, `machine_stm32@v0.5.0`.
+
+Toolchain: `arm-none-eabi-gcc`.
+
+## Emit / compile check (stubs) — default CI path
+
+```sh
+make KLIN=/path/to/klin/bin/klin.dart
+# → out/blink.c out/blink.o
+```
+
+This does **not** link a scheduler. Stubs stand in for FreeRTOS headers only.
+
+## Board ELF (real FreeRTOS)
+
+1. Clone [FreeRTOS-Kernel](https://github.com/FreeRTOS/FreeRTOS-Kernel) (or use a
+   vendor pack with **GCC/ARM_CM4F**).
+2. This folder already has `FreeRTOSConfig.h` (HSI 16 MHz, 1 kHz tick, 16 KiB
+   heap — tune after PLL / clock setup).
+3. The FreeRTOS port provides **SVC / PendSV / SysTick** (`FreeRTOSConfig.h`
+   aliases the handlers; `startup.s` weak defaults are overridden at link).
+4. Link **without** `freertos_stubs` on `-I`:
+
+```sh
+make elf FREERTOS_DIR=/path/to/FreeRTOS-Kernel KLIN=…
+# → blink.elf
+```
+
+Adjust the `elf` recipe’s source list if your tree layout differs. Flash with
+OpenOCD / probe-rs / STM32CubeProgrammer.
+
+## Contract
+
+- No hidden allocation in Klin: stacks/prios are explicit in `$rtos_task`.
+- GPIO stays in `machine_stm32`; RTOS stays in `klin_freertos`.
+- FromISR / idle wake: separate APIs (`klin_freertos` `@v0.3.0`) — not this demo.
+
+## Links
+
+- Issue: [028](../../../issues/028-freertos.md)
+- Packages: [klin_freertos](https://github.com/klin-lang/klin_freertos),
+  [machine_stm32](https://github.com/klin-lang/machine_stm32)
+- Bare-metal Pin blink (no RTOS): [`../blink_f411/`](../blink_f411/),
+  [machine_stm32 examples/blink_f411](https://github.com/klin-lang/machine_stm32/tree/main/examples/blink_f411)

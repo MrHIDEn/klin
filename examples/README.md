@@ -77,3 +77,4 @@ are not valid Klin until expand — format `point.kl` (or `--emit-pp` output), n
 | [`stm32/`](stm32/) | Board pack index |
 | [`stm32/blink_f411/`](stm32/blink_f411/) | Nucleo-F411RE — local SVD |
 | [`stm32/device_f411/`](stm32/device_f411/) | Same via `$device` + `klin get` ([053](../issues/053-device-board-assets.md)) |
+| [`stm32/freertos_blink/`](stm32/freertos_blink/) | FreeRTOS ≥2 tasks + PA5 LED (`klin_freertos` + `machine_stm32`; [028](../issues/028-freertos.md)) |

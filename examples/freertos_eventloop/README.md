@@ -49,8 +49,8 @@ make -C examples/freertos_eventloop
 ```
 
 **Not** a host `klin run` demo: linking and running need a real FreeRTOS kernel,
-port, `FreeRTOSConfig.h`, and board/host bring-up. Board blink with LED remains
-[028](../../issues/028-freertos.md) (`examples/stm32/freertos_blink/` — open).
+port, `FreeRTOSConfig.h`, and board/host bring-up. Board blink with LED:
+[`../stm32/freertos_blink/`](../stm32/freertos_blink/) ([028](../../issues/028-freertos.md)).
 
 ### Wiring a real FreeRTOS
 
