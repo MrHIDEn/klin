@@ -1,7 +1,7 @@
 # 028 — Ergonomic FreeRTOS integration
 
-**Status:** 🔨 in progress (package + `$rtos_task` ✅; board blink / `FromISR` open)
-**Depends on:** 024, 010, 021, 022?; 026 welcome
+**Status:** 🔨 in progress (package + `$rtos_task` + `FromISR` ✅; board blink open)
+**Depends on:** 024, 010, 021, 022?; 026 welcome; 030 for `@[isr]`
 
 Separate from general [024](024-rtos.md) (FFI + "C API client" — settled).
 
@@ -23,9 +23,10 @@ Package: [`github.com/klin-lang/klin_freertos`](https://github.com/klin-lang/kli
 |---|---|
 | FFI: `task_*` / `queue_*` / `semaphore_*` | ✅ `@v0.1.0` |
 | `$rtos_task(name, stack, prio) { … }` | ✅ `@v0.2.0` (needs Klin path-import macros + `block`) |
-| smoke / emit-c stubs | ✅ |
+| `FromISR` + `task_yield_from_isr` | ✅ `@v0.3.0` (with [030](030-isr-decorators.md) `@[isr]`) |
+| smoke / emit-c stubs + `examples/from_isr/` | ✅ |
 | Board blink (≥2 tasks + LED) | open |
-| Static create / `FromISR` sugar | open ([030](030-isr-decorators.md)) |
+| Static create | open |
 
 ```klin
 import "github/klin-lang/klin_freertos" freertos
@@ -56,6 +57,36 @@ fn main() {
     freertos.task_start_scheduler()
 }
 ```
+
+### FromISR (✅ `@v0.3.0`)
+
+Thin FFI — same names as FreeRTOS, no Hungarian prefix, **no auto-yield**:
+
+| Klin | FreeRTOS |
+|---|---|
+| `queue_send_from_isr` / `queue_receive_from_isr` | `xQueueSendFromISR` / `xQueueReceiveFromISR` |
+| `semaphore_give_from_isr` / `semaphore_take_from_isr` | `xSemaphoreGiveFromISR` / `xSemaphoreTakeFromISR` |
+| `task_yield_from_isr` | `taskYIELD_FROM_ISR` |
+
+Contract (prime rule):
+
+- Pass `higher_priority_task_woken: *mut i32` (init with `pd_false()`).
+- After FromISR calls, pass the flag **by value** to `task_yield_from_isr`.
+- Combine with Klin `@[isr("Vector_Handler")]` ([030](030-isr-decorators.md)).
+
+```klin
+import "github/klin-lang/klin_freertos" freertos
+
+@[isr("USART2_IRQHandler")]
+fn usart2_irq() {
+    let mut woken: i32 = freertos.pd_false()
+    freertos.semaphore_give_from_isr(sem, &woken)
+    freertos.task_yield_from_isr(woken)
+}
+```
+
+Package pin: `klin get github/klin-lang/klin_freertos@v0.3.0`.
+Stub smoke: `klin_freertos/examples/from_isr/`.
 
 ## `klin_freertos` library vs task "decorators" (settled)
 
@@ -98,7 +129,7 @@ Event-loop in task: same macro approach — [029](029-async-event-loop.md)
 - Klin **does not** hide synchronization: no magical "async-safe" or
   automatic locks on globals
 - variants: explicit FFI `semaphore_take` / thin wrappers with visible cost;
-  `FromISR` separately
+  `FromISR` separately (✅ thin FFI above — still explicit)
 - event-loop **does not replace** mutex between tasks
 - prime rule: mutex = RTOS call / explicit section
 
@@ -111,5 +142,6 @@ Zephyr / RT-Thread: same FFI-client pattern possible later as separate packages.
 
 - [x] external package with task / delay / queue / mutex FFI
 - [x] `$rtos_task` sugar without hidden alloc
+- [x] `FromISR` FFI + explicit yield (no auto-yield) — `@v0.3.0`
 - [ ] `examples/stm32/freertos_blink/` (or Pico) — ≥2 tasks, delay, LED
 - [ ] no overhead vs C+FreeRTOS (`objdump` / behavior)

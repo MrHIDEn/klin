@@ -54,7 +54,7 @@ Docs: [docs/09-ffi-c.md](../docs/09-ffi-c.md) (ISR section + name table).
 - Generating the vector table in Klin (startup stays `.s` — 010)
 - Hidden prologues/epilogues other than C/ABI
 - `@[irq(IRQ_TIM2)]` bare-ident args / SVD interrupt name lookup (011/027)
-- FreeRTOS `FromISR` sugar (028)
+- FreeRTOS `FromISR` sugar beyond thin FFI (028 ✅ `@v0.3.0` + explicit yield)
 - Checker warnings on allocation inside ISR
 
 ## History
