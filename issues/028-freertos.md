@@ -1,6 +1,6 @@
 # 028 — Ergonomic FreeRTOS integration
 
-**Status:** 🔨 in progress (package + `$rtos_task` + `FromISR` + blink example ✅; static create / objdump open)
+**Status:** 🔨 in progress (package through static create ✅ `@v0.4.0`; objdump overhead open)
 **Depends on:** 024, 010, 021, 022?; 026 welcome; 030 for `@[isr]`
 
 Separate from general [024](024-rtos.md) (FFI + "C API client" — settled).
@@ -26,7 +26,7 @@ Package: [`github.com/klin-lang/klin_freertos`](https://github.com/klin-lang/kli
 | `FromISR` + `task_yield_from_isr` | ✅ `@v0.3.0` (with [030](030-isr-decorators.md) `@[isr]`) |
 | smoke / emit-c stubs + `examples/from_isr/` | ✅ |
 | Board blink (≥2 tasks + LED) | ✅ [`examples/stm32/freertos_blink/`](../examples/stm32/freertos_blink/) (emit-c / stubs always; `make elf FREERTOS_DIR=…` + `FreeRTOSConfig.h` for Nucleo) |
-| Static create | open |
+| Static create (no FreeRTOS heap) | ✅ `@v0.4.0` (`task_` / `queue_` / `semaphore_*_create_static`) |
 
 ```klin
 import "github/klin-lang/klin_freertos" freertos
@@ -93,6 +93,26 @@ For cooperative async waiting on an IRQ **signal** inside an event-loop task,
 `flag_wait` ([029](029-async-event-loop.md)). That is **not** a substitute for
 FromISR when waking / yielding a FreeRTOS task (idle/power).
 
+### Static create (✅ `@v0.4.0`)
+
+No FreeRTOS heap for the object — caller passes buffers as opaque `*mut void`
+(sizes from the port headers). Needs `configSUPPORT_STATIC_ALLOCATION`.
+
+- task: `StackType_t[stack_depth]` + `sizeof(StaticTask_t)`
+- queue: item storage (`length × item_size` bytes) + `sizeof(StaticQueue_t)`
+- semaphore: `sizeof(StaticSemaphore_t)`
+
+| Klin | FreeRTOS |
+|---|---|
+| `task_create_static` | `xTaskCreateStatic` |
+| `queue_create_static` | `xQueueCreateStatic` |
+| `semaphore_create_mutex_static` | `xSemaphoreCreateMutexStatic` |
+| `semaphore_create_binary_static` | `xSemaphoreCreateBinaryStatic` |
+
+`$rtos_task` still expands to heap `task_create` — static stays an explicit call.
+Package pin: `klin get github/klin-lang/klin_freertos@v0.4.0`.
+Smoke: `klin_freertos/examples/static_create/`.
+
 ## `klin_freertos` library vs task "decorators" (settled)
 
 Question: can external Klin lib (RTOS bindings, not stdlib — [024](024-rtos.md))
@@ -149,5 +169,5 @@ Zephyr / RT-Thread: same FFI-client pattern possible later as separate packages.
 - [x] `$rtos_task` sugar without hidden alloc
 - [x] `FromISR` FFI + explicit yield (no auto-yield) — `@v0.3.0`
 - [x] `examples/stm32/freertos_blink/` — ≥2 tasks, delay, LED (Nucleo-F411RE)
+- [x] static create FFI (no FreeRTOS heap for TCB/stack/queue/sem) — `@v0.4.0`
 - [ ] no overhead vs C+FreeRTOS (`objdump` / behavior)
-- [ ] static create (queues / tasks without FreeRTOS heap)
