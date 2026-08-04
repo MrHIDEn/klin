@@ -104,8 +104,8 @@ Scheme: `module_Type_method`, e.g. `geom_Vec2_translate`.
 character-for-character with the vector table (`TIM2_IRQHandler`, `SysTick_Handler`).
 
 ```
-@[codename("TIM2_IRQHandler")]
-pub fn on_timer() { counter += 1 }
+@[isr("TIM2_IRQHandler")]
+fn on_timer() { counter += 1 }
 ```
 
 Mangling must be collision-resistant against everything from `<stdio.h>`

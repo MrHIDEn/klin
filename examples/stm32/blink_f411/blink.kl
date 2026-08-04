@@ -1,6 +1,6 @@
 $peripherals_from_svd("../../../third_party/svd/stm32f411.svd", "RCC,GPIOA,STK")
 
-@[codename("SysTick_Handler")]
+@[isr("SysTick_Handler")]
 fn systick_handler() {
   GPIOA.ODR.ODR5.toggle()
 }

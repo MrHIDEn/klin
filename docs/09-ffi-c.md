@@ -5,9 +5,11 @@ Interop with C is **explicit declarations** in Klin, not a header parser.
 | Direction | Attributes | Example |
 |---|---|---|
 | **Import** C→Klin | `@[cimport]`, `@[cheader]`, `@[cinclude]`, `@[link]`, CLI `-l`/`-L` | [`examples/ffi_add/`](../examples/ffi_add/) |
-| **Export** Klin→C | `@[cexport, codename("…")]`; `codename` alone = ISR | [`examples/cexport_add/`](../examples/cexport_add/), STM32 blink |
+| **Export** Klin→C | `@[cexport, codename("…")]` | [`examples/cexport_add/`](../examples/cexport_add/) |
+| **ISR** (vector) | `@[isr("…")]` or `@[isr, codename("…")]` | [`examples/stm32/blink_f411/`](../examples/stm32/blink_f411/) |
 
-Issues: [021](../issues/021-c-libraries.md) (import/link), [045](../issues/045-cexport.md) (export).
+Issues: [021](../issues/021-c-libraries.md) (import/link), [045](../issues/045-cexport.md) (export),
+[030](../issues/030-isr-decorators.md) (ISR).
 
 ## Import (C → Klin)
 
@@ -59,7 +61,6 @@ fn add(a: i32, b: i32): i32 {
 
 - `@[cexport]` — `fn` **with body**; global symbol in C emission (not `static`)
 - `@[codename("…")]` — **required** with `cexport` (stable name for C)
-- `@[codename]` **without** `cexport` — still OK (ISR / startup), e.g. `@[codename("SysTick_Handler")]`
 - Do not combine `cexport` with `cimport`; do not apply `cexport` to `main`
 
 C calls the exported function by `codename`. Prototypes:
@@ -72,14 +73,32 @@ klin --emit-c --emit-h lib.kl        # .c + .h
 Example: [`examples/cexport_add/`](../examples/cexport_add/). Issue:
 [046](../issues/046-emit-h.md).
 
+## ISR (vector handlers)
+
+```klin
+@[isr("SysTick_Handler")]
+fn systick_handler() {
+    // short: toggle / flag / FromISR — no hidden prologue
+}
+```
+
+- `@[isr("ExactVectorName")]` — preferred; implies `codename` (global C symbol)
+- `@[isr, codename("…")]` — same with explicit `codename`
+- Bare `@[codename("…")]` still works (010)
+- Shape: free `fn`, no params, `void` / omitted return; startup `.s` owns the vector table
+- No `cimport` / `cexport` / `async` / `main`
+
+Issue: [030](../issues/030-isr-decorators.md). Example:
+[`examples/stm32/blink_f411/`](../examples/stm32/blink_f411/).
+
 ## Comparison
 
-| | Import | Export |
-|---|---|---|
-| Marker | `@[cimport]` | `@[cexport]` |
-| Body in Klin | no | yes |
-| C name | usually `@[codename]` | **required** `@[codename]` |
-| Typical use | libc / `.a` / HAL | Klin library, ISR |
+| | Import | Export | ISR |
+|---|---|---|---|
+| Marker | `@[cimport]` | `@[cexport]` | `@[isr("…")]` |
+| Body in Klin | no | yes | yes |
+| C name | usually `@[codename]` | **required** `@[codename]` | vector symbol |
+| Typical use | libc / `.a` / HAL | Klin library | startup vector |
 
 ## Contract
 
