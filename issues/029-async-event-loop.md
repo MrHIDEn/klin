@@ -412,8 +412,9 @@ Steps 2–3 do not wait for async. Steps 4–6 landed; IDE follow.
 ### `flag_wait` / ISR (v0.4) — out of scope
 
 Shipped: one-shot `Flag` + `flag_wait(f).await` (auto-reset; `*mut volatile i32`
-accessors). ISR may only `flag_set`; continuation on the next `run()` **poll**
-(not a JS Promise resolve / push-wake).
+accessors). ISR may call `flag_set` / `flag_clear` only (never `run` / `spawn` /
+`.await`); continuation on the next `run()` **poll** (not a JS Promise resolve /
+push-wake).
 
 **Out of scope for `@v0.4.0`:**
 
