@@ -1,6 +1,6 @@
 # 028 — Ergonomic FreeRTOS integration
 
-**Status:** 🔨 in progress (package + `$rtos_task` + `FromISR` + blink example ✅; static create / objdump open)
+**Status:** 🔨 in progress (package through static create ✅ `@v0.4.0`; objdump overhead open)
 **Depends on:** 024, 010, 021, 022?; 026 welcome; 030 for `@[isr]`
 
 Separate from general [024](024-rtos.md) (FFI + "C API client" — settled).
@@ -26,7 +26,7 @@ Package: [`github.com/klin-lang/klin_freertos`](https://github.com/klin-lang/kli
 | `FromISR` + `task_yield_from_isr` | ✅ `@v0.3.0` (with [030](030-isr-decorators.md) `@[isr]`) |
 | smoke / emit-c stubs + `examples/from_isr/` | ✅ |
 | Board blink (≥2 tasks + LED) | ✅ [`examples/stm32/freertos_blink/`](../examples/stm32/freertos_blink/) (emit-c / stubs always; `make elf FREERTOS_DIR=…` + `FreeRTOSConfig.h` for Nucleo) |
-| Static create | open |
+| Static create (no FreeRTOS heap) | ✅ `@v0.4.0` (`task_` / `queue_` / `semaphore_*_create_static`) |
 
 ```klin
 import "github/klin-lang/klin_freertos" freertos
