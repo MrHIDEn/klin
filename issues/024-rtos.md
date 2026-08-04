@@ -63,7 +63,7 @@ Reasons:
 - FreeRTOS already validates the Klin RTOS model; little new language learning
 - Zephyr’s build/DTS world is a larger integration cost than another thin FFI
 - No concrete project demand yet; prefer finishing FreeRTOS follow-ups
-  (board blink ✅ / static create ✅ `@v0.4.0` — [028](028-freertos.md); `FromISR` ✅ with [030](030-isr-decorators.md); objdump open)
+  (board blink + static create + objdump ✅ — [028](028-freertos.md); `FromISR` ✅ with [030](030-isr-decorators.md))
 
 Revisit when a real app targets Zephyr or RT-Thread — then a **separate**
 repo (not stdlib), same “C engine + Klin client” rules as FreeRTOS.

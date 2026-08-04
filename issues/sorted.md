@@ -66,7 +66,7 @@ building the core from scratch.
 | # | Task | Status | Depends on |
 |---|---|---|---|
 | [018](018-generators-yield.md) | Generators / `yield` | 💭 | 004+ |
-| [028](028-freertos.md) | FreeRTOS (`klin_freertos` ✅ `@v0.4.0` static create; blink ✅; objdump open) | 🔨 | 024, 010, 021, 030 |
+| [028](028-freertos.md) | FreeRTOS (`klin_freertos` ✅ `@v0.4.0`; blink + objdump vs C ✅) | ✅ | 024, 010, 021, 030 |
 | [029](029-async-event-loop.md) | Event loop / async·await (lib `@v0.4.0` + `flag_wait` ✅; `$event_loop` ✅; async MVP ✅; IDE ⏳) | 🔨 | 018?, 028?, 049? |
 | [030](030-isr-decorators.md) | Interrupts via decorators (`@[isr("…")]` MVP ✅) | ✅ | 010 |
 | [031](031-hal-libraries.md) | HAL libraries (Cube / LL) | 💭 | 010, 021 |
