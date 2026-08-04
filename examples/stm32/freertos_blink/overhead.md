@@ -3,7 +3,7 @@
 Same FreeRTOS-Kernel, `FreeRTOSConfig.h`, `CFLAGS`, linker script.
 Klin: `blink.kl` → `blink.elf`. C twin: `blink_ref.c` → `blink_ref.elf`.
 
-Generated: 2026-08-04T15:08Z
+Generated: 2026-08-04T15:12Z
 
 ## `size` (whole ELF)
 
@@ -57,7 +57,7 @@ Both should only call `vTaskDelay` in the loop — no Klin runtime.
 - FreeRTOS entry points are direct C calls (`vTaskDelay`, `xTaskCreate`,
   `vTaskStartScheduler`) — Klin FFI is thin `@[cimport]`, not a scheduler.
 - `task_heartbeat` (fair RTOS-only compare): Klin=12 B, C=12 B —
-  identical delay loop, direct `bl vTaskDelay`, no Klin runtime.
+  **equal** size; both disassemblies contain `vTaskDelay` (checked by compare.sh).
 - `task_blink` may differ: Klin uses `machine_stm32.Pin` helpers; C ref
   inlines PA5 MMIO. That is board HAL shape, not FreeRTOS tax.
 - Whole-ELF `.text`: Klin=3180, C=3124 (delta from Pin /

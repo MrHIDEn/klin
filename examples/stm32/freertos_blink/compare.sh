@@ -17,6 +17,11 @@ done
 
 OBJDUMP=${OBJDUMP:-arm-none-eabi-objdump}
 SIZE=${SIZE:-arm-none-eabi-size}
+NM=${NM:-arm-none-eabi-nm}
+
+command -v "$NM" >/dev/null || { echo "missing $NM" >&2; exit 1; }
+command -v "$OBJDUMP" >/dev/null || { echo "missing $OBJDUMP" >&2; exit 1; }
+command -v "$SIZE" >/dev/null || { echo "missing $SIZE" >&2; exit 1; }
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
@@ -24,12 +29,12 @@ trap 'rm -rf "$tmp"' EXIT
 sym_size() {
   local elf=$1 sym=$2 hex
   # nm -S: address size type name
-  hex=$(arm-none-eabi-nm -S "$elf" 2>/dev/null | awk -v s="$sym" '$4==s {print $2; exit}')
+  hex=$("$NM" -S "$elf" | awk -v s="$sym" '$4==s {print $2; exit}')
   if [[ -z "$hex" ]]; then
-    echo 0
-  else
-    printf '%d\n' "$((16#$hex))"
+    echo "symbol not found: $sym in $elf" >&2
+    exit 1
   fi
+  printf '%d\n' "$((16#$hex))"
 }
 
 dump_sym() {
@@ -39,7 +44,32 @@ dump_sym() {
     p && /^[0-9a-f]+ </ && $0 !~ s {exit}
     p {print}
   ' >"$dest"
+  if [[ ! -s "$dest" ]]; then
+    echo "empty disassembly for $sym in $elf" >&2
+    exit 1
+  fi
+  if ! grep -q 'vTaskDelay' "$dest"; then
+    echo "$sym in $elf does not call vTaskDelay" >&2
+    exit 1
+  fi
 }
+
+hb_k=$(sym_size "$KLIN_ELF" task_heartbeat)
+hb_r=$(sym_size "$REF_ELF" task_heartbeat)
+blink_k=$(sym_size "$KLIN_ELF" task_blink)
+blink_r=$(sym_size "$REF_ELF" task_blink)
+main_k=$(sym_size "$KLIN_ELF" main)
+main_r=$(sym_size "$REF_ELF" main)
+text_k=$("$SIZE" "$KLIN_ELF" | awk 'NR==2{print $1}')
+text_r=$("$SIZE" "$REF_ELF" | awk 'NR==2{print $1}')
+
+dump_sym "$KLIN_ELF" task_heartbeat "$tmp/klin_hb.txt"
+dump_sym "$REF_ELF" task_heartbeat "$tmp/ref_hb.txt"
+
+if [[ "$hb_k" -ne "$hb_r" ]]; then
+  echo "task_heartbeat size mismatch: Klin=${hb_k} C=${hb_r}" >&2
+  exit 1
+fi
 
 {
   echo "# FreeRTOS blink — Klin vs C overhead (issue 028)"
@@ -63,18 +93,14 @@ dump_sym() {
   echo
   echo "| Symbol | Klin | C ref |"
   echo "|---|---:|---:|"
-  for sym in task_blink task_heartbeat main; do
-    ks=$(sym_size "$KLIN_ELF" "$sym")
-    rs=$(sym_size "$REF_ELF" "$sym")
-    echo "| \`$sym\` | $ks | $rs |"
-  done
+  echo "| \`task_blink\` | $blink_k | $blink_r |"
+  echo "| \`task_heartbeat\` | $hb_k | $hb_r |"
+  echo "| \`main\` | $main_k | $main_r |"
   echo
   echo "## \`task_heartbeat\` disassembly (pure RTOS delay loop)"
   echo
   echo "Both should only call \`vTaskDelay\` in the loop — no Klin runtime."
   echo
-  dump_sym "$KLIN_ELF" task_heartbeat "$tmp/klin_hb.txt"
-  dump_sym "$REF_ELF" task_heartbeat "$tmp/ref_hb.txt"
   echo "### Klin"
   echo
   echo '```'
@@ -91,12 +117,8 @@ dump_sym() {
   echo
   echo "- FreeRTOS entry points are direct C calls (\`vTaskDelay\`, \`xTaskCreate\`,"
   echo "  \`vTaskStartScheduler\`) — Klin FFI is thin \`@[cimport]\`, not a scheduler."
-  hb_k=$(sym_size "$KLIN_ELF" task_heartbeat)
-  hb_r=$(sym_size "$REF_ELF" task_heartbeat)
-  text_k=$("$SIZE" "$KLIN_ELF" | awk 'NR==2{print $1}')
-  text_r=$("$SIZE" "$REF_ELF" | awk 'NR==2{print $1}')
   echo "- \`task_heartbeat\` (fair RTOS-only compare): Klin=${hb_k} B, C=${hb_r} B —"
-  echo "  identical delay loop, direct \`bl vTaskDelay\`, no Klin runtime."
+  echo "  **equal** size; both disassemblies contain \`vTaskDelay\` (checked by compare.sh)."
   echo "- \`task_blink\` may differ: Klin uses \`machine_stm32.Pin\` helpers; C ref"
   echo "  inlines PA5 MMIO. That is board HAL shape, not FreeRTOS tax."
   echo "- Whole-ELF \`.text\`: Klin=${text_k}, C=${text_r} (delta from Pin /"

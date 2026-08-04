@@ -24,6 +24,9 @@ FREERTOS_SRCS := \
 
 FREERTOS_INC := -I. -I$(FREERTOS_DIR)/include -I$(FREERTOS_DIR)/portable/GCC/ARM_CM4F
 
+# @[link] paths from emit (e.g. startup.s) — rebuild Klin ELF when they change.
+LINK_OBJS := $(shell test -f out/blink.link && cat out/blink.link)
+
 .PHONY: all clean emit elf ref compare
 
 all: out/blink.o
@@ -44,7 +47,7 @@ out/blink.o: out/blink.c
 	$(CC) $(CFLAGS) -c -I$(STUB_INC) -o out/blink.o out/blink.c
 
 # Real kernel only — do NOT put freertos_stubs on -I (would shadow FreeRTOS.h).
-elf: out/blink.c out/blink.link FreeRTOSConfig.h
+blink.elf: out/blink.c out/blink.link FreeRTOSConfig.h $(LINK_OBJS)
 	@test -n "$(FREERTOS_DIR)" || (echo "set FREERTOS_DIR to FreeRTOS-Kernel root"; exit 1)
 	@test -f "$(FREERTOS_DIR)/include/FreeRTOS.h" || \
 		(echo "FREERTOS_DIR missing include/FreeRTOS.h: $(FREERTOS_DIR)"; exit 1)
@@ -54,8 +57,10 @@ elf: out/blink.c out/blink.link FreeRTOSConfig.h
 		-o blink.elf
 	@echo "ok: blink.elf"
 
+elf: blink.elf
+
 # Hand-written C twin (same RTOS API surface as blink.kl).
-ref: blink_ref.c startup.s FreeRTOSConfig.h
+blink_ref.elf: blink_ref.c startup.s FreeRTOSConfig.h
 	@test -n "$(FREERTOS_DIR)" || (echo "set FREERTOS_DIR to FreeRTOS-Kernel root"; exit 1)
 	$(CC) $(CFLAGS) $(FREERTOS_INC) $(LDFLAGS) \
 		startup.s blink_ref.c \
@@ -63,7 +68,9 @@ ref: blink_ref.c startup.s FreeRTOSConfig.h
 		-o blink_ref.elf
 	@echo "ok: blink_ref.elf"
 
-compare: elf ref
+ref: blink_ref.elf
+
+compare: blink.elf blink_ref.elf
 	chmod +x compare.sh
 	./compare.sh blink.elf blink_ref.elf overhead.md
 	@echo "ok: overhead.md"
