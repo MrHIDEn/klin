@@ -2,21 +2,23 @@
 
 **Status:** ✅ decided (external package; not Klin stdlib)
 **Depends on:** [010](010-bare-metal.md); nice to have [031](031-hal-libraries.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
-**Packages:** [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` + `Rc` + `Uart` + `I2c` + `Spi` + `Adc` `@v0.5.0`), [`machine_rp`](https://github.com/klin-lang/machine_rp) (`Pin` + `Pwm` + `Rc` `@v0.5.0`), [`machine_esp`](https://github.com/klin-lang/machine_esp) (`Pin` + `Pwm` + `Rc` `@v0.3.0`), [`machine_xmega`](https://github.com/klin-lang/machine_xmega) (`Pin` `@v0.1.1`), [`machine_avr`](https://github.com/klin-lang/machine_avr) (`Pin` `@v0.1.0`), [`machine_pic16`](https://github.com/klin-lang/machine_pic16) (`Pin` `@v0.1.0`)
+**Packages:** [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin`…`Adc` `@v0.5.0`), [`machine_rp`](https://github.com/klin-lang/machine_rp) (`Pin`…`Adc` `@v0.6.0`), [`machine_esp`](https://github.com/klin-lang/machine_esp) (`Pin`…`Adc` `@v0.4.0`), [`machine_stm8`](https://github.com/klin-lang/machine_stm8) (`Pin`…`Adc` `@v0.2.0`), [`machine_xmega`](https://github.com/klin-lang/machine_xmega) (`Pin` `@v0.1.1`), [`machine_avr`](https://github.com/klin-lang/machine_avr) (`Pin` `@v0.1.0`), [`machine_pic16`](https://github.com/klin-lang/machine_pic16) (`Pin` `@v0.1.0`)
 
 ## Verdict
 
 | Question | Answer |
 |---|---|
 | Change the Klin compiler? | **No** for the library itself |
-| Where does the code live? | External repos (not `stdlib/`): **`machine_stm32`**, **`machine_rp`**, **`machine_esp`**, **`machine_xmega`**, **`machine_avr`**, **`machine_pic16`** |
-| STM32? | **Yes** — [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` + `Rc` + `Uart` + `I2c` + `Spi` + `Adc` `@v0.5.0`; F411/F401-class MMIO, no runtime chip detect) |
-| RP2040 / RP2350? | **`machine_rp`** — Pin ✅; **Pwm** ✅; **Rc** ✅ `@v0.5.0` (`rc_out` / `rc_out_rp2350`); ([062](062-targets-esp-rp.md)) |
-| ESP32-C3? | **`machine_esp`** — Pin ✅; **Pwm** ✅; **Rc** ✅ `@v0.3.0` (LEDC); blink/PWM/RC via **minimal ESP-IDF** boot; Wi‑Fi / freestanding later ([062](062-targets-esp-rp.md)) |
-| ATxmega? | **`machine_xmega`** — Pin ✅ `@v0.1.1` (ATxmega128A1U-class PORT MMIO; formerly `machine_atmel`); Pwm later |
-| megaAVR (Arduino Uno/Mega)? | **`machine_avr`** — Pin ✅ `@v0.1.0` (ATmega328P + ATmega2560 `DDRx`/`PORTx`/`PINx`); Pwm / tinyAVR later |
-| PIC16? | **`machine_pic16`** — Pin ✅ `@v0.1.0` (PIC16F18855-class enhanced mid-range `LAT`/`PORT`/`TRIS`/`ANSEL`); PIC18/24/32 separate |
+| Where does the code live? | External repos (not `stdlib/`): **`machine_stm32`**, **`machine_rp`**, **`machine_esp`**, **`machine_stm8`**, **`machine_xmega`**, **`machine_avr`**, **`machine_pic16`** |
+| STM32? | **Yes** — [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` + `Rc` + `Uart` + `I2c` + `Spi` + `Adc` `@v0.5.0`; F411/F401-class — **no HW DAC**) |
+| RP2040 / RP2350? | **`machine_rp`** — Pin+Pwm+Rc+Uart+I2c+Spi+Adc ✅ `@v0.6.0` (**no HW DAC**); ([062](062-targets-esp-rp.md)) |
+| ESP32-C3? | **`machine_esp`** — Pin+Pwm+Rc+Uart+I2c+Spi+Adc ✅ `@v0.4.0` (**no HW DAC** on C3); minimal ESP-IDF boot; Wi‑Fi / freestanding later ([062](062-targets-esp-rp.md)) |
+| STM8? | **`machine_stm8`** — Pin+Pwm+Rc+Uart+I2c+Spi+Adc ✅ `@v0.2.0` (STM8S103/S003; **no DAC**); ([062](062-targets-esp-rp.md)) |
+| ATxmega? | **`machine_xmega`** — Pin ✅ `@v0.1.1`; buses later |
+| megaAVR (Arduino Uno/Mega)? | **`machine_avr`** — Pin ✅ `@v0.1.0`; buses later |
+| PIC16? | **`machine_pic16`** — Pin ✅ `@v0.1.0`; buses later |
 | Other PIC? | Separate ports if/when needed — not one library for all MCUs |
+| DAC? | Only where the silicon has it — **not** on F411/F401, RP2040/2350, ESP32-C3, STM8S. F407-class / classic ESP32 later if needed. |
 | Approach | **C** (thin Klin package over explicit MMIO) — not A, not full vendor HAL as the API |
 
 Chosen over A/B: MicroPython-like **shape** (`Pin`, later `Pwm` / `Uart`), with no GC, no hidden heap, no hidden clock magic. Clock / startup / linker stay in the app (board pack later: [074](074-board-ioc-klin-mod.md), [075](075-board-pack-init-host.md)).
@@ -121,26 +123,41 @@ Examples: [`pwm_f411`](https://github.com/klin-lang/machine_stm32/tree/main/exam
 [`adc_f411`](https://github.com/klin-lang/machine_stm32/tree/main/examples/adc_f411),
 [`machine_rp/examples/pwm_pico`](https://github.com/klin-lang/machine_rp/tree/main/examples/pwm_pico),
 [`rc_pico`](https://github.com/klin-lang/machine_rp/tree/main/examples/rc_pico),
+[`uart_pico`](https://github.com/klin-lang/machine_rp/tree/main/examples/uart_pico),
+[`i2c_pico`](https://github.com/klin-lang/machine_rp/tree/main/examples/i2c_pico),
+[`spi_pico`](https://github.com/klin-lang/machine_rp/tree/main/examples/spi_pico),
+[`adc_pico`](https://github.com/klin-lang/machine_rp/tree/main/examples/adc_pico),
 [`machine_esp/examples/pwm_c3`](https://github.com/klin-lang/machine_esp/tree/main/examples/pwm_c3),
-[`rc_c3`](https://github.com/klin-lang/machine_esp/tree/main/examples/rc_c3).
+[`rc_c3`](https://github.com/klin-lang/machine_esp/tree/main/examples/rc_c3),
+[`machine_stm8/examples/rc_pd4`](https://github.com/klin-lang/machine_stm8/tree/main/examples/rc_pd4).
 
-`machine_rp` `@v0.5.0`:
+`machine_rp` `@v0.6.0`:
 
 ```klin
-// GPIO 25 → slice/channel from pin; sys_clk_hz explicit
 let led = machine.pwm_out(25, 6000000)
-led.freq(1000)
-led.duty_u16(32768)
-let servo = machine.rc_out(25, 6000000, 50, 1000, 2000)
-// RP2350: machine.pwm_out_rp2350 / machine.rc_out_rp2350
+let u = machine.uart_out(0, 0, 1, 125000000, 115200)
+let bus = machine.i2c_out(0, 4, 5, 125000000, 100000)
+let s = machine.spi_out(0, 18, 19, 16, 125000000, 1000000, 0)
+let adc = machine.adc_out(26, 0)
+// RP2350: *_rp2350 twins
 ```
 
-`machine_esp` `@v0.3.0`:
+`machine_esp` `@v0.4.0`:
 
 ```klin
-// GPIO 8, LEDC ch 0, timer 0, APB 80 MHz
 let led = machine.pwm_out(8, 0, 0, 80000000)
-let servo = machine.rc_out(8, 0, 0, 80000000, 50, 1000, 2000)
+let u = machine.uart_out(0, 21, 20, 80000000, 115200)
+let bus = machine.i2c_out(0, 8, 9, 40000000, 100000)  // XTAL clock for I2C
+let s = machine.spi_out(2, 6, 7, 2, 80000000, 1000000, 0)
+let adc = machine.adc_out(0, 0)
+```
+
+`machine_stm8` `@v0.2.0` (UART1 PD5/PD6; ADC 10-bit — `read_u12` name kept for parity):
+
+```klin
+let led = machine.pwm_out(machine.Port.D, 4, 1, 2000000)
+let u = machine.uart_out(1, machine.Port.D, 5, machine.Port.D, 6, 2000000, 115200)
+let adc = machine.adc_out(machine.Port.D, 2, 3)
 ```
 
 ### Roadmap
@@ -152,34 +169,38 @@ let servo = machine.rc_out(8, 0, 0, 80000000, 50, 1000, 2000)
 3. **Rc** (servo / RC pulse on Pwm) — ✅ `@v0.3.0` (`rc_f411`)  
 4. **Uart** (USART1/2/6, explicit clk/baud) — ✅ `@v0.4.0` (`uart_f411`)  
 5. **I2c** / **Spi** / **Adc** — ✅ `@v0.5.0` (`i2c_f411`, `spi_f411`, `adc_f411`)  
-6. Further peripherals / boards when needed  
+6. DAC only if/when targeting a chip that has it (not F411)  
 
 **`machine_rp`**
 
-1. **Pin** + blink RP2040 (Pico GPIO 25) — ✅  
-2. **Pin** + blink RP2350 Arm (Pico 2) — ✅ (`pin_out_rp2350`, `blink_pico2`)  
-3. **Pin** + blink RP2350 RISC-V — ✅ (`blink_pico2_riscv`, same Pin API)  
-4. **PWM** (`pwm_out` / `pwm_out_rp2350`) — ✅ `@v0.4.0`  
-5. **Rc** (`rc_out` / `rc_out_rp2350`) — ✅ `@v0.5.0` (`rc_pico`)  
-6. UART when needed  
+1. **Pin** + blink RP2040 / RP2350 — ✅  
+2. **PWM** / **Rc** — ✅ `@v0.4.0` / `@v0.5.0`  
+3. **Uart** / **I2c** / **Spi** / **Adc** — ✅ `@v0.6.0` (`uart_pico`, `i2c_pico`, `spi_pico`, `adc_pico`)  
+4. No DAC (silicon)  
 
 **`machine_esp`**
 
-1. **Pin** + blink ESP32-C3 (DevKitM-1 GPIO8) — ✅ (MMIO Pin; example boot via ESP-IDF)  
-2. **PWM** (LEDC MMIO) — ✅ `@v0.2.0` (`pwm_c3`)  
-3. **Rc** (LEDC) — ✅ `@v0.3.0` (`rc_c3`)  
-4. Freestanding (no IDF) / other ESP chips / UART / Wi‑Fi — later  
+1. **Pin** + blink ESP32-C3 — ✅  
+2. **PWM** / **Rc** (LEDC) — ✅ `@v0.2.0` / `@v0.3.0`  
+3. **Uart** / **I2c** / **Spi** / **Adc** — ✅ `@v0.4.0`  
+4. No DAC on C3; freestanding / Wi‑Fi / other ESP chips later  
+
+**`machine_stm8`**
+
+1. **Pin** / **Pwm** / **Rc** — ✅ `@v0.1.0`  
+2. **Uart** / **I2c** / **Spi** / **Adc** — ✅ `@v0.2.0`  
+3. No DAC on STM8S; SDCC link / STM8L later  
 
 **`machine_xmega`** (formerly `machine_atmel`)
 
 1. **Pin** + blink ATxmega (XMEGA-A1U Xplained PORTR.0) — ✅ `@v0.1.1` (`blink_xmega`)  
-2. **PWM** / **Rc** / UART — later  
+2. **PWM** / **Rc** / buses — later  
 
 **`machine_avr`**
 
 1. **Pin** + blink ATmega328P (Arduino Uno D13 = PB5) — ✅ `@v0.1.0` (`blink_uno`)  
 2. **Pin** + blink ATmega2560 (Arduino Mega D13 = PB7) — ✅ `@v0.1.0` (`blink_mega`, `pin_out_2560`)  
-3. **PWM** / **Rc** / UART / tinyAVR — later  
+3. **PWM** / **Rc** / buses / tinyAVR — later  
 
 **`machine_pic16`**
 
@@ -276,7 +297,8 @@ Preference aligned with overarching rule: if C, then **explicit** clock tuning
 
 ## Links
 
-- Packages: https://github.com/klin-lang/machine_stm32 , https://github.com/klin-lang/machine_rp , https://github.com/klin-lang/machine_esp , https://github.com/klin-lang/machine_xmega , https://github.com/klin-lang/machine_avr , https://github.com/klin-lang/machine_pic16  
+- Packages: https://github.com/klin-lang/machine_stm32 , https://github.com/klin-lang/machine_rp , https://github.com/klin-lang/machine_esp , https://github.com/klin-lang/machine_stm8 , https://github.com/klin-lang/machine_xmega , https://github.com/klin-lang/machine_avr , https://github.com/klin-lang/machine_pic16  
+
 
 
 
