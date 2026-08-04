@@ -1,6 +1,6 @@
 # 028 — Ergonomic FreeRTOS integration
 
-**Status:** 🔨 in progress (package + `$rtos_task` + `FromISR` ✅; board blink open)
+**Status:** 🔨 in progress (package + `$rtos_task` + `FromISR` + board blink ✅; static create open)
 **Depends on:** 024, 010, 021, 022?; 026 welcome; 030 for `@[isr]`
 
 Separate from general [024](024-rtos.md) (FFI + "C API client" — settled).
@@ -25,7 +25,7 @@ Package: [`github.com/klin-lang/klin_freertos`](https://github.com/klin-lang/kli
 | `$rtos_task(name, stack, prio) { … }` | ✅ `@v0.2.0` (needs Klin path-import macros + `block`) |
 | `FromISR` + `task_yield_from_isr` | ✅ `@v0.3.0` (with [030](030-isr-decorators.md) `@[isr]`) |
 | smoke / emit-c stubs + `examples/from_isr/` | ✅ |
-| Board blink (≥2 tasks + LED) | open |
+| Board blink (≥2 tasks + LED) | ✅ [`examples/stm32/freertos_blink/`](../examples/stm32/freertos_blink/) (emit-c / stubs; real kernel via `FREERTOS_DIR`) |
 | Static create | open |
 
 ```klin
@@ -148,5 +148,6 @@ Zephyr / RT-Thread: same FFI-client pattern possible later as separate packages.
 - [x] external package with task / delay / queue / mutex FFI
 - [x] `$rtos_task` sugar without hidden alloc
 - [x] `FromISR` FFI + explicit yield (no auto-yield) — `@v0.3.0`
-- [ ] `examples/stm32/freertos_blink/` (or Pico) — ≥2 tasks, delay, LED
+- [x] `examples/stm32/freertos_blink/` — ≥2 tasks, delay, LED (Nucleo-F411RE)
 - [ ] no overhead vs C+FreeRTOS (`objdump` / behavior)
+- [ ] static create (queues / tasks without FreeRTOS heap)

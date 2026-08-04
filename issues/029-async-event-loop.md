@@ -2,7 +2,7 @@
 
 **Status:** 🔨 lib published (`github/klin-lang/eventloop@v0.4.0` — callbacks +
 `sleep_ms`/`spawn` + `$event_loop` + `flag_wait`); phase 4 **async/await MVP in
-core** ✅; phase 3 RTOS examples ✅; IDE keywords / board blink still open
+core** ✅; phase 3 RTOS examples ✅; IDE keywords still open (board blink → [028](028-freertos.md) ✅)
 **Depends on:** D1/D3 decisions; probably 018, 026, 028; remote lib → 049
 
 ## Question
@@ -398,7 +398,7 @@ Not in core: global default loop, auto-async `main`, Promise, hidden scheduler.
    Manual: [`freertos_eventloop/`](../examples/freertos_eventloop/) +  
    [`freertos_eventloop_async/`](../examples/freertos_eventloop_async/).  
    `$event_loop`: [`freertos_eventloop_macro/`](../examples/freertos_eventloop_macro/).  
-   Real kernel / board blink still [028](028-freertos.md).  
+   Board blink: [`stm32/freertos_blink/`](../examples/stm32/freertos_blink/) ([028](028-freertos.md) ✅).  
 4. **`async`/`await` in core** + lib `sleep_ms`/`spawn` — ✅ MVP
    (`eventloop@v0.2.0`+). IDE keywords still open.  
 5. **`$event_loop` lib macro** — ✅ `@v0.3.0` + host/RTOS examples

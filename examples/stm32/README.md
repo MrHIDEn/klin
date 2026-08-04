@@ -10,6 +10,7 @@ each folder has `startup.s`, `linker.ld`, and a Makefile for
 |---|---|
 | [`blink_f411/`](blink_f411/) | Nucleo-F411RE LED — local SVD via `$peripherals_from_svd` |
 | [`device_f411/`](device_f411/) | Same blink — remote `$device` + `klin get` ([053](../../issues/053-device-board-assets.md)) |
+| [`freertos_blink/`](freertos_blink/) | FreeRTOS ≥2 tasks + PA5 via `machine_stm32` ([028](../../issues/028-freertos.md)) |
 
 ## Why
 

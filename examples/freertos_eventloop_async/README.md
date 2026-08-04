@@ -45,7 +45,7 @@ make -C examples/freertos_eventloop_async
 ```
 
 **Not** a host `klin run` demo without a real FreeRTOS kernel. Board LED demo:
-[028](../../issues/028-freertos.md).
+[`../stm32/freertos_blink/`](../stm32/freertos_blink/) ([028](../../issues/028-freertos.md)).
 
 ### Wiring a real FreeRTOS
 
