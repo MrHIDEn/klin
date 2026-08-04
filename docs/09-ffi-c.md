@@ -75,8 +75,12 @@ Example: [`examples/cexport_add/`](../examples/cexport_add/). Issue:
 
 ## ISR (vector handlers)
 
+**Not STM32-only.** `@[isr("…")]` works on any MCU whose startup / CRT exports a
+C symbol for the IRQ. Klin emits that global function; the **vector table stays
+in `.s` / vendor CRT** ([010](../issues/010-bare-metal.md)).
+
 ```klin
-@[isr("SysTick_Handler")]
+@[isr("SysTick_Handler")]   // string = exact linker symbol from your startup
 fn systick_handler() {
     // short: toggle / flag / FromISR — no hidden prologue
 }
@@ -85,11 +89,30 @@ fn systick_handler() {
 - `@[isr("ExactVectorName")]` — preferred; implies `codename` (global C symbol)
 - `@[isr, codename("…")]` — same with explicit `codename`
 - Bare `@[codename("…")]` still works (010)
-- Shape: free `fn`, no params, `void` / omitted return; startup `.s` owns the vector table
+- Shape: free `fn`, no params, `void` / omitted return
 - No `cimport` / `cexport` / `async` / `main`
 
-Issue: [030](../issues/030-isr-decorators.md). Example:
-[`examples/stm32/blink_f411/`](../examples/stm32/blink_f411/).
+### How to pick the name (any chip)
+
+1. Open your **startup** (`.s` / `.S`) or vendor vector header and copy the
+   handler symbol **character-for-character**.
+2. Put that string in `@[isr("…")]`.
+3. Link the same startup (`@[link("startup.s")]` or board Makefile / CRT).
+4. Confirm with `nm` / `objdump` that the symbol is defined (not only referenced).
+
+| Family (examples) | Typical symbol | Where to look |
+|---|---|---|
+| STM32 (CMSIS) | `SysTick_Handler`, `TIM2_IRQHandler` | `startup_*.s`, CMSIS |
+| megaAVR / ATxmega | `USART_RX_vect`, `TIMER1_COMPA_vect` | avr-libc `ISR()` / vectors |
+| RP2040 / RP2350 | e.g. IRQ handler names from pico-sdk / custom `.s` | SDK / your startup |
+| ESP32-C3 | IDF / custom vector names | ESP-IDF or freestanding CRT |
+| PIC16 (XC8) | depends on CRT / interrupt mode | XC8 docs / custom startup |
+
+Wrong spelling → link error or a default weak handler (chip-dependent), not a Klin
+runtime remap. Klin does **not** translate “TIM2” → symbol; you pass the final name.
+
+Worked example (STM32): [`examples/stm32/blink_f411/`](../examples/stm32/blink_f411/).
+Issue: [030](../issues/030-isr-decorators.md).
 
 ## Comparison
 
