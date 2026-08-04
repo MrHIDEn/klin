@@ -96,8 +96,11 @@ FromISR when waking / yielding a FreeRTOS task (idle/power).
 ### Static create (✅ `@v0.4.0`)
 
 No FreeRTOS heap for the object — caller passes buffers as opaque `*mut void`
-(sized with `sizeof(StaticTask_t)` / `StackType_t[N]` / `StaticQueue_t` /
-`StaticSemaphore_t` from the port). Needs `configSUPPORT_STATIC_ALLOCATION`.
+(sizes from the port headers). Needs `configSUPPORT_STATIC_ALLOCATION`.
+
+- task: `StackType_t[stack_depth]` + `sizeof(StaticTask_t)`
+- queue: item storage (`length × item_size` bytes) + `sizeof(StaticQueue_t)`
+- semaphore: `sizeof(StaticSemaphore_t)`
 
 | Klin | FreeRTOS |
 |---|---|
