@@ -48,6 +48,19 @@ make elf FREERTOS_DIR=/path/to/FreeRTOS-Kernel KLIN=…
 Adjust the `elf` recipe’s source list if your tree layout differs. Flash with
 OpenOCD / probe-rs / STM32CubeProgrammer.
 
+## Overhead vs C (issue 028)
+
+Hand-written twin: [`blink_ref.c`](blink_ref.c). Same FreeRTOS tree / flags:
+
+```sh
+make compare FREERTOS_DIR=/path/to/FreeRTOS-Kernel KLIN=…
+# → blink.elf, blink_ref.elf, overhead.md
+```
+
+Snapshot: [`overhead.md`](overhead.md) — `task_heartbeat` is **12 bytes** on both
+(direct `vTaskDelay` loop); whole `.text` differs by tens of bytes (Pin helpers
+vs inlined MMIO), not a Klin scheduler tax.
+
 ## Contract
 
 - No hidden allocation in Klin: stacks/prios are explicit in `$rtos_task`.

@@ -1,6 +1,6 @@
 # 028 — Ergonomic FreeRTOS integration
 
-**Status:** 🔨 in progress (package through static create ✅ `@v0.4.0`; objdump overhead open)
+**Status:** ✅ done (`klin_freertos` through `@v0.4.0` + blink + objdump vs C)
 **Depends on:** 024, 010, 021, 022?; 026 welcome; 030 for `@[isr]`
 
 Separate from general [024](024-rtos.md) (FFI + "C API client" — settled).
@@ -170,4 +170,5 @@ Zephyr / RT-Thread: same FFI-client pattern possible later as separate packages.
 - [x] `FromISR` FFI + explicit yield (no auto-yield) — `@v0.3.0`
 - [x] `examples/stm32/freertos_blink/` — ≥2 tasks, delay, LED (Nucleo-F411RE)
 - [x] static create FFI (no FreeRTOS heap for TCB/stack/queue/sem) — `@v0.4.0`
-- [ ] no overhead vs C+FreeRTOS (`objdump` / behavior)
+- [x] no overhead vs C+FreeRTOS — [`examples/stm32/freertos_blink/overhead.md`](../examples/stm32/freertos_blink/overhead.md)
+  (`make compare`; `task_heartbeat` 12 B Klin = 12 B C, direct `vTaskDelay`)
