@@ -297,7 +297,8 @@ Preference aligned with overarching rule: if C, then **explicit** clock tuning
 
 ## Links
 
-- Packages: https://github.com/klin-lang/machine_stm32 , https://github.com/klin-lang/machine_rp , https://github.com/klin-lang/machine_esp , https://github.com/klin-lang/machine_xmega , https://github.com/klin-lang/machine_avr , https://github.com/klin-lang/machine_pic16  
+- Packages: https://github.com/klin-lang/machine_stm32 , https://github.com/klin-lang/machine_rp , https://github.com/klin-lang/machine_esp , https://github.com/klin-lang/machine_stm8 , https://github.com/klin-lang/machine_xmega , https://github.com/klin-lang/machine_avr , https://github.com/klin-lang/machine_pic16  
+
 
 
 
