@@ -81,8 +81,9 @@ Same *method names* across `machine_*` ports; **separate MMIO** per MCU
 | `writeto` / `readfrom_into` / `write_readfrom_into` | blocking; caller buffers (`[]u8`, no heap) |
 | `spi_out(…, spi_clk_hz, baud_hz, mode)` | SPI master — soft NSS; CS is a separate `Pin` |
 | `write_read_u8` / `write` / `readinto` / `write_readinto` | full-duplex / fill buffer |
-| `adc_out(port, num, channel)` | ADC — channel explicit (no hidden pin map) |
-| `read_u12` / `read_u16` | raw `0..=4095` / MicroPython-scaled `0..=65535` |
+| `adc_out(…)` | ADC — stm32/stm8/avr/xmega/pic16 `(port, num, channel)`; rp/esp `(gpio, channel)` |
+| `read_u12` / `read_u16` | raw (12-bit `0..=4095` on stm32/rp/esp/xmega; **10-bit** `0..=1023` on stm8/avr/pic16) / scaled `0..=65535` |
+| `dac_out(…)` / `write_u12` | only where HW exists — xmega DACB (12-bit); pic16 DAC1 (**5-bit** HW, `write_u12` scales) |
 
 `machine_stm32` `@v0.5.0`:
 
