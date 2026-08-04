@@ -47,7 +47,7 @@ out/blink.o: out/blink.c
 	$(CC) $(CFLAGS) -c -I$(STUB_INC) -o out/blink.o out/blink.c
 
 # Real kernel only — do NOT put freertos_stubs on -I (would shadow FreeRTOS.h).
-blink.elf: out/blink.c out/blink.link FreeRTOSConfig.h $(LINK_OBJS)
+blink.elf: out/blink.c out/blink.link FreeRTOSConfig.h linker.ld $(LINK_OBJS)
 	@test -n "$(FREERTOS_DIR)" || (echo "set FREERTOS_DIR to FreeRTOS-Kernel root"; exit 1)
 	@test -f "$(FREERTOS_DIR)/include/FreeRTOS.h" || \
 		(echo "FREERTOS_DIR missing include/FreeRTOS.h: $(FREERTOS_DIR)"; exit 1)
