@@ -7,6 +7,7 @@ Board-shaped demo: **`klin_freertos` + `machine_stm32`**, ≥2 tasks, LED on **P
 | `$rtos_task(blink, …)` | `pin_out(A, 5)` + `toggle` + `task_delay` |
 | `$rtos_task(heartbeat, …)` | second runnable (`task_delay` only) |
 | `startup.s` / `linker.ld` | same F411 pack as other STM32 examples |
+| `FreeRTOSConfig.h` | board config for `make elf` (not used by stubs) |
 | `freertos_stubs/` | emit-c / object compile without a kernel |
 
 ## Prerequisites
@@ -18,9 +19,9 @@ dart run ../../../bin/klin.dart get
 
 Pins (`klin.mod`): `klin_freertos@v0.3.0`, `machine_stm32@v0.5.0`.
 
-Toolchain for the default target: `arm-none-eabi-gcc`.
+Toolchain: `arm-none-eabi-gcc`.
 
-## Emit / compile check (stubs)
+## Emit / compile check (stubs) — default CI path
 
 ```sh
 make KLIN=/path/to/klin/bin/klin.dart
@@ -31,21 +32,21 @@ This does **not** link a scheduler. Stubs stand in for FreeRTOS headers only.
 
 ## Board ELF (real FreeRTOS)
 
-1. Obtain FreeRTOS kernel + **GCC/ARM_CM4F** port (vendor pack or
-   [FreeRTOS-Kernel](https://github.com/FreeRTOS/FreeRTOS-Kernel)).
-2. Add a board `FreeRTOSConfig.h` (tick rate, heap, priorities) on the include
-   path — replace or extend `-I freertos_stubs` with your config + kernel
-   `include/`.
-3. The FreeRTOS port must provide **SVC / PendSV / SysTick** (our `startup.s`
-   only has weak defaults).
-4. Link:
+1. Clone [FreeRTOS-Kernel](https://github.com/FreeRTOS/FreeRTOS-Kernel) (or use a
+   vendor pack with **GCC/ARM_CM4F**).
+2. This folder already has `FreeRTOSConfig.h` (HSI 16 MHz, 1 kHz tick, 16 KiB
+   heap — tune after PLL / clock setup).
+3. The FreeRTOS port provides **SVC / PendSV / SysTick** (`FreeRTOSConfig.h`
+   aliases the handlers; `startup.s` weak defaults are overridden at link).
+4. Link **without** `freertos_stubs` on `-I`:
 
 ```sh
 make elf FREERTOS_DIR=/path/to/FreeRTOS-Kernel KLIN=…
+# → blink.elf
 ```
 
-Adjust the `elf` recipe’s source list if your tree layout differs. Flash
-`blink.elf` with your usual Nucleo tool (OpenOCD / probe-rs / STM32CubeProgrammer).
+Adjust the `elf` recipe’s source list if your tree layout differs. Flash with
+OpenOCD / probe-rs / STM32CubeProgrammer.
 
 ## Contract
 
