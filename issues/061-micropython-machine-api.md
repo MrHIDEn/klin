@@ -2,7 +2,7 @@
 
 **Status:** ✅ decided (external package; not Klin stdlib)
 **Depends on:** [010](010-bare-metal.md); nice to have [031](031-hal-libraries.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
-**Packages:** [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin`…`Adc` `@v0.5.0`), [`machine_rp`](https://github.com/klin-lang/machine_rp) (`Pin`…`Adc` `@v0.6.0`), [`machine_esp`](https://github.com/klin-lang/machine_esp) (`Pin`…`Adc` `@v0.4.0`), [`machine_stm8`](https://github.com/klin-lang/machine_stm8) (`Pin`…`Adc` `@v0.2.0`), [`machine_xmega`](https://github.com/klin-lang/machine_xmega) (`Pin` `@v0.1.1`), [`machine_avr`](https://github.com/klin-lang/machine_avr) (`Pin` `@v0.1.0`), [`machine_pic16`](https://github.com/klin-lang/machine_pic16) (`Pin` `@v0.1.0`)
+**Packages:** [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin`…`Adc` `@v0.5.0`), [`machine_rp`](https://github.com/klin-lang/machine_rp) (`Pin`…`Adc` `@v0.6.0`), [`machine_esp`](https://github.com/klin-lang/machine_esp) (`Pin`…`Adc` `@v0.4.0`), [`machine_stm8`](https://github.com/klin-lang/machine_stm8) (`Pin`…`Adc` `@v0.2.0`), [`machine_avr`](https://github.com/klin-lang/machine_avr) (`Pin` 328P+2560; `Pwm`…`Adc` **328P** `@v0.2.0`), [`machine_xmega`](https://github.com/klin-lang/machine_xmega) (`Pin`…`Dac` `@v0.2.0`), [`machine_pic16`](https://github.com/klin-lang/machine_pic16) (`Pin`…`Dac` `@v0.2.0`)
 
 ## Verdict
 
@@ -14,11 +14,11 @@
 | RP2040 / RP2350? | **`machine_rp`** — Pin+Pwm+Rc+Uart+I2c+Spi+Adc ✅ `@v0.6.0` (**no HW DAC**); ([062](062-targets-esp-rp.md)) |
 | ESP32-C3? | **`machine_esp`** — Pin+Pwm+Rc+Uart+I2c+Spi+Adc ✅ `@v0.4.0` (**no HW DAC** on C3); minimal ESP-IDF boot; Wi‑Fi / freestanding later ([062](062-targets-esp-rp.md)) |
 | STM8? | **`machine_stm8`** — Pin+Pwm+Rc+Uart+I2c+Spi+Adc ✅ `@v0.2.0` (STM8S103/S003; **no DAC**); ([062](062-targets-esp-rp.md)) |
-| ATxmega? | **`machine_xmega`** — Pin ✅ `@v0.1.1`; buses later |
-| megaAVR (Arduino Uno/Mega)? | **`machine_avr`** — Pin ✅ `@v0.1.0`; buses later |
-| PIC16? | **`machine_pic16`** — Pin ✅ `@v0.1.0`; buses later |
+| ATxmega? | **`machine_xmega`** — Pin+Pwm+Rc+Uart+I2c+Spi+Adc+**Dac** ✅ `@v0.2.0` (ATxmega128A1U-class; DACB) |
+| megaAVR (Arduino Uno/Mega)? | **`machine_avr`** — Pin ✅ 328P+2560; **Pwm…Adc** ✅ **328P only** `@v0.2.0` (**no DAC**; 2560 bus factories later) |
+| PIC16? | **`machine_pic16`** — Pin+Pwm+Rc+Uart+I2c+Spi+Adc+**Dac** ✅ `@v0.2.0` (PIC16F18855; PPS explicit; DAC1 5-bit HW) |
 | Other PIC? | Separate ports if/when needed — not one library for all MCUs |
-| DAC? | Only where the silicon has it — **not** on F411/F401, RP2040/2350, ESP32-C3, STM8S. F407-class / classic ESP32 later if needed. |
+| DAC? | Only where the silicon has it — **yes** on ATxmega (DACB) and PIC16F18855 (DAC1); **not** on F411/F401, RP2040/2350, ESP32-C3, STM8S, megaAVR 328P/2560. F407-class / classic ESP32 later if needed. |
 | Approach | **C** (thin Klin package over explicit MMIO) — not A, not full vendor HAL as the API |
 
 Chosen over A/B: MicroPython-like **shape** (`Pin`, later `Pwm` / `Uart`), with no GC, no hidden heap, no hidden clock magic. Clock / startup / linker stay in the app (board pack later: [074](074-board-ioc-klin-mod.md), [075](075-board-pack-init-host.md)).
@@ -62,8 +62,6 @@ Same *method names* across `machine_*` ports; **separate MMIO** per MCU
 | `pulse_us(us)` | raw pulse width |
 | `deinit()` | stop underlying PWM |
 
-Pin-only ports (`machine_avr` / `xmega` / `pic16`) have no `rc_out` until they get Pwm.
-
 ### Uart shape (shared convention)
 
 | Piece | Role |
@@ -83,8 +81,9 @@ Pin-only ports (`machine_avr` / `xmega` / `pic16`) have no `rc_out` until they g
 | `writeto` / `readfrom_into` / `write_readfrom_into` | blocking; caller buffers (`[]u8`, no heap) |
 | `spi_out(…, spi_clk_hz, baud_hz, mode)` | SPI master — soft NSS; CS is a separate `Pin` |
 | `write_read_u8` / `write` / `readinto` / `write_readinto` | full-duplex / fill buffer |
-| `adc_out(port, num, channel)` | ADC — channel explicit (no hidden pin map) |
-| `read_u12` / `read_u16` | raw `0..=4095` / MicroPython-scaled `0..=65535` |
+| `adc_out(…)` | ADC — stm32/stm8/avr/xmega/pic16 `(port, num, channel)`; rp/esp `(gpio, channel)` |
+| `read_u12` / `read_u16` | raw (12-bit `0..=4095` on stm32/rp/esp/xmega; **10-bit** `0..=1023` on stm8/avr/pic16) / scaled `0..=65535` |
+| `dac_out(…)` / `write_u12` | only where HW exists — xmega DACB (12-bit); pic16 DAC1 (**5-bit** HW, `write_u12` scales) |
 
 `machine_stm32` `@v0.5.0`:
 
@@ -160,6 +159,32 @@ let u = machine.uart_out(1, machine.Port.D, 5, machine.Port.D, 6, 2000000, 11520
 let adc = machine.adc_out(machine.Port.D, 2, 3)
 ```
 
+`machine_avr` `@v0.2.0` (**ATmega328P** USART0 / TWI / SPI / ADC10; **no DAC**; 2560 = Pin only):
+
+```klin
+let pwm = machine.pwm_out(machine.Port.B, 1, 1, 1, 16000000) // Uno PB1 OC1A
+let u = machine.uart_out(machine.Port.D, 1, machine.Port.D, 0, 16000000, 9600)
+let adc = machine.adc_out(machine.Port.C, 0, 0)
+```
+
+`machine_xmega` `@v0.2.0` (TCC0 / USARTC0 / TWIC / SPIC / ADCA / **DACB**; `remap` explicit):
+
+```klin
+let pwm = machine.pwm_out(machine.Port.C, 0, 0, 1, 0, 32000000)
+let u = machine.uart_out(machine.Port.C, 3, machine.Port.C, 2, 0, 32000000, 115200)
+let dac = machine.dac_out(machine.Port.B, 2, 0)
+dac.write_u12(2048)
+```
+
+`machine_pic16` `@v0.2.0` (CCP1+TMR2 / EUSART / MSSP / ADC10 / **DAC1**; PPS explicit):
+
+```klin
+let pwm = machine.pwm_out(machine.Port.C, 0, 1, machine.pps_ccp1(), 32000000)
+let u = machine.uart_out(machine.Port.C, 0, machine.pps_tx(), machine.Port.C, 1, 32000000, 115200)
+let dac = machine.dac_out(machine.Port.A, 2, 0)
+dac.write_u12(2048)
+```
+
 ### Roadmap
 
 **`machine_stm32`**
@@ -194,18 +219,22 @@ let adc = machine.adc_out(machine.Port.D, 2, 3)
 **`machine_xmega`** (formerly `machine_atmel`)
 
 1. **Pin** + blink ATxmega (XMEGA-A1U Xplained PORTR.0) — ✅ `@v0.1.1` (`blink_xmega`)  
-2. **PWM** / **Rc** / buses — later  
+2. **Pwm** / **Rc** / **Uart** / **I2c** / **Spi** / **Adc** / **Dac** — ✅ `@v0.2.0`  
 
 **`machine_avr`**
 
 1. **Pin** + blink ATmega328P (Arduino Uno D13 = PB5) — ✅ `@v0.1.0` (`blink_uno`)  
 2. **Pin** + blink ATmega2560 (Arduino Mega D13 = PB7) — ✅ `@v0.1.0` (`blink_mega`, `pin_out_2560`)  
-3. **PWM** / **Rc** / buses / tinyAVR — later  
+3. **Pwm** / **Rc** / **Uart** / **I2c** / **Spi** / **Adc** — ✅ `@v0.2.0` (**328P MMIO**; no DAC)  
+4. ATmega2560 bus factories / tinyAVR / AVR Dx — later  
+
 
 **`machine_pic16`**
 
 1. **Pin** + blink PIC16F18855 (Curiosity Nano RA0) — ✅ `@v0.1.0` (`blink_curiosity`)  
-2. **PWM** / **Rc** / UART / classic F877A — later  
+2. **Pwm** / **Rc** / **Uart** / **I2c** / **Spi** / **Adc** / **Dac** — ✅ `@v0.2.0` (PPS explicit)  
+3. Classic F877A / PIC18 — later  
+
 
 Other MCU families = other repos — not “one machine for everything”.
 
