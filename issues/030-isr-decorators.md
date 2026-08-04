@@ -24,14 +24,30 @@ Checker rules (frontend; gcc never sees a bad shape):
 Emission: **unchanged** — global C symbol via `codename` (no hidden prologue,
 no vector-table generation). Bare `@[codename("…")]` still works (010 / 045).
 
+**Portable across MCUs** — not an STM32 feature. Any target with a startup /
+CRT vector symbol works; only the **string** changes (must match that chip’s
+linker name). Klin does not own IRQ numbering or the vector table.
+
 ```klin
-@[isr("SysTick_Handler")]
+@[isr("SysTick_Handler")]   // STM32 CMSIS example
 fn systick_handler() {
     GPIOA.ODR.ODR5.toggle()
 }
+
+// Other chips: same attribute, different string from *their* startup, e.g.
+// @[isr("USART_RX_vect")]          // megaAVR / avr-libc
+// @[isr("TIMER1_COMPA_vect")]
 ```
 
-Example: [`examples/stm32/blink_f411/`](../examples/stm32/blink_f411/).
+How to wire it:
+
+1. Copy the exact handler name from startup `.s` / vendor CRT / toolchain docs.
+2. `@[isr("That_Exact_Name")]` on a void free `fn` with no parameters.
+3. Link that startup (`@[link("…")]` or board Makefile).
+4. Optional check: `nm` / `objdump` shows the symbol defined.
+
+Example (STM32): [`examples/stm32/blink_f411/`](../examples/stm32/blink_f411/).
+Docs: [docs/09-ffi-c.md](../docs/09-ffi-c.md) (ISR section + name table).
 
 ## Out of scope (MVP)
 
