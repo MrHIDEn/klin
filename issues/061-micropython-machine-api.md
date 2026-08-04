@@ -15,7 +15,7 @@
 | ESP32-C3? | **`machine_esp`** — Pin+Pwm+Rc+Uart+I2c+Spi+Adc ✅ `@v0.4.0` (**no HW DAC** on C3); minimal ESP-IDF boot; Wi‑Fi / freestanding later ([062](062-targets-esp-rp.md)) |
 | STM8? | **`machine_stm8`** — Pin+Pwm+Rc+Uart+I2c+Spi+Adc ✅ `@v0.2.0` (STM8S103/S003; **no DAC**); ([062](062-targets-esp-rp.md)) |
 | ATxmega? | **`machine_xmega`** — Pin+Pwm+Rc+Uart+I2c+Spi+Adc+**Dac** ✅ `@v0.2.0` (ATxmega128A1U-class; DACB) |
-| megaAVR (Arduino Uno/Mega)? | **`machine_avr`** — Pin+Pwm+Rc+Uart+I2c+Spi+Adc ✅ `@v0.2.0` (328P/2560 Pin; buses on 328P MMIO; **no DAC**) |
+| megaAVR (Arduino Uno/Mega)? | **`machine_avr`** — Pin ✅ 328P+2560; **Pwm…Adc** ✅ **328P only** `@v0.2.0` (**no DAC**; 2560 bus factories later) |
 | PIC16? | **`machine_pic16`** — Pin+Pwm+Rc+Uart+I2c+Spi+Adc+**Dac** ✅ `@v0.2.0` (PIC16F18855; PPS explicit; DAC1 5-bit HW) |
 | Other PIC? | Separate ports if/when needed — not one library for all MCUs |
 | DAC? | Only where the silicon has it — **yes** on ATxmega (DACB) and PIC16F18855 (DAC1); **not** on F411/F401, RP2040/2350, ESP32-C3, STM8S, megaAVR 328P/2560. F407-class / classic ESP32 later if needed. |
