@@ -3799,6 +3799,94 @@ fn main() {}
     expect(c, isNot(contains('static void SysTick_Handler')));
   });
 
+  test('isr("…") sugar emits a global C vector symbol (issue 030)', () {
+    const source = '''
+@[isr("SysTick_Handler")]
+fn tick() {}
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'isr.kl');
+    expect(c, contains('void SysTick_Handler(void);'));
+    expect(c, contains('void SysTick_Handler(void) {'));
+    expect(c, isNot(contains('static void SysTick_Handler')));
+  });
+
+  test('isr + codename emits a global C vector symbol (issue 030)', () {
+    const source = '''
+@[isr, codename("TIM2_IRQHandler")]
+fn on_tim2() {}
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    Checker().check(program);
+    final c = emitC(program, 'isr2.kl');
+    expect(c, contains('void TIM2_IRQHandler(void);'));
+    expect(c, isNot(contains('static void TIM2_IRQHandler')));
+  });
+
+  test('isr without vector name is a checker error', () {
+    const source = '''
+@[isr]
+fn tick() {}
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate(
+        (e) => e is CheckError && e.toString().contains('isr'),
+      )),
+    );
+  });
+
+  test('isr with parameters is a checker error', () {
+    const source = '''
+@[isr("SysTick_Handler")]
+fn tick(x: i32) {}
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate(
+        (e) =>
+            e is CheckError && e.toString().contains('no parameters'),
+      )),
+    );
+  });
+
+  test('isr with non-void return is a checker error', () {
+    const source = '''
+@[isr("SysTick_Handler")]
+fn tick(): i32 { return 0 }
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate(
+        (e) => e is CheckError && e.toString().contains('void'),
+      )),
+    );
+  });
+
+  test('isr name conflicting with codename is a checker error', () {
+    const source = '''
+@[isr("SysTick_Handler"), codename("Other_Handler")]
+fn tick() {}
+fn main() {}
+''';
+    final program = Parser(Lexer(source).tokenize()).parse();
+    expect(
+      () => Checker().check(program),
+      throwsA(predicate(
+        (e) => e is CheckError && e.toString().contains('conflicts'),
+      )),
+    );
+  });
+
   test('cexport + codename emits a global C symbol (issue 045)', () {
     const source = '''
 @[cexport, codename("klin_add")]

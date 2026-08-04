@@ -2,7 +2,7 @@
 // Run `klin get` in this directory first (see README).
 $device("github/tinygo-org/stm32-svd/svd/stm32f411.svd", "RCC,GPIOA,STK")
 
-@[codename("SysTick_Handler")]
+@[isr("SysTick_Handler")]
 fn systick_handler() {
   GPIOA.ODR.ODR5.toggle()
 }

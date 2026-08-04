@@ -8,6 +8,7 @@
 
 - `-ffreestanding`, no libc
 - annotations `@[codename("...")]` — mangling disableable
+- annotations `@[isr("…")]` — ISR vector symbol ([030](030-isr-decorators.md)); implies `codename`
 - annotations `@[cimport]`, `@[cinclude]`, `@[link]`
 - inline ASM
 - integration with linker script and startup in `.s`
@@ -15,7 +16,7 @@
 ## Critical notes
 
 **Symbol names must match exactly** the vector table
-(`TIM2_IRQHandler`, `SysTick_Handler`). Hence `codename`.
+(`TIM2_IRQHandler`, `SysTick_Handler`). Prefer `@[isr("…")]`; bare `codename` still OK.
 
 **Startup stays raw `.s` alongside.** Vector table, reset handler,
 copying `.data` from flash to RAM, zeroing `.bss`. Do not wrap it.

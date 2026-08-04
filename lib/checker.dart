@@ -201,6 +201,7 @@ final class Checker {
           'cinclude',
           'link',
           'cheader',
+          'isr',
         }.contains(attr.name)) {
           throw CheckError('unknown attribute `${attr.name}`', attr.pos);
         }
@@ -231,11 +232,16 @@ final class Checker {
       if (decl is StructDecl && _hasAttr(attrs, 'cexport')) {
         throw CheckError('`cexport` is allowed only on functions', decl.pos);
       }
+      if (decl is StructDecl && _hasAttr(attrs, 'isr')) {
+        throw CheckError('`isr` is allowed only on functions', decl.pos);
+      }
       if (decl is FuncDecl) {
         final imported = _hasAttr(attrs, 'cimport');
         final exported = _hasAttr(attrs, 'cexport');
         final fromHeader = _hasAttr(attrs, 'cheader');
         final hasCodename = _hasAttr(attrs, 'codename');
+        final isrAttr = _attrNamed(attrs, 'isr');
+        final isIsr = isrAttr != null;
         if (fromHeader && !imported) {
           throw CheckError(
               '`cheader` requires `cimport` (declaration comes from a C header)',
@@ -266,12 +272,76 @@ final class Checker {
           throw CheckError(
               'function without `cimport` requires a body', decl.pos);
         }
+        if (isIsr) {
+          if (imported) {
+            throw CheckError('cannot combine `isr` and `cimport`', decl.pos);
+          }
+          if (exported) {
+            throw CheckError('cannot combine `isr` and `cexport`', decl.pos);
+          }
+          if (decl.name == 'main') {
+            throw CheckError('`isr` cannot be applied to `main`', decl.pos);
+          }
+          if (decl.isAsync) {
+            throw CheckError('`isr` cannot be applied to `async fn`', decl.pos);
+          }
+          if (decl.receiver != null || decl.associatedType != null) {
+            throw CheckError(
+                '`isr` is allowed only on free functions '
+                '(not methods / associated functions)',
+                decl.pos);
+          }
+          if (decl.body == null) {
+            throw CheckError('`isr` function requires a body', decl.pos);
+          }
+          if (decl.params.isNotEmpty) {
+            throw CheckError(
+                '`isr` handler must take no parameters '
+                '(vector ABI; match startup `.s`)',
+                decl.pos);
+          }
+          if (decl.returnTypeName != null && decl.returnTypeName != 'void') {
+            throw CheckError(
+                '`isr` handler must return void (or omit the return type)',
+                decl.pos);
+          }
+          final nameFromIsr = isrAttr.arg;
+          final nameFromCode = _attrNamed(attrs, 'codename')?.arg;
+          if (nameFromIsr == null && nameFromCode == null) {
+            throw CheckError(
+                '`isr` requires `isr("Vector_Handler")` or '
+                '`@[isr, codename("Vector_Handler")]`',
+                isrAttr.pos);
+          }
+          if (nameFromIsr != null &&
+              nameFromCode != null &&
+              nameFromIsr != nameFromCode) {
+            throw CheckError(
+                '`isr("${nameFromIsr}")` conflicts with '
+                '`codename("${nameFromCode}")`',
+                isrAttr.pos);
+          }
+          // `@[isr("…")]` sugar → synthesize `codename` for emission.
+          if (nameFromIsr != null && nameFromCode == null) {
+            if (!cNames.add(nameFromIsr)) {
+              throw CheckError('duplicate codename `$nameFromIsr`', isrAttr.pos);
+            }
+            attrs.add(Attr('codename', nameFromIsr, isrAttr.pos));
+          }
+        }
       }
     }
   }
 
   bool _hasAttr(List<Attr> attrs, String name) =>
       attrs.any((attr) => attr.name == name);
+
+  Attr? _attrNamed(List<Attr> attrs, String name) {
+    for (final attr in attrs) {
+      if (attr.name == name) return attr;
+    }
+    return null;
+  }
 
   void _registerFunctions(Program program) {
     for (final func in program.funcs) {
