@@ -88,6 +88,11 @@ fn usart2_irq() {
 Package pin: `klin get github/klin-lang/klin_freertos@v0.3.0`.
 Stub smoke: `klin_freertos/examples/from_isr/`.
 
+For cooperative async waiting on an IRQ **signal** inside an event-loop task,
+[`eventloop`](https://github.com/klin-lang/eventloop) `@v0.4.0` offers
+`flag_wait` ([029](029-async-event-loop.md)). That is **not** a substitute for
+FromISR when waking / yielding a FreeRTOS task (idle/power).
+
 ## `klin_freertos` library vs task "decorators" (settled)
 
 Question: can external Klin lib (RTOS bindings, not stdlib — [024](024-rtos.md))

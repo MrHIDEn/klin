@@ -119,6 +119,11 @@ FreeRTOS ISR → task: use
 (`queue_*_from_isr` / `semaphore_*_from_isr` + explicit `task_yield_from_isr`)
 with `@[isr("…")]` — no auto-yield ([028](../issues/028-freertos.md)).
 
+ISR → event-loop `.await` (poll, not push-wake):
+[`eventloop`](https://github.com/klin-lang/eventloop) `@v0.4.0` `flag_set` /
+`flag_wait` ([029](../issues/029-async-event-loop.md)). Does not replace FromISR
+for waking a FreeRTOS task.
+
 ## Comparison
 
 | | Import | Export | ISR |
