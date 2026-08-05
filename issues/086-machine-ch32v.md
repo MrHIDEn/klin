@@ -35,6 +35,6 @@ klin get github/klin-lang/machine_ch32v@v0.1.0
 
 ## Links
 
-- Companion stub: [087](087-machine-gd32v.md)
+- Companion GD32V port: [087](087-machine-gd32v.md)
 - API catalog: [061](061-micropython-machine-api.md)
 - Other RISC-V (ESP-C3 / RP2350): [062](062-targets-esp-rp.md)
