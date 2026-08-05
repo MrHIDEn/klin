@@ -18,7 +18,7 @@ target **ESP32**, **RP2040**, **RP2350**, **STM8**, **CH32V**, **GD32V**?
 | **ESP32-C3** | ✅ Pin…Adc | [`machine_esp`](https://github.com/klin-lang/machine_esp) `@v0.4.0` — MMIO + LEDC; minimal **ESP-IDF** boot; no DAC; no Wi‑Fi in MVP. |
 | **STM8S** | ✅ Pin…Adc (emit-c) | [`machine_stm8`](https://github.com/klin-lang/machine_stm8) `@v0.2.0` — no DAC; SDCC link later. |
 | **CH32V003** | ✅ Pin…Adc | [`machine_ch32v`](https://github.com/klin-lang/machine_ch32v) `@v0.1.0` — QingKe RV32EC ([086](086-machine-ch32v.md)). |
-| **GD32VF103** | ✅ Pin…Adc | [`machine_gd32v`](https://github.com/klin-lang/machine_gd32v) `@v0.1.0` — Nuclei N205 ([087](087-machine-gd32v.md)). |
+| **GD32VF103** | ✅ Pin…Adc | [`machine_gd32v`](https://github.com/klin-lang/machine_gd32v) `@v0.2.0` — Nuclei N205 ([087](087-machine-gd32v.md)). |
 | **ESP32** (classic / other) | Later | Classic = **Xtensa**; C6/S3 etc. separate from C3 MVP. |
 
 ## What already carries to these MCUs
@@ -44,7 +44,7 @@ target **ESP32**, **RP2040**, **RP2350**, **STM8**, **CH32V**, **GD32V**?
 4. **Pwm** / **Rc** on RP + ESP — ✅  
 5. **Uart** / **I2c** / **Spi** / **Adc** on RP + ESP + STM8 — ✅ (`machine_rp@v0.6.0`, `machine_esp@v0.4.0`, `machine_stm8@v0.2.0`)  
 6. **CH32V003** Pin…Adc — ✅ (`machine_ch32v@v0.1.0`; [086](086-machine-ch32v.md))  
-7. **GD32VF103** Pin…Adc — ✅ (`machine_gd32v@v0.1.0`; [087](087-machine-gd32v.md))  
+7. **GD32VF103** Pin…Adc — ✅ (`machine_gd32v@v0.2.0`; [087](087-machine-gd32v.md))  
 8. Wi‑Fi / freestanding ESP / SDCC STM8 — later  
 
 ## Out of scope
