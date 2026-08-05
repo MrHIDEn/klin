@@ -1,6 +1,7 @@
 # 086 — `machine_ch32v`: CH32V003 (QingKe RISC-V) Pin…Adc
 
-**Status:** 🔨 package ready (`@v0.1.0` sources); GitHub repo create pending org admin  
+**Status:** ✅ MVP `@v0.1.0` published  
+
 **Depends on:** [061](061-micropython-machine-api.md), [062](062-targets-esp-rp.md), [010](010-bare-metal.md), [021](021-c-libraries.md)
 
 ## Verdict
@@ -26,13 +27,11 @@
 - CH32V203 / V307 / USB / BLE variants
 - Vendor EVT / MounRiver as a dependency
 - Wi‑Fi / Ethernet
-- Publishing `klin get` until the empty GitHub repo exists and is pushed
+## Published
 
-## Publish checklist
-
-1. Org admin: `gh repo create klin-lang/machine_ch32v --public`
-2. Push package sources + tag `v0.1.0`
-3. Smoke: `klin get github/klin-lang/machine_ch32v@v0.1.0`
+```sh
+klin get github/klin-lang/machine_ch32v@v0.1.0
+```
 
 ## Links
 
