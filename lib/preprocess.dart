@@ -1,26 +1,55 @@
 import 'dart:io';
 
 import 'remote.dart';
+import 'source_map.dart';
 import 'svd/fluent.dart';
 import 'svd/model.dart';
 import 'token.dart';
 
 export 'token.dart' show PreprocessError;
+export 'source_map.dart' show SourceMap;
 
-/// Compile-time `$fn` macros (decision D3) and built-in `$peripherals_from_svd`.
-/// Runs before lex/parse of Klin.
+/// Result of preprocess: expanded text plus an optional position [map].
 ///
-/// ```
-/// $fn point(name: name, T: type) {
-///   struct $name { x: $T  y: $T }
-///   fn (p: $name) len_sq(): $T { return p.x * p.x + p.y * p.y }
-/// }
-/// $point(Vec2i, i32)
-/// ```
-///
-/// Path imports (`import "…"`) may export `$fn` definitions (059 A1 lite).
-/// A trailing `block` parameter accepts `$name(args) { … }`.
-/// Imported macros may use `$mod` for the import qualifier.
+/// [map] is null when a secondary rewrite (e.g. SVD fluent) invalidated
+/// offset tracking — callers then treat positions as skewed.
+final class PreprocessResult {
+  final String text;
+  final SourceMap? map;
+
+  const PreprocessResult(this.text, {this.map});
+}
+
+/// Expands `$fn` definitions and `$name(...)` invocations in [source].
+String preprocess(
+  String source, {
+  String path = '<input>',
+  String? klinCacheDir,
+  List<String> klinPathDirs = const [],
+}) {
+  return preprocessWithMap(
+    source,
+    path: path,
+    klinCacheDir: klinCacheDir,
+    klinPathDirs: klinPathDirs,
+  ).text;
+}
+
+/// Like [preprocess], but also returns a [SourceMap] when tracking succeeded.
+PreprocessResult preprocessWithMap(
+  String source, {
+  String path = '<input>',
+  String? klinCacheDir,
+  List<String> klinPathDirs = const [],
+}) {
+  final scanner = _PpScanner(
+    source,
+    path,
+    klinCacheDir: klinCacheDir,
+    klinPathDirs: klinPathDirs,
+  );
+  return scanner.expandWithMap();
+}
 
 final class _MacroParam {
   final String name;
@@ -54,20 +83,29 @@ final class _ScannedPathImport {
   const _ScannedPathImport(this.spec, this.qualifier);
 }
 
-/// Expands `$fn` definitions and `$name(...)` invocations in [source].
-String preprocess(
-  String source, {
-  String path = '<input>',
-  String? klinCacheDir,
-  List<String> klinPathDirs = const [],
-}) {
-  final scanner = _PpScanner(
-    source,
-    path,
-    klinCacheDir: klinCacheDir,
-    klinPathDirs: klinPathDirs,
-  );
-  return scanner.expand();
+/// Growable expanded buffer that records original offsets per emitted char.
+final class _MappedOut {
+  final StringBuffer _buf = StringBuffer();
+  final List<int> origOfExp = [];
+
+  void copyChar(String c, int origOff) {
+    _buf.write(c);
+    origOfExp.add(origOff);
+  }
+
+  void copyString(String s, int origStart) {
+    for (var i = 0; i < s.length; i++) {
+      copyChar(s[i], origStart + i);
+    }
+  }
+
+  void synthetic(String s, int origOff) {
+    for (var i = 0; i < s.length; i++) {
+      copyChar(s[i], origOff);
+    }
+  }
+
+  String get text => _buf.toString();
 }
 
 final class _PpScanner {
@@ -96,19 +134,46 @@ final class _PpScanner {
   Never _err(String message, [SourcePos? pos]) =>
       throw PreprocessError(message, pos ?? _pos, path: path);
 
-  String expand() {
+  PreprocessResult expandWithMap() {
     final macros = <String, _MacroDef>{};
     _loadMacrosFromPathImports(macros);
     _macros = macros;
     _nestDepth = 0;
-    return _expandBody();
+    return _expandBodyMapped(trackMap: true);
   }
 
   /// Expand `$fn` defs / `$name(...)` calls in [source] using [_macros].
-  String _expandBody() {
+  String _expandBody() => _expandBodyMapped(trackMap: false).text;
+
+  PreprocessResult _expandBodyMapped({required bool trackMap}) {
     final macros = _macros!;
-    final out = StringBuffer();
+    final out = trackMap ? _MappedOut() : null;
+    final plain = trackMap ? null : StringBuffer();
     SvdDevice? svdDevice;
+
+    void emitCopy(String s, int origStart) {
+      if (out != null) {
+        out.copyString(s, origStart);
+      } else {
+        plain!.write(s);
+      }
+    }
+
+    void emitSynthetic(String s, int origOff) {
+      if (out != null) {
+        out.synthetic(s, origOff);
+      } else {
+        plain!.write(s);
+      }
+    }
+
+    void emitChar(String c, int origOff) {
+      if (out != null) {
+        out.copyChar(c, origOff);
+      } else {
+        plain!.write(c);
+      }
+    }
 
     while (!_atEnd) {
       if (_startsWithFn()) {
@@ -123,6 +188,7 @@ final class _PpScanner {
       if (_peek == r'$' &&
           _i + 1 < source.length &&
           _isIdentStart(source[_i + 1])) {
+        final startOff = _i;
         final start = _pos;
         _advance(); // $
         final name = _readIdent();
@@ -148,7 +214,7 @@ final class _PpScanner {
               klinCacheDir: klinCacheDir,
             );
             svdDevice = expansion.device;
-            out.write(expansion.klinSnippet);
+            emitSynthetic(expansion.klinSnippet, startOff);
             continue;
           }
           final def = macros[name];
@@ -157,7 +223,7 @@ final class _PpScanner {
           }
           final args = _parseArgList();
           _appendTrailingBlockArg(def, args, start);
-          out.write(_expandCall(def, args, start));
+          emitSynthetic(_expandCall(def, args, start), startOff);
           continue;
         }
         _err('expected `(` after macro `\$$name`', start);
@@ -165,20 +231,43 @@ final class _PpScanner {
 
       // Skip strings / comments so `$` inside them is left alone.
       if (_peek == '"') {
-        out.write(_readStringLiteral());
+        final startOff = _i;
+        final s = _readStringLiteral();
+        emitCopy(s, startOff);
         continue;
       }
       if (_peek == '/' && _i + 1 < source.length && source[_i + 1] == '/') {
-        out.write(_readLineComment());
+        final startOff = _i;
+        final s = _readLineComment();
+        emitCopy(s, startOff);
         continue;
       }
 
-      out.write(_advance());
+      final origOff = _i;
+      emitChar(_advance(), origOff);
     }
 
-    final text = out.toString();
-    if (svdDevice == null) return text;
-    return rewriteSvdFluent(text, svdDevice, path: path);
+    final text = out?.text ?? plain!.toString();
+    if (svdDevice != null) {
+      // Fluent rewrite reshapes identifiers; drop the map (positions skewed).
+      return PreprocessResult(
+        rewriteSvdFluent(text, svdDevice, path: path),
+      );
+    }
+    if (out == null) {
+      return PreprocessResult(text);
+    }
+    if (text == source) {
+      return PreprocessResult(text, map: SourceMap.identity(source));
+    }
+    return PreprocessResult(
+      text,
+      map: SourceMap(
+        origOfExpanded: out.origOfExp,
+        original: source,
+        expanded: text,
+      ),
+    );
   }
 
   void _loadMacrosFromPathImports(Map<String, _MacroDef> macros) {

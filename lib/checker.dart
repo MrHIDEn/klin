@@ -12,6 +12,17 @@ final class CheckError implements Exception {
   String toString() => '${pos.line}:${pos.col}: $message';
 }
 
+/// Multiple [CheckError]s collected when [Checker.check] runs with
+/// `collectErrors: true` (Language Server).
+final class CheckErrors implements Exception {
+  final List<CheckError> errors;
+
+  const CheckErrors(this.errors);
+
+  @override
+  String toString() => errors.map((e) => e.toString()).join('\n');
+}
+
 final class _Symbol {
   final String name;
   final KlinType type;
@@ -111,7 +122,15 @@ final class Checker {
   /// contain exactly one parameterless `main`. Language Server analysis of
   /// library modules passes `false` so editing stdlib / packages does not
   /// report a spurious missing-`main` error (issue 086).
-  void check(Program program, {bool requireMain = true}) {
+  ///
+  /// When [collectErrors] is true, body-check failures are gathered per
+  /// function and thrown together as [CheckErrors] (registration / `main`
+  /// rules still fail fast as a single [CheckError]).
+  void check(
+    Program program, {
+    bool requireMain = true,
+    bool collectErrors = false,
+  }) {
     _functions.clear();
     _structs.clear();
     _enums.clear();
@@ -151,54 +170,67 @@ final class Checker {
           '`main` function cannot have parameters', main.single.pos);
     }
 
+    final collected = <CheckError>[];
     for (final func in program.funcs) {
       if (_hasAttr(func.attrs, 'cimport')) continue;
-      if (func.isAsync && func.name == 'main') {
-        throw CheckError('`main` cannot be `async`', func.pos);
+      try {
+        _checkFuncBody(func);
+      } on CheckError catch (e) {
+        if (!collectErrors) rethrow;
+        collected.add(e);
       }
-      _scope = _Scope(null);
-      _loopDepth = 0;
-      _deferDepth = 0;
-      _currentFunction = func.name;
-      _currentModule = func.moduleName;
-      _currentSourcePath = func.sourcePath;
-      _currentIsAsync = func.isAsync;
-      _currentReturn = func.resolvedReturnType!;
-      _asyncFlatNames
-        ..clear()
-        ..addAll(func.params.map((p) => p.name));
-      final receiver = func.receiver;
-      if (receiver != null) {
-        _asyncFlatNames.add(receiver.name);
-        _scope.define(
-          _Symbol(
-            name: receiver.name,
-            type: receiver.resolvedType!,
-            isMut: receiver.isMut,
-            pos: receiver.pos,
-            isPtrReceiver: receiver.isMut,
-          ),
-        );
-      }
-      for (final param in func.params) {
-        _scope.define(
-          _Symbol(
-            name: param.name,
-            type: param.resolvedType!,
-            isMut: false,
-            pos: param.pos,
-          ),
-        );
-      }
-      _checkBlock(func.body!);
-      if (func.name != 'main' &&
-          _currentReturn is! VoidType &&
-          !_returnsOnAllPaths(func.body!)) {
-        throw CheckError(
-          'function `${func.name}` must return a value on all paths',
-          func.pos,
-        );
-      }
+    }
+    if (collected.isNotEmpty) {
+      throw CheckErrors(collected);
+    }
+  }
+
+  void _checkFuncBody(FuncDecl func) {
+    if (func.isAsync && func.name == 'main') {
+      throw CheckError('`main` cannot be `async`', func.pos);
+    }
+    _scope = _Scope(null);
+    _loopDepth = 0;
+    _deferDepth = 0;
+    _currentFunction = func.name;
+    _currentModule = func.moduleName;
+    _currentSourcePath = func.sourcePath;
+    _currentIsAsync = func.isAsync;
+    _currentReturn = func.resolvedReturnType!;
+    _asyncFlatNames
+      ..clear()
+      ..addAll(func.params.map((p) => p.name));
+    final receiver = func.receiver;
+    if (receiver != null) {
+      _asyncFlatNames.add(receiver.name);
+      _scope.define(
+        _Symbol(
+          name: receiver.name,
+          type: receiver.resolvedType!,
+          isMut: receiver.isMut,
+          pos: receiver.pos,
+          isPtrReceiver: receiver.isMut,
+        ),
+      );
+    }
+    for (final param in func.params) {
+      _scope.define(
+        _Symbol(
+          name: param.name,
+          type: param.resolvedType!,
+          isMut: false,
+          pos: param.pos,
+        ),
+      );
+    }
+    _checkBlock(func.body!);
+    if (func.name != 'main' &&
+        _currentReturn is! VoidType &&
+        !_returnsOnAllPaths(func.body!)) {
+      throw CheckError(
+        'function `${func.name}` must return a value on all paths',
+        func.pos,
+      );
     }
   }
 

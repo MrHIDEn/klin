@@ -96,7 +96,7 @@ fn main(): void {
       expect(def!.pos.line, 2);
     });
 
-    test('nav disabled when positions skewed by macros', () {
+    test(r'nav works after $fn expand via source map', () {
       const source = r'''
 $fn point(name: name, T: type) {
   struct $name { x: $T y: $T }
@@ -108,12 +108,16 @@ fn main(): void {
 }
 ''';
       final result = analyzeSource(path: 'skew_nav.kl', source: source);
-      expect(result.positionsSkewed, isTrue);
-      // Even if analysis succeeded, hover/def stay off when skewed.
-      if (result.program != null) {
-        expect(hoverAt(result, 7, 3), isNull);
-        expect(definitionAt(result, 7, 3), isNull);
-      }
+      expect(result.positionsSkewed, isFalse);
+      expect(result.sourceMap, isNotNull);
+      expect(result.diagnostics, isEmpty);
+      // `v` on the `let a` line (editor coords).
+      final hover = hoverAt(result, 7, 16);
+      expect(hover, isNotNull);
+      expect(hover, contains('Vec2i'));
+      final def = definitionAt(result, 7, 16);
+      expect(def, isNotNull);
+      expect(def!.pos.line, 6);
     });
   });
 }

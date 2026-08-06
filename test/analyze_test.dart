@@ -33,7 +33,7 @@ fn foo(): void {
       expect(result.program, isNull);
     });
 
-    test('check error yields one diagnostic', () {
+    test('check error keeps program for navigation', () {
       const source = '''
 fn main(): void {
     let x: NoSuchType = 1
@@ -46,7 +46,7 @@ fn main(): void {
       );
       expect(result.diagnostics, hasLength(1));
       expect(result.diagnostics.single.message, contains('NoSuchType'));
-      expect(result.program, isNull);
+      expect(result.program, isNotNull);
     });
 
     test('requireMain true reports missing main', () {
@@ -70,7 +70,7 @@ fn foo(): void {
       expect(without.diagnostics, isEmpty);
     });
 
-    test('check error after macro expand remaps pos (no wrong squiggle)', () {
+    test('check error after macro expand remaps via source map', () {
       const source = r'''
 $fn point(name: name, T: type) {
   struct $name { x: $T y: $T }
@@ -82,12 +82,34 @@ fn main(): void {
 ''';
       final result = analyzeSource(path: 'skew.kl', source: source);
       expect(result.diagnostics, hasLength(1));
-      expect(result.positionsSkewed, isTrue);
+      expect(result.positionsSkewed, isFalse);
+      expect(result.sourceMap, isNotNull);
       final d = result.diagnostics.single;
-      expect(d.pos.line, 1);
-      expect(d.pos.col, 1);
-      expect(d.message, contains('after preprocess'));
       expect(d.message, contains('NoSuch'));
+      expect(d.message, isNot(contains('after preprocess')));
+      // Squiggle on the editor line with `NoSuch`, not line 1.
+      expect(d.pos.line, 6);
+    });
+
+    test('collects check errors from multiple functions', () {
+      const source = '''
+fn a(): void {
+    let x: NoSuchA = 1
+}
+fn b(): void {
+    let y: NoSuchB = 1
+}
+''';
+      final result = analyzeSource(
+        path: 'multi.kl',
+        source: source,
+        requireMain: false,
+      );
+      expect(result.diagnostics.length, greaterThanOrEqualTo(2));
+      final messages = result.diagnostics.map((d) => d.message).join('\n');
+      expect(messages, contains('NoSuchA'));
+      expect(messages, contains('NoSuchB'));
+      expect(result.program, isNotNull);
     });
 
     test('diagnosticForOpenDocument rewrites foreign paths', () {

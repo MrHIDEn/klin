@@ -40,12 +40,13 @@ Starts an LSP server on stdin/stdout (no args). Editors wire it as:
 
 Dev without install: `dart run bin/klin.dart lsp`.
 
-MVP: full-document sync, publish diagnostics from the frontend (one error at a
-time), `textDocument/formatting` via `klin fmt` / [`formatSource`](../lib/fmt.dart),
-`hover` / `definition` for names in the open file, and `completion` (keywords,
-scope, `.` members; uses last-good analysis after incomplete `x.`). Same-file
-only; nav/completion disabled when `$fn` preprocess skews positions. Library
-files do not require `main`. Details: [086](../issues/086-lsp.md).
+MVP: full-document sync, publish diagnostics from the frontend (check errors
+collected per function), `textDocument/formatting` via `klin fmt` /
+[`formatSource`](../lib/fmt.dart), `hover` / `definition` / `completion` for the
+open file. After `$fn` expand, [`SourceMap`](../lib/source_map.dart) remaps
+positions to the editor buffer (nav stays off only when mapping is unavailable,
+e.g. SVD fluent rewrite). Library files do not require `main`. Details:
+[086](../issues/086-lsp.md).
 
 ## Flags before / with `run`
 

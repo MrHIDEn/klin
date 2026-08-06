@@ -6,6 +6,8 @@ import 'parser.dart';
 import 'preprocess.dart';
 import 'token.dart';
 
+export 'source_map.dart' show SourceMap;
+
 /// Severity for editor diagnostics (issue 086). Matches LSP Error for MVP.
 enum KlinDiagnosticSeverity { error }
 
@@ -29,38 +31,40 @@ final class AnalysisResult {
   final List<KlinDiagnostic> diagnostics;
   final Program? program;
 
-  /// True when preprocess rewrote the buffer; post-expand positions then refer
-  /// to expanded text, not the editor buffer (see [analyzeSource]).
+  /// True when preprocess rewrote the buffer and no usable [sourceMap] exists
+  /// (e.g. after SVD fluent rewrite). Nav / completion stay disabled then.
   final bool positionsSkewed;
+
+  /// Editor ↔ expanded position map when preprocess tracking succeeded.
+  final SourceMap? sourceMap;
 
   const AnalysisResult({
     required this.diagnostics,
     this.program,
     this.positionsSkewed = false,
+    this.sourceMap,
   });
 }
 
 /// Preprocess → lex → parse → check for a single buffer.
 ///
-/// Catches the first frontend error (fail-fast pipeline). Does not exit the
-/// process — suitable for Language Server and unit tests.
+/// Check-phase errors are collected per function (`collectErrors: true`) so the
+/// LSP can show more than one diagnostic. Lex/parse stay fail-fast.
 ///
 /// [requireMain] defaults to `false` (library-friendly). CLI compile paths keep
 /// calling [Checker.check] with the default `true`.
 ///
-/// When preprocess changes the source, lex/parse/check positions are relative
-/// to the **expanded** text. Those diagnostics are remapped to line 1 / col 1
-/// with an `(after preprocess)` note so the editor does not paint a squiggle on
-/// the wrong line of the buffer. [PreprocessError] keeps its original position
-/// (still on the pre-expand source, or on an imported path).
+/// When preprocess rewrites the source, [SourceMap] remaps diagnostics and
+/// navigation positions back to the editor buffer. If mapping is unavailable,
+/// [positionsSkewed] is set and nav/completion are disabled.
 AnalysisResult analyzeSource({
   required String path,
   required String source,
   bool requireMain = false,
 }) {
-  late final String expanded;
+  late final PreprocessResult pp;
   try {
-    expanded = preprocess(source, path: path);
+    pp = preprocessWithMap(source, path: path);
   } on PreprocessError catch (e) {
     return AnalysisResult(
       diagnostics: [
@@ -73,46 +77,85 @@ AnalysisResult analyzeSource({
     );
   }
 
-  final skewed = expanded != source;
+  final expanded = pp.text;
+  final map = pp.map;
+  final skewed = expanded != source && map == null;
+
   try {
     final program = Parser(Lexer(expanded).tokenize()).parse();
-    Checker().check(program, requireMain: requireMain);
-    return AnalysisResult(
-      diagnostics: const [],
-      program: program,
-      positionsSkewed: skewed,
-    );
+    try {
+      Checker().check(
+        program,
+        requireMain: requireMain,
+        collectErrors: true,
+      );
+      return AnalysisResult(
+        diagnostics: const [],
+        program: program,
+        positionsSkewed: skewed,
+        sourceMap: map,
+      );
+    } on CheckErrors catch (e) {
+      return AnalysisResult(
+        diagnostics: [
+          for (final err in e.errors)
+            _mappedDiagnostic(path, err.message, err.pos, map, skewed),
+        ],
+        program: program,
+        positionsSkewed: skewed,
+        sourceMap: map,
+      );
+    } on CheckError catch (e) {
+      return AnalysisResult(
+        diagnostics: [
+          _mappedDiagnostic(path, e.message, e.pos, map, skewed),
+        ],
+        // Registration failures — AST may be only partially typed.
+        program: program,
+        positionsSkewed: skewed,
+        sourceMap: map,
+      );
+    }
   } on LexError catch (e) {
-    return _postExpandDiagnostic(path, e.message, e.pos, skewed);
+    return AnalysisResult(
+      diagnostics: [
+        _mappedDiagnostic(path, e.message, e.pos, map, skewed),
+      ],
+      positionsSkewed: skewed,
+      sourceMap: map,
+    );
   } on ParseError catch (e) {
-    return _postExpandDiagnostic(path, e.message, e.pos, skewed);
-  } on CheckError catch (e) {
-    return _postExpandDiagnostic(path, e.message, e.pos, skewed);
+    return AnalysisResult(
+      diagnostics: [
+        _mappedDiagnostic(path, e.message, e.pos, map, skewed),
+      ],
+      positionsSkewed: skewed,
+      sourceMap: map,
+    );
   }
 }
 
-AnalysisResult _postExpandDiagnostic(
+KlinDiagnostic _mappedDiagnostic(
   String path,
   String message,
   SourcePos pos,
+  SourceMap? map,
   bool skewed,
 ) {
-  if (!skewed) {
-    return AnalysisResult(
-      diagnostics: [
-        KlinDiagnostic(message: message, pos: pos, path: path),
-      ],
+  if (map != null) {
+    return KlinDiagnostic(
+      message: message,
+      pos: map.toOriginal(pos),
+      path: path,
     );
   }
-  return AnalysisResult(
-    diagnostics: [
-      KlinDiagnostic(
-        message: '$message (after preprocess)',
-        pos: const SourcePos(1, 1),
-        path: path,
-      ),
-    ],
-    positionsSkewed: true,
+  if (!skewed) {
+    return KlinDiagnostic(message: message, pos: pos, path: path);
+  }
+  return KlinDiagnostic(
+    message: '$message (after preprocess)',
+    pos: const SourcePos(1, 1),
+    path: path,
   );
 }
 
@@ -153,20 +196,32 @@ KlinDiagnostic diagnosticForOpenDocument(
   );
 }
 
-/// Hover text at 1-based [line]/[col], or null.
-///
-/// Disabled when [AnalysisResult.positionsSkewed] (macro expand without source
-/// maps) or when analysis failed (`program == null`).
+SourcePos _queryPos(AnalysisResult result, int line, int col) {
+  final map = result.sourceMap;
+  if (map == null) return SourcePos(line, col);
+  return map.toExpanded(SourcePos(line, col));
+}
+
+/// Hover text at 1-based editor [line]/[col], or null.
 String? hoverAt(AnalysisResult result, int line, int col) {
   if (result.positionsSkewed || result.program == null) return null;
-  final target = findNavTarget(result.program!, line, col);
+  final q = _queryPos(result, line, col);
+  final target = findNavTarget(result.program!, q.line, q.col);
   if (target == null) return null;
   return hoverText(target);
 }
 
-/// Go-to-definition at 1-based [line]/[col], or null.
+/// Go-to-definition at 1-based editor [line]/[col], or null.
+///
+/// Definition positions are remapped to the editor buffer when a [SourceMap]
+/// is present.
 ResolvedDef? definitionAt(AnalysisResult result, int line, int col) {
   if (result.positionsSkewed || result.program == null) return null;
-  final target = findNavTarget(result.program!, line, col);
-  return target?.def;
+  final q = _queryPos(result, line, col);
+  final target = findNavTarget(result.program!, q.line, q.col);
+  final def = target?.def;
+  if (def == null) return null;
+  final map = result.sourceMap;
+  if (map == null) return def;
+  return ResolvedDef(map.toOriginal(def.pos), def.path);
 }

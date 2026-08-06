@@ -106,10 +106,18 @@ List<KlinCompletionItem> completeAt(
   final dot = trigger == '.' || _endsWithDot(before);
   final prefix = _identPrefix(before);
 
+  // Editor coords for buffer prefix; expanded coords for AST scope walks.
+  final map = result.sourceMap;
+  final query = map != null
+      ? map.toExpanded(SourcePos(line, col))
+      : SourcePos(line, col);
+  final qLine = query.line;
+  final qCol = query.col;
+
   if (dot) {
     if (program == null) return const [];
     return _filterPrefix(
-      _memberCompletions(program, before, line, col),
+      _memberCompletions(program, before, qLine, qCol),
       prefix,
     );
   }
@@ -120,7 +128,7 @@ List<KlinCompletionItem> completeAt(
   ];
   if (program != null) {
     items.addAll(_topLevelItems(program));
-    items.addAll(_localsAt(program, line, col));
+    items.addAll(_localsAt(program, qLine, qCol));
   }
   return _dedupe(_filterPrefix(items, prefix));
 }

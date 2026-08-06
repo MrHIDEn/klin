@@ -214,7 +214,7 @@ fn main(): void {
       expect(labels, containsAll(['Red', 'Green', 'Blue']));
     });
 
-    test('empty when positions skewed', () {
+    test(r'completion works after $fn expand via source map', () {
       const source = r'''
 $fn point(name: name, T: type) {
   struct $name { x: $T y: $T }
@@ -229,8 +229,14 @@ fn main(): void {
         source: source,
         requireMain: false,
       );
-      expect(result.positionsSkewed, isTrue);
-      expect(completeAt(result, 6, 10, source: source), isEmpty);
+      expect(result.positionsSkewed, isFalse);
+      expect(result.sourceMap, isNotNull);
+      final (line, col) = _after(source, 'let a: i32 = ');
+      final labels = completeAt(result, line, col, source: source)
+          .map((i) => i.label)
+          .toSet();
+      expect(labels, contains('a'));
+      expect(labels, contains('Vec2i'));
     });
   });
 }
