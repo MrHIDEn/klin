@@ -1,4 +1,5 @@
 import 'package:klin/analyze.dart';
+import 'package:klin/complete.dart';
 import 'package:klin/lsp/server.dart';
 import 'package:klin/token.dart';
 import 'package:lsp_server/lsp_server.dart';
@@ -69,6 +70,21 @@ void main() {
       final lsp = toLspDiagnostics([d]).single;
       expect(lsp.range.start.line, 0);
       expect(lsp.message, contains('other.kl'));
+    });
+
+    test('toLspCompletionKind maps Klin kinds', () {
+      expect(
+        toLspCompletionKind(KlinCompletionKind.keyword),
+        CompletionItemKind.Keyword,
+      );
+      expect(
+        toLspCompletionKind(KlinCompletionKind.field),
+        CompletionItemKind.Field,
+      );
+      expect(
+        toLspCompletionKind(KlinCompletionKind.function),
+        CompletionItemKind.Function,
+      );
     });
   });
 }

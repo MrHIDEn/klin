@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:klin/analyze.dart';
+import 'package:klin/complete.dart';
 import 'package:klin/fmt.dart';
 import 'package:klin/lexer.dart';
 import 'package:klin/parser.dart';
@@ -144,6 +145,9 @@ Future<void> runKlinLsp({
         documentFormattingProvider: const Either2.t1(true),
         hoverProvider: const Either2.t1(true),
         definitionProvider: const Either2.t1(true),
+        completionProvider: CompletionOptions(
+          triggerCharacters: const ['.'],
+        ),
       ),
       serverInfo: InitializeResultServerInfo(
         name: 'klin',
@@ -232,7 +236,52 @@ Future<void> runKlinLsp({
     );
   });
 
+  connection.onCompletion((params) async {
+    final uriKey = params.textDocument.uri.toString();
+    final result = docs.analysis(uriKey);
+    if (result == null) {
+      return CompletionList(isIncomplete: false, items: const []);
+    }
+    final source = docs.get(uriKey) ?? '';
+    final line = params.position.line + 1;
+    final col = params.position.character + 1;
+    final fallback = docs.lastGood(uriKey)?.program;
+    final items = completeAt(
+      result,
+      line,
+      col,
+      source: source,
+      fallbackProgram: fallback,
+    );
+    return CompletionList(
+      isIncomplete: false,
+      items: [
+        for (final i in items)
+          CompletionItem(
+            label: i.label,
+            kind: toLspCompletionKind(i.kind),
+            detail: i.detail,
+          ),
+      ],
+    );
+  });
+
   await connection.listen();
+}
+
+/// Map Klin completion kinds to LSP [CompletionItemKind].
+CompletionItemKind toLspCompletionKind(KlinCompletionKind kind) {
+  return switch (kind) {
+    KlinCompletionKind.keyword => CompletionItemKind.Keyword,
+    KlinCompletionKind.function => CompletionItemKind.Function,
+    KlinCompletionKind.method => CompletionItemKind.Method,
+    KlinCompletionKind.struct => CompletionItemKind.Struct,
+    KlinCompletionKind.enumType => CompletionItemKind.Enum,
+    KlinCompletionKind.enumMember => CompletionItemKind.EnumMember,
+    KlinCompletionKind.field => CompletionItemKind.Field,
+    KlinCompletionKind.variable => CompletionItemKind.Variable,
+    KlinCompletionKind.type => CompletionItemKind.Class,
+  };
 }
 
 /// Convert a filesystem path to a `file://` [Uri].

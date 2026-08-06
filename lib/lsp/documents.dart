@@ -4,6 +4,7 @@ import 'package:klin/analyze.dart';
 final class DocumentStore {
   final Map<String, String> _docs = {};
   final Map<String, AnalysisResult> _analysis = {};
+  final Map<String, AnalysisResult> _lastGood = {};
 
   void open(String uri, String text) {
     _docs[uri] = text;
@@ -16,6 +17,7 @@ final class DocumentStore {
   void close(String uri) {
     _docs.remove(uri);
     _analysis.remove(uri);
+    _lastGood.remove(uri);
   }
 
   String? get(String uri) => _docs[uri];
@@ -24,7 +26,13 @@ final class DocumentStore {
 
   void setAnalysis(String uri, AnalysisResult result) {
     _analysis[uri] = result;
+    if (result.program != null && !result.positionsSkewed) {
+      _lastGood[uri] = result;
+    }
   }
 
   AnalysisResult? analysis(String uri) => _analysis[uri];
+
+  /// Last successful analysis for [uri] (for completion after `x.`).
+  AnalysisResult? lastGood(String uri) => _lastGood[uri];
 }
