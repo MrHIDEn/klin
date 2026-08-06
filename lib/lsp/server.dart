@@ -6,6 +6,7 @@ import 'package:klin/complete.dart';
 import 'package:klin/fmt.dart';
 import 'package:klin/lexer.dart';
 import 'package:klin/parser.dart';
+import 'package:klin/rename.dart';
 import 'package:klin/token.dart';
 import 'package:klin/version.dart';
 import 'package:lsp_server/lsp_server.dart';
@@ -124,7 +125,11 @@ Future<void> runKlinLsp({
   void publishFor(Uri uri, String text) {
     final path = uriToPath(uri);
     final uriKey = uri.toString();
-    final result = analyzeSource(path: path, source: text);
+    final result = analyzeSource(
+      path: path,
+      source: text,
+      sourceOverlay: docs.pathOverlay(uriToPath),
+    );
     docs.setAnalysis(uriKey, result);
     final attributed = [
       for (final d in result.diagnostics)
@@ -145,6 +150,7 @@ Future<void> runKlinLsp({
         documentFormattingProvider: const Either2.t1(true),
         hoverProvider: const Either2.t1(true),
         definitionProvider: const Either2.t1(true),
+        renameProvider: const Either2.t1(true),
         completionProvider: CompletionOptions(
           triggerCharacters: const ['.'],
         ),
@@ -224,7 +230,7 @@ Future<void> runKlinLsp({
     if (result == null) return null;
     final line = params.position.line + 1;
     final col = params.position.character + 1;
-    final def = definitionAt(result, line, col);
+    final def = definitionAt(result, line, col, openPath: openPath);
     if (def == null) return null;
     final defPath = def.path ?? openPath;
     final defUri = pathToUri(defPath);
@@ -234,6 +240,85 @@ Future<void> runKlinLsp({
         range: diagnosticRange(def.pos),
       ),
     );
+  });
+
+  connection.onPrepareRename((params) async {
+    final uriKey = params.textDocument.uri.toString();
+    final openPath = uriToPath(params.textDocument.uri);
+    final result = docs.analysis(uriKey);
+    if (result == null) {
+      return Either2.t1(
+        Range(
+          start: params.position,
+          end: params.position,
+        ),
+      );
+    }
+    final line = params.position.line + 1;
+    final col = params.position.character + 1;
+    final prep = prepareRenameAt(
+      result,
+      line,
+      col,
+      openPath: openPath,
+    );
+    if (prep == null) {
+      return Either2.t1(
+        Range(
+          start: params.position,
+          end: params.position,
+        ),
+      );
+    }
+    return Either2.t1(
+      Range(
+        start: Position(
+          line: prep.pos.line - 1,
+          character: prep.pos.col - 1,
+        ),
+        end: Position(
+          line: prep.pos.line - 1,
+          character: prep.pos.col - 1 + prep.length,
+        ),
+      ),
+    );
+  });
+
+  connection.onRenameRequest((params) async {
+    final uriKey = params.textDocument.uri.toString();
+    final openPath = uriToPath(params.textDocument.uri);
+    final result = docs.analysis(uriKey);
+    if (result == null) return WorkspaceEdit(changes: {});
+    final line = params.position.line + 1;
+    final col = params.position.character + 1;
+    final edits = renameAt(
+      result,
+      line,
+      col,
+      params.newName,
+      openPath: openPath,
+    );
+    if (edits == null) return WorkspaceEdit(changes: {});
+    final changes = <Uri, List<TextEdit>>{};
+    for (final e in edits) {
+      final uri = pathToUri(e.path);
+      changes.putIfAbsent(uri, () => []).add(
+            TextEdit(
+              range: Range(
+                start: Position(
+                  line: e.pos.line - 1,
+                  character: e.pos.col - 1,
+                ),
+                end: Position(
+                  line: e.pos.line - 1,
+                  character: e.pos.col - 1 + e.length,
+                ),
+              ),
+              newText: e.newText,
+            ),
+          );
+    }
+    return WorkspaceEdit(changes: changes);
   });
 
   connection.onCompletion((params) async {

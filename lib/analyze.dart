@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'ast.dart';
 import 'checker.dart';
 import 'lexer.dart';
 import 'navigate.dart';
 import 'parser.dart';
 import 'preprocess.dart';
+import 'project.dart';
 import 'token.dart';
 
 export 'source_map.dart' show SourceMap;
@@ -48,19 +51,20 @@ final class AnalysisResult {
 
 /// Preprocess → lex → parse → check for a single buffer.
 ///
+/// When [sourceOverlay] is provided (LSP open buffers), analysis uses
+/// [loadProject] so imports / siblings resolve and cross-file definitions
+/// work. Falls back to a single-file parse if the project load fails.
+///
 /// Check-phase errors are collected per function (`collectErrors: true`) so the
 /// LSP can show more than one diagnostic. Lex/parse stay fail-fast.
 ///
 /// [requireMain] defaults to `false` (library-friendly). CLI compile paths keep
 /// calling [Checker.check] with the default `true`.
-///
-/// When preprocess rewrites the source, [SourceMap] remaps diagnostics and
-/// navigation positions back to the editor buffer. If mapping is unavailable,
-/// [positionsSkewed] is set and nav/completion are disabled.
 AnalysisResult analyzeSource({
   required String path,
   required String source,
   bool requireMain = false,
+  Map<String, String>? sourceOverlay,
 }) {
   late final PreprocessResult pp;
   try {
@@ -82,41 +86,107 @@ AnalysisResult analyzeSource({
   final skewed = expanded != source &&
       (map == null || map.origOfExpanded.isEmpty);
 
+  if (sourceOverlay != null) {
+    final project = _tryAnalyzeProject(
+      path: path,
+      source: source,
+      requireMain: requireMain,
+      sourceOverlay: sourceOverlay,
+      openMap: map,
+      skewed: skewed,
+    );
+    if (project != null) return project;
+  }
+
+  return _analyzeExpanded(
+    path: path,
+    expanded: expanded,
+    map: map,
+    skewed: skewed,
+    requireMain: requireMain,
+  );
+}
+
+AnalysisResult? _tryAnalyzeProject({
+  required String path,
+  required String source,
+  required bool requireMain,
+  required Map<String, String> sourceOverlay,
+  required SourceMap? openMap,
+  required bool skewed,
+}) {
+  String abs;
+  try {
+    abs = File(path).absolute.path;
+  } catch (_) {
+    return null;
+  }
+  final overlay = <String, String>{
+    for (final e in sourceOverlay.entries)
+      File(e.key).absolute.path: e.value,
+  };
+  overlay[abs] = source;
+
+  try {
+    final program = loadProject(abs, sourceOverlay: overlay);
+    return _checkProgram(
+      path: path,
+      program: program,
+      map: openMap,
+      skewed: skewed,
+      requireMain: requireMain,
+    );
+  } on PreprocessError catch (e) {
+    return AnalysisResult(
+      diagnostics: [
+        KlinDiagnostic(
+          message: e.message,
+          pos: e.pos,
+          path: e.path.isNotEmpty ? e.path : path,
+        ),
+      ],
+      sourceMap: openMap,
+      positionsSkewed: skewed,
+    );
+  } on LexError catch (e) {
+    return AnalysisResult(
+      diagnostics: [
+        _mappedDiagnostic(path, e.message, e.pos, openMap, skewed),
+      ],
+      sourceMap: openMap,
+      positionsSkewed: skewed,
+    );
+  } on ParseError catch (e) {
+    return AnalysisResult(
+      diagnostics: [
+        _mappedDiagnostic(path, e.message, e.pos, openMap, skewed),
+      ],
+      sourceMap: openMap,
+      positionsSkewed: skewed,
+    );
+  } on FileSystemException {
+    return null;
+  } on ArgumentError {
+    return null;
+  }
+}
+
+AnalysisResult _analyzeExpanded({
+  required String path,
+  required String expanded,
+  required SourceMap? map,
+  required bool skewed,
+  required bool requireMain,
+}) {
   try {
     final program = Parser(Lexer(expanded).tokenize()).parse();
-    try {
-      Checker().check(
-        program,
-        requireMain: requireMain,
-        collectErrors: true,
-      );
-      return AnalysisResult(
-        diagnostics: const [],
-        program: program,
-        positionsSkewed: skewed,
-        sourceMap: map,
-      );
-    } on CheckErrors catch (e) {
-      return AnalysisResult(
-        diagnostics: [
-          for (final err in e.errors)
-            _mappedDiagnostic(path, err.message, err.pos, map, skewed),
-        ],
-        program: program,
-        positionsSkewed: skewed,
-        sourceMap: map,
-      );
-    } on CheckError catch (e) {
-      return AnalysisResult(
-        diagnostics: [
-          _mappedDiagnostic(path, e.message, e.pos, map, skewed),
-        ],
-        // Registration failures — AST may be only partially typed.
-        program: program,
-        positionsSkewed: skewed,
-        sourceMap: map,
-      );
-    }
+    return _checkProgram(
+      path: path,
+      program: program,
+      map: map,
+      skewed: skewed,
+      requireMain: requireMain,
+    );
   } on LexError catch (e) {
     return AnalysisResult(
       diagnostics: [
@@ -130,6 +200,47 @@ AnalysisResult analyzeSource({
       diagnostics: [
         _mappedDiagnostic(path, e.message, e.pos, map, skewed),
       ],
+      positionsSkewed: skewed,
+      sourceMap: map,
+    );
+  }
+}
+
+AnalysisResult _checkProgram({
+  required String path,
+  required Program program,
+  required SourceMap? map,
+  required bool skewed,
+  required bool requireMain,
+}) {
+  try {
+    Checker().check(
+      program,
+      requireMain: requireMain,
+      collectErrors: true,
+    );
+    return AnalysisResult(
+      diagnostics: const [],
+      program: program,
+      positionsSkewed: skewed,
+      sourceMap: map,
+    );
+  } on CheckErrors catch (e) {
+    return AnalysisResult(
+      diagnostics: [
+        for (final err in e.errors)
+          _mappedDiagnostic(path, err.message, err.pos, map, skewed),
+      ],
+      program: program,
+      positionsSkewed: skewed,
+      sourceMap: map,
+    );
+  } on CheckError catch (e) {
+    return AnalysisResult(
+      diagnostics: [
+        _mappedDiagnostic(path, e.message, e.pos, map, skewed),
+      ],
+      program: program,
       positionsSkewed: skewed,
       sourceMap: map,
     );
@@ -216,9 +327,15 @@ String? hoverAt(AnalysisResult result, int line, int col) {
 
 /// Go-to-definition at 1-based editor [line]/[col], or null.
 ///
-/// Definition positions are remapped to the editor buffer when a [SourceMap]
-/// is present.
-ResolvedDef? definitionAt(AnalysisResult result, int line, int col) {
+/// Definition positions in the **open** file are remapped via [SourceMap].
+/// Cross-file definitions keep their path and expanded positions as stored on
+/// the AST (other-file maps are not applied in MVP).
+ResolvedDef? definitionAt(
+  AnalysisResult result,
+  int line,
+  int col, {
+  String? openPath,
+}) {
   if (result.positionsSkewed || result.program == null) return null;
   final q = _queryPos(result, line, col);
   final target = findNavTarget(result.program!, q.line, q.col);
@@ -226,5 +343,12 @@ ResolvedDef? definitionAt(AnalysisResult result, int line, int col) {
   if (def == null) return null;
   final map = result.sourceMap;
   if (map == null) return def;
+  final defPath = def.path;
+  if (openPath != null &&
+      defPath != null &&
+      defPath.isNotEmpty &&
+      !sameDiagnosticPath(defPath, openPath)) {
+    return def;
+  }
   return ResolvedDef(map.toOriginal(def.pos), def.path);
 }

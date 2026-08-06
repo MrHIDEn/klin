@@ -21,6 +21,8 @@ Program loadProject(
   String entryPath, {
   List<String> klinPathDirs = const [],
   String? klinCacheDir,
+  /// Absolute path → source text; wins over disk (LSP open buffers).
+  Map<String, String>? sourceOverlay,
 }) {
   final structs = <StructDecl>[];
   final enums = <EnumDecl>[];
@@ -30,6 +32,23 @@ Program loadProject(
   final loaded = <String, String>{}; // packageKey → moduleName
   final fileModule = <String, String>{}; // abs file path → moduleName
   SourcePos? firstPos;
+
+  String readSource(String absPath) {
+    final abs = File(absPath).absolute.path;
+    final fromOverlay = sourceOverlay?[abs] ?? sourceOverlay?[absPath];
+    if (fromOverlay != null) return fromOverlay;
+    return File(abs).readAsStringSync();
+  }
+
+  bool sourceExists(String absPath) {
+    final abs = File(absPath).absolute.path;
+    if (sourceOverlay != null &&
+        (sourceOverlay.containsKey(abs) ||
+            sourceOverlay.containsKey(absPath))) {
+      return true;
+    }
+    return File(abs).existsSync();
+  }
 
   String loadPackageFiles(
     List<String> filePaths, {
@@ -73,12 +92,11 @@ Program loadProject(
 
     final units = <({String path, ModuleUnit unit, String moduleName})>[];
     for (final path in absFiles) {
-      final file = File(path);
-      if (!file.existsSync()) {
+      if (!sourceExists(path)) {
         throw FileSystemException('imported file not found', path);
       }
       final expanded = preprocess(
-        file.readAsStringSync(),
+        readSource(path),
         path: path,
         klinCacheDir: klinCacheDir,
         klinPathDirs: klinPathDirs,
@@ -176,7 +194,7 @@ Program loadProject(
   // Entry: load the entry file plus same-module siblings in its directory.
   final entryAbs = File(entryPath).absolute.path;
   final entryExpanded = preprocess(
-    File(entryAbs).readAsStringSync(),
+    readSource(entryAbs),
     path: entryAbs,
     klinCacheDir: klinCacheDir,
     klinPathDirs: klinPathDirs,
@@ -188,7 +206,7 @@ Program loadProject(
   final moduleDecl = RegExp('(?:^|\\n)\\s*module\\s+$entryModule\\b');
   for (final path in _packageKlFiles(entryDir)) {
     if (path == entryAbs) continue;
-    final raw = File(path).readAsStringSync();
+    final raw = readSource(path);
     final looksLikeSibling = _fileStem(path) == entryModule ||
         moduleDecl.hasMatch(raw);
     try {
