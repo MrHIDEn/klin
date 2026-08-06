@@ -122,7 +122,9 @@ Future<void> runKlinLsp({
 
   void publishFor(Uri uri, String text) {
     final path = uriToPath(uri);
+    final uriKey = uri.toString();
     final result = analyzeSource(path: path, source: text);
+    docs.setAnalysis(uriKey, result);
     final attributed = [
       for (final d in result.diagnostics)
         diagnosticForOpenDocument(d, path),
@@ -140,6 +142,8 @@ Future<void> runKlinLsp({
       capabilities: ServerCapabilities(
         textDocumentSync: const Either2.t1(TextDocumentSyncKind.Full),
         documentFormattingProvider: const Either2.t1(true),
+        hoverProvider: const Either2.t1(true),
+        definitionProvider: const Either2.t1(true),
       ),
       serverInfo: InitializeResultServerInfo(
         name: 'klin',
@@ -194,5 +198,42 @@ Future<void> runKlinLsp({
     return formatDocumentEdits(text);
   });
 
+  connection.onHover((params) async {
+    final uriKey = params.textDocument.uri.toString();
+    final result = docs.analysis(uriKey);
+    if (result == null) {
+      return Hover(contents: Either2.t2(''));
+    }
+    final line = params.position.line + 1;
+    final col = params.position.character + 1;
+    final text = hoverAt(result, line, col);
+    if (text == null) {
+      return Hover(contents: Either2.t2(''));
+    }
+    return Hover(contents: Either2.t2(text));
+  });
+
+  connection.onDefinition((params) async {
+    final uriKey = params.textDocument.uri.toString();
+    final openPath = uriToPath(params.textDocument.uri);
+    final result = docs.analysis(uriKey);
+    if (result == null) return null;
+    final line = params.position.line + 1;
+    final col = params.position.character + 1;
+    final def = definitionAt(result, line, col);
+    if (def == null) return null;
+    final defPath = def.path ?? openPath;
+    final defUri = pathToUri(defPath);
+    return Either3.t1(
+      Location(
+        uri: defUri,
+        range: diagnosticRange(def.pos),
+      ),
+    );
+  });
+
   await connection.listen();
 }
+
+/// Convert a filesystem path to a `file://` [Uri].
+Uri pathToUri(String path) => Uri.file(path);

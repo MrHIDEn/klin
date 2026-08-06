@@ -1,6 +1,7 @@
 import 'ast.dart';
 import 'checker.dart';
 import 'lexer.dart';
+import 'navigate.dart';
 import 'parser.dart';
 import 'preprocess.dart';
 import 'token.dart';
@@ -150,4 +151,22 @@ KlinDiagnostic diagnosticForOpenDocument(
     path: openPath,
     severity: d.severity,
   );
+}
+
+/// Hover text at 1-based [line]/[col], or null.
+///
+/// Disabled when [AnalysisResult.positionsSkewed] (macro expand without source
+/// maps) or when analysis failed (`program == null`).
+String? hoverAt(AnalysisResult result, int line, int col) {
+  if (result.positionsSkewed || result.program == null) return null;
+  final target = findNavTarget(result.program!, line, col);
+  if (target == null) return null;
+  return hoverText(target);
+}
+
+/// Go-to-definition at 1-based [line]/[col], or null.
+ResolvedDef? definitionAt(AnalysisResult result, int line, int col) {
+  if (result.positionsSkewed || result.program == null) return null;
+  final target = findNavTarget(result.program!, line, col);
+  return target?.def;
 }

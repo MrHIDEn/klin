@@ -111,7 +111,7 @@ building the core from scratch.
 | [080](080-stdlib-str.md) | `stdlib/str` — `eq`/`len`/… (string compares without `==`) | ✅ | 012, 021 |
 | [083](083-stdlib-math.md) | `stdlib/math` — thin libm + typed `min_*`/`max_*`/`clamp_*` | ✅ | 012, 021 |
 | [081](081-number-literals.md) | Literals: binary `0b`, float exponent `1e…`, char `'A'`, (octal) | 🔨 (Group 1 ✅) | 002 |
-| [086](086-lsp.md) | Language Server (`klin lsp`: diagnostics + formatDocument) | ✅ MVP | 002, 033 |
+| [086](086-lsp.md) | Language Server (`klin lsp`: diagnostics, format, hover, definition) | 🔨 | 002, 033 |
 | [087](087-intellij-plugin.md) | IntelliJ plugin for Klin (LSP client + highlight; not full PSI) | 💭 0% | 086 |
 | [088](088-dap-debug.md) | Debug: `#line`/gdb docs + optional thin DAP (not inside LSP) | 💭 0% | `#line`, 087? |
 
