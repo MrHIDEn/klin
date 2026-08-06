@@ -103,7 +103,13 @@ final class Checker {
   /// assignment right-hand side (it lowers to statements in emission).
   bool _allowMatchExpr = false;
 
-  void check(Program program) {
+  /// Type-checks [program].
+  ///
+  /// When [requireMain] is true (CLI / `klin run` default), the program must
+  /// contain exactly one parameterless `main`. Language Server analysis of
+  /// library modules passes `false` so editing stdlib / packages does not
+  /// report a spurious missing-`main` error (issue 086).
+  void check(Program program, {bool requireMain = true}) {
     _functions.clear();
     _structs.clear();
     _enums.clear();
@@ -123,14 +129,22 @@ final class Checker {
             func.associatedType == null &&
             func.name == 'main')
         .toList();
-    if (main.isEmpty) {
-      throw CheckError('missing required `main` function', program.pos);
-    }
-    if (main.length != 1) {
+    if (requireMain) {
+      if (main.isEmpty) {
+        throw CheckError('missing required `main` function', program.pos);
+      }
+      if (main.length != 1) {
+        throw CheckError(
+            'a project can contain only one `main` function', main[1].pos);
+      }
+      if (main.single.params.isNotEmpty) {
+        throw CheckError(
+            '`main` function cannot have parameters', main.single.pos);
+      }
+    } else if (main.length > 1) {
       throw CheckError(
           'a project can contain only one `main` function', main[1].pos);
-    }
-    if (main.single.params.isNotEmpty) {
+    } else if (main.length == 1 && main.single.params.isNotEmpty) {
       throw CheckError(
           '`main` function cannot have parameters', main.single.pos);
     }

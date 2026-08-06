@@ -21,7 +21,7 @@ about tabs, braces, and line breaks.
 
 - Formatting **macro bodies** / `--emit-pp` result (dedent + `fmt`)
 - Preserving comments (`//`)
-- LSP / editor `formatDocument`
+- LSP / editor `formatDocument` → [086](086-lsp.md)
 - `klin fmt ./...` recursively
 
 ## Criteria

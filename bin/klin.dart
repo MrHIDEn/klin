@@ -10,6 +10,7 @@ import 'package:klin/link_args.dart';
 import 'package:klin/parser.dart';
 import 'package:klin/preprocess.dart';
 import 'package:klin/project.dart';
+import 'package:klin/lsp/server.dart';
 import 'package:klin/remote.dart';
 import 'package:klin/version.dart';
 
@@ -20,6 +21,7 @@ import 'package:klin/version.dart';
 ///   klin --help|-h
 ///   klin run [--cc …] [-I dir] [-l lib] [-L dir] <file.kl>
 ///   klin fmt [-w] <file.kl…>
+///   klin lsp
 ///   klin test [--cc …] [-I dir] [-l lib] [-L dir] [path…]
 ///   klin get [path[@ref]…]
 ///   klin update [path[@ref]…]
@@ -42,6 +44,10 @@ Future<void> main(List<String> args) async {
 
   if (args.first == 'fmt') {
     await _runFmt(args.skip(1).toList());
+    return;
+  }
+  if (args.first == 'lsp') {
+    await runKlinLsp();
     return;
   }
   if (args.first == 'test') {
@@ -598,6 +604,7 @@ String _usageText() =>
     '       klin --help|-h\n'
     '       klin run [--cc gcc|clang|tcc] [-I dir] [-l lib] [-L dir] <file.kl>\n'
     '       klin fmt [-w] <file.kl…>\n'
+    '       klin lsp\n'
     '       klin test [--cc gcc|clang|tcc] [-I dir] [-l lib] [-L dir] [path…]\n'
     '       klin get [path[@ref]…]\n'
     '       klin update [path[@ref]…]\n'
