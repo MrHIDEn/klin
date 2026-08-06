@@ -913,7 +913,7 @@ final class Parser {
       name: name.lexeme,
       typeName: typeName,
       init: init,
-      pos: letTok.pos,
+      pos: name.pos,
     );
   }
 

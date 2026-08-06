@@ -102,6 +102,22 @@ final class _CallStmtNav extends NavTarget {
   }
 }
 
+final class _LetNav extends NavTarget {
+  final LetStmt stmt;
+  _LetNav(this.stmt);
+
+  @override
+  SourcePos get pos => stmt.pos;
+  @override
+  String get label => stmt.name;
+  @override
+  KlinType? get type => stmt.resolvedType;
+  @override
+  ResolvedDef? get def => ResolvedDef(stmt.pos);
+  @override
+  int get nameLength => stmt.name.length;
+}
+
 bool _covers(SourcePos start, int length, int line, int col) {
   if (start.line != line) return false;
   if (col < start.col) return false;
@@ -217,8 +233,9 @@ final class _NavWalker {
 
   void walkStmt(Stmt s) {
     switch (s) {
-      case LetStmt(:final init):
-        if (init != null) walkExpr(init);
+      case LetStmt letStmt:
+        consider(_LetNav(letStmt));
+        if (letStmt.init != null) walkExpr(letStmt.init!);
       case LetDestructureStmt(:final source):
         walkExpr(source);
       case LetArrayDestructureStmt(:final source):

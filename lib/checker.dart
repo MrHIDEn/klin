@@ -1124,6 +1124,7 @@ final class Checker {
 
       case MethodCallStmt(:final call):
         final type = _checkMethodCall(call);
+        call.resolvedType = type;
         if (type is ResultType) {
           throw CheckError(
             'result `${type.displayName}` from method `${call.name}` must be handled with `!` or `or`',

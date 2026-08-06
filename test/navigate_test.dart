@@ -18,7 +18,16 @@ fn main(): void {
       expect(result.diagnostics, isEmpty);
       expect(result.program, isNotNull);
 
-      // `x` on the `let y` line — use site.
+      // Declaration site: `x` in `let x`.
+      final declLine = 2;
+      final declCol = source.split('\n')[declLine - 1].indexOf('x') + 1;
+      expect(hoverAt(result, declLine, declCol), contains('x: i32'));
+      final self = definitionAt(result, declLine, declCol);
+      expect(self, isNotNull);
+      expect(self!.pos.line, declLine);
+      expect(self.pos.col, declCol);
+
+      // Use site: `x` on the `let y` line.
       final useLine = 3;
       final useCol = source.split('\n')[useLine - 1].indexOf('x') + 1;
       final hover = hoverAt(result, useLine, useCol);
@@ -27,7 +36,8 @@ fn main(): void {
 
       final def = definitionAt(result, useLine, useCol);
       expect(def, isNotNull);
-      expect(def!.pos.line, 2); // `let x`
+      expect(def!.pos.line, declLine);
+      expect(def.pos.col, declCol);
     });
 
     test('hover and goto function call', () {
