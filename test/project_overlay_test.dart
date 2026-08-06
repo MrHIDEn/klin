@@ -69,5 +69,45 @@ pub fn helper(): i32 {
       expect(def!.path, isNotNull);
       expect(File(def.path!).absolute.path, lib.absolute.path);
     });
+
+    test('check errors from import keep import path', () {
+      final lib = File('${dir.path}/util.kl')
+        ..writeAsStringSync('''
+module util
+pub fn helper(): i32 {
+    return true
+}
+''');
+      final main = File('${dir.path}/main.kl')
+        ..writeAsStringSync('''
+import util
+fn main(): void {
+    let x: i32 = util.helper()
+}
+''');
+      final overlay = {
+        lib.absolute.path: lib.readAsStringSync(),
+        main.absolute.path: main.readAsStringSync(),
+      };
+      final result = analyzeSource(
+        path: main.path,
+        source: main.readAsStringSync(),
+        sourceOverlay: overlay,
+      );
+      expect(result.diagnostics, isNotEmpty);
+      expect(
+        result.diagnostics.any(
+          (d) => sameDiagnosticPath(d.path, lib.absolute.path),
+        ),
+        isTrue,
+        reason: 'type error in util must keep util path, not open main',
+      );
+      expect(
+        result.diagnostics
+            .where((d) => sameDiagnosticPath(d.path, lib.absolute.path))
+            .every((d) => d.pos.line >= 3),
+        isTrue,
+      );
+    });
   });
 }

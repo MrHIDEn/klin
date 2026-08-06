@@ -229,7 +229,14 @@ AnalysisResult _checkProgram({
     return AnalysisResult(
       diagnostics: [
         for (final err in e.errors)
-          _mappedDiagnostic(path, err.message, err.pos, map, skewed),
+          _mappedDiagnostic(
+            path,
+            err.message,
+            err.pos,
+            map,
+            skewed,
+            errorPath: err.path,
+          ),
       ],
       program: program,
       positionsSkewed: skewed,
@@ -238,7 +245,14 @@ AnalysisResult _checkProgram({
   } on CheckError catch (e) {
     return AnalysisResult(
       diagnostics: [
-        _mappedDiagnostic(path, e.message, e.pos, map, skewed),
+        _mappedDiagnostic(
+          path,
+          e.message,
+          e.pos,
+          map,
+          skewed,
+          errorPath: e.path,
+        ),
       ],
       program: program,
       positionsSkewed: skewed,
@@ -248,26 +262,37 @@ AnalysisResult _checkProgram({
 }
 
 KlinDiagnostic _mappedDiagnostic(
-  String path,
+  String openPath,
   String message,
   SourcePos pos,
   SourceMap? map,
-  bool skewed,
-) {
+  bool skewed, {
+  String? errorPath,
+}) {
+  final ep = errorPath;
+  final foreign = ep != null &&
+      ep.isNotEmpty &&
+      !sameDiagnosticPath(ep, openPath);
+
+  if (foreign) {
+    // Do not apply the open file's SourceMap to another module's positions.
+    return KlinDiagnostic(message: message, pos: pos, path: ep);
+  }
+
   if (map != null) {
     return KlinDiagnostic(
       message: message,
       pos: map.toOriginal(pos),
-      path: path,
+      path: openPath,
     );
   }
   if (!skewed) {
-    return KlinDiagnostic(message: message, pos: pos, path: path);
+    return KlinDiagnostic(message: message, pos: pos, path: openPath);
   }
   return KlinDiagnostic(
     message: '$message (after preprocess)',
     pos: const SourcePos(1, 1),
-    path: path,
+    path: openPath,
   );
 }
 

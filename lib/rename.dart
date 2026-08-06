@@ -48,7 +48,8 @@ bool _isIdent(String name) {
   final q = map?.toExpanded(SourcePos(line, col)) ?? SourcePos(line, col);
   final target = findNavTarget(result.program!, q.line, q.col);
   if (target == null || target.def == null) return null;
-  final editorPos = _toEditorPos(target.pos, target.def?.path, map, openPath);
+  final editorPos =
+      _toEditorPos(target.pos, target.occurrencePath, map, openPath);
   return (
     pos: editorPos,
     length: target.nameLength,
@@ -79,7 +80,7 @@ List<KlinTextEdit>? renameAt(
   final seen = <String>{};
   for (final t in allNavTargets(result.program!)) {
     if (!sameResolvedDef(t.def, def)) continue;
-    final path = t.def?.path ?? openPath;
+    final path = t.occurrencePath ?? openPath;
     final editorPos = _toEditorPos(t.pos, path, map, openPath);
     final key = '$path:${editorPos.line}:${editorPos.col}:${t.nameLength}';
     if (!seen.add(key)) continue;
@@ -104,12 +105,12 @@ List<KlinTextEdit>? renameAt(
 
 SourcePos _toEditorPos(
   SourcePos expandedPos,
-  String? defPath,
+  String? occurrencePath,
   SourceMap? map,
   String? openPath,
 ) {
   if (map == null || openPath == null) return expandedPos;
-  final path = defPath ?? openPath;
+  final path = occurrencePath ?? openPath;
   if (!sameDiagnosticPath(path, openPath)) return expandedPos;
   return map.toOriginal(expandedPos);
 }

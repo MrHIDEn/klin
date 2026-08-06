@@ -9,11 +9,16 @@ sealed class NavTarget {
   KlinType? get type;
   ResolvedDef? get def;
   int get nameLength;
+
+  /// File containing this occurrence (not necessarily the definition file).
+  String? get occurrencePath;
 }
 
 final class _NameNav extends NavTarget {
   final NameExpr expr;
-  _NameNav(this.expr);
+  @override
+  final String? occurrencePath;
+  _NameNav(this.expr, this.occurrencePath);
 
   @override
   SourcePos get pos => expr.pos;
@@ -29,7 +34,9 @@ final class _NameNav extends NavTarget {
 
 final class _FieldNav extends NavTarget {
   final FieldExpr expr;
-  _FieldNav(this.expr);
+  @override
+  final String? occurrencePath;
+  _FieldNav(this.expr, this.occurrencePath);
 
   @override
   SourcePos get pos => expr.pos;
@@ -45,7 +52,9 @@ final class _FieldNav extends NavTarget {
 
 final class _MethodNav extends NavTarget {
   final MethodCallExpr expr;
-  _MethodNav(this.expr);
+  @override
+  final String? occurrencePath;
+  _MethodNav(this.expr, this.occurrencePath);
 
   @override
   SourcePos get pos => expr.pos;
@@ -61,7 +70,9 @@ final class _MethodNav extends NavTarget {
 
 final class _CallNav extends NavTarget {
   final CallExpr expr;
-  _CallNav(this.expr);
+  @override
+  final String? occurrencePath;
+  _CallNav(this.expr, this.occurrencePath);
 
   @override
   SourcePos get pos => expr.pos;
@@ -82,7 +93,9 @@ final class _CallNav extends NavTarget {
 
 final class _CallStmtNav extends NavTarget {
   final CallStmt stmt;
-  _CallStmtNav(this.stmt);
+  @override
+  final String? occurrencePath;
+  _CallStmtNav(this.stmt, this.occurrencePath);
 
   @override
   SourcePos get pos => stmt.pos;
@@ -104,7 +117,9 @@ final class _CallStmtNav extends NavTarget {
 
 final class _LetNav extends NavTarget {
   final LetStmt stmt;
-  _LetNav(this.stmt);
+  @override
+  final String? occurrencePath;
+  _LetNav(this.stmt, this.occurrencePath);
 
   @override
   SourcePos get pos => stmt.pos;
@@ -113,7 +128,7 @@ final class _LetNav extends NavTarget {
   @override
   KlinType? get type => stmt.resolvedType;
   @override
-  ResolvedDef? get def => ResolvedDef(stmt.pos);
+  ResolvedDef? get def => ResolvedDef(stmt.pos, occurrencePath);
   @override
   int get nameLength => stmt.name.length;
 }
@@ -139,7 +154,10 @@ bool sameResolvedDef(ResolvedDef? a, ResolvedDef? b) {
   if (a.pos.line != b.pos.line || a.pos.col != b.pos.col) return false;
   final ap = a.path ?? '';
   final bp = b.path ?? '';
-  if (ap.isEmpty || bp.isEmpty) return ap == bp || ap.isEmpty || bp.isEmpty;
+  // Both unknown → same analysis unit. One known + one unknown → not equal
+  // (avoids colliding locals across files that share line/col).
+  if (ap.isEmpty && bp.isEmpty) return true;
+  if (ap.isEmpty || bp.isEmpty) return false;
   return ap == bp ||
       ap.replaceAll('\\', '/').split('/').last ==
           bp.replaceAll('\\', '/').split('/').last;
@@ -158,6 +176,8 @@ final class _FuncNav extends NavTarget {
   @override
   ResolvedDef? get def => ResolvedDef(func.pos, func.sourcePath);
   @override
+  String? get occurrencePath => func.sourcePath;
+  @override
   int get nameLength => func.name.length;
 }
 
@@ -175,14 +195,18 @@ final class _ParamNav extends NavTarget {
   @override
   ResolvedDef? get def => ResolvedDef(param.pos, sourcePath);
   @override
+  String? get occurrencePath => sourcePath;
+  @override
   int get nameLength => param.name.length;
 }
 
 final class _CollectNav {
   final List<NavTarget> out = [];
+  String? _file;
 
   List<NavTarget> run(Program program) {
     for (final f in program.funcs) {
+      _file = f.sourcePath;
       out.add(_FuncNav(f));
       for (final p in f.params) {
         out.add(_ParamNav(p, f.sourcePath));
@@ -196,21 +220,21 @@ final class _CollectNav {
   void walkExpr(Expr e) {
     switch (e) {
       case NameExpr():
-        out.add(_NameNav(e));
+        out.add(_NameNav(e, _file));
       case FieldExpr(:final object):
         walkExpr(object);
-        out.add(_FieldNav(e));
+        out.add(_FieldNav(e, _file));
       case MethodCallExpr(:final receiver, :final args):
         walkExpr(receiver);
         for (final a in args) {
           walkExpr(a);
         }
-        out.add(_MethodNav(e));
+        out.add(_MethodNav(e, _file));
       case CallExpr(:final args):
         for (final a in args) {
           walkExpr(a);
         }
-        out.add(_CallNav(e));
+        out.add(_CallNav(e, _file));
       case UnaryExpr(:final operand):
         walkExpr(operand);
       case BinaryExpr(:final left, :final right):
@@ -274,7 +298,7 @@ final class _CollectNav {
   void walkStmt(Stmt s) {
     switch (s) {
       case LetStmt letStmt:
-        out.add(_LetNav(letStmt));
+        out.add(_LetNav(letStmt, _file));
         if (letStmt.init != null) walkExpr(letStmt.init!);
       case LetDestructureStmt(:final source):
         walkExpr(source);
@@ -299,7 +323,7 @@ final class _CollectNav {
         for (final a in callStmt.args) {
           walkExpr(a);
         }
-        out.add(_CallStmtNav(callStmt));
+        out.add(_CallStmtNav(callStmt, _file));
       case MethodCallStmt(:final call):
         walkExpr(call);
       case AwaitStmt(:final expr):
@@ -353,11 +377,13 @@ final class _NavWalker {
   final int line;
   final int col;
   NavTarget? best;
+  String? _file;
 
   _NavWalker(this.line, this.col);
 
   NavTarget? run(Program program) {
     for (final f in program.funcs) {
+      _file = f.sourcePath;
       consider(_FuncNav(f));
       for (final p in f.params) {
         consider(_ParamNav(p, f.sourcePath));
@@ -380,21 +406,21 @@ final class _NavWalker {
   void walkExpr(Expr e) {
     switch (e) {
       case NameExpr():
-        consider(_NameNav(e));
+        consider(_NameNav(e, _file));
       case FieldExpr(:final object):
         walkExpr(object);
-        consider(_FieldNav(e));
+        consider(_FieldNav(e, _file));
       case MethodCallExpr(:final receiver, :final args):
         walkExpr(receiver);
         for (final a in args) {
           walkExpr(a);
         }
-        consider(_MethodNav(e));
+        consider(_MethodNav(e, _file));
       case CallExpr(:final args):
         for (final a in args) {
           walkExpr(a);
         }
-        consider(_CallNav(e));
+        consider(_CallNav(e, _file));
       case UnaryExpr(:final operand):
         walkExpr(operand);
       case BinaryExpr(:final left, :final right):
@@ -458,7 +484,7 @@ final class _NavWalker {
   void walkStmt(Stmt s) {
     switch (s) {
       case LetStmt letStmt:
-        consider(_LetNav(letStmt));
+        consider(_LetNav(letStmt, _file));
         if (letStmt.init != null) walkExpr(letStmt.init!);
       case LetDestructureStmt(:final source):
         walkExpr(source);
@@ -483,7 +509,7 @@ final class _NavWalker {
         for (final a in callStmt.args) {
           walkExpr(a);
         }
-        consider(_CallStmtNav(callStmt));
+        consider(_CallStmtNav(callStmt, _file));
       case MethodCallStmt(:final call):
         walkExpr(call);
       case AwaitStmt(:final expr):

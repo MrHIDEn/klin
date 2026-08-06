@@ -6,10 +6,18 @@ final class CheckError implements Exception {
   final String message;
   final SourcePos pos;
 
-  const CheckError(this.message, this.pos);
+  /// File where the error was raised, when known (e.g. during function body
+  /// check). Null for registration / single-unit errors without a path.
+  final String? path;
+
+  const CheckError(this.message, this.pos, {this.path});
 
   @override
-  String toString() => '${pos.line}:${pos.col}: $message';
+  String toString() {
+    final p = path;
+    if (p == null || p.isEmpty) return '${pos.line}:${pos.col}: $message';
+    return '$p:${pos.line}:${pos.col}: $message';
+  }
 }
 
 /// Multiple [CheckError]s collected when [Checker.check] runs with
@@ -177,7 +185,11 @@ final class Checker {
         _checkFuncBody(func);
       } on CheckError catch (e) {
         if (!collectErrors) rethrow;
-        collected.add(e);
+        collected.add(
+          e.path != null
+              ? e
+              : CheckError(e.message, e.pos, path: _currentSourcePath),
+        );
       }
     }
     if (collected.isNotEmpty) {
