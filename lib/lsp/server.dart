@@ -74,11 +74,41 @@ String uriToPath(Uri uri) {
   return uri.path;
 }
 
-String _changeText(TextDocumentContentChangeEvent change) {
+/// Applies one LSP content change to [current] (full or incremental).
+String applyContentChange(
+  String current,
+  TextDocumentContentChangeEvent change,
+) {
   return change.map(
-    (incremental) => incremental.text,
+    (incremental) {
+      final start = offsetOfPosition(current, incremental.range.start);
+      final end = offsetOfPosition(current, incremental.range.end);
+      if (start < 0 || end < start || end > current.length) {
+        // Corrupt range — fall back to replacement text only if empty doc.
+        return incremental.text;
+      }
+      return current.replaceRange(start, end, incremental.text);
+    },
     (full) => full.text,
   );
+}
+
+/// UTF-16 code unit offset for an LSP [Position] (0-based line/character).
+int offsetOfPosition(String text, Position pos) {
+  var offset = 0;
+  var line = 0;
+  while (line < pos.line && offset < text.length) {
+    final next = text.indexOf('\n', offset);
+    if (next < 0) {
+      return text.length;
+    }
+    offset = next + 1;
+    line++;
+  }
+  final lineEnd = text.indexOf('\n', offset);
+  final maxCol = lineEnd < 0 ? text.length - offset : lineEnd - offset;
+  final col = pos.character.clamp(0, maxCol);
+  return offset + col;
 }
 
 /// Starts the Klin Language Server on stdio (issue 086).
@@ -93,10 +123,14 @@ Future<void> runKlinLsp({
   void publishFor(Uri uri, String text) {
     final path = uriToPath(uri);
     final result = analyzeSource(path: path, source: text);
+    final attributed = [
+      for (final d in result.diagnostics)
+        diagnosticForOpenDocument(d, path),
+    ];
     connection.sendDiagnostics(
       PublishDiagnosticsParams(
         uri: uri,
-        diagnostics: toLspDiagnostics(result.diagnostics),
+        diagnostics: toLspDiagnostics(attributed),
       ),
     );
   }
@@ -134,7 +168,10 @@ Future<void> runKlinLsp({
   connection.onDidChangeTextDocument((params) async {
     final uriKey = params.textDocument.uri.toString();
     if (params.contentChanges.isEmpty) return;
-    final text = _changeText(params.contentChanges.last);
+    var text = docs.get(uriKey) ?? '';
+    for (final change in params.contentChanges) {
+      text = applyContentChange(text, change);
+    }
     docs.change(uriKey, text);
     publishFor(params.textDocument.uri, text);
   });

@@ -28,9 +28,14 @@ final class AnalysisResult {
   final List<KlinDiagnostic> diagnostics;
   final Program? program;
 
+  /// True when preprocess rewrote the buffer; post-expand positions then refer
+  /// to expanded text, not the editor buffer (see [analyzeSource]).
+  final bool positionsSkewed;
+
   const AnalysisResult({
     required this.diagnostics,
     this.program,
+    this.positionsSkewed = false,
   });
 }
 
@@ -41,16 +46,20 @@ final class AnalysisResult {
 ///
 /// [requireMain] defaults to `false` (library-friendly). CLI compile paths keep
 /// calling [Checker.check] with the default `true`.
+///
+/// When preprocess changes the source, lex/parse/check positions are relative
+/// to the **expanded** text. Those diagnostics are remapped to line 1 / col 1
+/// with an `(after preprocess)` note so the editor does not paint a squiggle on
+/// the wrong line of the buffer. [PreprocessError] keeps its original position
+/// (still on the pre-expand source, or on an imported path).
 AnalysisResult analyzeSource({
   required String path,
   required String source,
   bool requireMain = false,
 }) {
+  late final String expanded;
   try {
-    final expanded = preprocess(source, path: path);
-    final program = Parser(Lexer(expanded).tokenize()).parse();
-    Checker().check(program, requireMain: requireMain);
-    return AnalysisResult(diagnostics: const [], program: program);
+    expanded = preprocess(source, path: path);
   } on PreprocessError catch (e) {
     return AnalysisResult(
       diagnostics: [
@@ -61,23 +70,84 @@ AnalysisResult analyzeSource({
         ),
       ],
     );
+  }
+
+  final skewed = expanded != source;
+  try {
+    final program = Parser(Lexer(expanded).tokenize()).parse();
+    Checker().check(program, requireMain: requireMain);
+    return AnalysisResult(
+      diagnostics: const [],
+      program: program,
+      positionsSkewed: skewed,
+    );
   } on LexError catch (e) {
-    return AnalysisResult(
-      diagnostics: [
-        KlinDiagnostic(message: e.message, pos: e.pos, path: path),
-      ],
-    );
+    return _postExpandDiagnostic(path, e.message, e.pos, skewed);
   } on ParseError catch (e) {
-    return AnalysisResult(
-      diagnostics: [
-        KlinDiagnostic(message: e.message, pos: e.pos, path: path),
-      ],
-    );
+    return _postExpandDiagnostic(path, e.message, e.pos, skewed);
   } on CheckError catch (e) {
+    return _postExpandDiagnostic(path, e.message, e.pos, skewed);
+  }
+}
+
+AnalysisResult _postExpandDiagnostic(
+  String path,
+  String message,
+  SourcePos pos,
+  bool skewed,
+) {
+  if (!skewed) {
     return AnalysisResult(
       diagnostics: [
-        KlinDiagnostic(message: e.message, pos: e.pos, path: path),
+        KlinDiagnostic(message: message, pos: pos, path: path),
       ],
     );
   }
+  return AnalysisResult(
+    diagnostics: [
+      KlinDiagnostic(
+        message: '$message (after preprocess)',
+        pos: const SourcePos(1, 1),
+        path: path,
+      ),
+    ],
+    positionsSkewed: true,
+  );
+}
+
+/// True when [a] and [b] name the same file (path or basename).
+bool sameDiagnosticPath(String a, String b) {
+  if (a == b) return true;
+  if (a.isEmpty || b.isEmpty) return false;
+  final na = a.replaceAll('\\', '/');
+  final nb = b.replaceAll('\\', '/');
+  if (na == nb) return true;
+  final ba = na.split('/').last;
+  final bb = nb.split('/').last;
+  return ba == bb && ba.isNotEmpty;
+}
+
+/// Attribute a diagnostic to [openPath] for publishDiagnostics on that URI.
+///
+/// Errors that originated in another file (e.g. preprocess of an import) keep
+/// their message but are pinned to the start of the open buffer so the editor
+/// still surfaces them.
+KlinDiagnostic diagnosticForOpenDocument(
+  KlinDiagnostic d,
+  String openPath,
+) {
+  if (sameDiagnosticPath(d.path, openPath)) {
+    return KlinDiagnostic(
+      message: d.message,
+      pos: d.pos,
+      path: openPath,
+      severity: d.severity,
+    );
+  }
+  return KlinDiagnostic(
+    message: '${d.path}:${d.pos.line}:${d.pos.col}: ${d.message}',
+    pos: const SourcePos(1, 1),
+    path: openPath,
+    severity: d.severity,
+  );
 }

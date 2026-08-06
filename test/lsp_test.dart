@@ -1,5 +1,7 @@
+import 'package:klin/analyze.dart';
 import 'package:klin/lsp/server.dart';
 import 'package:klin/token.dart';
+import 'package:lsp_server/lsp_server.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -28,6 +30,45 @@ void main() {
     test('uriToPath unwraps file URIs', () {
       final path = uriToPath(Uri.file('/tmp/hello.kl'));
       expect(path, contains('hello.kl'));
+    });
+
+    test('applyContentChange applies incremental range edits', () {
+      const current = 'fn foo(): void {\n}\n';
+      final change = Either2<TextDocumentContentChangeEvent1,
+          TextDocumentContentChangeEvent2>.t1(
+        TextDocumentContentChangeEvent1(
+          range: Range(
+            start: Position(line: 0, character: 3),
+            end: Position(line: 0, character: 6),
+          ),
+          text: 'bar',
+        ),
+      );
+      final next = applyContentChange(current, change);
+      expect(next, 'fn bar(): void {\n}\n');
+    });
+
+    test('applyContentChange replaces whole document on full sync', () {
+      const current = 'old';
+      final change = Either2<TextDocumentContentChangeEvent1,
+          TextDocumentContentChangeEvent2>.t2(
+        TextDocumentContentChangeEvent2(text: 'fn main(): void {}\n'),
+      );
+      expect(applyContentChange(current, change), 'fn main(): void {}\n');
+    });
+
+    test('toLspDiagnostics uses attributed open-document paths', () {
+      final d = diagnosticForOpenDocument(
+        const KlinDiagnostic(
+          message: 'x',
+          pos: SourcePos(2, 1),
+          path: 'other.kl',
+        ),
+        'open.kl',
+      );
+      final lsp = toLspDiagnostics([d]).single;
+      expect(lsp.range.start.line, 0);
+      expect(lsp.message, contains('other.kl'));
     });
   });
 }

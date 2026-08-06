@@ -1,5 +1,6 @@
 import 'package:klin/analyze.dart';
 import 'package:klin/fmt.dart';
+import 'package:klin/token.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -67,6 +68,40 @@ fn foo(): void {
         requireMain: false,
       );
       expect(without.diagnostics, isEmpty);
+    });
+
+    test('check error after macro expand remaps pos (no wrong squiggle)', () {
+      const source = r'''
+$fn point(name: name, T: type) {
+  struct $name { x: $T y: $T }
+}
+$point(Vec2i, i32)
+fn main(): void {
+  let bad: NoSuch = 1
+}
+''';
+      final result = analyzeSource(path: 'skew.kl', source: source);
+      expect(result.diagnostics, hasLength(1));
+      expect(result.positionsSkewed, isTrue);
+      final d = result.diagnostics.single;
+      expect(d.pos.line, 1);
+      expect(d.pos.col, 1);
+      expect(d.message, contains('after preprocess'));
+      expect(d.message, contains('NoSuch'));
+    });
+
+    test('diagnosticForOpenDocument rewrites foreign paths', () {
+      const foreign = KlinDiagnostic(
+        message: 'boom',
+        pos: SourcePos(3, 4),
+        path: '/other/macros.kl',
+      );
+      final attributed = diagnosticForOpenDocument(foreign, '/app/main.kl');
+      expect(attributed.path, '/app/main.kl');
+      expect(attributed.pos.line, 1);
+      expect(attributed.pos.col, 1);
+      expect(attributed.message, contains('/other/macros.kl'));
+      expect(attributed.message, contains('boom'));
     });
   });
 
