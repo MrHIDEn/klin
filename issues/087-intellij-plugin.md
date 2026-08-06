@@ -28,6 +28,7 @@ LSP is editor-agnostic; a thin JetBrains LSP client avoids dual grammar drift
 - Full Grammar-Kit grammar duplicating the Dart frontend
 - Go-to-definition / hover until LSP grows those features (086 follow-up)
 - Debugger UI beyond attaching gdb/lldb to emitted C + `#line`
+  (full story → [088](088-dap-debug.md); DAP ≠ LSP)
 
 ## Progress
 
