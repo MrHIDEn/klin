@@ -65,6 +65,85 @@ fn main(): void {
       expect(items.map((i) => i.label), contains('x'));
     });
 
+    test('does not suggest locals from another function', () {
+      const source = '''
+fn helper(): void {
+    let secret: i32 = 1
+}
+fn main(): void {
+    let a: i32 = 1
+}
+''';
+      final result = _ok(source);
+      final (line, col) = _after(source, 'let a: i32 = ');
+      final labels =
+          completeAt(result, line, col, source: source).map((i) => i.label);
+      expect(labels, contains('a'));
+      expect(labels, isNot(contains('secret')));
+    });
+
+    test('if-arm locals do not leak into the other arm', () {
+      const source = '''
+fn main(): void {
+    if true {
+        let onlyThen: i32 = 1
+    } else {
+        let onlyElse: i32 = 2
+        let z: i32 = onlyElse
+    }
+}
+''';
+      final result = _ok(source);
+      final (line, col) = _after(source, 'let z: i32 = ');
+      final labels = completeAt(result, line, col, source: source)
+          .map((i) => i.label)
+          .toSet();
+      expect(labels, contains('onlyElse'));
+      expect(labels, isNot(contains('onlyThen')));
+    });
+
+    test('loop variable is not suggested after the loop', () {
+      const source = '''
+fn main(): void {
+    for i in 0..<3 {
+        let inside: i32 = i
+    }
+    let after: i32 = 1
+}
+''';
+      final result = _ok(source);
+      final (line, col) = _after(source, 'let after: i32 = ');
+      final labels = completeAt(result, line, col, source: source)
+          .map((i) => i.label)
+          .toSet();
+      expect(labels, contains('after'));
+      expect(labels, isNot(contains('i')));
+      expect(labels, isNot(contains('inside')));
+    });
+
+    test('member type uses enclosing-function binding', () {
+      const source = '''
+struct Point { x: i32 y: i32 }
+struct Box { w: i32 h: i32 }
+fn helper(): void {
+    let p: Box = Box{ w: 1, h: 2 }
+    let _u: i32 = p.w
+}
+fn main(): void {
+    let p: Point = Point{ x: 1, y: 2 }
+    let z: i32 = p.x
+}
+''';
+      final result = _ok(source);
+      final (line, col) = _after(source, 'let z: i32 = p.');
+      final labels = completeAt(result, line, col, source: source)
+          .map((i) => i.label)
+          .toSet();
+      expect(labels, containsAll(['x', 'y']));
+      expect(labels, isNot(contains('w')));
+      expect(labels, isNot(contains('h')));
+    });
+
     test('filters by identifier prefix', () {
       const source = '''
 fn foo(): void {

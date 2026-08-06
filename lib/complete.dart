@@ -108,7 +108,10 @@ List<KlinCompletionItem> completeAt(
 
   if (dot) {
     if (program == null) return const [];
-    return _filterPrefix(_memberCompletions(program, before), prefix);
+    return _filterPrefix(
+      _memberCompletions(program, before, line, col),
+      prefix,
+    );
   }
 
   final items = <KlinCompletionItem>[
@@ -173,30 +176,50 @@ String _funcDetail(FuncDecl f) {
 }
 
 List<KlinCompletionItem> _localsAt(Program program, int line, int col) {
+  final f = _enclosingFunc(program, line, col);
+  if (f == null) return const [];
   final map = <String, KlinCompletionItem>{};
-  for (final f in program.funcs) {
-    final body = f.body;
-    if (body == null) continue;
-    if (_isBefore(line, col, body.pos)) continue;
-
-    final receiver = f.receiver;
-    if (receiver != null) {
-      map[receiver.name] = KlinCompletionItem(
-        label: receiver.name,
-        kind: KlinCompletionKind.variable,
-        detail: receiver.resolvedType?.displayName ?? receiver.typeName,
-      );
-    }
-    for (final p in f.params) {
-      map[p.name] = KlinCompletionItem(
-        label: p.name,
-        kind: KlinCompletionKind.variable,
-        detail: p.resolvedType?.displayName ?? p.typeName,
-      );
-    }
+  final receiver = f.receiver;
+  if (receiver != null) {
+    map[receiver.name] = KlinCompletionItem(
+      label: receiver.name,
+      kind: KlinCompletionKind.variable,
+      detail: receiver.resolvedType?.displayName ?? receiver.typeName,
+    );
+  }
+  for (final p in f.params) {
+    map[p.name] = KlinCompletionItem(
+      label: p.name,
+      kind: KlinCompletionKind.variable,
+      detail: p.resolvedType?.displayName ?? p.typeName,
+    );
+  }
+  final body = f.body;
+  if (body != null) {
     _collectLocalsInBlock(body, line, col, map);
   }
   return map.values.toList();
+}
+
+/// Top-level function whose source range contains [line]/[col].
+///
+/// Functions are ordered by declaration position; the enclosing one is the
+/// last whose `pos` is at or before the cursor.
+FuncDecl? _enclosingFunc(Program program, int line, int col) {
+  FuncDecl? best;
+  for (final f in program.funcs) {
+    if (_isBefore(line, col, f.pos)) continue;
+    if (best == null || !_posBefore(f.pos, best.pos)) {
+      best = f;
+    }
+  }
+  return best;
+}
+
+/// True when [a] is strictly before [b] in source order.
+bool _posBefore(SourcePos a, SourcePos b) {
+  if (a.line != b.line) return a.line < b.line;
+  return a.col < b.col;
 }
 
 void _collectLocalsInBlock(
@@ -205,9 +228,14 @@ void _collectLocalsInBlock(
   int col,
   Map<String, KlinCompletionItem> map,
 ) {
-  for (final s in block.stmts) {
+  final stmts = block.stmts;
+  for (var i = 0; i < stmts.length; i++) {
+    final s = stmts[i];
     if (_isBefore(line, col, s.pos)) break;
-    _collectLocalsInStmt(s, line, col, map);
+    final endExclusive = i + 1 < stmts.length ? stmts[i + 1].pos : null;
+    final nestedVisible =
+        endExclusive == null || _isBefore(line, col, endExclusive);
+    _collectLocalsInStmt(s, line, col, map, nestedVisible: nestedVisible);
   }
 }
 
@@ -215,11 +243,11 @@ void _collectLocalsInStmt(
   Stmt s,
   int line,
   int col,
-  Map<String, KlinCompletionItem> map,
-) {
+  Map<String, KlinCompletionItem> map, {
+  required bool nestedVisible,
+}) {
   switch (s) {
     case LetStmt(:final name, :final resolvedType, :final typeName, :final pos):
-      // Binding is available after the name token.
       if (line > pos.line || (line == pos.line && col > pos.col)) {
         map[name] = KlinCompletionItem(
           label: name,
@@ -253,50 +281,65 @@ void _collectLocalsInStmt(
         }
       }
     case IfStmt(:final thenBlock, :final elseBranch):
-      if (!_isBefore(line, col, thenBlock.pos)) {
+      if (!nestedVisible) break;
+      if (elseBranch != null) {
+        if (!_isBefore(line, col, elseBranch.pos)) {
+          _collectLocalsInStmt(
+            elseBranch,
+            line,
+            col,
+            map,
+            nestedVisible: true,
+          );
+        } else if (!_isBefore(line, col, thenBlock.pos)) {
+          _collectLocalsInBlock(thenBlock, line, col, map);
+        }
+      } else if (!_isBefore(line, col, thenBlock.pos)) {
         _collectLocalsInBlock(thenBlock, line, col, map);
       }
-      if (elseBranch != null) {
-        _collectLocalsInStmt(elseBranch, line, col, map);
-      }
     case WhileStmt(:final body):
+      if (!nestedVisible) break;
       _collectLocalsInBlock(body, line, col, map);
     case ForRangeStmt(
         :final name,
         :final body,
-        :final pos,
         :final resolvedType,
       ):
-      if (!_isBefore(line, col, pos)) {
-        map[name] = KlinCompletionItem(
-          label: name,
-          kind: KlinCompletionKind.variable,
-          detail: resolvedType?.displayName ?? 'i32',
-        );
-        _collectLocalsInBlock(body, line, col, map);
-      }
+      if (!nestedVisible) break;
+      map[name] = KlinCompletionItem(
+        label: name,
+        kind: KlinCompletionKind.variable,
+        detail: resolvedType?.displayName ?? 'i32',
+      );
+      _collectLocalsInBlock(body, line, col, map);
     case ForCStmt(
         :final initName,
         :final resolvedInitType,
         :final body,
-        :final pos,
       ):
-      if (!_isBefore(line, col, pos)) {
-        if (initName != null) {
-          map[initName] = KlinCompletionItem(
-            label: initName,
-            kind: KlinCompletionKind.variable,
-            detail: resolvedInitType?.displayName,
-          );
-        }
-        _collectLocalsInBlock(body, line, col, map);
+      if (!nestedVisible) break;
+      if (initName != null) {
+        map[initName] = KlinCompletionItem(
+          label: initName,
+          kind: KlinCompletionKind.variable,
+          detail: resolvedInitType?.displayName,
+        );
       }
+      _collectLocalsInBlock(body, line, col, map);
     case BlockStmt(:final block):
+      if (!nestedVisible) break;
       _collectLocalsInBlock(block, line, col, map);
     case DeferStmt(:final body):
-      _collectLocalsInStmt(body, line, col, map);
+      if (!nestedVisible) break;
+      _collectLocalsInStmt(body, line, col, map, nestedVisible: true);
     case MatchStmt(:final arms):
-      for (final arm in arms) {
+      if (!nestedVisible) break;
+      for (var i = 0; i < arms.length; i++) {
+        final arm = arms[i];
+        final start = arm.body.pos;
+        if (_isBefore(line, col, start)) continue;
+        final end = i + 1 < arms.length ? arms[i + 1].body.pos : null;
+        if (end != null && !_isBefore(line, col, end)) continue;
         _collectLocalsInBlock(arm.body, line, col, map);
       }
     default:
@@ -310,7 +353,12 @@ bool _isBefore(int line, int col, SourcePos pos) {
   return col < pos.col;
 }
 
-List<KlinCompletionItem> _memberCompletions(Program program, String before) {
+List<KlinCompletionItem> _memberCompletions(
+  Program program,
+  String before,
+  int line,
+  int col,
+) {
   final receiver = _receiverNameBeforeDot(before);
   if (receiver == null) return const [];
 
@@ -334,7 +382,7 @@ List<KlinCompletionItem> _memberCompletions(Program program, String before) {
     }
   }
 
-  final type = _typeOfName(program, receiver);
+  final type = _typeOfName(program, receiver, line, col);
   if (type == null) return const [];
   return _membersForType(program, type);
 }
@@ -423,82 +471,110 @@ StructDecl? _findStruct(Program program, String moduleName, String name) {
   return null;
 }
 
-KlinType? _typeOfName(Program program, String name) {
-  KlinType? found;
-  for (final f in program.funcs) {
-    final t = _findBindingTypeInFunc(f, name);
-    if (t != null) found = t;
-  }
-  return found;
+KlinType? _typeOfName(Program program, String name, int line, int col) {
+  final f = _enclosingFunc(program, line, col);
+  if (f == null) return null;
+  return _bindingTypeInFunc(f, name, line, col);
 }
 
-KlinType? _findBindingTypeInFunc(FuncDecl f, String name) {
-  if (f.receiver?.name == name) return f.receiver!.resolvedType;
-  for (final p in f.params) {
-    if (p.name == name) return p.resolvedType;
-  }
+KlinType? _bindingTypeInFunc(
+  FuncDecl f,
+  String name,
+  int line,
+  int col,
+) {
   KlinType? found;
+  if (f.receiver?.name == name) found = f.receiver!.resolvedType;
+  for (final p in f.params) {
+    if (p.name == name) found = p.resolvedType;
+  }
 
-  void walkStmt(Stmt s) {
+  late void Function(Block) walkBlock;
+  late void Function(Stmt, {required bool nestedVisible}) walkStmt;
+
+  walkBlock = (Block block) {
+    final stmts = block.stmts;
+    for (var i = 0; i < stmts.length; i++) {
+      final s = stmts[i];
+      if (_isBefore(line, col, s.pos)) break;
+      final endExclusive = i + 1 < stmts.length ? stmts[i + 1].pos : null;
+      final nestedVisible =
+          endExclusive == null || _isBefore(line, col, endExclusive);
+      walkStmt(s, nestedVisible: nestedVisible);
+    }
+  };
+
+  walkStmt = (Stmt s, {required bool nestedVisible}) {
     switch (s) {
       case LetStmt stmt:
-        if (stmt.name == name) found = stmt.resolvedType;
-      case LetDestructureStmt(:final binds, :final fieldTypes):
-        for (var i = 0; i < binds.length; i++) {
-          if (binds[i] == name) {
-            found = fieldTypes != null && i < fieldTypes.length
-                ? fieldTypes[i]
-                : null;
+        if (stmt.name == name &&
+            (line > stmt.pos.line ||
+                (line == stmt.pos.line && col > stmt.pos.col))) {
+          found = stmt.resolvedType;
+        }
+      case LetDestructureStmt(:final binds, :final fieldTypes, :final pos):
+        if (!_isBefore(line, col, pos)) {
+          for (var i = 0; i < binds.length; i++) {
+            if (binds[i] == name) {
+              found = fieldTypes != null && i < fieldTypes.length
+                  ? fieldTypes[i]
+                  : null;
+            }
           }
         }
-      case LetArrayDestructureStmt(:final names, :final elemType):
-        for (final n in names) {
-          if (n == name) found = elemType;
+      case LetArrayDestructureStmt(:final names, :final elemType, :final pos):
+        if (!_isBefore(line, col, pos)) {
+          for (final n in names) {
+            if (n == name) found = elemType;
+          }
         }
       case IfStmt(:final thenBlock, :final elseBranch):
-        for (final st in thenBlock.stmts) {
-          walkStmt(st);
+        if (!nestedVisible) break;
+        if (elseBranch != null) {
+          if (!_isBefore(line, col, elseBranch.pos)) {
+            walkStmt(elseBranch, nestedVisible: true);
+          } else if (!_isBefore(line, col, thenBlock.pos)) {
+            walkBlock(thenBlock);
+          }
+        } else if (!_isBefore(line, col, thenBlock.pos)) {
+          walkBlock(thenBlock);
         }
-        if (elseBranch != null) walkStmt(elseBranch);
       case WhileStmt(:final body):
-        for (final st in body.stmts) {
-          walkStmt(st);
-        }
+        if (!nestedVisible) break;
+        walkBlock(body);
       case ForRangeStmt stmt:
+        if (!nestedVisible) break;
         if (stmt.name == name) {
           found = stmt.resolvedType ?? const PrimType(PrimKind.i32);
         }
-        for (final st in stmt.body.stmts) {
-          walkStmt(st);
-        }
+        walkBlock(stmt.body);
       case ForCStmt(:final initName, :final resolvedInitType, :final body):
+        if (!nestedVisible) break;
         if (initName == name) found = resolvedInitType;
-        for (final st in body.stmts) {
-          walkStmt(st);
-        }
+        walkBlock(body);
       case BlockStmt(:final block):
-        for (final st in block.stmts) {
-          walkStmt(st);
-        }
+        if (!nestedVisible) break;
+        walkBlock(block);
       case DeferStmt(:final body):
-        walkStmt(body);
+        if (!nestedVisible) break;
+        walkStmt(body, nestedVisible: true);
       case MatchStmt(:final arms):
-        for (final arm in arms) {
-          for (final st in arm.body.stmts) {
-            walkStmt(st);
-          }
+        if (!nestedVisible) break;
+        for (var i = 0; i < arms.length; i++) {
+          final arm = arms[i];
+          final start = arm.body.pos;
+          if (_isBefore(line, col, start)) continue;
+          final end = i + 1 < arms.length ? arms[i + 1].body.pos : null;
+          if (end != null && !_isBefore(line, col, end)) continue;
+          walkBlock(arm.body);
         }
       default:
         break;
     }
-  }
+  };
 
   final body = f.body;
-  if (body != null) {
-    for (final s in body.stmts) {
-      walkStmt(s);
-    }
-  }
+  if (body != null) walkBlock(body);
   return found;
 }
 
