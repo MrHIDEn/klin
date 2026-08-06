@@ -2,14 +2,14 @@
 
 **Status:** ✅ decided (external package; not Klin stdlib)
 **Depends on:** [010](010-bare-metal.md); nice to have [031](031-hal-libraries.md), [027](027-svd-ergonomic-api.md), [053](053-device-board-assets.md)
-**Packages:** [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin`…`Adc` `@v0.5.0`), [`machine_rp`](https://github.com/klin-lang/machine_rp) (`Pin`…`Adc` `@v0.6.0`), [`machine_esp`](https://github.com/klin-lang/machine_esp) (`Pin`…`Adc` `@v0.4.0`), [`machine_stm8`](https://github.com/klin-lang/machine_stm8) (`Pin`…`Adc` `@v0.2.0`), [`machine_avr`](https://github.com/klin-lang/machine_avr) (`Pin` 328P+2560; `Pwm`…`Adc` **328P** `@v0.2.0`), [`machine_xmega`](https://github.com/klin-lang/machine_xmega) (`Pin`…`Dac` `@v0.2.0`), [`machine_pic16`](https://github.com/klin-lang/machine_pic16) (`Pin`…`Dac` `@v0.2.0`)
+**Packages:** [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin`…`Adc` `@v0.5.0`), [`machine_rp`](https://github.com/klin-lang/machine_rp) (`Pin`…`Adc` `@v0.6.0`), [`machine_esp`](https://github.com/klin-lang/machine_esp) (`Pin`…`Adc` `@v0.4.0`), [`machine_stm8`](https://github.com/klin-lang/machine_stm8) (`Pin`…`Adc` `@v0.2.0`), [`machine_avr`](https://github.com/klin-lang/machine_avr) (`Pin` 328P+2560; `Pwm`…`Adc` **328P** `@v0.2.0`), [`machine_xmega`](https://github.com/klin-lang/machine_xmega) (`Pin`…`Dac` `@v0.2.0`), [`machine_pic16`](https://github.com/klin-lang/machine_pic16) (`Pin`…`Dac` `@v0.2.0`), [`machine_ch32v`](https://github.com/klin-lang/machine_ch32v) (`Pin`…`Adc` `@v0.1.0`; [086](086-machine-ch32v.md)), [`machine_gd32v`](https://github.com/klin-lang/machine_gd32v) (`Pin`…`Adc` `@v0.2.0`; [087](087-machine-gd32v.md))
 
 ## Verdict
 
 | Question | Answer |
 |---|---|
 | Change the Klin compiler? | **No** for the library itself |
-| Where does the code live? | External repos (not `stdlib/`): **`machine_stm32`**, **`machine_rp`**, **`machine_esp`**, **`machine_stm8`**, **`machine_xmega`**, **`machine_avr`**, **`machine_pic16`** |
+| Where does the code live? | External repos (not `stdlib/`): **`machine_stm32`**, **`machine_rp`**, **`machine_esp`**, **`machine_stm8`**, **`machine_xmega`**, **`machine_avr`**, **`machine_pic16`**, **`machine_ch32v`**, **`machine_gd32v`** |
 | STM32? | **Yes** — [`machine_stm32`](https://github.com/klin-lang/machine_stm32) (`Pin` + `Pwm` + `Rc` + `Uart` + `I2c` + `Spi` + `Adc` `@v0.5.0`; F411/F401-class — **no HW DAC**) |
 | RP2040 / RP2350? | **`machine_rp`** — Pin+Pwm+Rc+Uart+I2c+Spi+Adc ✅ `@v0.6.0` (**no HW DAC**); ([062](062-targets-esp-rp.md)) |
 | ESP32-C3? | **`machine_esp`** — Pin+Pwm+Rc+Uart+I2c+Spi+Adc ✅ `@v0.4.0` (**no HW DAC** on C3); minimal ESP-IDF boot; Wi‑Fi / freestanding later ([062](062-targets-esp-rp.md)) |
@@ -17,8 +17,10 @@
 | ATxmega? | **`machine_xmega`** — Pin+Pwm+Rc+Uart+I2c+Spi+Adc+**Dac** ✅ `@v0.2.0` (ATxmega128A1U-class; DACB) |
 | megaAVR (Arduino Uno/Mega)? | **`machine_avr`** — Pin ✅ 328P+2560; **Pwm…Adc** ✅ **328P only** `@v0.2.0` (**no DAC**; 2560 bus factories later) |
 | PIC16? | **`machine_pic16`** — Pin+Pwm+Rc+Uart+I2c+Spi+Adc+**Dac** ✅ `@v0.2.0` (PIC16F18855; PPS explicit; DAC1 5-bit HW) |
+| CH32V003 (QingKe RISC-V)? | **`machine_ch32v`** — Pin…Adc ✅ `@v0.1.0` ([086](086-machine-ch32v.md)); **10-bit** ADC |
+| GD32VF103 (Nuclei RISC-V)? | **`machine_gd32v`** — Pin…Adc ✅ `@v0.2.0` ([087](087-machine-gd32v.md)); **12-bit** ADC |
 | Other PIC? | Separate ports if/when needed — not one library for all MCUs |
-| DAC? | Only where the silicon has it — **yes** on ATxmega (DACB) and PIC16F18855 (DAC1); **not** on F411/F401, RP2040/2350, ESP32-C3, STM8S, megaAVR 328P/2560. F407-class / classic ESP32 later if needed. |
+| DAC? | Only where the silicon has it — **yes** on ATxmega (DACB) and PIC16F18855 (DAC1); **not** on F411/F401, RP2040/2350, ESP32-C3, STM8S, megaAVR 328P/2560, CH32V003, GD32VF103. F407-class / classic ESP32 later if needed. |
 | Approach | **C** (thin Klin package over explicit MMIO) — not A, not full vendor HAL as the API |
 
 Chosen over A/B: MicroPython-like **shape** (`Pin`, later `Pwm` / `Uart`), with no GC, no hidden heap, no hidden clock magic. Clock / startup / linker stay in the app (board pack later: [074](074-board-ioc-klin-mod.md), [075](075-board-pack-init-host.md)).
