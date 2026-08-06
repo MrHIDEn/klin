@@ -257,6 +257,9 @@ final class _PpScanner {
     if (out == null) {
       return PreprocessResult(text);
     }
+    if (out.origOfExp.isEmpty) {
+      return PreprocessResult(text);
+    }
     if (text == source) {
       return PreprocessResult(text, map: SourceMap.identity(source));
     }

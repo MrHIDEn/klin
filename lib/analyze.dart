@@ -79,7 +79,8 @@ AnalysisResult analyzeSource({
 
   final expanded = pp.text;
   final map = pp.map;
-  final skewed = expanded != source && map == null;
+  final skewed = expanded != source &&
+      (map == null || map.origOfExpanded.isEmpty);
 
   try {
     final program = Parser(Lexer(expanded).tokenize()).parse();

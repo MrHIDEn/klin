@@ -36,21 +36,46 @@ final class SourceMap {
 
   /// Map an editor [pos] into expanded space (for AST hit-tests).
   SourcePos toExpanded(SourcePos pos) {
-    if (origOfExpanded.isEmpty) return pos;
-    final o = offsetOf(original, pos);
-    // Prefer an exact match; else the first expanded offset whose original
-    // coordinate is >= [o] (snap forward past deleted `$fn` text).
-    var found = -1;
-    for (var i = 0; i < origOfExpanded.length; i++) {
-      final oo = origOfExpanded[i];
-      if (oo == o) return positionOf(expanded, i);
-      if (oo >= o) {
-        found = i;
-        break;
-      }
+    if (origOfExpanded.isEmpty) {
+      return isIdentity ? pos : const SourcePos(1, 1);
     }
-    if (found >= 0) return positionOf(expanded, found);
-    return positionOf(expanded, expanded.length);
+    final o = offsetOf(original, pos);
+
+    // Exact original offset (identity char or call-site `$`).
+    for (var i = 0; i < origOfExpanded.length; i++) {
+      if (origOfExpanded[i] == o) return positionOf(expanded, i);
+    }
+
+    // Last expanded index whose original offset is <= [o].
+    var best = -1;
+    for (var i = 0; i < origOfExpanded.length; i++) {
+      if (origOfExpanded[i] <= o) best = i;
+    }
+    if (best < 0) return positionOf(expanded, 0);
+
+    final oo = origOfExpanded[best];
+    var runStart = best;
+    while (runStart > 0 && origOfExpanded[runStart - 1] == oo) {
+      runStart--;
+    }
+    var runEnd = best;
+    while (runEnd + 1 < origOfExpanded.length &&
+        origOfExpanded[runEnd + 1] == oo) {
+      runEnd++;
+    }
+    // Synthetic insertion: many expanded chars share the call-site offset.
+    // Cursor inside the deleted `$name(…)` span (o > call site) must land in
+    // the expansion, not on the identity text that follows.
+    if (runEnd > runStart && o > oo) {
+      return positionOf(expanded, runStart);
+    }
+    if (o > oo) {
+      for (var i = best + 1; i < origOfExpanded.length; i++) {
+        if (origOfExpanded[i] >= o) return positionOf(expanded, i);
+      }
+      return positionOf(expanded, expanded.length);
+    }
+    return positionOf(expanded, best);
   }
 }
 
