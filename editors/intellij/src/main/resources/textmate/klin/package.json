@@ -1,0 +1,40 @@
+{
+  "name": "klin",
+  "displayName": "Klin",
+  "description": "Syntax highlighting for the Klin systems language (.kl)",
+  "version": "0.1.0",
+  "publisher": "klin-lang",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "klin",
+    "syntax"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "klin",
+        "aliases": [
+          "Klin",
+          "klin"
+        ],
+        "extensions": [
+          ".kl"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "klin",
+        "scopeName": "source.klin",
+        "path": "./syntaxes/klin.tmLanguage.json"
+      }
+    ]
+  }
+}

@@ -22,9 +22,8 @@ To remove: delete the symlink.
 
 ## IntelliJ
 
-See **[../intellij/README.md](../intellij/README.md)** — TextMateBundle + optional
-LSP4IJ today; future thin plugin ([087](../../issues/087-intellij-plugin.md))
-tested with Gradle `runIde` / Install from Disk before Marketplace.
+See **[../intellij/README.md](../intellij/README.md)** — thin plugin ([087](../../issues/087-intellij-plugin.md))
+with bundled TextMate + LSP4IJ (`./gradlew runIde` / Install from Disk).
 
 ## Scope
 
