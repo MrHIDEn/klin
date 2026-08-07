@@ -47,7 +47,9 @@ completion / rename. Cross-file goto uses `loadProject` with an overlay of open
 LSP buffers. After `$fn` / `$device` expand (including SVD fluent rewrite),
 [`SourceMap`](../lib/source_map.dart) remaps positions
 ([091](../issues/091-lsp-svd-sourcemaps.md)). Library files do not require
-`main`. Details: [086](../issues/086-lsp.md).
+`main`. Syntax highlight for `.kl` is a separate TextMate pack —
+[`editors/vscode/`](../editors/vscode/) ([093](../issues/093-syntax-highlight.md)).
+Details: [086](../issues/086-lsp.md).
 
 ## Flags before / with `run`
 
