@@ -85,8 +85,8 @@ String applyContentChange(
       final start = offsetOfPosition(current, incremental.range.start);
       final end = offsetOfPosition(current, incremental.range.end);
       if (start < 0 || end < start || end > current.length) {
-        // Corrupt range — fall back to replacement text only if empty doc.
-        return incremental.text;
+        // Corrupt range — keep the buffer; only empty docs take the patch.
+        return current.isEmpty ? incremental.text : current;
       }
       return current.replaceRange(start, end, incremental.text);
     },

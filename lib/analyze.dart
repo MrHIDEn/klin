@@ -160,16 +160,18 @@ KlinDiagnostic _mappedDiagnostic(
   );
 }
 
-/// True when [a] and [b] name the same file (path or basename).
+/// True when [a] and [b] name the same file.
+///
+/// Compares normalized full paths, and allows a relative path to match an
+/// absolute (or longer) path that ends with that relative path — but not two
+/// distinct directories that only share a basename.
 bool sameDiagnosticPath(String a, String b) {
   if (a == b) return true;
   if (a.isEmpty || b.isEmpty) return false;
   final na = a.replaceAll('\\', '/');
   final nb = b.replaceAll('\\', '/');
   if (na == nb) return true;
-  final ba = na.split('/').last;
-  final bb = nb.split('/').last;
-  return ba == bb && ba.isNotEmpty;
+  return na.endsWith('/$nb') || nb.endsWith('/$na');
 }
 
 /// Attribute a diagnostic to [openPath] for publishDiagnostics on that URI.

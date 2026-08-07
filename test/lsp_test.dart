@@ -58,6 +58,22 @@ void main() {
       expect(applyContentChange(current, change), 'fn main(): void {}\n');
     });
 
+    test('applyContentChange keeps buffer on corrupt incremental range', () {
+      const current = 'fn foo(): void {}\n';
+      final change = Either2<TextDocumentContentChangeEvent1,
+          TextDocumentContentChangeEvent2>.t1(
+        TextDocumentContentChangeEvent1(
+          // Inverted range → end < start after offset mapping.
+          range: Range(
+            start: Position(line: 0, character: 10),
+            end: Position(line: 0, character: 3),
+          ),
+          text: 'WIPED',
+        ),
+      );
+      expect(applyContentChange(current, change), current);
+    });
+
     test('toLspDiagnostics uses attributed open-document paths', () {
       final d = diagnosticForOpenDocument(
         const KlinDiagnostic(

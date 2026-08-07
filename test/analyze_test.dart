@@ -125,6 +125,25 @@ fn b(): void {
       expect(attributed.message, contains('/other/macros.kl'));
       expect(attributed.message, contains('boom'));
     });
+
+    test('sameDiagnosticPath does not equate distinct dirs by basename', () {
+      expect(sameDiagnosticPath('/a/main.kl', '/b/main.kl'), isFalse);
+      expect(sameDiagnosticPath('main.kl', '/proj/main.kl'), isTrue);
+      expect(sameDiagnosticPath('/proj/main.kl', 'main.kl'), isTrue);
+      expect(sameDiagnosticPath('/proj/main.kl', '/proj/main.kl'), isTrue);
+    });
+
+    test('same-basename foreign diagnostic is pinned, not line-mapped', () {
+      const foreign = KlinDiagnostic(
+        message: 'boom',
+        pos: SourcePos(10, 3),
+        path: '/lib/util/main.kl',
+      );
+      final attributed = diagnosticForOpenDocument(foreign, '/app/main.kl');
+      expect(attributed.pos.line, 1);
+      expect(attributed.pos.col, 1);
+      expect(attributed.message, contains('/lib/util/main.kl'));
+    });
   });
 
   group('formatDocument helper', () {
