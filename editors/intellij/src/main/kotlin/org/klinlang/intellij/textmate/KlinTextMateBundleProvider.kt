@@ -17,8 +17,8 @@ import kotlin.io.path.notExists
 /**
  * Registers the Klin VS Code / TextMate pack shipped under `textmate/klin/`.
  *
- * JAR packaging does not create directory entries, so we resolve via
- * `package.json` (a real file) and extract to a **versioned** cache when needed.
+ * JAR packaging may omit directory resource entries, so we resolve via
+ * `package.json` and extract to a **versioned** cache when needed.
  */
 class KlinTextMateBundleProvider : TextMateBundleProvider {
     override fun getBundles(): MutableList<TextMateBundleProvider.PluginBundle> {
@@ -48,7 +48,7 @@ class KlinTextMateBundleProvider : TextMateBundleProvider {
         }
     }
 
-    private fun extractFromJar(packageJsonUri: URI): Path {
+    private fun extractFromJar(packageJsonUri: URI): Path? {
         val version = pluginVersion()
         val cacheRoot = Paths.get(
             System.getProperty("java.io.tmpdir"),
@@ -56,13 +56,18 @@ class KlinTextMateBundleProvider : TextMateBundleProvider {
             version,
             "klin",
         )
-        val marker = cacheRoot.resolve("package.json")
-        if (marker.notExists()) {
-            if (cacheRoot.exists()) {
-                cacheRoot.toFile().deleteRecursively()
-            }
-            cacheRoot.createDirectories()
-            // jar:file:/…/plugin.jar!/textmate/klin/package.json
+        val grammar = cacheRoot.resolve("syntaxes/klin.tmLanguage.json")
+        if (cacheRoot.resolve("package.json").exists() && grammar.exists()) {
+            return cacheRoot
+        }
+
+        val staging = cacheRoot.resolveSibling("${cacheRoot.fileName}.extracting")
+        if (staging.exists()) {
+            staging.toFile().deleteRecursively()
+        }
+        staging.createDirectories()
+
+        return try {
             val jarUri = URI.create(packageJsonUri.schemeSpecificPart.substringBefore("!"))
             val fsUri = URI.create("jar:$jarUri")
             FileSystems.newFileSystem(fsUri, emptyMap<String, Any>()).use { fs ->
@@ -71,7 +76,7 @@ class KlinTextMateBundleProvider : TextMateBundleProvider {
                     stream.forEach { source ->
                         val relative = root.relativize(source).toString()
                         if (relative.isEmpty()) return@forEach
-                        val target = cacheRoot.resolve(relative)
+                        val target = staging.resolve(relative)
                         if (Files.isDirectory(source)) {
                             target.createDirectories()
                         } else {
@@ -81,8 +86,23 @@ class KlinTextMateBundleProvider : TextMateBundleProvider {
                     }
                 }
             }
+            if (staging.resolve("package.json").notExists() ||
+                staging.resolve("syntaxes/klin.tmLanguage.json").notExists()
+            ) {
+                LOG.warn("Incomplete Klin TextMate extract under $staging")
+                staging.toFile().deleteRecursively()
+                return null
+            }
+            if (cacheRoot.exists()) {
+                cacheRoot.toFile().deleteRecursively()
+            }
+            Files.move(staging, cacheRoot)
+            cacheRoot
+        } catch (e: Exception) {
+            LOG.warn("Failed to extract Klin TextMate bundle", e)
+            staging.toFile().deleteRecursively()
+            null
         }
-        return cacheRoot
     }
 
     private fun pluginVersion(): String {

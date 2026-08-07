@@ -2,9 +2,11 @@ package org.klinlang.intellij.settings
 
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurationException
+import com.intellij.openapi.project.ProjectManager
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
+import com.redhat.devtools.lsp4ij.LanguageServerManager
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -34,6 +36,13 @@ class KlinConfigurable : Configurable {
             throw ConfigurationException("Klin executable path cannot be empty")
         }
         KlinSettingsState.getInstance().klinPath = path
+        // Rebuild the command line by restarting LSP4IJ servers in open projects.
+        for (project in ProjectManager.getInstance().openProjects) {
+            if (project.isDisposed) continue
+            val manager = LanguageServerManager.getInstance(project)
+            manager.stop(SERVER_ID)
+            manager.start(SERVER_ID)
+        }
     }
 
     override fun reset() {
@@ -42,5 +51,9 @@ class KlinConfigurable : Configurable {
 
     override fun disposeUIResources() {
         pathField = null
+    }
+
+    companion object {
+        private const val SERVER_ID = "klinLsp"
     }
 }
