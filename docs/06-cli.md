@@ -49,6 +49,8 @@ LSP buffers. After `$fn` / `$device` expand (including SVD fluent rewrite),
 ([091](../issues/091-lsp-svd-sourcemaps.md)). Library files do not require
 `main`. Syntax highlight for `.kl` is a separate TextMate pack —
 [`editors/vscode/`](../editors/vscode/) ([093](../issues/093-syntax-highlight.md)).
+IntelliJ today / future plugin: [`editors/intellij/`](../editors/intellij/)
+([087](../issues/087-intellij-plugin.md)).
 Details: [086](../issues/086-lsp.md).
 
 ## Flags before / with `run`
