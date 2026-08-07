@@ -367,7 +367,10 @@ Future<void> runKlinLsp({
       final openPath = uriToPath(p.textDocument.uri);
       final result = docs.analysis(uriKey);
       if (result == null) return SemanticTokens(data: const []);
-      return buildSemanticTokens(result, openPath: openPath);
+      // On parse recovery prefer lastGood AST (same idea as completion).
+      final forTokens =
+          result.hasParseErrors ? (docs.lastGood(uriKey) ?? result) : result;
+      return buildSemanticTokens(forTokens, openPath: openPath);
     },
   );
 

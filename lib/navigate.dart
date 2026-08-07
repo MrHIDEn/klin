@@ -162,7 +162,8 @@ enum SemanticNavKind {
 
 SemanticNavKind semanticNavKind(NavTarget t) {
   return switch (t) {
-    _FuncNav() => SemanticNavKind.function,
+    _FuncNav(:final func) =>
+      func.receiver != null ? SemanticNavKind.method : SemanticNavKind.function,
     _ParamNav() => SemanticNavKind.parameter,
     _LetNav() => SemanticNavKind.variable,
     _MethodNav() => SemanticNavKind.method,
@@ -211,13 +212,15 @@ final class _FuncNav extends NavTarget {
   _FuncNav(this.func);
 
   @override
+  // Occurrence span uses the name ident; [def] keeps `fn` pos so it matches
+  // checker `ResolvedDef(decl.pos)` for rename / references.
   SourcePos get pos => func.namePos;
   @override
   String get label => func.name;
   @override
   KlinType? get type => func.resolvedReturnType;
   @override
-  ResolvedDef? get def => ResolvedDef(func.namePos, func.sourcePath);
+  ResolvedDef? get def => ResolvedDef(func.pos, func.sourcePath);
   @override
   String? get occurrencePath => func.sourcePath;
   @override
