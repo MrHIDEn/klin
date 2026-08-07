@@ -1,7 +1,6 @@
 # 088 — Debug (gdb / `#line` docs + optional DAP)
 
-**Status:** 🔨 docs ✅ (`#line` / gdb); thin DAP / CLI `-g` profile / IDE run
-configs still 💭
+**Status:** 🔨 docs ✅ + CLI `-g` ✅; thin DAP / IDE run configs still 💭
 **Depends on:** 001+ (`#line` in emission ✅); IDE UX → [087](087-intellij-plugin.md); not [086](086-lsp.md)
 
 ## Goal
@@ -26,18 +25,17 @@ docs), not a second debugger engine.
 
 - Every token carries a source position; emission includes `#line`
   ([docs/02-architecture.md](../docs/02-architecture.md) Z2).
-- Host: `klin` → `.c` → `gcc -g` → `gdb` / `lldb` (stack / breaks on `.kl`
-  when the toolchain honors `#line`).
+- Host: `klin run -g` / `--debug` → host `cc -g`; or `--emit-c` + manual
+  `gcc -g` → `gdb` / `lldb`.
 - MCU: same idea with OpenOCD / probe + `arm-none-eabi-gdb`.
 - **Docs:** [docs/19-debug.md](../docs/19-debug.md) (+ pointer in
   [docs/06-cli.md](../docs/06-cli.md)).
 
 ## Scope
 
-1. **Docs — ✅** — host debug recipe (`--emit-c` + `gcc -g`), MCU note,
-   LSP ≠ DAP.
-2. **Optional CLI sugar** — e.g. `klin` flag or documented `cc` args to always
-   pass `-g` in a “debug” profile (no hidden runtime).
+1. **Docs — ✅** — host debug recipe, MCU note, LSP ≠ DAP.
+2. **CLI sugar — ✅** — `-g` / `--debug` → host `cc -g` via
+   [`buildCcArgs(debug: …)`](../lib/link_args.dart) (no hidden runtime).
 3. **Optional thin DAP** — adapter that launches/attaches **gdb** (or lldb)
    and forwards DAP ↔ MI; Klin does not interpret DWARF itself. Same pattern
    as “C with `#line`”, zero Klin VM.
@@ -58,7 +56,7 @@ docs), not a second debugger engine.
 | `#line` in emission | ✅ (existing) |
 | Issue / plan | ✅ (this file) |
 | Debug docs (host + MCU) | ✅ [docs/19-debug.md](../docs/19-debug.md) |
-| CLI `-g` / debug profile | ❌ 0% |
+| CLI `-g` / `--debug` | ✅ |
 | Thin DAP over gdb | ❌ 0% |
 | IntelliJ debug run config | ❌ 0% (see 087) |
 
@@ -66,5 +64,6 @@ docs), not a second debugger engine.
 
 - [x] Documented host path: `.kl` → C → `-g` → gdb/lldb breaks on `.kl`
 - [x] Explicit note: LSP does not provide debug; DAP is optional follow-up
+- [x] CLI passes host `-g` when requested (`klin run -g`)
 - [ ] If DAP lands: stdio DAP that delegates to gdb; smoke test in CI or
       manual checklist — no Klin runtime

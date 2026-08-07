@@ -64,6 +64,7 @@ Details: [086](../issues/086-lsp.md).
 | `--emit-h` | Write C header with `@[cexport]` prototypes (`out/<base>.h`) |
 | `--emit-pp` | Write preprocessor output (`.pp.kl`), no further stages |
 | `--cc <gcc\|clang\|tcc>` | Host C compiler (default `gcc`) |
+| `-g` / `--debug` | Pass host `cc -g` (debug symbols; no Klin runtime) — [19-debug.md](19-debug.md) |
 | `-I <dir>` / `-Idir` | Search Klin sources (`import` → `name.kl`) in `dir` |
 | `-l <name>` / `-lname` | Link `-lname` (like cc; C FFI) |
 | `-L <dir>` / `-Ldir` | Search C libs in `dir` |

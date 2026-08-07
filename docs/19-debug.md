@@ -12,7 +12,7 @@ Issue: [088](../issues/088-dap-debug.md).
 | Protocol | Role | Klin today |
 |---|---|---|
 | **LSP** ([086](../issues/086-lsp.md)) | Edit: diagnostics, format, hover, … | `klin lsp` |
-| **gdb / lldb / OpenOCD** | Run, step, breakpoints | Emitted C + `#line`; host `cc -g` (not `klin run`) |
+| **gdb / lldb / OpenOCD** | Run, step, breakpoints | Emitted C + `#line`; host `cc -g` via `klin run -g` or manual `cc` |
 | **DAP** | IDE debug adapter API | Not shipped (optional later; still wraps gdb) |
 
 Editors may already attach **Native Debug** / gdb to a binary built with `-g`.
@@ -20,13 +20,24 @@ Wire that to the binary, not through the language server.
 
 ## Host recipe
 
-`klin run` compiles and executes without guaranteeing debug symbols. For gdb /
-lldb, emit C and compile with `-g` yourself:
+### `klin run -g` (debug symbols)
+
+`-g` / `--debug` forwards host `cc -g` when Klin compiles (no Klin VM, no
+hidden runtime):
 
 ```sh
-# From the repo root (or with `klin` on PATH)
+dart run bin/klin.dart run -g examples/hello.kl
+# binary: out/hello  (then: gdb ./out/hello)
+```
+
+`--emit-c` alone still skips `cc`; use the manual recipe below if you only want
+the `.c` file.
+
+### Manual `emit-c` + `cc -g`
+
+```sh
 dart run bin/klin.dart --emit-c examples/hello.kl
-# → out/hello.c (path may vary; see CLI)
+# → out/hello.c
 
 gcc -g -O0 out/hello.c -o out/hello
 gdb ./out/hello
@@ -37,14 +48,7 @@ Breakpoints and stepping should land on `.kl` lines when the toolchain honors
 `#line` (typical with gcc/clang). Inspect generated C only if you need to see
 the emission itself.
 
-Dev alias without install: same as above with `dart run bin/klin.dart …`.
-Flags: [06-cli.md](06-cli.md).
-
-### Optional: keep the `.c` next to a normal run
-
-You can still use `--emit-c` alone (no run), or combine with your own `cc`
-invocation. A dedicated `klin` “debug profile” that always passes `-g` is
-**not** implemented yet — document or add later under [088](../issues/088-dap-debug.md).
+Flags: [06-cli.md](06-cli.md). Issue: [088](../issues/088-dap-debug.md).
 
 ## MCU / embedded
 

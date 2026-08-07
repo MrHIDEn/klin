@@ -36,12 +36,13 @@ List<LinkAttrRef> collectLinkAttrRefs(Program program, String fallbackDir) {
   return out;
 }
 
-/// Builds `cc` argv: `[cPath, objects…, -L…, -l…, -o, binPath]`.
+/// Builds `cc` argv: `[cPath, objects…, (-g)?, -L…, -l…, -o, binPath]`.
 ///
 /// `@[link]` strings that start with `-L` / `-l` / other `-` are linker flags.
 /// Otherwise they are object/archive/assembly paths (`.a` / `.o` / `.so` /
 /// `.s` / `.S`) resolved relative to the declaring `.kl` file's directory.
 /// CLI `-L` dirs are emitted before any `-l` flags.
+/// When [debug] is true, passes host `-g` (debug symbols; no Klin runtime).
 List<String> buildCcArgs({
   required String cPath,
   required String binPath,
@@ -49,6 +50,7 @@ List<String> buildCcArgs({
   required String sourceDir,
   List<String> cliLibs = const [],
   List<String> cliLibDirs = const [],
+  bool debug = false,
 }) {
   final objects = <String>[];
   final dashL = <String>[for (final d in cliLibDirs) '-L$d'];
@@ -68,7 +70,15 @@ List<String> buildCcArgs({
     dashOther.add('-l$lib');
   }
 
-  return [cPath, ...objects, ...dashL, ...dashOther, '-o', binPath];
+  return [
+    cPath,
+    ...objects,
+    if (debug) '-g',
+    ...dashL,
+    ...dashOther,
+    '-o',
+    binPath,
+  ];
 }
 
 /// Raw `@[link]` strings (for `out/*.link` dump). Prefer [collectLinkAttrRefs]
