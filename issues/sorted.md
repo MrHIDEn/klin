@@ -111,9 +111,12 @@ building the core from scratch.
 | [080](080-stdlib-str.md) | `stdlib/str` — `eq`/`len`/… (string compares without `==`) | ✅ | 012, 021 |
 | [083](083-stdlib-math.md) | `stdlib/math` — thin libm + typed `min_*`/`max_*`/`clamp_*` | ✅ | 012, 021 |
 | [081](081-number-literals.md) | Literals: binary `0b`, float exponent `1e…`, char `'A'`, (octal) | 🔨 (Group 1 ✅) | 002 |
-| [086](086-lsp.md) | Language Server (`klin lsp`: diagnostics, format, hover, definition, completion, `$fn` maps) | 🔨 | 002, 033, 026 |
+| [086](086-lsp.md) | Language Server (`klin lsp` MVP + cross-file + rename) | ✅ | 002, 033, 026 |
 | [087](087-intellij-plugin.md) | IntelliJ plugin for Klin (LSP client + highlight; not full PSI) | 💭 0% | 086 |
 | [088](088-dap-debug.md) | Debug: `#line`/gdb docs + optional thin DAP (not inside LSP) | 💭 0% | `#line`, 087? |
+| [091](091-lsp-svd-sourcemaps.md) | LSP source maps through SVD fluent (`$device`) | 💭 0% | 086 |
+| [092](092-lsp-parse-recovery.md) | LSP lex/parse multi-error recovery + workspace index | 💭 0% | 086 |
+| [093](093-syntax-highlight.md) | TextMate / tree-sitter highlight (not inside `klin lsp`) | 💭 0% | 086?, 087 |
 
 ---
 

@@ -6,10 +6,18 @@ final class CheckError implements Exception {
   final String message;
   final SourcePos pos;
 
-  const CheckError(this.message, this.pos);
+  /// File where the error was raised, when known (e.g. during function body
+  /// check). Null for registration / single-unit errors without a path.
+  final String? path;
+
+  const CheckError(this.message, this.pos, {this.path});
 
   @override
-  String toString() => '${pos.line}:${pos.col}: $message';
+  String toString() {
+    final p = path;
+    if (p == null || p.isEmpty) return '${pos.line}:${pos.col}: $message';
+    return '$p:${pos.line}:${pos.col}: $message';
+  }
 }
 
 /// Multiple [CheckError]s collected when [Checker.check] runs with
@@ -177,7 +185,11 @@ final class Checker {
         _checkFuncBody(func);
       } on CheckError catch (e) {
         if (!collectErrors) rethrow;
-        collected.add(e);
+        collected.add(
+          e.path != null
+              ? e
+              : CheckError(e.message, e.pos, path: _currentSourcePath),
+        );
       }
     }
     if (collected.isNotEmpty) {
@@ -186,15 +198,20 @@ final class Checker {
   }
 
   void _checkFuncBody(FuncDecl func) {
+    // Set before any early throw so collectErrors attributes the right file.
+    _currentSourcePath = func.sourcePath;
     if (func.isAsync && func.name == 'main') {
-      throw CheckError('`main` cannot be `async`', func.pos);
+      throw CheckError(
+        '`main` cannot be `async`',
+        func.pos,
+        path: func.sourcePath,
+      );
     }
     _scope = _Scope(null);
     _loopDepth = 0;
     _deferDepth = 0;
     _currentFunction = func.name;
     _currentModule = func.moduleName;
-    _currentSourcePath = func.sourcePath;
     _currentIsAsync = func.isAsync;
     _currentReturn = func.resolvedReturnType!;
     _asyncFlatNames

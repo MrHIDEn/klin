@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:klin/analyze.dart';
 
 /// In-memory overlay of open Klin documents (URI → source + last analysis).
@@ -35,4 +37,14 @@ final class DocumentStore {
 
   /// Last successful analysis for [uri] (for completion after `x.`).
   AnalysisResult? lastGood(String uri) => _lastGood[uri];
+
+  /// Absolute filesystem path → buffer text for every open document.
+  Map<String, String> pathOverlay(String Function(Uri) uriToPath) {
+    final out = <String, String>{};
+    for (final e in _docs.entries) {
+      final path = uriToPath(Uri.parse(e.key));
+      out[File(path).absolute.path] = e.value;
+    }
+    return out;
+  }
 }
