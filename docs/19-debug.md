@@ -12,7 +12,7 @@ Issue: [088](../issues/088-dap-debug.md).
 | Protocol | Role | Klin today |
 |---|---|---|
 | **LSP** ([086](../issues/086-lsp.md)) | Edit: diagnostics, format, hover, … | `klin lsp` |
-| **gdb / lldb / OpenOCD** | Run, step, breakpoints | Via emitted C + `#line` + `-g` |
+| **gdb / lldb / OpenOCD** | Run, step, breakpoints | Emitted C + `#line`; host `cc -g` (not `klin run`) |
 | **DAP** | IDE debug adapter API | Not shipped (optional later; still wraps gdb) |
 
 Editors may already attach **Native Debug** / gdb to a binary built with `-g`.
