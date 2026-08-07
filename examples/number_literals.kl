@@ -1,5 +1,5 @@
-// Number literals (issue 081, group 1): binary integers and float exponents.
-// Non-C forms (binary) are emitted as portable `0x` — zero hidden cost.
+// Number literals (issue 081): binary/octal integers, float exponents,
+// and character literals. Non-C forms (binary/octal) emit as portable `0x`.
 
 fn main() {
     // Binary integers with `_` grouping — handy for bit masks / registers.
@@ -15,4 +15,9 @@ fn main() {
     let avogadro: f64 = 6.022e23
     let milli: f64 = 1e-3
     printf("%g %g\n", avogadro, milli)
+
+    // Character literals — untyped int (ASCII code); emit as C `'…'`.
+    let letter: u8 = 'A'
+    let tab: u8 = '\t'
+    printf("letter=%c tab=%d\n", letter, tab)
 }

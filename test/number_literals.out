@@ -2,3 +2,4 @@ bin: 240 5
 oct: 493
 exp: 1e+09 0.0015 250
 len: 4 first: 1
+char: A 90 nl=10

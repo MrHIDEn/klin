@@ -3568,7 +3568,7 @@ fn main() {
     expect(formatSource(once), once);
   });
 
-  test('golden: binary + float-exponent literals (issue 081)', () async {
+  test('golden: number + character literals (issue 081)', () async {
     final result = await _compileAndRun('test/number_literals.kl', tmp);
     expect(result.exitCode, 0, reason: result.stderr);
     expect(
@@ -3587,6 +3587,30 @@ fn main() {
     // Float exponents pass through; `0b100` array length becomes 4.
     expect(c, contains('double small = 1.5e-3;'));
     expect(c, contains('int32_t xs[4]'));
+    expect(c, contains("uint8_t a = 'A';"));
+    expect(c, contains("uint8_t nl = '\\n';"));
+  });
+
+  test('error: empty character literal (issue 081)', () {
+    expect(
+      () => Lexer("fn main() { let x = '' }").tokenize(),
+      throwsA(predicate(
+          (e) => e is LexError && e.toString().contains('empty character'))),
+    );
+  });
+
+  test('error: unknown character escape (issue 081)', () {
+    expect(
+      () => Lexer(r"fn main() { let x = '\q' }").tokenize(),
+      throwsA(predicate(
+          (e) => e is LexError && e.toString().contains('ucieczki'))),
+    );
+  });
+
+  test('fmt: character literal spelling preserved (issue 081)', () {
+    const src = "fn main() {\n    let a: u8 = 'A'\n    let b: u8 = '\\n'\n}";
+    expect(formatSource(src), contains("'A'"));
+    expect(formatSource(src), contains(r"'\n'"));
   });
 
   test('error: binary literal without a digit (issue 081)', () {

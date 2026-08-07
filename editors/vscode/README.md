@@ -29,4 +29,5 @@ with bundled TextMate + LSP4IJ (`./gradlew runIde` / Install from Disk).
 
 Keywords and primitive types match the Klin lexer / completion lists. Line
 comments are `//` only (no block comments). Strings support `\n \t \\ \" \$`
-escapes and `${…}` / `${…:fmt}` interpolation highlighting.
+escapes and `${…}` / `${…:fmt}` interpolation highlighting. Character literals
+`'A'` / `'\n'` highlight as single-quoted constants.

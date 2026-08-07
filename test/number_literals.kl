@@ -17,4 +17,9 @@ fn main() {
     // Binary literal as an array length.
     let xs: [0b100]i32 = [1, 2, 3, 4]
     printf("len: %d first: %d\n", xs.len, xs[0])
+
+    // Character literals — untyped int (ASCII); coerce to u8 / i32.
+    let a: u8 = 'A'
+    let nl: u8 = '\n'
+    printf("char: %c %d nl=%d\n", a, 'Z', nl)
 }
