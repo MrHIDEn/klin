@@ -167,13 +167,13 @@ AnalysisResult? _tryAnalyzeProject({
   } on ParseError catch (e) {
     // Open-buffer syntax errors: fall through to `_analyzeExpanded` so
     // `Parser(collectErrors: true)` can report multiple diagnostics and keep
-    // a partial AST. Foreign-module parse failures stay a single diagnostic
-    // (loadProject remains fail-fast).
+    // a partial AST. Project-level / foreign `ParseError`s (often no path)
+    // stay a single diagnostic — loadProject remains fail-fast.
     final errPath = e.path;
-    final inOpen = errPath == null ||
-        errPath.isEmpty ||
-        sameDiagnosticPath(errPath, path) ||
-        sameDiagnosticPath(errPath, abs);
+    final inOpen = errPath != null &&
+        errPath.isNotEmpty &&
+        (sameDiagnosticPath(errPath, path) ||
+            sameDiagnosticPath(errPath, abs));
     if (inOpen) return null;
     return AnalysisResult(
       diagnostics: [

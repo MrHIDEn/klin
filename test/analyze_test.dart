@@ -85,6 +85,42 @@ fn also_broken( {
       );
     });
 
+    test('LSP overlay keeps project-level ParseError without path', () {
+      final dir = Directory.systemTemp.createTempSync('klin_092_alias_');
+      addTearDown(() {
+        if (dir.existsSync()) dir.deleteSync(recursive: true);
+      });
+      final b = File('${dir.path}/b.kl')
+        ..writeAsStringSync('module b\nfn fb(): void {}\n');
+      final c = File('${dir.path}/c.kl')
+        ..writeAsStringSync('module c\nfn fc(): void {}\n');
+      final a = File('${dir.path}/a.kl')
+        ..writeAsStringSync('''
+module a
+import "b" x
+import "c" x
+fn main(): void {
+}
+''');
+      final absA = a.absolute.path;
+      final result = analyzeSource(
+        path: absA,
+        source: a.readAsStringSync(),
+        requireMain: false,
+        sourceOverlay: {
+          absA: a.readAsStringSync(),
+          b.absolute.path: b.readAsStringSync(),
+          c.absolute.path: c.readAsStringSync(),
+        },
+      );
+      expect(result.diagnostics, isNotEmpty);
+      expect(
+        result.diagnostics.any((d) => d.message.contains('already bound')),
+        isTrue,
+        reason: 'must not swallow pathless project ParseError via fall-through',
+      );
+    });
+
     test('parse recovery reports stmt error and keeps later stmts', () {
       const source = '''
 fn main(): void {
