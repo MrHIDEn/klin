@@ -1,6 +1,8 @@
 package org.klinlang.intellij.textmate
 
+import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.extensions.PluginId
 import org.jetbrains.plugins.textmate.api.TextMateBundleProvider
 import java.net.URI
 import java.nio.file.FileSystems
@@ -10,33 +12,33 @@ import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
+import kotlin.io.path.notExists
 
 /**
  * Registers the Klin VS Code / TextMate pack shipped under `textmate/klin/`.
+ *
+ * JAR packaging does not create directory entries, so we resolve via
+ * `package.json` (a real file) and extract to a **versioned** cache when needed.
  */
 class KlinTextMateBundleProvider : TextMateBundleProvider {
     override fun getBundles(): MutableList<TextMateBundleProvider.PluginBundle> {
-        val resource = javaClass.classLoader.getResource(BUNDLE_RESOURCE)
+        val marker = javaClass.classLoader.getResource("$BUNDLE_RESOURCE/package.json")
             ?: run {
-                LOG.warn("Klin TextMate bundle resource missing: $BUNDLE_RESOURCE")
+                LOG.warn("Klin TextMate bundle missing: $BUNDLE_RESOURCE/package.json")
                 return mutableListOf()
             }
-        val path = resolveBundlePath(resource.toURI())
+        val bundleRoot = resolveBundleRoot(marker.toURI())
             ?: return mutableListOf()
-        return mutableListOf(TextMateBundleProvider.PluginBundle("klin", path))
+        return mutableListOf(TextMateBundleProvider.PluginBundle("klin", bundleRoot))
     }
 
-    /**
-     * TextMate needs a real filesystem path. When the plugin is loaded from a
-     * jar, copy the embedded bundle to a cache directory under the system path.
-     */
-    private fun resolveBundlePath(uri: URI): Path? {
+    private fun resolveBundleRoot(packageJsonUri: URI): Path? {
         return try {
-            when (uri.scheme) {
-                "file" -> Paths.get(uri)
-                "jar" -> extractFromJar(uri)
+            when (packageJsonUri.scheme) {
+                "file" -> Paths.get(packageJsonUri).parent
+                "jar" -> extractFromJar(packageJsonUri)
                 else -> {
-                    LOG.warn("Unsupported TextMate bundle URI scheme: ${uri.scheme}")
+                    LOG.warn("Unsupported TextMate bundle URI scheme: ${packageJsonUri.scheme}")
                     null
                 }
             }
@@ -46,15 +48,24 @@ class KlinTextMateBundleProvider : TextMateBundleProvider {
         }
     }
 
-    private fun extractFromJar(uri: URI): Path {
+    private fun extractFromJar(packageJsonUri: URI): Path {
+        val version = pluginVersion()
         val cacheRoot = Paths.get(
             System.getProperty("java.io.tmpdir"),
             "klin-intellij-textmate",
+            version,
             "klin",
         )
-        if (!cacheRoot.exists()) {
+        val marker = cacheRoot.resolve("package.json")
+        if (marker.notExists()) {
+            if (cacheRoot.exists()) {
+                cacheRoot.toFile().deleteRecursively()
+            }
             cacheRoot.createDirectories()
-            FileSystems.newFileSystem(uri, emptyMap<String, Any>()).use { fs ->
+            // jar:file:/…/plugin.jar!/textmate/klin/package.json
+            val jarUri = URI.create(packageJsonUri.schemeSpecificPart.substringBefore("!"))
+            val fsUri = URI.create("jar:$jarUri")
+            FileSystems.newFileSystem(fsUri, emptyMap<String, Any>()).use { fs ->
                 val root = fs.getPath("/$BUNDLE_RESOURCE")
                 Files.walk(root).use { stream ->
                     stream.forEach { source ->
@@ -72,6 +83,11 @@ class KlinTextMateBundleProvider : TextMateBundleProvider {
             }
         }
         return cacheRoot
+    }
+
+    private fun pluginVersion(): String {
+        val plugin = PluginManagerCore.getPlugin(PluginId.getId("org.klin-lang.intellij"))
+        return plugin?.version?.ifBlank { null } ?: "dev"
     }
 
     companion object {
