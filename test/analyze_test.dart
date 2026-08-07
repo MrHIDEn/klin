@@ -50,6 +50,7 @@ fn also_broken( {
       );
       expect(result.diagnostics.length, greaterThanOrEqualTo(2));
       expect(result.program, isNotNull);
+      expect(result.hasParseErrors, isTrue);
       expect(
         result.program!.funcs.any((f) => f.name == 'ok'),
         isTrue,

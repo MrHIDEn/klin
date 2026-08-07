@@ -84,8 +84,8 @@ const _primTypes = <String>[
 ///
 /// When [trigger] is `'.'` or the buffer before the cursor ends with `.`
 /// (optionally followed by a partial member name), returns member
-/// completions. Prefer [fallbackProgram] when the current analysis failed
-/// to parse (typical after typing `x.`).
+/// completions. Prefer [fallbackProgram] when the current analysis has
+/// parse errors (typical after typing `x.`, or after parse recovery).
 ///
 /// Otherwise: keywords, primitive types, top-level decls, and locals.
 /// Empty when [AnalysisResult.positionsSkewed].
@@ -99,7 +99,9 @@ List<KlinCompletionItem> completeAt(
 }) {
   if (result.positionsSkewed) return const [];
 
-  final program = result.program ?? fallbackProgram;
+  final program = result.hasParseErrors
+      ? (fallbackProgram ?? result.program)
+      : (result.program ?? fallbackProgram);
   final text = source ?? '';
   final offset = _offsetOf(text, line, col);
   final before = offset <= text.length ? text.substring(0, offset) : text;

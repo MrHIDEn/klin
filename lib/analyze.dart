@@ -41,11 +41,16 @@ final class AnalysisResult {
   /// Editor ↔ expanded position map when preprocess tracking succeeded.
   final SourceMap? sourceMap;
 
+  /// True when diagnostics include parse recovery / fail-fast parse failures.
+  /// LSP keeps the previous clean AST as `lastGood` for completion then.
+  final bool hasParseErrors;
+
   const AnalysisResult({
     required this.diagnostics,
     this.program,
     this.positionsSkewed = false,
     this.sourceMap,
+    this.hasParseErrors = false,
   });
 }
 
@@ -189,6 +194,7 @@ AnalysisResult? _tryAnalyzeProject({
       ],
       sourceMap: openMap,
       positionsSkewed: skewed,
+      hasParseErrors: true,
     );
   } on FileSystemException {
     return null;
@@ -242,6 +248,7 @@ AnalysisResult _analyzeExpanded({
         diagnostics: parseDiags,
         positionsSkewed: skewed,
         sourceMap: map,
+        hasParseErrors: true,
       );
     }
     final checked = _checkProgram(
@@ -256,6 +263,7 @@ AnalysisResult _analyzeExpanded({
       program: checked.program ?? program,
       positionsSkewed: skewed,
       sourceMap: map,
+      hasParseErrors: true,
     );
   } on ParseError catch (e) {
     return AnalysisResult(
@@ -271,6 +279,7 @@ AnalysisResult _analyzeExpanded({
       ],
       positionsSkewed: skewed,
       sourceMap: map,
+      hasParseErrors: true,
     );
   }
 }

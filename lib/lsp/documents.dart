@@ -28,7 +28,11 @@ final class DocumentStore {
 
   void setAnalysis(String uri, AnalysisResult result) {
     _analysis[uri] = result;
-    if (result.program != null && !result.positionsSkewed) {
+    // Do not let a partially recovered AST replace the last clean snapshot —
+    // completion after `x.` relies on lastGood (issue 092).
+    if (result.program != null &&
+        !result.positionsSkewed &&
+        !result.hasParseErrors) {
       _lastGood[uri] = result;
     }
   }

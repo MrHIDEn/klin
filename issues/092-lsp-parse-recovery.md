@@ -19,6 +19,8 @@ at declaration / statement boundaries (`Parser(collectErrors: true)`).
   `program` for check / nav when possible
 - With LSP `sourceOverlay`, open-buffer `ParseError` from `loadProject`
   falls through to the recovering single-file path (imports stay fail-fast)
+- Partial AST does not overwrite LSP `lastGood`; completion prefers fallback
+  when `hasParseErrors`
 - CLI / default `Parser()` remain fail-fast (first `ParseError`)
 - Tests in `test/analyze_test.dart`
 
