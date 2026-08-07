@@ -1,6 +1,6 @@
 # 087 — IntelliJ plugin for Klin (over LSP)
 
-**Status:** 🔨 MVP in repo (not on Marketplace)
+**Status:** ✅ MVP in repo (not on Marketplace)
 **Depends on:** [086](086-lsp.md) (`klin lsp` MVP ✅), [093](093-syntax-highlight.md) (TextMate ✅)
 
 ## Goal

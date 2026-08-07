@@ -47,6 +47,7 @@ final class Lexer {
     if (_isIdentStart(c)) return _identOrKeyword(start);
     if (_isDigit(c)) return _number(start);
     if (c == '"') return _string(start);
+    if (c == "'") return _char(start);
 
     switch (c) {
       case '(':
@@ -353,6 +354,48 @@ final class Lexer {
     if (_atEnd) throw LexError('unterminated string', start);
     _advance(); // closing "
     return Token(TokenKind.string, buf.toString(), start);
+  }
+
+  /// Character literal → [TokenKind.intLit] with source spelling (`'A'`, `'\n'`).
+  /// Typed as untyped int in the checker; emitted as a C `'…'` literal.
+  Token _char(SourcePos start) {
+    final buf = StringBuffer();
+    buf.write(_advance()); // opening '
+    if (_atEnd) throw LexError('unterminated character literal', start);
+    if (_peek == "'") {
+      throw LexError('empty character literal', start);
+    }
+    if (_peek == '\n') {
+      throw LexError('unterminated character literal', start);
+    }
+    if (_peek == '\\') {
+      buf.write(_advance());
+      if (_atEnd) throw LexError('unterminated character literal', start);
+      final esc = _advance();
+      switch (esc) {
+        case 'n':
+        case 't':
+        case '0':
+        case '\\':
+        case "'":
+          buf.write(esc);
+        default:
+          throw LexError('nieznana sekwencja ucieczki `\\$esc`', start);
+      }
+    } else {
+      final ch = _advance();
+      // Single ASCII code unit (printable or space); no multi-char literals.
+      final code = ch.codeUnitAt(0);
+      if (code > 0x7F) {
+        throw LexError('character literal must be ASCII', start);
+      }
+      buf.write(ch);
+    }
+    if (_atEnd || _peek != "'") {
+      throw LexError('expected closing `\'` in character literal', start);
+    }
+    buf.write(_advance());
+    return Token(TokenKind.intLit, buf.toString(), start);
   }
 
   void _skipWhitespace() {

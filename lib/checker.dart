@@ -31,6 +31,63 @@ final class CheckErrors implements Exception {
   String toString() => errors.map((e) => e.toString()).join('\n');
 }
 
+/// Parses Klin integer lexemes used in array lengths: decimal / `0x` / `0b` /
+/// `0o` / character `'A'` / `'\n'`. Returns null if invalid.
+int? _parseIntLiteralValue(String lexeme) {
+  if (lexeme.startsWith("'") && lexeme.endsWith("'") && lexeme.length >= 3) {
+    final inner = lexeme.substring(1, lexeme.length - 1);
+    if (inner.startsWith('\\') && inner.length == 2) {
+      return switch (inner[1]) {
+        'n' => 0x0A,
+        't' => 0x09,
+        '0' => 0x00,
+        '\\' => 0x5C,
+        "'" => 0x27,
+        _ => null,
+      };
+    }
+    if (inner.length == 1) return inner.codeUnitAt(0);
+    return null;
+  }
+  final isHex = lexeme.startsWith('0x') || lexeme.startsWith('0X');
+  final isBin = lexeme.startsWith('0b') || lexeme.startsWith('0B');
+  final isOct = lexeme.startsWith('0o') || lexeme.startsWith('0O');
+  return int.tryParse(
+    isHex || isBin || isOct ? lexeme.substring(2) : lexeme,
+    radix: isHex
+        ? 16
+        : isBin
+            ? 2
+            : isOct
+                ? 8
+                : 10,
+  );
+}
+
+/// Index of the `]` that closes `[LEN]` in a type name. Character lengths
+/// (`']'`, `'\''`) must not use a naive `indexOf(']')`.
+int? _arrayTypeCloseBracket(String name) {
+  if (!name.startsWith('[') || name.length < 3) return null;
+  var i = 1;
+  if (name[i] == "'") {
+    i++; // opening '
+    if (i >= name.length) return null;
+    if (name[i] == '\\') {
+      i += 2; // \ + escape letter
+    } else {
+      i++; // one char
+    }
+    if (i >= name.length || name[i] != "'") return null;
+    i++; // closing '
+  } else {
+    while (i < name.length && name[i] != ']') {
+      i++;
+    }
+  }
+  if (i >= name.length || name[i] != ']') return null;
+  return i;
+}
+
 final class _Symbol {
   final String name;
   final KlinType type;
@@ -599,22 +656,12 @@ final class Checker {
       return SliceType(elem);
     }
     if (name.startsWith('[')) {
-      final close = name.indexOf(']');
-      if (close < 2) throw CheckError('invalid array type `$name`', pos);
+      final close = _arrayTypeCloseBracket(name);
+      if (close == null || close < 2) {
+        throw CheckError('invalid array type `$name`', pos);
+      }
       final lenText = name.substring(1, close).replaceAll('_', '');
-      final isHex = lenText.startsWith('0x') || lenText.startsWith('0X');
-      final isBin = lenText.startsWith('0b') || lenText.startsWith('0B');
-      final isOct = lenText.startsWith('0o') || lenText.startsWith('0O');
-      final len = int.tryParse(
-        isHex || isBin || isOct ? lenText.substring(2) : lenText,
-        radix: isHex
-            ? 16
-            : isBin
-                ? 2
-                : isOct
-                    ? 8
-                    : 10,
-      );
+      final len = _parseIntLiteralValue(lenText);
       if (len == null || len < 0 || close == name.length - 1) {
         throw CheckError('invalid array type `$name`', pos);
       }

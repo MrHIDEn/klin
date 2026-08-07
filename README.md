@@ -203,10 +203,11 @@ Same mutability / type rules as `target = target op value`.
 ### Number literals
 
 Integers are decimal (`123`), hex (`0xFF`), binary (`0b1010`), or octal
-(`0o755`, never C's leading-zero form); floats use a dot (`1.5`) and/or an
-exponent (`1e9`, `1.5e-3`, `2.5E+2`). `_` groups digits (`1_000`, `0b1111_0000`).
-Binary and octal emit as portable `0x` (no `0b`/`0o` in the C, so gcc/clang/tcc
-all work). See
+(`0o755`, never C's leading-zero form); character literals `'A'` / `'\n'` are
+untyped ints (ASCII); floats use a dot (`1.5`) and/or an exponent (`1e9`,
+`1.5e-3`, `2.5E+2`). `_` groups digits (`1_000`, `0b1111_0000`). Binary and
+octal emit as portable `0x` (no `0b`/`0o` in the C, so gcc/clang/tcc all work);
+characters emit as C `'…'`. See
 [issues/081-number-literals.md](issues/081-number-literals.md),
 [`examples/number_literals.kl`](examples/number_literals.kl).
 

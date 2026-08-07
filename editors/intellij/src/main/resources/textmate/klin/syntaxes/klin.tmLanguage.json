@@ -5,6 +5,7 @@
   "patterns": [
     { "include": "#comments" },
     { "include": "#strings" },
+    { "include": "#characters" },
     { "include": "#attributes" },
     { "include": "#macros" },
     { "include": "#numbers" },
@@ -54,6 +55,10 @@
           ]
         }
       ]
+    },
+    "characters": {
+      "name": "string.quoted.single.klin",
+      "match": "'(?:\\\\[nt0\\\\']|[^'\\\\\\n])'"
     },
     "attributes": {
       "name": "meta.attribute.klin",
