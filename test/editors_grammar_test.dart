@@ -54,5 +54,28 @@ void main() {
         expect(raw, contains(t), reason: 'type `$t`');
       }
     });
+
+    test('operators list longer tokens before shorter prefixes', () {
+      final json = jsonDecode(File(grammarPath).readAsStringSync())
+          as Map<String, dynamic>;
+      final repo = json['repository'] as Map<String, dynamic>;
+      final ops = repo['operators'] as Map<String, dynamic>;
+      final patterns = ops['patterns'] as List<dynamic>;
+      final matches = [
+        for (final p in patterns) (p as Map)['match'] as String,
+      ];
+      final eqEqIdx = matches.indexWhere((m) => m.contains('=='));
+      final bareEqIdx = matches.indexWhere((m) => m == '=');
+      expect(eqEqIdx, greaterThanOrEqualTo(0));
+      expect(bareEqIdx, greaterThanOrEqualTo(0));
+      expect(eqEqIdx, lessThan(bareEqIdx),
+          reason: '`==` rule must precede bare `=` rule');
+      final shiftIdx = matches.indexWhere((m) => m.startsWith('<<='));
+      final compareIdx = matches.indexWhere((m) => m.contains('!='));
+      expect(shiftIdx, greaterThanOrEqualTo(0));
+      expect(compareIdx, greaterThanOrEqualTo(0));
+      expect(shiftIdx, lessThan(compareIdx),
+          reason: '`<<` rule must precede `<` comparison rule');
+    });
   });
 }
