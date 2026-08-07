@@ -26,7 +26,7 @@ Natural home: [`editors/`](../editors/README.md).
 ## Out of scope
 
 - PSI / Grammar-Kit full IntelliJ parser → [087](087-intellij-plugin.md)
-- Semantic tokens via LSP (possible later enhancement to 086)
+- Semantic tokens via LSP → [094](094-lsp-semantic-tokens.md)
 
 ## Completion criteria
 
