@@ -170,10 +170,11 @@ AnalysisResult? _tryAnalyzeProject({
     // a partial AST. Project-level / foreign `ParseError`s (often no path)
     // stay a single diagnostic — loadProject remains fail-fast.
     final errPath = e.path;
+    // Compare only to the absolute open path — a relative basename `path`
+    // would falsely match another module's `…/same.kl` via sameDiagnosticPath.
     final inOpen = errPath != null &&
         errPath.isNotEmpty &&
-        (sameDiagnosticPath(errPath, path) ||
-            sameDiagnosticPath(errPath, abs));
+        sameDiagnosticPath(errPath, abs);
     if (inOpen) return null;
     return AnalysisResult(
       diagnostics: [

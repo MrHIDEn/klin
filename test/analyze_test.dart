@@ -121,6 +121,44 @@ fn main(): void {
       );
     });
 
+    test('LSP overlay does not fall through on same-basename foreign parse', () {
+      final root = Directory.systemTemp.createTempSync('klin_092_base_');
+      addTearDown(() {
+        if (root.existsSync()) root.deleteSync(recursive: true);
+      });
+      final app = Directory('${root.path}/app')..createSync();
+      final lib = Directory('${root.path}/lib')..createSync();
+      final foreign = File('${lib.path}/main.kl')
+        ..writeAsStringSync('fn broken( {\n');
+      final open = File('${app.path}/main.kl')
+        ..writeAsStringSync('''
+import "../lib/main" util
+fn main(): void {
+}
+''');
+      // Call with relative basename so a naive sameDiagnosticPath(path)
+      // would match the foreign file.
+      final result = analyzeSource(
+        path: open.path,
+        source: open.readAsStringSync(),
+        requireMain: false,
+        sourceOverlay: {
+          open.absolute.path: open.readAsStringSync(),
+          foreign.absolute.path: foreign.readAsStringSync(),
+        },
+      );
+      expect(result.diagnostics, isNotEmpty);
+      expect(
+        result.diagnostics.any(
+          (d) =>
+              d.message.contains('expected') ||
+              sameDiagnosticPath(d.path, foreign.absolute.path),
+        ),
+        isTrue,
+        reason: 'foreign same-basename syntax error must not be dropped',
+      );
+    });
+
     test('parse recovery reports stmt error and keeps later stmts', () {
       const source = '''
 fn main(): void {
