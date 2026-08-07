@@ -53,6 +53,9 @@ IntelliJ today / future plugin: [`editors/intellij/`](../editors/intellij/)
 ([087](../issues/087-intellij-plugin.md)).
 Details: [086](../issues/086-lsp.md).
 
+**Debug is not LSP.** For gdb / lldb on `.kl` via `#line`, see
+[19-debug.md](19-debug.md) ([088](../issues/088-dap-debug.md)).
+
 ## Flags before / with `run`
 
 | Flag | Meaning |

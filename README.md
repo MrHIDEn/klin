@@ -36,6 +36,7 @@ dart run bin/klin.dart --version   # → klin 0.1.1
 
 Use `dart run bin/klin.dart …` while developing. Details:
 [docs/06-cli.md](docs/06-cli.md), [docs/make.md](docs/make.md).
+Debug with gdb/lldb (`#line`): [docs/19-debug.md](docs/19-debug.md).
 
 ### Homebrew
 

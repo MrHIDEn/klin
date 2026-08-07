@@ -1,6 +1,7 @@
 # 088 — Debug (gdb / `#line` docs + optional DAP)
 
-**Status:** 💭 under consideration (not started) — **0%**
+**Status:** 🔨 docs ✅ (`#line` / gdb); thin DAP / CLI `-g` profile / IDE run
+configs still 💭
 **Depends on:** 001+ (`#line` in emission ✅); IDE UX → [087](087-intellij-plugin.md); not [086](086-lsp.md)
 
 ## Goal
@@ -28,11 +29,13 @@ docs), not a second debugger engine.
 - Host: `klin` → `.c` → `gcc -g` → `gdb` / `lldb` (stack / breaks on `.kl`
   when the toolchain honors `#line`).
 - MCU: same idea with OpenOCD / probe + `arm-none-eabi-gdb`.
+- **Docs:** [docs/19-debug.md](../docs/19-debug.md) (+ pointer in
+  [docs/06-cli.md](../docs/06-cli.md)).
 
-## Proposed scope (cheapest first)
+## Scope
 
-1. **Docs** — short `docs/…` (or CLI section): host debug recipe
-   (`--emit-c` / `klin run` + `-g`), MCU note, relation to LSP/DAP.
+1. **Docs — ✅** — host debug recipe (`--emit-c` + `gcc -g`), MCU note,
+   LSP ≠ DAP.
 2. **Optional CLI sugar** — e.g. `klin` flag or documented `cc` args to always
    pass `-g` in a “debug” profile (no hidden runtime).
 3. **Optional thin DAP** — adapter that launches/attaches **gdb** (or lldb)
@@ -54,14 +57,14 @@ docs), not a second debugger engine.
 |---|---|
 | `#line` in emission | ✅ (existing) |
 | Issue / plan | ✅ (this file) |
-| Debug docs (host + MCU) | ❌ 0% |
-| CLI `-g` / debug profile note | ❌ 0% |
+| Debug docs (host + MCU) | ✅ [docs/19-debug.md](../docs/19-debug.md) |
+| CLI `-g` / debug profile | ❌ 0% |
 | Thin DAP over gdb | ❌ 0% |
 | IntelliJ debug run config | ❌ 0% (see 087) |
 
-## Completion criteria (when work starts)
+## Completion criteria
 
-- [ ] Documented host path: `.kl` → C → `-g` → gdb/lldb breaks on `.kl`
-- [ ] Explicit note: LSP does not provide debug; DAP is optional follow-up
+- [x] Documented host path: `.kl` → C → `-g` → gdb/lldb breaks on `.kl`
+- [x] Explicit note: LSP does not provide debug; DAP is optional follow-up
 - [ ] If DAP lands: stdio DAP that delegates to gdb; smoke test in CI or
       manual checklist — no Klin runtime
