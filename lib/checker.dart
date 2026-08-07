@@ -64,6 +64,30 @@ int? _parseIntLiteralValue(String lexeme) {
   );
 }
 
+/// Index of the `]` that closes `[LEN]` in a type name. Character lengths
+/// (`']'`, `'\''`) must not use a naive `indexOf(']')`.
+int? _arrayTypeCloseBracket(String name) {
+  if (!name.startsWith('[') || name.length < 3) return null;
+  var i = 1;
+  if (name[i] == "'") {
+    i++; // opening '
+    if (i >= name.length) return null;
+    if (name[i] == '\\') {
+      i += 2; // \ + escape letter
+    } else {
+      i++; // one char
+    }
+    if (i >= name.length || name[i] != "'") return null;
+    i++; // closing '
+  } else {
+    while (i < name.length && name[i] != ']') {
+      i++;
+    }
+  }
+  if (i >= name.length || name[i] != ']') return null;
+  return i;
+}
+
 final class _Symbol {
   final String name;
   final KlinType type;
@@ -632,8 +656,10 @@ final class Checker {
       return SliceType(elem);
     }
     if (name.startsWith('[')) {
-      final close = name.indexOf(']');
-      if (close < 2) throw CheckError('invalid array type `$name`', pos);
+      final close = _arrayTypeCloseBracket(name);
+      if (close == null || close < 2) {
+        throw CheckError('invalid array type `$name`', pos);
+      }
       final lenText = name.substring(1, close).replaceAll('_', '');
       final len = _parseIntLiteralValue(lenText);
       if (len == null || len < 0 || close == name.length - 1) {

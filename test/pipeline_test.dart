@@ -3613,6 +3613,20 @@ fn main() {
     expect(formatSource(src), contains(r"'\n'"));
   });
 
+  test('checker: array length character `]` and quote escape (issue 081)', () {
+    final program = Parser(Lexer(r"""
+fn take_brack(xs: [']']u8) {}
+fn take_quote(ys: ['\'']u8) {}
+fn main() {}
+""")
+        .tokenize())
+        .parse();
+    expect(() => Checker().check(program), returnsNormally);
+    final c = emitC(program, 't.kl');
+    expect(c, contains('uint8_t xs[93]')); // ']' == 93
+    expect(c, contains('uint8_t ys[39]')); // '\'' == 39
+  });
+
   test('error: binary literal without a digit (issue 081)', () {
     expect(
       () => Lexer('fn main() { let x = 0b }').tokenize(),
