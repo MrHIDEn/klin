@@ -6,10 +6,17 @@ final class ParseError implements Exception {
   final String message;
   final SourcePos pos;
 
-  const ParseError(this.message, this.pos);
+  /// Source file when known (e.g. during multi-file project load).
+  final String? path;
+
+  const ParseError(this.message, this.pos, {this.path});
 
   @override
-  String toString() => '${pos.line}:${pos.col}: $message';
+  String toString() {
+    final p = path;
+    if (p == null || p.isEmpty) return '${pos.line}:${pos.col}: $message';
+    return '$p:${pos.line}:${pos.col}: $message';
+  }
 }
 
 /// Grammar 004:

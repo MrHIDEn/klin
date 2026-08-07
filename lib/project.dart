@@ -95,13 +95,12 @@ Program loadProject(
       if (!sourceExists(path)) {
         throw FileSystemException('imported file not found', path);
       }
-      final expanded = preprocess(
+      final unit = _parseUnitFile(
+        path,
         readSource(path),
-        path: path,
         klinCacheDir: klinCacheDir,
         klinPathDirs: klinPathDirs,
       );
-      final unit = Parser(Lexer(expanded).tokenize()).parseUnit();
       final moduleName = unit.declaredName ?? _fileStem(path);
       if (requiredModule != null && moduleName != requiredModule) {
         throw ParseError(
@@ -193,13 +192,12 @@ Program loadProject(
 
   // Entry: load the entry file plus same-module siblings in its directory.
   final entryAbs = File(entryPath).absolute.path;
-  final entryExpanded = preprocess(
+  final entryUnit = _parseUnitFile(
+    entryAbs,
     readSource(entryAbs),
-    path: entryAbs,
     klinCacheDir: klinCacheDir,
     klinPathDirs: klinPathDirs,
   );
-  final entryUnit = Parser(Lexer(entryExpanded).tokenize()).parseUnit();
   final entryModule = entryUnit.declaredName ?? _fileStem(entryAbs);
   final entryDir = File(entryAbs).parent.path;
   final siblingFiles = <String>[entryAbs];
@@ -210,13 +208,12 @@ Program loadProject(
     final looksLikeSibling = _fileStem(path) == entryModule ||
         moduleDecl.hasMatch(raw);
     try {
-      final expanded = preprocess(
+      final unit = _parseUnitFile(
+        path,
         raw,
-        path: path,
         klinCacheDir: klinCacheDir,
         klinPathDirs: klinPathDirs,
       );
-      final unit = Parser(Lexer(expanded).tokenize()).parseUnit();
       final name = unit.declaredName ?? _fileStem(path);
       if (name == entryModule) siblingFiles.add(path);
     } on PreprocessError {
@@ -398,6 +395,27 @@ Iterable<String> stdlibCandidatesForInstallRoot(Iterable<String> roots) sync* {
       final path = '$root$sep$rel';
       if (seen.add(path)) yield path;
     }
+  }
+}
+
+ModuleUnit _parseUnitFile(
+  String path,
+  String source, {
+  String? klinCacheDir,
+  List<String> klinPathDirs = const [],
+}) {
+  try {
+    final expanded = preprocess(
+      source,
+      path: path,
+      klinCacheDir: klinCacheDir,
+      klinPathDirs: klinPathDirs,
+    );
+    return Parser(Lexer(expanded).tokenize()).parseUnit();
+  } on LexError catch (e) {
+    throw LexError(e.message, e.pos, path: e.path ?? path);
+  } on ParseError catch (e) {
+    throw ParseError(e.message, e.pos, path: e.path ?? path);
   }
 }
 

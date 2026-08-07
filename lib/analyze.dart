@@ -151,7 +151,14 @@ AnalysisResult? _tryAnalyzeProject({
   } on LexError catch (e) {
     return AnalysisResult(
       diagnostics: [
-        _mappedDiagnostic(path, e.message, e.pos, openMap, skewed),
+        _mappedDiagnostic(
+          path,
+          e.message,
+          e.pos,
+          openMap,
+          skewed,
+          errorPath: e.path,
+        ),
       ],
       sourceMap: openMap,
       positionsSkewed: skewed,
@@ -159,7 +166,14 @@ AnalysisResult? _tryAnalyzeProject({
   } on ParseError catch (e) {
     return AnalysisResult(
       diagnostics: [
-        _mappedDiagnostic(path, e.message, e.pos, openMap, skewed),
+        _mappedDiagnostic(
+          path,
+          e.message,
+          e.pos,
+          openMap,
+          skewed,
+          errorPath: e.path,
+        ),
       ],
       sourceMap: openMap,
       positionsSkewed: skewed,

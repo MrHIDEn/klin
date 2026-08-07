@@ -210,5 +210,23 @@ fn main(): void {
         isTrue,
       );
     });
+
+    test('same basename in different dirs does not match', () {
+      const pos = SourcePos(3, 5);
+      expect(
+        sameResolvedDef(
+          ResolvedDef(pos, '/a/util.kl'),
+          ResolvedDef(pos, '/b/util.kl'),
+        ),
+        isFalse,
+      );
+      expect(
+        sameResolvedDef(
+          ResolvedDef(pos, 'util.kl'),
+          ResolvedDef(pos, '/proj/util.kl'),
+        ),
+        isTrue,
+      );
+    });
   });
 }

@@ -109,5 +109,71 @@ fn main(): void {
         isTrue,
       );
     });
+
+    test('parse errors from import keep import path', () {
+      final lib = File('${dir.path}/util.kl')
+        ..writeAsStringSync('''
+module util
+pub fn helper(: i32 {
+    return 1
+}
+''');
+      final main = File('${dir.path}/main.kl')
+        ..writeAsStringSync('''
+import util
+fn main(): void {}
+''');
+      final overlay = {
+        lib.absolute.path: lib.readAsStringSync(),
+        main.absolute.path: main.readAsStringSync(),
+      };
+      final result = analyzeSource(
+        path: main.path,
+        source: main.readAsStringSync(),
+        sourceOverlay: overlay,
+      );
+      expect(result.diagnostics, isNotEmpty);
+      expect(
+        result.diagnostics.any(
+          (d) => sameDiagnosticPath(d.path, lib.absolute.path),
+        ),
+        isTrue,
+        reason: 'syntax error in util must not use open main path',
+      );
+    });
+
+    test('async main diagnostic keeps main file path', () {
+      final lib = File('${dir.path}/util.kl')
+        ..writeAsStringSync('''
+module util
+pub fn helper(): void {
+}
+''');
+      final main = File('${dir.path}/main.kl')
+        ..writeAsStringSync('''
+import util
+async fn main(): void {
+}
+''');
+      final overlay = {
+        lib.absolute.path: lib.readAsStringSync(),
+        main.absolute.path: main.readAsStringSync(),
+      };
+      final result = analyzeSource(
+        path: main.path,
+        source: main.readAsStringSync(),
+        sourceOverlay: overlay,
+      );
+      expect(result.diagnostics, isNotEmpty);
+      expect(
+        result.diagnostics.any(
+          (d) =>
+              d.message.contains('async') &&
+              sameDiagnosticPath(d.path, main.absolute.path),
+        ),
+        isTrue,
+        reason: 'async main must not inherit util.kl path',
+      );
+    });
   });
 }

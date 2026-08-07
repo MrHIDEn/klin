@@ -158,9 +158,11 @@ bool sameResolvedDef(ResolvedDef? a, ResolvedDef? b) {
   // (avoids colliding locals across files that share line/col).
   if (ap.isEmpty && bp.isEmpty) return true;
   if (ap.isEmpty || bp.isEmpty) return false;
-  return ap == bp ||
-      ap.replaceAll('\\', '/').split('/').last ==
-          bp.replaceAll('\\', '/').split('/').last;
+  final na = ap.replaceAll('\\', '/');
+  final nb = bp.replaceAll('\\', '/');
+  if (na == nb) return true;
+  // Relative vs absolute suffix match — not basename-only (distinct dirs).
+  return na.endsWith('/$nb') || nb.endsWith('/$na');
 }
 
 final class _FuncNav extends NavTarget {

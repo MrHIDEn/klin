@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:json_rpc_2/json_rpc_2.dart';
 import 'package:klin/analyze.dart';
 import 'package:klin/complete.dart';
 import 'package:klin/fmt.dart';
@@ -12,6 +13,13 @@ import 'package:klin/version.dart';
 import 'package:lsp_server/lsp_server.dart';
 
 import 'documents.dart';
+
+Never _rejectPrepareRename() {
+  throw RpcException(
+    ErrorCodes.RequestFailed.toJson() as int,
+    'No renameable symbol at this position',
+  );
+}
 
 /// Maps a Klin [SourcePos] (1-based) to an LSP [Range] (0-based, one column).
 Range diagnosticRange(SourcePos pos) {
@@ -247,12 +255,7 @@ Future<void> runKlinLsp({
     final openPath = uriToPath(params.textDocument.uri);
     final result = docs.analysis(uriKey);
     if (result == null) {
-      return Either2.t1(
-        Range(
-          start: params.position,
-          end: params.position,
-        ),
-      );
+      _rejectPrepareRename();
     }
     final line = params.position.line + 1;
     final col = params.position.character + 1;
@@ -263,12 +266,7 @@ Future<void> runKlinLsp({
       openPath: openPath,
     );
     if (prep == null) {
-      return Either2.t1(
-        Range(
-          start: params.position,
-          end: params.position,
-        ),
-      );
+      _rejectPrepareRename();
     }
     return Either2.t1(
       Range(

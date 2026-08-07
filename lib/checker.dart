@@ -198,15 +198,20 @@ final class Checker {
   }
 
   void _checkFuncBody(FuncDecl func) {
+    // Set before any early throw so collectErrors attributes the right file.
+    _currentSourcePath = func.sourcePath;
     if (func.isAsync && func.name == 'main') {
-      throw CheckError('`main` cannot be `async`', func.pos);
+      throw CheckError(
+        '`main` cannot be `async`',
+        func.pos,
+        path: func.sourcePath,
+      );
     }
     _scope = _Scope(null);
     _loopDepth = 0;
     _deferDepth = 0;
     _currentFunction = func.name;
     _currentModule = func.moduleName;
-    _currentSourcePath = func.sourcePath;
     _currentIsAsync = func.isAsync;
     _currentReturn = func.resolvedReturnType!;
     _asyncFlatNames
