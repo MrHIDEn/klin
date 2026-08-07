@@ -37,11 +37,18 @@ class KlinConfigurable : Configurable {
         }
         KlinSettingsState.getInstance().klinPath = path
         // Rebuild the command line by restarting LSP4IJ servers in open projects.
+        // Default stop() also disables the server; keep it enabled so start() works.
+        val stopOptions = LanguageServerManager.StopOptions().apply {
+            setWillDisable(false)
+        }
+        val startOptions = LanguageServerManager.StartOptions().apply {
+            setForceStart(true)
+        }
         for (project in ProjectManager.getInstance().openProjects) {
             if (project.isDisposed) continue
             val manager = LanguageServerManager.getInstance(project)
-            manager.stop(SERVER_ID)
-            manager.start(SERVER_ID)
+            manager.stop(SERVER_ID, stopOptions)
+            manager.start(SERVER_ID, startOptions)
         }
     }
 

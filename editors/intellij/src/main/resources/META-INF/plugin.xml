@@ -26,8 +26,6 @@
                 instance="org.klinlang.intellij.settings.KlinConfigurable"
                 id="org.klinlang.intellij.settings"
                 displayName="Klin"/>
-        <applicationService
-                serviceImplementation="org.klinlang.intellij.settings.KlinSettingsState"/>
         <textmate.bundleProvider
                 implementation="org.klinlang.intellij.textmate.KlinTextMateBundleProvider"/>
     </extensions>
