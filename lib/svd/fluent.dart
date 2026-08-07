@@ -99,6 +99,19 @@ SvdPeripheralsExpansion expandPeripheralsFromSvd({
   );
 }
 
+/// Result of fluent rewrite with mid-text offset tracking for SourceMap compose.
+final class SvdFluentRewrite {
+  final String text;
+
+  /// `midOfFinal[j]` = offset in the pre-fluent text for final offset `j`.
+  final List<int> midOfFinal;
+
+  const SvdFluentRewrite({
+    required this.text,
+    required this.midOfFinal,
+  });
+}
+
 /// Rewrites `PERIPH.REG.FIELD.set/write/toggle(...)` to snake_case accessors.
 ///
 /// `.EnumName` as the sole argument becomes the integer from SVD.
@@ -107,45 +120,79 @@ String rewriteSvdFluent(
   SvdDevice device, {
   required String path,
 }) {
+  return rewriteSvdFluentWithMap(source, device, path: path).text;
+}
+
+/// Like [rewriteSvdFluent], but records mid-text offsets for each emitted char.
+SvdFluentRewrite rewriteSvdFluentWithMap(
+  String source,
+  SvdDevice device, {
+  required String path,
+}) {
   final fields = _indexFields(device);
   final out = StringBuffer();
+  final midOfFinal = <int>[];
   var i = 0;
   var line = 1;
   var col = 1;
 
-  void writeChar(String c) {
-    out.write(c);
+  void bumpPos(String c) {
     if (c == '\n') {
       line++;
       col = 1;
     } else {
       col++;
     }
-    i++;
+  }
+
+  void emitCopyChar(int midOff, String c) {
+    out.write(c);
+    midOfFinal.add(midOff);
+  }
+
+  void emitCopyString(int midStart, String s) {
+    for (var k = 0; k < s.length; k++) {
+      emitCopyChar(midStart + k, s[k]);
+    }
+  }
+
+  void emitSynthetic(int midOff, String s) {
+    for (var k = 0; k < s.length; k++) {
+      emitCopyChar(midOff, s[k]);
+    }
   }
 
   while (i < source.length) {
     final c = source[i];
     if (c == '"') {
-      out.write(c);
+      emitCopyChar(i, c);
+      bumpPos(c);
       i++;
-      col++;
       while (i < source.length && source[i] != '"') {
         if (source[i] == '\\' && i + 1 < source.length) {
-          out.write(source[i]);
-          out.write(source[i + 1]);
+          emitCopyChar(i, source[i]);
+          bumpPos(source[i]);
+          emitCopyChar(i + 1, source[i + 1]);
+          bumpPos(source[i + 1]);
           i += 2;
-          col += 2;
         } else {
-          writeChar(source[i]);
+          emitCopyChar(i, source[i]);
+          bumpPos(source[i]);
+          i++;
         }
       }
-      if (i < source.length) writeChar(source[i]);
+      if (i < source.length) {
+        emitCopyChar(i, source[i]);
+        bumpPos(source[i]);
+        i++;
+      }
       continue;
     }
     if (c == '/' && i + 1 < source.length && source[i + 1] == '/') {
       while (i < source.length && source[i] != '\n') {
-        writeChar(source[i]);
+        emitCopyChar(i, source[i]);
+        bumpPos(source[i]);
+        i++;
       }
       continue;
     }
@@ -188,30 +235,26 @@ String rewriteSvdFluent(
             path: path,
           );
           final replacement = '${info.prefix}_${match.method}($args)';
-          out.write(replacement);
-          // Advance scanner past the original call.
+          emitSynthetic(start, replacement);
           for (var k = start; k < match.end; k++) {
-            if (source[k] == '\n') {
-              line++;
-              col = 1;
-            } else {
-              col++;
-            }
+            bumpPos(source[k]);
           }
           i = match.end;
           continue;
         }
       }
-      out.write(ident);
+      emitCopyString(start, ident);
       i = afterIdent;
       col += ident.length;
       continue;
     }
 
-    writeChar(c);
+    emitCopyChar(i, c);
+    bumpPos(c);
+    i++;
   }
 
-  return out.toString();
+  return SvdFluentRewrite(text: out.toString(), midOfFinal: midOfFinal);
 }
 
 final class _FieldInfo {

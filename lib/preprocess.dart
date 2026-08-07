@@ -249,9 +249,22 @@ final class _PpScanner {
 
     final text = out?.text ?? plain!.toString();
     if (svdDevice != null) {
-      // Fluent rewrite reshapes identifiers; drop the map (positions skewed).
+      final fluent = rewriteSvdFluentWithMap(text, svdDevice, path: path);
+      final mid = out?.origOfExp;
+      if (mid == null || mid.isEmpty) {
+        return PreprocessResult(fluent.text);
+      }
+      final composed = [
+        for (final m in fluent.midOfFinal)
+          mid[m.clamp(0, mid.length - 1)],
+      ];
       return PreprocessResult(
-        rewriteSvdFluent(text, svdDevice, path: path),
+        fluent.text,
+        map: SourceMap(
+          origOfExpanded: composed,
+          original: source,
+          expanded: fluent.text,
+        ),
       );
     }
     if (out == null) {
