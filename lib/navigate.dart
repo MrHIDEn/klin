@@ -1,0 +1,322 @@
+import 'ast.dart';
+import 'token.dart';
+import 'type.dart';
+
+/// A name-like site in the AST that can provide hover / go-to-definition.
+sealed class NavTarget {
+  SourcePos get pos;
+  String get label;
+  KlinType? get type;
+  ResolvedDef? get def;
+  int get nameLength;
+}
+
+final class _NameNav extends NavTarget {
+  final NameExpr expr;
+  _NameNav(this.expr);
+
+  @override
+  SourcePos get pos => expr.pos;
+  @override
+  String get label => expr.name;
+  @override
+  KlinType? get type => expr.resolvedType;
+  @override
+  ResolvedDef? get def => expr.resolvedDef;
+  @override
+  int get nameLength => expr.name.length;
+}
+
+final class _FieldNav extends NavTarget {
+  final FieldExpr expr;
+  _FieldNav(this.expr);
+
+  @override
+  SourcePos get pos => expr.pos;
+  @override
+  String get label => expr.name;
+  @override
+  KlinType? get type => expr.resolvedType;
+  @override
+  ResolvedDef? get def => expr.resolvedDef;
+  @override
+  int get nameLength => expr.name.length;
+}
+
+final class _MethodNav extends NavTarget {
+  final MethodCallExpr expr;
+  _MethodNav(this.expr);
+
+  @override
+  SourcePos get pos => expr.pos;
+  @override
+  String get label => expr.name;
+  @override
+  KlinType? get type => expr.resolvedType;
+  @override
+  ResolvedDef? get def => expr.resolvedDef;
+  @override
+  int get nameLength => expr.name.length;
+}
+
+final class _CallNav extends NavTarget {
+  final CallExpr expr;
+  _CallNav(this.expr);
+
+  @override
+  SourcePos get pos => expr.pos;
+  @override
+  String get label =>
+      expr.moduleName == null ? expr.callee : '${expr.moduleName}.${expr.callee}';
+  @override
+  KlinType? get type => expr.resolvedType;
+  @override
+  ResolvedDef? get def => expr.resolvedDef;
+  @override
+  int get nameLength {
+    final mod = expr.moduleName;
+    if (mod == null) return expr.callee.length;
+    return mod.length + 1 + expr.callee.length;
+  }
+}
+
+final class _CallStmtNav extends NavTarget {
+  final CallStmt stmt;
+  _CallStmtNav(this.stmt);
+
+  @override
+  SourcePos get pos => stmt.pos;
+  @override
+  String get label => stmt.moduleName == null
+      ? stmt.callee
+      : '${stmt.moduleName}.${stmt.callee}';
+  @override
+  KlinType? get type => null;
+  @override
+  ResolvedDef? get def => stmt.resolvedDef;
+  @override
+  int get nameLength {
+    final mod = stmt.moduleName;
+    if (mod == null) return stmt.callee.length;
+    return mod.length + 1 + stmt.callee.length;
+  }
+}
+
+final class _LetNav extends NavTarget {
+  final LetStmt stmt;
+  _LetNav(this.stmt);
+
+  @override
+  SourcePos get pos => stmt.pos;
+  @override
+  String get label => stmt.name;
+  @override
+  KlinType? get type => stmt.resolvedType;
+  @override
+  ResolvedDef? get def => ResolvedDef(stmt.pos);
+  @override
+  int get nameLength => stmt.name.length;
+}
+
+bool _covers(SourcePos start, int length, int line, int col) {
+  if (start.line != line) return false;
+  if (col < start.col) return false;
+  return col < start.col + length;
+}
+
+/// Deepest name/call/field/method covering 1-based [line]/[col], or null.
+NavTarget? findNavTarget(Program program, int line, int col) {
+  return _NavWalker(line, col).run(program);
+}
+
+final class _NavWalker {
+  final int line;
+  final int col;
+  NavTarget? best;
+
+  _NavWalker(this.line, this.col);
+
+  NavTarget? run(Program program) {
+    for (final f in program.funcs) {
+      final body = f.body;
+      if (body != null) walkBlock(body);
+    }
+    return best;
+  }
+
+  void consider(NavTarget t) {
+    if (!_covers(t.pos, t.nameLength, line, col)) return;
+    if (best == null ||
+        t.pos.line > best!.pos.line ||
+        (t.pos.line == best!.pos.line && t.pos.col >= best!.pos.col)) {
+      best = t;
+    }
+  }
+
+  void walkExpr(Expr e) {
+    switch (e) {
+      case NameExpr():
+        consider(_NameNav(e));
+      case FieldExpr(:final object):
+        walkExpr(object);
+        consider(_FieldNav(e));
+      case MethodCallExpr(:final receiver, :final args):
+        walkExpr(receiver);
+        for (final a in args) {
+          walkExpr(a);
+        }
+        consider(_MethodNav(e));
+      case CallExpr(:final args):
+        for (final a in args) {
+          walkExpr(a);
+        }
+        consider(_CallNav(e));
+      case UnaryExpr(:final operand):
+        walkExpr(operand);
+      case BinaryExpr(:final left, :final right):
+        walkExpr(left);
+        walkExpr(right);
+      case GroupExpr(:final inner):
+        walkExpr(inner);
+      case IndexExpr(:final object, :final index):
+        walkExpr(object);
+        walkExpr(index);
+      case SliceFromExpr(:final array):
+        walkExpr(array);
+      case ArrayLitExpr(:final elements):
+        for (final el in elements) {
+          walkExpr(el);
+        }
+      case StructLitExpr(:final namedFields, :final positionalFields):
+        if (namedFields != null) {
+          for (final v in namedFields.values) {
+            walkExpr(v);
+          }
+        }
+        if (positionalFields != null) {
+          for (final v in positionalFields) {
+            walkExpr(v);
+          }
+        }
+      case InterpolatedStringExpr(:final parts):
+        for (final p in parts) {
+          if (p is InterpSlot) walkExpr(p.expr);
+        }
+      case CastExpr(:final expr):
+        walkExpr(expr);
+      case AwaitExpr(:final operand):
+        walkExpr(operand);
+      case ErrorExpr(:final code):
+        walkExpr(code);
+      case PropagateExpr(:final result):
+        walkExpr(result);
+      case OrExpr(:final result, :final fallback):
+        walkExpr(result);
+        for (final s in fallback.stmts) {
+          walkStmt(s);
+        }
+        walkExpr(fallback.value);
+      case MatchExpr(:final subject, :final arms):
+        walkExpr(subject);
+        for (final arm in arms) {
+          if (arm.when != null) walkExpr(arm.when!);
+          walkExpr(arm.body);
+        }
+      case PickExpr(:final cond, :final thenExpr, :final elseExpr):
+        walkExpr(cond);
+        walkExpr(thenExpr);
+        walkExpr(elseExpr);
+      case IntLit() || FloatLit() || BoolLit() || StringLit():
+        break;
+    }
+  }
+
+  void walkStmt(Stmt s) {
+    switch (s) {
+      case LetStmt letStmt:
+        consider(_LetNav(letStmt));
+        if (letStmt.init != null) walkExpr(letStmt.init!);
+      case LetDestructureStmt(:final source):
+        walkExpr(source);
+      case LetArrayDestructureStmt(:final source):
+        walkExpr(source);
+      case AssignStmt(:final target, :final value):
+        walkExpr(target);
+        walkExpr(value);
+      case MultiAssignStmt(:final targets, :final values):
+        for (final t in targets) {
+          walkExpr(t);
+        }
+        for (final v in values) {
+          walkExpr(v);
+        }
+      case StructAssignStmt(:final targets, :final source):
+        for (final t in targets) {
+          walkExpr(t);
+        }
+        walkExpr(source);
+      case CallStmt callStmt:
+        for (final a in callStmt.args) {
+          walkExpr(a);
+        }
+        consider(_CallStmtNav(callStmt));
+      case MethodCallStmt(:final call):
+        walkExpr(call);
+      case AwaitStmt(:final expr):
+        walkExpr(expr);
+      case IfStmt(:final cond, :final thenBlock, :final elseBranch):
+        walkExpr(cond);
+        walkBlock(thenBlock);
+        if (elseBranch != null) walkStmt(elseBranch);
+      case WhileStmt(:final cond, :final body):
+        walkExpr(cond);
+        walkBlock(body);
+      case ForRangeStmt(:final start, :final endExclusive, :final body):
+        walkExpr(start);
+        walkExpr(endExclusive);
+        walkBlock(body);
+      case ForCStmt(
+          :final initExpr,
+          :final cond,
+          :final postExpr,
+          :final body,
+        ):
+        if (initExpr != null) walkExpr(initExpr);
+        if (cond != null) walkExpr(cond);
+        if (postExpr != null) walkExpr(postExpr);
+        walkBlock(body);
+      case ReturnStmt(:final value):
+        if (value != null) walkExpr(value);
+      case DeferStmt(:final body):
+        walkStmt(body);
+      case BlockStmt(:final block):
+        walkBlock(block);
+      case MatchStmt(:final subject, :final arms):
+        walkExpr(subject);
+        for (final arm in arms) {
+          if (arm.when != null) walkExpr(arm.when!);
+          walkBlock(arm.body);
+        }
+      case BreakStmt() || ContinueStmt() || AsmStmt():
+        break;
+    }
+  }
+
+  void walkBlock(Block block) {
+    for (final s in block.stmts) {
+      walkStmt(s);
+    }
+  }
+}
+
+/// Hover plain text for a nav target, or null.
+String? hoverText(NavTarget target) {
+  final ty = target.type;
+  if (ty != null) {
+    return '${target.label}: ${ty.displayName}';
+  }
+  if (target.def != null) {
+    return target.label;
+  }
+  return null;
+}

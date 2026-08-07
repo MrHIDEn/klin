@@ -423,6 +423,9 @@ final class CallStmt extends Stmt {
   /// wrappers for [asyncSpawnFn] (issue 029).
   String? asyncSpawnFn;
 
+  /// Callee definition (LSP).
+  ResolvedDef? resolvedDef;
+
   CallStmt({
     this.moduleName,
     required this.callee,
@@ -643,6 +646,17 @@ sealed class Expr {
   ArrayType? arrayToSliceFrom;
 }
 
+/// Definition site for LSP go-to-definition / hover (issue 086 follow-up).
+///
+/// [path] is null when the definition is in the same analysis unit / unknown
+/// (single-file analyze without `loadProject`).
+final class ResolvedDef {
+  final SourcePos pos;
+  final String? path;
+
+  const ResolvedDef(this.pos, [this.path]);
+}
+
 final class IntLit extends Expr {
   final String lexeme;
   final SourcePos pos;
@@ -718,6 +732,9 @@ final class NameExpr extends Expr {
   /// Top-level function used as a value (fn-pointer decay); C symbol to emit.
   String? resolvedFnCName;
 
+  /// Binding / function definition (LSP).
+  ResolvedDef? resolvedDef;
+
   NameExpr(this.name, this.pos);
 }
 
@@ -729,6 +746,9 @@ final class FieldExpr extends Expr {
   /// Filled by the checker when `object.name` is an enum constant
   /// (`Color.Red`): the C constant to emit instead of a field access.
   String? enumConstCName;
+
+  /// Field or enum-variant definition (LSP).
+  ResolvedDef? resolvedDef;
 
   FieldExpr({
     required this.object,
@@ -750,6 +770,9 @@ final class MethodCallExpr extends Expr {
   /// True when the "receiver" is a type name and this is an associated
   /// (static) function call `Type.func(…)` — emitted with no receiver argument.
   bool isAssociated = false;
+
+  /// Method / associated-function definition (LSP).
+  ResolvedDef? resolvedDef;
 
   MethodCallExpr({
     required this.receiver,
@@ -796,6 +819,9 @@ final class CallExpr extends Expr {
 
   /// When set, emit rewrites to `spawn(ex, fn_poll_erased, fn_init_erased)`.
   String? asyncSpawnFn;
+
+  /// Callee definition (LSP); null for builtins / unknown FFI.
+  ResolvedDef? resolvedDef;
 
   CallExpr({
     this.moduleName,

@@ -12,6 +12,17 @@ final class CheckError implements Exception {
   String toString() => '${pos.line}:${pos.col}: $message';
 }
 
+/// Multiple [CheckError]s collected when [Checker.check] runs with
+/// `collectErrors: true` (Language Server).
+final class CheckErrors implements Exception {
+  final List<CheckError> errors;
+
+  const CheckErrors(this.errors);
+
+  @override
+  String toString() => errors.map((e) => e.toString()).join('\n');
+}
+
 final class _Symbol {
   final String name;
   final KlinType type;
@@ -75,8 +86,9 @@ final class _CheckedCall {
   final KlinType type;
   final String? cName;
   final bool isAsync;
+  final ResolvedDef? def;
 
-  const _CheckedCall(this.type, this.cName, {this.isAsync = false});
+  const _CheckedCall(this.type, this.cName, {this.isAsync = false, this.def});
 }
 
 /// Symbol table and type checker. Mutates `resolvedType` on AST nodes.
@@ -94,6 +106,7 @@ final class Checker {
   KlinType _currentReturn = const VoidType();
   String _currentFunction = '';
   String _currentModule = '';
+  String? _currentSourcePath;
   bool _currentIsAsync = false;
 
   /// Names already reserved in the flat async state struct (params + lets).
@@ -103,7 +116,21 @@ final class Checker {
   /// assignment right-hand side (it lowers to statements in emission).
   bool _allowMatchExpr = false;
 
-  void check(Program program) {
+  /// Type-checks [program].
+  ///
+  /// When [requireMain] is true (CLI / `klin run` default), the program must
+  /// contain exactly one parameterless `main`. Language Server analysis of
+  /// library modules passes `false` so editing stdlib / packages does not
+  /// report a spurious missing-`main` error (issue 086).
+  ///
+  /// When [collectErrors] is true, body-check failures are gathered per
+  /// function and thrown together as [CheckErrors] (registration / `main`
+  /// rules still fail fast as a single [CheckError]).
+  void check(
+    Program program, {
+    bool requireMain = true,
+    bool collectErrors = false,
+  }) {
     _functions.clear();
     _structs.clear();
     _enums.clear();
@@ -123,65 +150,87 @@ final class Checker {
             func.associatedType == null &&
             func.name == 'main')
         .toList();
-    if (main.isEmpty) {
-      throw CheckError('missing required `main` function', program.pos);
-    }
-    if (main.length != 1) {
+    if (requireMain) {
+      if (main.isEmpty) {
+        throw CheckError('missing required `main` function', program.pos);
+      }
+      if (main.length != 1) {
+        throw CheckError(
+            'a project can contain only one `main` function', main[1].pos);
+      }
+      if (main.single.params.isNotEmpty) {
+        throw CheckError(
+            '`main` function cannot have parameters', main.single.pos);
+      }
+    } else if (main.length > 1) {
       throw CheckError(
           'a project can contain only one `main` function', main[1].pos);
-    }
-    if (main.single.params.isNotEmpty) {
+    } else if (main.length == 1 && main.single.params.isNotEmpty) {
       throw CheckError(
           '`main` function cannot have parameters', main.single.pos);
     }
 
+    final collected = <CheckError>[];
     for (final func in program.funcs) {
       if (_hasAttr(func.attrs, 'cimport')) continue;
-      if (func.isAsync && func.name == 'main') {
-        throw CheckError('`main` cannot be `async`', func.pos);
+      try {
+        _checkFuncBody(func);
+      } on CheckError catch (e) {
+        if (!collectErrors) rethrow;
+        collected.add(e);
       }
-      _scope = _Scope(null);
-      _loopDepth = 0;
-      _deferDepth = 0;
-      _currentFunction = func.name;
-      _currentModule = func.moduleName;
-      _currentIsAsync = func.isAsync;
-      _currentReturn = func.resolvedReturnType!;
-      _asyncFlatNames
-        ..clear()
-        ..addAll(func.params.map((p) => p.name));
-      final receiver = func.receiver;
-      if (receiver != null) {
-        _asyncFlatNames.add(receiver.name);
-        _scope.define(
-          _Symbol(
-            name: receiver.name,
-            type: receiver.resolvedType!,
-            isMut: receiver.isMut,
-            pos: receiver.pos,
-            isPtrReceiver: receiver.isMut,
-          ),
-        );
-      }
-      for (final param in func.params) {
-        _scope.define(
-          _Symbol(
-            name: param.name,
-            type: param.resolvedType!,
-            isMut: false,
-            pos: param.pos,
-          ),
-        );
-      }
-      _checkBlock(func.body!);
-      if (func.name != 'main' &&
-          _currentReturn is! VoidType &&
-          !_returnsOnAllPaths(func.body!)) {
-        throw CheckError(
-          'function `${func.name}` must return a value on all paths',
-          func.pos,
-        );
-      }
+    }
+    if (collected.isNotEmpty) {
+      throw CheckErrors(collected);
+    }
+  }
+
+  void _checkFuncBody(FuncDecl func) {
+    if (func.isAsync && func.name == 'main') {
+      throw CheckError('`main` cannot be `async`', func.pos);
+    }
+    _scope = _Scope(null);
+    _loopDepth = 0;
+    _deferDepth = 0;
+    _currentFunction = func.name;
+    _currentModule = func.moduleName;
+    _currentSourcePath = func.sourcePath;
+    _currentIsAsync = func.isAsync;
+    _currentReturn = func.resolvedReturnType!;
+    _asyncFlatNames
+      ..clear()
+      ..addAll(func.params.map((p) => p.name));
+    final receiver = func.receiver;
+    if (receiver != null) {
+      _asyncFlatNames.add(receiver.name);
+      _scope.define(
+        _Symbol(
+          name: receiver.name,
+          type: receiver.resolvedType!,
+          isMut: receiver.isMut,
+          pos: receiver.pos,
+          isPtrReceiver: receiver.isMut,
+        ),
+      );
+    }
+    for (final param in func.params) {
+      _scope.define(
+        _Symbol(
+          name: param.name,
+          type: param.resolvedType!,
+          isMut: false,
+          pos: param.pos,
+        ),
+      );
+    }
+    _checkBlock(func.body!);
+    if (func.name != 'main' &&
+        _currentReturn is! VoidType &&
+        !_returnsOnAllPaths(func.body!)) {
+      throw CheckError(
+        'function `${func.name}` must return a value on all paths',
+        func.pos,
+      );
     }
   }
 
@@ -763,6 +812,9 @@ final class Checker {
     }
     node.enumConstCName =
         _enumConstCName(decl.moduleName, decl.name, variant);
+    final variantDecl =
+        decl.variants.firstWhere((v) => v.name == variant);
+    node.resolvedDef = ResolvedDef(variantDecl.pos, decl.sourcePath);
     return decl.resolvedType ??
         EnumType(
           decl.moduleName,
@@ -1100,9 +1152,11 @@ final class Checker {
           );
         }
         stmt.resolvedCallee = call.cName;
+        stmt.resolvedDef = call.def;
 
       case MethodCallStmt(:final call):
         final type = _checkMethodCall(call);
+        call.resolvedType = type;
         if (type is ResultType) {
           throw CheckError(
             'result `${type.displayName}` from method `${call.name}` must be handled with `!` or `or`',
@@ -1500,7 +1554,13 @@ final class Checker {
     if (local != null && moduleName == null) {
       final fnType = local.type;
       if (fnType is FnType) {
-        return _checkFnTypeCall(fnType, callee, args, pos);
+        final call = _checkFnTypeCall(fnType, callee, args, pos);
+        return _CheckedCall(
+          call.type,
+          call.cName,
+          isAsync: call.isAsync,
+          def: ResolvedDef(local.pos, _currentSourcePath),
+        );
       }
       throw CheckError(
         '`$callee` is not a function (it is a `${local.type.displayName}` variable)',
@@ -1568,6 +1628,7 @@ final class Checker {
       signature.returnType,
       _cNameForFunction(decl),
       isAsync: signature.isAsync,
+      def: ResolvedDef(decl.pos, decl.sourcePath),
     );
   }
 
@@ -1645,6 +1706,7 @@ final class Checker {
         moduleName: operand.moduleName,
       );
       operand.resolvedCallee = call.cName;
+      operand.resolvedDef = call.def;
       operand.resolvedType = call.type;
       if (call.isAsync) {
         expr.asyncCallee = call.cName;
@@ -1796,6 +1858,10 @@ final class Checker {
         ? '${typeName}_${call.name}'
         : '${module}_${typeName}_${call.name}';
     call.isAssociated = true;
+    final decl = _findAssociatedFunc(type.displayName, call.name);
+    if (decl != null) {
+      call.resolvedDef = ResolvedDef(decl.pos, decl.sourcePath);
+    }
     return signature.returnType;
   }
 
@@ -1861,7 +1927,36 @@ final class Checker {
         ? '${receiverName}_${call.name}'
         : '${receiverModule}_${receiverName}_${call.name}';
     call.receiverByRef = signature.isMutReceiver;
+    final decl = _findInstanceMethod(receiverType.displayName, call.name);
+    if (decl != null) {
+      call.resolvedDef = ResolvedDef(decl.pos, decl.sourcePath);
+    }
     return signature.returnType;
+  }
+
+  FuncDecl? _findInstanceMethod(String typeDisplayName, String name) {
+    for (final f in _allFunctions) {
+      if (f.receiver == null || f.name != name) continue;
+      final rt = f.receiver!.resolvedType;
+      if (rt != null && rt.displayName == typeDisplayName) return f;
+    }
+    return null;
+  }
+
+  FuncDecl? _findAssociatedFunc(String typeDisplayName, String name) {
+    for (final f in _allFunctions) {
+      if (f.associatedType == null || f.name != name) continue;
+      // Resolve the type name in the declaring module (not the caller's).
+      final saved = _currentModule;
+      _currentModule = f.moduleName;
+      try {
+        final t = _resolveType(f.associatedType!, f.pos);
+        if (t.displayName == typeDisplayName) return f;
+      } finally {
+        _currentModule = saved;
+      }
+    }
+    return null;
   }
 
   KlinType _checkAssignableTarget(Expr target, SourcePos pos) {
@@ -2026,19 +2121,27 @@ final class Checker {
           final sym = _scope.lookup(nameExpr.name);
           if (sym != null) {
             nameExpr.isPtrReceiver = sym.isPtrReceiver;
+            nameExpr.resolvedDef =
+                ResolvedDef(sym.pos, _currentSourcePath);
             return sym.type;
           }
           final fnType = _fnTypeForName(nameExpr.name, nameExpr.pos);
           if (fnType != null) {
             nameExpr.resolvedFnCName = fnType.cName;
+            final decl = _functionDecl(_currentModule, nameExpr.name);
+            nameExpr.resolvedDef =
+                ResolvedDef(decl.pos, decl.sourcePath);
             return fnType.type;
           }
           throw CheckError(
               'nieznana zmienna `${nameExpr.name}`', nameExpr.pos);
         }(),
-      FieldExpr(:final object, :final name, :final pos) => () {
+      FieldExpr fieldExpr => () {
+          final object = fieldExpr.object;
+          final name = fieldExpr.name;
+          final pos = fieldExpr.pos;
           // `Enum.Variant`: a type name (not a variable) followed by a variant.
-          final enumConst = _tryEnumConstant(expr, object, name, pos);
+          final enumConst = _tryEnumConstant(fieldExpr, object, name, pos);
           if (enumConst != null) return enumConst;
           final objectType = _inferExpr(object);
           if (name == 'len' && objectType is ArrayType) {
@@ -2053,9 +2156,9 @@ final class Checker {
                 pos);
           }
           FieldDecl? field;
-          for (final candidate
-              in _structs[_key(objectType.moduleName, objectType.name)]!
-                  .fields) {
+          final struct =
+              _structs[_key(objectType.moduleName, objectType.name)]!;
+          for (final candidate in struct.fields) {
             if (candidate.name == name) {
               field = candidate;
               break;
@@ -2065,6 +2168,8 @@ final class Checker {
             throw CheckError(
                 'struct `${objectType.name}` has no field `$name`', pos);
           }
+          fieldExpr.resolvedDef =
+              ResolvedDef(field.pos, struct.sourcePath);
           return field.resolvedType!;
         }(),
       IndexExpr(:final object, :final index, :final pos) => () {
@@ -2219,6 +2324,7 @@ final class Checker {
           }
           final call = _checkCall(callee, args, pos, moduleName: moduleName);
           expr.resolvedCallee = call.cName;
+          expr.resolvedDef = call.def;
           if (call.isAsync) {
             // Async calls are only valid as `.await` operands (handled there).
             throw CheckError(
@@ -2370,7 +2476,11 @@ final class Checker {
         type is PtrType ||
         type is ArrayType ||
         type is SliceType ||
-        type is ResultType) expr.resolvedType = type;
+        type is ResultType ||
+        type is FnType ||
+        type is VoidType) {
+      expr.resolvedType = type;
+    }
     return type;
   }
 

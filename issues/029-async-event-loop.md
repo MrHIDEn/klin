@@ -2,7 +2,7 @@
 
 **Status:** 🔨 lib published (`github/klin-lang/eventloop@v0.4.0` — callbacks +
 `sleep_ms`/`spawn` + `$event_loop` + `flag_wait`); phase 4 **async/await MVP in
-core** ✅; phase 3 RTOS examples ✅; IDE keywords still open (board blink → [028](028-freertos.md) ✅)
+core** ✅; phase 3 RTOS examples ✅; IDE → [087](087-intellij-plugin.md) (board blink → [028](028-freertos.md) ✅)
 **Depends on:** D1/D3 decisions; probably 018, 026, 028; remote lib → 049
 
 ## Question
@@ -283,10 +283,10 @@ delay_ms(100).await
 | Example (callbacks, manual) | [`examples/remote_eventloop/app.kl`](../examples/remote_eventloop/app.kl) |
 | Example (async, manual) | [`examples/remote_eventloop/async_app.kl`](../examples/remote_eventloop/async_app.kl) |
 | Example (`$event_loop`) | [`examples/remote_eventloop_macro/`](../examples/remote_eventloop_macro/) |
-| IDE keywords | **no** — still open |
+| IDE keywords | **no** — → [087](087-intellij-plugin.md) |
 
-IntelliJ plugin (highlight / parser) should learn `async` / `.await` after this
-lands on `main` — not via an "eventloop plugin".
+IntelliJ plugin (highlight + LSP client over [086](086-lsp.md)) should learn
+`async` / `.await` — not via an "eventloop plugin".
 
 ### Multiple loops: RTOS tasks and CPU cores (SMP)
 
@@ -400,14 +400,14 @@ Not in core: global default loop, auto-async `main`, Promise, hidden scheduler.
    `$event_loop`: [`freertos_eventloop_macro/`](../examples/freertos_eventloop_macro/).  
    Board blink: [`stm32/freertos_blink/`](../examples/stm32/freertos_blink/) ([028](028-freertos.md) ✅).  
 4. **`async`/`await` in core** + lib `sleep_ms`/`spawn` — ✅ MVP
-   (`eventloop@v0.2.0`+). IDE keywords still open.  
+   (`eventloop@v0.2.0`+). IDE keywords → [087](087-intellij-plugin.md).  
 5. **`$event_loop` lib macro** — ✅ `@v0.3.0` + host/RTOS examples
    ([`remote_eventloop_macro/`](../examples/remote_eventloop_macro/),
    [`freertos_eventloop_macro/`](../examples/freertos_eventloop_macro/)).
 6. **`flag_wait` / `FlagFuture`** — ✅ `@v0.4.0` (ISR/producer → `.await` via poll;
    host smoke in the eventloop package `examples/flag_wait/`).
 
-Steps 2–3 do not wait for async. Steps 4–6 landed; IDE follow.
+Steps 2–3 do not wait for async. Steps 4–6 landed; IDE → [087](087-intellij-plugin.md).
 
 ### `flag_wait` / ISR (v0.4) — out of scope
 

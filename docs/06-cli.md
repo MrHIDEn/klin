@@ -17,6 +17,7 @@ Entry: `dart run bin/klin.dart <subcommand|file.kl> …`
 | `run <file.kl>` | Preprocess → parse → check → emit C → host `cc` → run |
 | *(bare path)* | Alias for `run` — `klin examples/hello.kl` |
 | `fmt [-w] <file.kl>` | Canonical printer (4 spaces, K&R). Without `-w` → stdout; with `-w` → write |
+| `lsp` | Language Server over **stdio** (diagnostics, format, hover, definition, completion; [086](../issues/086-lsp.md)) |
 | `test [path…]` | Finds `*_test.kl`, runs `test_*` (like `go test`) |
 | `get [path[@ref]…]` | Fetch remote package **or** device SVD (`.svd`) into cache; writes `klin.mod` (`require` / `device`) + `klin.lock` ([049](../issues/049-remote-imports.md), [053](../issues/053-device-board-assets.md), [065](../issues/065-project-lockfile.md)) |
 | `update [path[@ref]…]` | Force re-fetch (no args = all `require`/`device` from `klin.mod`); refreshes lock |
@@ -26,6 +27,26 @@ Entry: `dart run bin/klin.dart <subcommand|file.kl> …`
 `run` / `test` **do not** open network for remotes — cache only.
 `get` with existing `klin.lock` prefers commit SHA (reproducible).
 `update` ≠ `upgrade`: update keeps pin from mod; upgrade looks for a newer tag.
+
+## Language Server (`klin lsp`)
+
+Starts an LSP server on stdin/stdout (no args). Editors wire it as:
+
+```json
+"klin": {
+  "command": ["klin", "lsp"]
+}
+```
+
+Dev without install: `dart run bin/klin.dart lsp`.
+
+MVP: full-document sync, publish diagnostics from the frontend (check errors
+collected per function), `textDocument/formatting` via `klin fmt` /
+[`formatSource`](../lib/fmt.dart), `hover` / `definition` / `completion` for the
+open file. After `$fn` expand, [`SourceMap`](../lib/source_map.dart) remaps
+positions to the editor buffer (nav stays off only when mapping is unavailable,
+e.g. SVD fluent rewrite). Library files do not require `main`. Details:
+[086](../issues/086-lsp.md).
 
 ## Flags before / with `run`
 

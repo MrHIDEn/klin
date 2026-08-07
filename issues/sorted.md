@@ -67,7 +67,7 @@ building the core from scratch.
 |---|---|---|---|
 | [018](018-generators-yield.md) | Generators / `yield` | 💭 | 004+ |
 | [028](028-freertos.md) | FreeRTOS (`klin_freertos` ✅ `@v0.4.0`; blink + objdump vs C ✅) | ✅ | 024, 010, 021, 030 |
-| [029](029-async-event-loop.md) | Event loop / async·await (lib `@v0.4.0` + `flag_wait` ✅; `$event_loop` ✅; async MVP ✅; IDE ⏳) | 🔨 | 018?, 028?, 049? |
+| [029](029-async-event-loop.md) | Event loop / async·await (lib `@v0.4.0` + `flag_wait` ✅; `$event_loop` ✅; async MVP ✅; IDE → [087](087-intellij-plugin.md)) | 🔨 | 018?, 028?, 049? |
 | [030](030-isr-decorators.md) | Interrupts via decorators (`@[isr("…")]` MVP ✅) | ✅ | 010 |
 | [031](031-hal-libraries.md) | HAL libraries (Cube / LL) | 💭 | 010, 021 |
 | [034](034-generic-types.md) | Generics in the grammar — not now (D3/`$fn`; maybe sugar later) | 💭 | 026 |
@@ -111,6 +111,9 @@ building the core from scratch.
 | [080](080-stdlib-str.md) | `stdlib/str` — `eq`/`len`/… (string compares without `==`) | ✅ | 012, 021 |
 | [083](083-stdlib-math.md) | `stdlib/math` — thin libm + typed `min_*`/`max_*`/`clamp_*` | ✅ | 012, 021 |
 | [081](081-number-literals.md) | Literals: binary `0b`, float exponent `1e…`, char `'A'`, (octal) | 🔨 (Group 1 ✅) | 002 |
+| [086](086-lsp.md) | Language Server (`klin lsp`: diagnostics, format, hover, definition, completion, `$fn` maps) | 🔨 | 002, 033, 026 |
+| [087](087-intellij-plugin.md) | IntelliJ plugin for Klin (LSP client + highlight; not full PSI) | 💭 0% | 086 |
+| [088](088-dap-debug.md) | Debug: `#line`/gdb docs + optional thin DAP (not inside LSP) | 💭 0% | `#line`, 087? |
 
 ---
 

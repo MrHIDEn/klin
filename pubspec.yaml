@@ -13,4 +13,5 @@ dev_dependencies:
   test: ^1.25.0
 dependencies:
   crypto: ^3.0.7
+  lsp_server: ^0.4.0
   xml: ^7.0.1
