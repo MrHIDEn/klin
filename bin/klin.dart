@@ -19,7 +19,7 @@ import 'package:klin/version.dart';
 /// Usage:
 ///   klin --version|-v
 ///   klin --help|-h
-///   klin run [--cc …] [-I dir] [-l lib] [-L dir] <file.kl>
+///   klin run [--cc …] [-g|--debug] [-I dir] [-l lib] [-L dir] <file.kl>
 ///   klin fmt [-w] <file.kl…>
 ///   klin lsp
 ///   klin test [--cc …] [-I dir] [-l lib] [-L dir] [path…]
@@ -27,7 +27,8 @@ import 'package:klin/version.dart';
 ///   klin update [path[@ref]…]
 ///   klin outdated [path…]
 ///   klin upgrade [path…]
-///   klin [--cc …] [-I dir] [-l lib] [-L dir] [--emit-c] [--emit-h] [--emit-pp] <file.kl>
+///   klin [--cc …] [-g|--debug] [-I dir] [-l lib] [-L dir]
+///        [--emit-c] [--emit-h] [--emit-pp] <file.kl>
 Future<void> main(List<String> args) async {
   if (args.isEmpty) {
     stdout.write(_usageText());
@@ -151,6 +152,7 @@ Future<void> main(List<String> args) async {
     sourceDir: sourceDir,
     cliLibs: opts.libs,
     cliLibDirs: opts.libDirs,
+    debug: opts.debug,
   );
   final compile = await Process.run(opts.cc, ccArgs);
   if (compile.exitCode != 0) {
@@ -524,6 +526,7 @@ final class _Opts {
   final bool emitC;
   final bool emitH;
   final bool emitPp;
+  final bool debug;
   final List<String> klinPathDirs;
   final List<String> libs;
   final List<String> libDirs;
@@ -534,6 +537,7 @@ final class _Opts {
     this.emitC,
     this.emitH,
     this.emitPp,
+    this.debug,
     this.klinPathDirs,
     this.libs,
     this.libDirs,
@@ -548,6 +552,7 @@ _Opts? _parseArgs(List<String> args) {
   var emitC = false;
   var emitH = false;
   var emitPp = false;
+  var debug = false;
   final klinPathDirs = <String>[];
   final libs = <String>[];
   final libDirs = <String>[];
@@ -564,6 +569,8 @@ _Opts? _parseArgs(List<String> args) {
       emitH = true;
     } else if (a == '--emit-pp') {
       emitPp = true;
+    } else if (a == '-g' || a == '--debug') {
+      debug = true;
     } else if (a == '-I') {
       if (i + 1 >= args.length) return null;
       klinPathDirs.add(args[++i]);
@@ -593,7 +600,17 @@ _Opts? _parseArgs(List<String> args) {
   if (emitPp && (emitC || emitH)) return null;
   // `run` means compile+execute; `--emit-*` skip execution.
   if (command != null && command != 'run') return null;
-  return _Opts(source, cc, emitC, emitH, emitPp, klinPathDirs, libs, libDirs);
+  return _Opts(
+    source,
+    cc,
+    emitC,
+    emitH,
+    emitPp,
+    debug,
+    klinPathDirs,
+    libs,
+    libDirs,
+  );
 }
 
 String _testUsage() =>
@@ -602,7 +619,8 @@ String _testUsage() =>
 String _usageText() =>
     'usage: klin --version|-v\n'
     '       klin --help|-h\n'
-    '       klin run [--cc gcc|clang|tcc] [-I dir] [-l lib] [-L dir] <file.kl>\n'
+    '       klin run [--cc gcc|clang|tcc] [-g|--debug] '
+    '[-I dir] [-l lib] [-L dir] <file.kl>\n'
     '       klin fmt [-w] <file.kl…>\n'
     '       klin lsp\n'
     '       klin test [--cc gcc|clang|tcc] [-I dir] [-l lib] [-L dir] [path…]\n'
@@ -610,7 +628,7 @@ String _usageText() =>
     '       klin update [path[@ref]…]\n'
     '       klin outdated [path…]\n'
     '       klin upgrade [path…]\n'
-    '       klin [--cc gcc|clang|tcc] [-I dir] [-l lib] [-L dir] '
+    '       klin [--cc gcc|clang|tcc] [-g|--debug] [-I dir] [-l lib] [-L dir] '
     '[--emit-c] [--emit-h] [--emit-pp] <file.kl>\n';
 
 String _basenameWithoutExt(String path) {

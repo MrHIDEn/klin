@@ -4468,6 +4468,40 @@ fn main() {}
     expect(args.indexOf('-L/libs'), lessThan(args.indexOf('-lfoo')));
   });
 
+  test('buildCcArgs -g / debug passes host -g (issue 088)', () {
+    const pos = SourcePos(1, 1);
+    final program = Program(
+      [],
+      [
+        FuncDecl(
+          name: 'main',
+          receiver: null,
+          params: const [],
+          returnTypeName: null,
+          body: Block(const [], pos),
+          pos: pos,
+        ),
+      ],
+      pos,
+    );
+    final plain = buildCcArgs(
+      cPath: 'a.c',
+      binPath: 'a',
+      program: program,
+      sourceDir: tmp.path,
+    );
+    expect(plain, isNot(contains('-g')));
+    final debug = buildCcArgs(
+      cPath: 'a.c',
+      binPath: 'a',
+      program: program,
+      sourceDir: tmp.path,
+      debug: true,
+    );
+    expect(debug, contains('-g'));
+    expect(debug.indexOf('-g'), lessThan(debug.indexOf('-o')));
+  });
+
   test('cheader cimport skips C prototype emission', () {
     const source = '''
 @[cinclude("regs.h")]
