@@ -5,26 +5,22 @@
 
 ## Goal
 
-Keep `[SourceMap](../lib/source_map.dart)` valid after `rewriteSvdFluent` so LSP
+Keep [`SourceMap`](../lib/source_map.dart) valid after `rewriteSvdFluent` so LSP
 nav/diagnostics stay accurate in files that use `$device` /
 `$peripherals_from_svd`.
 
 ## Done
 
 - `rewriteSvdFluentWithMap` tracks mid-text offsets; preprocess composes them
-with the `$fn`/`$device` stage-1 map
+  with the `$fn`/`$device` stage-1 map
 - `analyzeSource` keeps `positionsSkewed: false` for `$device` + fluent samples
 - Tests in `test/source_map_test.dart`
 - Fluent `PreprocessError` positions remapped through the stage-1 map to the
-editor buffer
-
-
+  editor buffer
 
 ## Out of scope
 
-- Parse recovery, rename, grammar highlight
-
-
+- Parse recovery → [092](092-lsp-parse-recovery.md); rename, grammar highlight
 
 ## Completion criteria
 
