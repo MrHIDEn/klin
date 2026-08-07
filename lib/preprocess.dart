@@ -249,7 +249,26 @@ final class _PpScanner {
 
     final text = out?.text ?? plain!.toString();
     if (svdDevice != null) {
-      final fluent = rewriteSvdFluentWithMap(text, svdDevice, path: path);
+      final SvdFluentRewrite fluent;
+      try {
+        fluent = rewriteSvdFluentWithMap(text, svdDevice, path: path);
+      } on PreprocessError catch (e) {
+        // Fluent positions are in mid-text (`text`); map to the editor buffer.
+        final mid = out?.origOfExp;
+        if (mid == null || mid.isEmpty || mid.length != text.length) {
+          rethrow;
+        }
+        final stage1 = SourceMap(
+          origOfExpanded: mid,
+          original: source,
+          expanded: text,
+        );
+        throw PreprocessError(
+          e.message,
+          stage1.toOriginal(e.pos),
+          path: e.path,
+        );
+      }
       final mid = out?.origOfExp;
       if (mid == null || mid.isEmpty) {
         return PreprocessResult(fluent.text);

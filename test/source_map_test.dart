@@ -135,5 +135,41 @@ fn main(): void {
         reason: 'check error must remap to editor line with NoSuch, not 1:1',
       );
     });
+
+    test(r'fluent PreprocessError remaps to editor coords', () {
+      final dir = Directory.systemTemp.createTempSync('klin_svd_err_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+
+      File('${dir.path}/tiny.svd').writeAsStringSync('''
+<device><peripherals>
+  <peripheral><name>GPIOA</name><baseAddress>0x40020000</baseAddress><registers>
+    <register><name>ODR</name><addressOffset>0x14</addressOffset><fields>
+      <field><name>ODR5</name><bitOffset>5</bitOffset><bitWidth>1</bitWidth></field>
+    </fields></register>
+  </registers></peripheral>
+</peripherals></device>
+''');
+      final klPath = '${dir.path}/bad.kl';
+      final source = r'''
+$device("tiny.svd", "GPIOA")
+fn main(): void {
+  GPIOA.ODR.ODR5.toggle(1)
+}
+''';
+      File(klPath).writeAsStringSync(source);
+
+      final result = analyzeSource(path: klPath, source: source);
+      expect(result.diagnostics, isNotEmpty);
+      final toggleLine =
+          source.split('\n').indexWhere((l) => l.contains('toggle')) + 1;
+      expect(toggleLine, greaterThan(1));
+      final d = result.diagnostics.single;
+      expect(d.message, contains('takes no arguments'));
+      expect(
+        d.pos.line,
+        toggleLine,
+        reason: r'must not point into the mid-text $device expansion',
+      );
+    });
   });
 }

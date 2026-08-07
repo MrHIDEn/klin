@@ -15,14 +15,16 @@ nav/diagnostics stay accurate in files that use `$device` /
   with the `$fn`/`$device` stage-1 map
 - `analyzeSource` keeps `positionsSkewed: false` for `$device` + fluent samples
 - Tests in `test/source_map_test.dart`
+- Fluent `PreprocessError` positions remapped through the stage-1 map to the
+  editor buffer
 
 ## Out of scope
 
 - Parse recovery, rename, grammar highlight
-- Remap of `PreprocessError` positions raised inside fluent (still mid-text)
 
 ## Completion criteria
 
 - [x] Fluent rewrite preserves or rebuilds offset map
 - [x] `analyzeSource` keeps nav enabled for `$device` samples
 - [x] Tests for a small SVD/fluent fixture
+- [x] Fluent preprocess errors remap to editor coordinates
