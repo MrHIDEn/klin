@@ -17,6 +17,8 @@ at declaration / statement boundaries (`Parser(collectErrors: true)`).
 - `ParseErrors` + `Parser(collectErrors:)` with sync at decl / stmt boundaries
 - `analyzeSource` surfaces multiple parse diagnostics and keeps a partial
   `program` for check / nav when possible
+- With LSP `sourceOverlay`, open-buffer `ParseError` from `loadProject`
+  falls through to the recovering single-file path (imports stay fail-fast)
 - CLI / default `Parser()` remain fail-fast (first `ParseError`)
 - Tests in `test/analyze_test.dart`
 

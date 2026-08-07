@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:klin/analyze.dart';
 import 'package:klin/fmt.dart';
 import 'package:klin/lexer.dart';
@@ -52,6 +54,34 @@ fn also_broken( {
         result.program!.funcs.any((f) => f.name == 'ok'),
         isTrue,
         reason: 'recovery should keep the valid `ok` function',
+      );
+    });
+
+    test('LSP overlay path still uses parse recovery (issue 092)', () {
+      final dir = Directory.systemTemp.createTempSync('klin_092_');
+      addTearDown(() {
+        if (dir.existsSync()) dir.deleteSync(recursive: true);
+      });
+      const source = '''
+fn broken( {
+fn ok(): void {
+}
+fn also_broken( {
+''';
+      final file = File('${dir.path}/multi_parse.kl')
+        ..writeAsStringSync(source);
+      final abs = file.absolute.path;
+      final result = analyzeSource(
+        path: abs,
+        source: source,
+        requireMain: false,
+        sourceOverlay: {abs: source},
+      );
+      expect(result.diagnostics.length, greaterThanOrEqualTo(2));
+      expect(result.program, isNotNull);
+      expect(
+        result.program!.funcs.any((f) => f.name == 'ok'),
+        isTrue,
       );
     });
 
