@@ -117,6 +117,7 @@ building the core from scratch.
 | [091](091-lsp-svd-sourcemaps.md) | LSP source maps through SVD fluent (`$device`) | ✅ | 086 |
 | [092](092-lsp-parse-recovery.md) | LSP lex/parse multi-error recovery + workspace index | ✅ parse MVP (index 💭) | 086 |
 | [093](093-syntax-highlight.md) | TextMate / tree-sitter highlight (not inside `klin lsp`) | ✅ TextMate MVP (tree-sitter 💭) | 086?, 087 |
+| [094](094-lsp-semantic-tokens.md) | LSP semantic tokens (AST/checker coloring) | 💭 backlog | 086 |
 
 ---
 
