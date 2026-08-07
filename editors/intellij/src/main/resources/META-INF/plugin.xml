@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<idea-plugin>
+    <id>org.klin-lang.intellij</id>
+    <name>Klin</name>
+    <vendor url="https://github.com/klin-lang/klin">klin-lang</vendor>
+    <description><![CDATA[
+    <p>Thin Klin language support for IntelliJ-based IDEs.</p>
+    <ul>
+      <li>Syntax highlighting via TextMate (<code>*.kl</code>)</li>
+      <li>Diagnostics, format, hover, and navigation via <code>klin lsp</code> (requires
+          <a href="https://plugins.jetbrains.com/plugin/23257-lsp4ij">LSP4IJ</a>)</li>
+    </ul>
+    <p>Does <b>not</b> embed a second Klin parser — the Dart frontend remains the source of truth.</p>
+    ]]></description>
+    <change-notes><![CDATA[
+    <p>0.1.0 — MVP: TextMate highlight + LSP4IJ → <code>klin lsp</code>.</p>
+    ]]></change-notes>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>org.jetbrains.plugins.textmate</depends>
+    <depends>com.redhat.devtools.lsp4ij</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <applicationConfigurable
+                parentId="language"
+                instance="org.klinlang.intellij.settings.KlinConfigurable"
+                id="org.klinlang.intellij.settings"
+                displayName="Klin"/>
+        <applicationService
+                serviceImplementation="org.klinlang.intellij.settings.KlinSettingsState"/>
+        <textmate.bundleProvider
+                implementation="org.klinlang.intellij.textmate.KlinTextMateBundleProvider"/>
+    </extensions>
+
+    <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
+        <server id="klinLsp"
+                name="Klin Language Server"
+                factoryClass="org.klinlang.intellij.lsp.KlinLanguageServerFactory">
+            <description><![CDATA[
+            Runs <code>klin lsp</code> (stdio). Configure the executable under
+            <b>Settings → Languages &amp; Frameworks → Klin</b>.
+            ]]></description>
+        </server>
+        <fileNamePatternMapping patterns="*.kl"
+                                serverId="klinLsp"
+                                languageId="klin"/>
+    </extensions>
+</idea-plugin>

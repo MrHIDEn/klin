@@ -1,7 +1,7 @@
 # 087 — IntelliJ plugin for Klin (over LSP)
 
-**Status:** 💭 under consideration (not started)
-**Depends on:** [086](086-lsp.md) (`klin lsp` MVP ✅)
+**Status:** 🔨 MVP in repo (not on Marketplace)
+**Depends on:** [086](086-lsp.md) (`klin lsp` MVP ✅), [093](093-syntax-highlight.md) (TextMate ✅)
 
 ## Goal
 
@@ -13,39 +13,59 @@ Rationale: author already works in IntelliJ ([docs/02-architecture.md](../docs/0
 LSP is editor-agnostic; a thin JetBrains LSP client avoids dual grammar drift
 (`async` / `.await`, `$fn`, `match`, …).
 
+**Home:** [`editors/intellij/`](../editors/intellij/) in this repo (not a separate
+`klin-intellij` package for MVP).
+
+## Done (MVP)
+
+- Gradle IntelliJ Platform plugin under [`editors/intellij/`](../editors/intellij/)
+- TextMate bundle via `com.intellij.textmate.bundleProvider` (pack from 093)
+- LSP4IJ server `klinLsp` → `klin lsp` (stdio); `*.kl` file-name mapping
+- Settings: Klin executable path (default `klin`)
+- Docs: [`editors/intellij/README.md`](../editors/intellij/README.md) (`runIde` /
+  Install from Disk)
+
 ## Approach
 
-1. **Highlight** — TextMate grammar shipped in
-   [`editors/vscode/syntaxes/klin.tmLanguage.json`](../editors/vscode/syntaxes/klin.tmLanguage.json)
-   ([093](093-syntax-highlight.md)); wire via TextMateBundle or embed in the
-   plugin (closes “IDE keywords” from [029](029-async-event-loop.md): `async`,
-   `.await`, …).
-2. **Language Server** — spawn `klin lsp` (or `dart run bin/klin.dart lsp` in
-   dev) via LSP4IJ / built-in LSP support; map `file` association for `*.kl`.
-3. **Format** — `textDocument/formatting` already provided by 086.
-4. **Optional later** — run configurations (`klin run` / `klin test`),
-   deeper PSI only if JetBrains-native refactor is worth the cost.
+1. **Highlight** — embedded TextMate copy of
+   [`editors/vscode/`](../editors/vscode/) (`./sync-textmate.sh` after grammar edits).
+2. **Language Server** — LSP4IJ dependency +
+   `OSProcessStreamConnectionProvider` for `klin lsp`.
+3. **Format / hover / goto / rename** — whatever 086 already exposes over LSP.
+4. **Optional later** — run configurations (`klin run` / `klin test`); Marketplace
+   publish; deeper PSI only if worth the cost.
+
+## Dev / test before Marketplace
+
+```bash
+cd editors/intellij
+./gradlew runIde        # sandbox
+./gradlew buildPlugin   # zip → Install Plugin from Disk
+```
+
+Details: [`editors/intellij/README.md`](../editors/intellij/README.md).
 
 ## Non-goals (MVP plugin)
 
 - Full Grammar-Kit grammar duplicating the Dart frontend
-- Go-to-definition / hover until LSP grows those features (086 follow-up)
-- Debugger UI beyond attaching gdb/lldb to emitted C + `#line`
-  (full story → [088](088-dap-debug.md); DAP ≠ LSP)
+- Semantic tokens ([094](094-lsp-semantic-tokens.md))
+- Debugger UI (→ [088](088-dap-debug.md))
 
 ## Progress
 
 | Piece | Status |
 |---|---|
-| Issue / plan | ✅ (this file) |
-| TextMate / keyword highlight | ✅ grammar in [093](093-syntax-highlight.md) / `editors/vscode/` |
-| Wire `klin lsp` in IntelliJ | ❌ 0% |
-| Plugin publish (Marketplace / local zip) | ❌ 0% |
+| Issue / plan | ✅ |
+| How-to + Gradle plugin sources | ✅ |
+| TextMate highlight in plugin | ✅ |
+| Wire `klin lsp` via LSP4IJ | ✅ |
+| Plugin publish (Marketplace) | ❌ |
 
-## Completion criteria (when work starts)
+## Completion criteria
 
-- [ ] `*.kl` opens with Klin highlight (keywords include `async` / `await` / …)
-- [ ] Diagnostics from `klin lsp` appear as inspections / squiggles
-- [ ] Format action uses LSP `formatting` (same as `klin fmt`)
-- [ ] Short note in docs (how to install / point at `klin` binary)
+- [x] `*.kl` opens with Klin highlight (keywords include `async` / `await` / …)
+- [x] Diagnostics path via `klin lsp` + LSP4IJ (verify locally with `klin` on PATH)
+- [x] Format via LSP `formatting` (same as `klin fmt`)
+- [x] Docs: install / executable path
 - [ ] Cross-link from [029](029-async-event-loop.md) IDE row → done
+- [ ] Marketplace publish after Install-from-Disk smoke on a clean machine

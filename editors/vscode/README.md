@@ -22,9 +22,8 @@ To remove: delete the symlink.
 
 ## IntelliJ
 
-Point [TextMateBundle](https://plugins.jetbrains.com/plugin/14055-textmate-bundle)
-(or a future [087](../../issues/087-intellij-plugin.md) plugin) at
-`syntaxes/klin.tmLanguage.json` with scope `source.klin` and file type `*.kl`.
+See **[../intellij/README.md](../intellij/README.md)** — thin plugin ([087](../../issues/087-intellij-plugin.md))
+with bundled TextMate + LSP4IJ (`./gradlew runIde` / Install from Disk).
 
 ## Scope
 
