@@ -48,7 +48,8 @@ After changing the VS Code TextMate grammar, refresh the copy:
 ## Manual fallback (no plugin)
 
 Still valid: import [`../vscode/syntaxes/klin.tmLanguage.json`](../vscode/syntaxes/klin.tmLanguage.json)
-via TextMate Bundles UI, and register `klin lsp` by hand in LSP4IJ.
+via TextMate Bundles UI, and register `klin lsp` by hand in LSP4IJ
+(`klin lsp`, or in-repo `dart run bin/klin.dart lsp`).
 
 ## Layout
 

@@ -49,7 +49,7 @@ Details: [`editors/intellij/README.md`](../editors/intellij/README.md).
 
 - Full Grammar-Kit grammar duplicating the Dart frontend
 - Semantic tokens ([094](094-lsp-semantic-tokens.md))
-- Debugger UI (→ [088](088-dap-debug.md))
+- Debugger UI (→ [088](088-dap-debug.md); DAP ≠ LSP)
 
 ## Progress
 
