@@ -149,6 +149,47 @@ List<NavTarget> allNavTargets(Program program) {
   return _CollectNav().run(program);
 }
 
+/// Classification of a [NavTarget] for LSP semantic tokens (issue 094).
+enum SemanticNavKind {
+  function,
+  method,
+  parameter,
+  variable,
+  property,
+  enumMember,
+  call,
+}
+
+SemanticNavKind semanticNavKind(NavTarget t) {
+  return switch (t) {
+    _FuncNav() => SemanticNavKind.function,
+    _ParamNav() => SemanticNavKind.parameter,
+    _LetNav() => SemanticNavKind.variable,
+    _MethodNav() => SemanticNavKind.method,
+    _CallNav() || _CallStmtNav() => SemanticNavKind.call,
+    _FieldNav(:final expr) =>
+      expr.enumConstCName != null
+          ? SemanticNavKind.enumMember
+          : SemanticNavKind.property,
+    _NameNav(:final expr) =>
+      (expr.resolvedFnCName != null || expr.resolvedType is FnType)
+          ? SemanticNavKind.function
+          : SemanticNavKind.variable,
+  };
+}
+
+/// True for let/param/fn declaration sites (modifier `declaration`).
+bool semanticNavIsDeclaration(NavTarget t) =>
+    t is _FuncNav || t is _ParamNav || t is _LetNav;
+
+/// True for non-mut `let` bindings (modifier `readonly`).
+bool semanticNavIsReadonly(NavTarget t) =>
+    t is _LetNav && !t.stmt.isMut;
+
+/// True when the function decl has `@[cimport]` (modifier `defaultLibrary`).
+bool semanticNavIsCimport(NavTarget t) =>
+    t is _FuncNav && t.func.attrs.any((a) => a.name == 'cimport');
+
 bool sameResolvedDef(ResolvedDef? a, ResolvedDef? b) {
   if (a == null || b == null) return false;
   if (a.pos.line != b.pos.line || a.pos.col != b.pos.col) return false;
@@ -170,13 +211,13 @@ final class _FuncNav extends NavTarget {
   _FuncNav(this.func);
 
   @override
-  SourcePos get pos => func.pos;
+  SourcePos get pos => func.namePos;
   @override
   String get label => func.name;
   @override
   KlinType? get type => func.resolvedReturnType;
   @override
-  ResolvedDef? get def => ResolvedDef(func.pos, func.sourcePath);
+  ResolvedDef? get def => ResolvedDef(func.namePos, func.sourcePath);
   @override
   String? get occurrencePath => func.sourcePath;
   @override

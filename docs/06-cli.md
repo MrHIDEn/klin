@@ -17,7 +17,7 @@ Entry: `dart run bin/klin.dart <subcommand|file.kl> …`
 | `run <file.kl>` | Preprocess → parse → check → emit C → host `cc` → run |
 | *(bare path)* | Alias for `run` — `klin examples/hello.kl` |
 | `fmt [-w] <file.kl>` | Canonical printer (4 spaces, K&R). Without `-w` → stdout; with `-w` → write |
-| `lsp` | Language Server over **stdio** (diagnostics, format, hover, definition, completion, rename, cross-file; [086](../issues/086-lsp.md)) |
+| `lsp` | Language Server over **stdio** (diagnostics, format, hover, definition, completion, rename, semantic tokens, cross-file; [086](../issues/086-lsp.md)) |
 | `test [path…]` | Finds `*_test.kl`, runs `test_*` (like `go test`) |
 | `get [path[@ref]…]` | Fetch remote package **or** device SVD (`.svd`) into cache; writes `klin.mod` (`require` / `device`) + `klin.lock` ([049](../issues/049-remote-imports.md), [053](../issues/053-device-board-assets.md), [065](../issues/065-project-lockfile.md)) |
 | `update [path[@ref]…]` | Force re-fetch (no args = all `require`/`device` from `klin.mod`); refreshes lock |
@@ -43,13 +43,16 @@ Dev without install: `dart run bin/klin.dart lsp`.
 MVP: full-document sync, publish diagnostics (check errors collected per
 function; parse recovers at decl/stmt boundaries —
 [092](../issues/092-lsp-parse-recovery.md)), formatting, hover / definition /
-completion / rename. Cross-file goto uses `loadProject` with an overlay of open
-LSP buffers. After `$fn` / `$device` expand (including SVD fluent rewrite),
+completion / rename / semantic tokens
+([094](../issues/094-lsp-semantic-tokens.md)). Cross-file goto uses
+`loadProject` with an overlay of open LSP buffers. After `$fn` / `$device`
+expand (including SVD fluent rewrite),
 [`SourceMap`](../lib/source_map.dart) remaps positions
 ([091](../issues/091-lsp-svd-sourcemaps.md)). Library files do not require
 `main`. Syntax highlight for `.kl` is a separate TextMate pack —
-[`editors/vscode/`](../editors/vscode/) ([093](../issues/093-syntax-highlight.md)).
-IntelliJ today / future plugin: [`editors/intellij/`](../editors/intellij/)
+[`editors/vscode/`](../editors/vscode/) ([093](../issues/093-syntax-highlight.md));
+editors may stack TextMate with LSP semantic tokens. IntelliJ thin plugin:
+[`editors/intellij/`](../editors/intellij/)
 ([087](../issues/087-intellij-plugin.md)).
 Details: [086](../issues/086-lsp.md).
 

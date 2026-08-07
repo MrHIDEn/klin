@@ -95,6 +95,9 @@ final class StructDecl {
   final List<FieldDecl> fields;
   final List<Attr> attrs;
   final SourcePos pos;
+
+  /// Position of the type name ident (may differ from [pos] on `struct`).
+  final SourcePos namePos;
   bool isPub;
   String moduleName;
   String? sourcePath;
@@ -104,10 +107,11 @@ final class StructDecl {
     required this.fields,
     this.attrs = const [],
     required this.pos,
+    SourcePos? namePos,
     this.isPub = false,
     this.moduleName = '',
     this.sourcePath,
-  });
+  }) : namePos = namePos ?? pos;
 }
 
 /// enum Name [: BaseType] { Variant [= value], … }  (issue 072)
@@ -122,6 +126,9 @@ final class EnumDecl {
   final String? baseTypeName;
   final List<Attr> attrs;
   final SourcePos pos;
+
+  /// Position of the type name ident (may differ from [pos] on `enum`).
+  final SourcePos namePos;
   bool isPub;
   String moduleName;
   String? sourcePath;
@@ -136,10 +143,11 @@ final class EnumDecl {
     required this.baseTypeName,
     this.attrs = const [],
     required this.pos,
+    SourcePos? namePos,
     this.isPub = false,
     this.moduleName = '',
     this.sourcePath,
-  });
+  }) : namePos = namePos ?? pos;
 }
 
 final class EnumVariant {
@@ -187,6 +195,9 @@ final class FuncDecl {
   final List<Attr> attrs;
   final SourcePos pos;
 
+  /// Position of the function name ident (may differ from [pos] on `fn`).
+  final SourcePos namePos;
+
   /// Issue 029 phase 4: `async fn` — lowered to state struct + `poll` in emit.
   final bool isAsync;
   bool isPub;
@@ -203,13 +214,14 @@ final class FuncDecl {
     required this.returnTypeName,
     required this.body,
     required this.pos,
+    SourcePos? namePos,
     this.associatedType,
     this.attrs = const [],
     this.isAsync = false,
     this.isPub = false,
     this.moduleName = '',
     this.sourcePath,
-  });
+  }) : namePos = namePos ?? pos;
 }
 
 final class Receiver {

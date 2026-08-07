@@ -292,6 +292,7 @@ final class Parser {
       fields: fields,
       attrs: attrs,
       pos: keyword.pos,
+      namePos: name.pos,
       isPub: isPub,
     );
   }
@@ -333,6 +334,7 @@ final class Parser {
       baseTypeName: baseTypeName,
       attrs: attrs,
       pos: keyword.pos,
+      namePos: name.pos,
       isPub: isPub,
     );
   }
@@ -422,6 +424,7 @@ final class Parser {
       returnTypeName: returnTypeName,
       body: attrs.any((attr) => attr.name == 'cimport') ? null : _block(),
       pos: fn.pos,
+      namePos: name.pos,
       attrs: attrs,
       isAsync: isAsync,
       isPub: isPub,

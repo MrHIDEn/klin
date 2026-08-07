@@ -1,6 +1,7 @@
 import 'package:klin/analyze.dart';
 import 'package:klin/complete.dart';
 import 'package:klin/lsp/documents.dart';
+import 'package:klin/lsp/semantic_tokens.dart';
 import 'package:klin/lsp/server.dart';
 import 'package:klin/token.dart';
 import 'package:lsp_server/lsp_server.dart';
@@ -105,6 +106,60 @@ void main() {
     });
   });
 
+  group('semantic tokens (issue 094)', () {
+    test('full tokens mark function / param / let / call / struct', () {
+      const src = '''\
+struct Point {
+    x: i32
+}
+fn add(a: i32, b: i32): i32 {
+    return a + b
+}
+fn main(): void {
+    let mut n: i32 = add(1, 2)
+}
+''';
+      final result = analyzeSource(path: 't.kl', source: src);
+      expect(result.diagnostics, isEmpty);
+      final tokens = buildSemanticTokens(result, openPath: 't.kl');
+      final abs = _decodeSemanticTokens(tokens.data);
+      expect(abs, isNotEmpty);
+
+      bool has(int line, int col, int length, int type, {int? mods}) {
+        return abs.any(
+          (t) =>
+              t.line == line &&
+              t.col == col &&
+              t.length == length &&
+              t.type == type &&
+              (mods == null || t.mods == mods),
+        );
+      }
+
+      // Legend: function=0 method=1 parameter=2 variable=3 property=4 struct=5
+      // declaration=1<<0, readonly=1<<1
+      expect(has(1, 8, 5, 5, mods: 1), isTrue, reason: 'struct Point');
+      expect(has(2, 5, 1, 4, mods: 1), isTrue, reason: 'field x');
+      expect(has(4, 4, 3, 0, mods: 1), isTrue, reason: 'fn add');
+      expect(has(4, 8, 1, 2, mods: 1), isTrue, reason: 'param a');
+      expect(has(8, 13, 1, 3), isTrue, reason: 'let mut n (not readonly)');
+      expect(has(8, 22, 3, 0), isTrue, reason: 'call add');
+    });
+
+    test('empty when no program', () {
+      final empty = buildSemanticTokens(
+        const AnalysisResult(diagnostics: [], program: null),
+        openPath: 't.kl',
+      );
+      expect(empty.data, isEmpty);
+    });
+
+    test('legend matches advertised types', () {
+      expect(klinSemanticTokensLegend.tokenTypes.first, 'function');
+      expect(klinSemanticTokensLegend.tokenModifiers, contains('declaration'));
+    });
+  });
+
   group('DocumentStore', () {
     test('lastGood ignores analysis with parse errors (issue 092)', () {
       final docs = DocumentStore();
@@ -143,4 +198,28 @@ fn main(): void {
       );
     });
   });
+}
+
+final class _AbsTok {
+  final int line;
+  final int col;
+  final int length;
+  final int type;
+  final int mods;
+  _AbsTok(this.line, this.col, this.length, this.type, this.mods);
+}
+
+/// Decode LSP relative semantic-token data to 1-based line/col.
+List<_AbsTok> _decodeSemanticTokens(List<int> data) {
+  final out = <_AbsTok>[];
+  var line = 1;
+  var col = 1;
+  for (var i = 0; i + 4 < data.length; i += 5) {
+    final dLine = data[i];
+    final dCol = data[i + 1];
+    line += dLine;
+    col = dLine == 0 ? col + dCol : dCol + 1;
+    out.add(_AbsTok(line, col, data[i + 2], data[i + 3], data[i + 4]));
+  }
+  return out;
 }
