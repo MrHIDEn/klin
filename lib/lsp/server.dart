@@ -13,6 +13,7 @@ import 'package:klin/version.dart';
 import 'package:lsp_server/lsp_server.dart';
 
 import 'documents.dart';
+import 'semantic_tokens.dart';
 
 Never _rejectPrepareRename() {
   throw RpcException(
@@ -161,6 +162,12 @@ Future<void> runKlinLsp({
         renameProvider: const Either2.t1(true),
         completionProvider: CompletionOptions(
           triggerCharacters: const ['.'],
+        ),
+        semanticTokensProvider: Either2.t1(
+          SemanticTokensOptions(
+            legend: klinSemanticTokensLegend,
+            full: const Either2.t1(true),
+          ),
         ),
       ),
       serverInfo: InitializeResultServerInfo(
@@ -348,6 +355,24 @@ Future<void> runKlinLsp({
       ],
     );
   });
+
+  // lsp_server 0.4 has no typed onSemanticTokensFull — register by method name.
+  connection.onRequest(
+    Method.textDocument_semanticTokens_full.toString(),
+    (params) async {
+      final p = SemanticTokensParams.fromJson(
+        params.value as Map<String, Object?>,
+      );
+      final uriKey = p.textDocument.uri.toString();
+      final openPath = uriToPath(p.textDocument.uri);
+      final result = docs.analysis(uriKey);
+      if (result == null) return SemanticTokens(data: const []);
+      // On parse recovery prefer lastGood AST (same idea as completion).
+      final forTokens =
+          result.hasParseErrors ? (docs.lastGood(uriKey) ?? result) : result;
+      return buildSemanticTokens(forTokens, openPath: openPath);
+    },
+  );
 
   await connection.listen();
 }

@@ -1,6 +1,6 @@
 # 094 — LSP semantic tokens
 
-**Status:** 💭 backlog (deferred)
+**Status:** ✅ MVP (`textDocument/semanticTokens/full`)
 **Depends on:** [086](086-lsp.md)
 
 ## Goal
@@ -27,24 +27,27 @@ Examples of what TextMate cannot decide but the frontend can:
 Editors may stack both (VS Code / Cursor do). IntelliJ thin plugin
 ([087](087-intellij-plugin.md)) benefits once LSP advertises the capability.
 
-## Approach (when implemented)
+## Done (MVP)
 
-1. Advertise `semanticTokensProvider` in LSP initialize (legend: token types /
-   modifiers).
-2. Walk `AnalysisResult.program` (and defs from navigate/checker) for the open
-   buffer; remap via `SourceMap` when present (same as hover / diagnostics).
-3. Prefer `full` first; `range` if cheap; delta only if profiling needs it.
-4. Skip or degrade when `positionsSkewed` / no program (same as completion).
+1. Advertise `semanticTokensProvider` + legend in initialize
+   ([`lib/lsp/semantic_tokens.dart`](../lib/lsp/semantic_tokens.dart)).
+2. `textDocument/semanticTokens/full` from `allNavTargets` + struct/enum decls;
+   remap via `SourceMap` when present; empty when `positionsSkewed` / no program.
+3. Modifiers: `declaration`, `readonly` (non-mut `let`), `defaultLibrary`
+   (`@[cimport]` fns).
+4. Decl name positions via `FuncDecl` / `StructDecl` / `EnumDecl.namePos`.
+5. Unit tests in [`test/lsp_test.dart`](../test/lsp_test.dart).
 
-## Out of scope
+## Out of scope (still)
 
+- Range / delta requests
 - Replacing TextMate ([093](093-syntax-highlight.md)) or tree-sitter
 - IntelliJ Grammar-Kit / PSI ([087](087-intellij-plugin.md))
-- Changing Klin grammar or emission
+- Coloring `: Type` annotations without richer AST positions
 
 ## Completion criteria
 
-- [ ] Legend + `textDocument/semanticTokens/full` (and/or range) in `klin lsp`
-- [ ] Tokens respect `SourceMap` / open-buffer path rules like other nav APIs
-- [ ] Smoke test (Dart) for a small fixture
-- [ ] Note under [086](086-lsp.md) / [docs/06-cli.md](../docs/06-cli.md)
+- [x] Legend + `textDocument/semanticTokens/full` in `klin lsp`
+- [x] Tokens respect `SourceMap` / open-buffer path rules like other nav APIs
+- [x] Smoke test (Dart) for a small fixture
+- [x] Note under [086](086-lsp.md) / [docs/06-cli.md](../docs/06-cli.md)
