@@ -254,10 +254,12 @@ final class _PpScanner {
       if (mid == null || mid.isEmpty) {
         return PreprocessResult(fluent.text);
       }
-      final composed = [
-        for (final m in fluent.midOfFinal)
-          mid[m.clamp(0, mid.length - 1)],
-      ];
+      // Strict compose: bad mid indices mean drop the map (safer than skew).
+      if (fluent.midOfFinal.length != fluent.text.length ||
+          fluent.midOfFinal.any((m) => m < 0 || m >= mid.length)) {
+        return PreprocessResult(fluent.text);
+      }
+      final composed = [for (final m in fluent.midOfFinal) mid[m]];
       return PreprocessResult(
         fluent.text,
         map: SourceMap(

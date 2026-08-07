@@ -254,7 +254,9 @@ SvdFluentRewrite rewriteSvdFluentWithMap(
     i++;
   }
 
-  return SvdFluentRewrite(text: out.toString(), midOfFinal: midOfFinal);
+  final text = out.toString();
+  assert(midOfFinal.length == text.length);
+  return SvdFluentRewrite(text: text, midOfFinal: midOfFinal);
 }
 
 final class _FieldInfo {

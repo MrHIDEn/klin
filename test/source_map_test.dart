@@ -94,6 +94,8 @@ fn main(): void {
   RCC.AHB1ENR.GPIOAEN.set(1)
   GPIOA.MODER.MODER5.write(.Output)
   GPIOA.ODR.ODR5.toggle()
+  // keep GPIOA.MODER.MODER5.write(.Output)
+  puts("GPIOA.MODER.MODER5.write(.Output)")
   let bad: NoSuch = 1
 }
 ''';
@@ -103,8 +105,14 @@ fn main(): void {
       expect(pp.map, isNotNull, reason: 'fluent must not drop the map');
       expect(pp.map!.origOfExpanded.length, pp.text.length);
       expect(pp.text, contains('GPIOA_MODER_MODER5_write(1)'));
-      expect(pp.text, isNot(contains('GPIOA.MODER.MODER5')));
-
+      expect(pp.text, contains('// keep GPIOA.MODER.MODER5.write(.Output)'));
+      expect(pp.text, contains('puts("GPIOA.MODER.MODER5.write(.Output)")'));
+      // Code (not comment/string) must be rewritten.
+      expect(
+        pp.text.split('\n').where((l) => l.contains('GPIOA.MODER.MODER5')).length,
+        2,
+        reason: 'only comment + string keep dotted fluent form',
+      );
       // Expanded fluent call maps back near the editor fluent site.
       final writeInExp = pp.text.indexOf('GPIOA_MODER_MODER5_write');
       expect(writeInExp, greaterThan(0));
