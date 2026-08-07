@@ -1,0 +1,198 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Klin",
+  "scopeName": "source.klin",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#attributes" },
+    { "include": "#macros" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#operators" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.klin",
+          "match": "//.*$"
+        }
+      ]
+    },
+    "strings": {
+      "name": "string.quoted.double.klin",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.klin",
+          "match": "\\\\[nt\"\\\\$]"
+        },
+        {
+          "name": "meta.interpolation.klin",
+          "begin": "\\$\\{",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.template-expression.begin.klin" }
+          },
+          "end": "(:[^}]*)?\\}",
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.template-expression.end.klin" },
+            "1": { "name": "constant.other.format.klin" }
+          },
+          "patterns": [
+            { "include": "#numbers" },
+            { "include": "#keywords" },
+            { "include": "#types" },
+            { "include": "#operators" },
+            {
+              "name": "variable.other.klin",
+              "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+            }
+          ]
+        }
+      ]
+    },
+    "attributes": {
+      "name": "meta.attribute.klin",
+      "begin": "@\\[",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.attribute.klin" }
+      },
+      "end": "\\]",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.attribute.klin" }
+      },
+      "patterns": [
+        {
+          "name": "entity.other.attribute-name.klin",
+          "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+        },
+        { "include": "#strings" },
+        { "include": "#numbers" },
+        {
+          "name": "punctuation.separator.comma.klin",
+          "match": ","
+        }
+      ]
+    },
+    "macros": {
+      "patterns": [
+        {
+          "name": "entity.name.function.preprocessor.klin",
+          "match": "\\$[A-Za-z_][A-Za-z0-9_]*"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.hex.klin",
+          "match": "\\b0[xX][0-9A-Fa-f_]+\\b"
+        },
+        {
+          "name": "constant.numeric.binary.klin",
+          "match": "\\b0[bB][01_]+\\b"
+        },
+        {
+          "name": "constant.numeric.octal.klin",
+          "match": "\\b0[oO][0-7_]+\\b"
+        },
+        {
+          "name": "constant.numeric.float.klin",
+          "match": "\\b[0-9][0-9_]*\\.[0-9][0-9_]*([eE][+-]?[0-9][0-9_]*)?\\b|\\b[0-9][0-9_]*[eE][+-]?[0-9][0-9_]*\\b"
+        },
+        {
+          "name": "constant.numeric.integer.klin",
+          "match": "\\b[0-9][0-9_]*\\b"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.klin",
+          "match": "\\b(true|false)\\b"
+        },
+        {
+          "name": "keyword.control.klin",
+          "match": "\\b(if|else|while|for|in|return|break|continue|match|when|pick|defer|or|async|await)\\b"
+        },
+        {
+          "name": "keyword.other.klin",
+          "match": "\\b(fn|struct|enum|pub|module|import|let|mut|cast|volatile|error|asm)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.primitive.klin",
+          "match": "\\b(i8|i16|i32|i64|u8|u16|u32|u64|f32|f64|bool|usize|isize|int|float|void|str)\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.assignment.klin",
+          "match": ":=|\\+=|-=|\\*=|/=|%=|&=|\\|=|\\^=|<<=|>>=|="
+        },
+        {
+          "name": "keyword.operator.comparison.klin",
+          "match": "==|!=|<=|>=|<|>"
+        },
+        {
+          "name": "keyword.operator.range.klin",
+          "match": "\\.\\.<|\\.\\.="
+        },
+        {
+          "name": "keyword.operator.bitwise.klin",
+          "match": "<<|>>|\\||\\^|~|&"
+        },
+        {
+          "name": "keyword.operator.arithmetic.klin",
+          "match": "\\+|-|\\*|/|%"
+        },
+        {
+          "name": "keyword.operator.logical.klin",
+          "match": "!"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.terminator.statement.klin",
+          "match": ";"
+        },
+        {
+          "name": "punctuation.separator.comma.klin",
+          "match": ","
+        },
+        {
+          "name": "punctuation.separator.colon.klin",
+          "match": ":"
+        },
+        {
+          "name": "punctuation.accessor.klin",
+          "match": "\\."
+        },
+        {
+          "name": "meta.brace.round.klin",
+          "match": "[()]"
+        },
+        {
+          "name": "meta.brace.square.klin",
+          "match": "[\\[\\]]"
+        },
+        {
+          "name": "meta.brace.curly.klin",
+          "match": "[{}]"
+        }
+      ]
+    }
+  }
+}

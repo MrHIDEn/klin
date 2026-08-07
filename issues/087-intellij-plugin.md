@@ -15,8 +15,11 @@ LSP is editor-agnostic; a thin JetBrains LSP client avoids dual grammar drift
 
 ## Approach
 
-1. **Highlight** — TextMate / TextMateBundle or simple keyword highlighter
-   (closes “IDE keywords” from [029](029-async-event-loop.md): `async`, `.await`, …).
+1. **Highlight** — TextMate grammar shipped in
+   [`editors/vscode/syntaxes/klin.tmLanguage.json`](../editors/vscode/syntaxes/klin.tmLanguage.json)
+   ([093](093-syntax-highlight.md)); wire via TextMateBundle or embed in the
+   plugin (closes “IDE keywords” from [029](029-async-event-loop.md): `async`,
+   `.await`, …).
 2. **Language Server** — spawn `klin lsp` (or `dart run bin/klin.dart lsp` in
    dev) via LSP4IJ / built-in LSP support; map `file` association for `*.kl`.
 3. **Format** — `textDocument/formatting` already provided by 086.
@@ -35,7 +38,7 @@ LSP is editor-agnostic; a thin JetBrains LSP client avoids dual grammar drift
 | Piece | Status |
 |---|---|
 | Issue / plan | ✅ (this file) |
-| TextMate / keyword highlight | ❌ 0% |
+| TextMate / keyword highlight | ✅ grammar in [093](093-syntax-highlight.md) / `editors/vscode/` |
 | Wire `klin lsp` in IntelliJ | ❌ 0% |
 | Plugin publish (Marketplace / local zip) | ❌ 0% |
 

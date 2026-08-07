@@ -116,7 +116,7 @@ building the core from scratch.
 | [088](088-dap-debug.md) | Debug: `#line`/gdb docs + optional thin DAP (not inside LSP) | 💭 0% | `#line`, 087? |
 | [091](091-lsp-svd-sourcemaps.md) | LSP source maps through SVD fluent (`$device`) | ✅ | 086 |
 | [092](092-lsp-parse-recovery.md) | LSP lex/parse multi-error recovery + workspace index | ✅ parse MVP (index 💭) | 086 |
-| [093](093-syntax-highlight.md) | TextMate / tree-sitter highlight (not inside `klin lsp`) | 💭 0% | 086?, 087 |
+| [093](093-syntax-highlight.md) | TextMate / tree-sitter highlight (not inside `klin lsp`) | ✅ TextMate MVP (tree-sitter 💭) | 086?, 087 |
 
 ---
 
