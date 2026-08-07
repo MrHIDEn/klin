@@ -42,10 +42,11 @@ Dev without install: `dart run bin/klin.dart lsp`.
 
 MVP: full-document sync, publish diagnostics (check errors collected per
 function), formatting, hover / definition / completion / rename. Cross-file
-goto uses `loadProject` with an overlay of open LSP buffers. After `$fn`
-expand, [`SourceMap`](../lib/source_map.dart) remaps positions (nav stays off
-when mapping is unavailable, e.g. SVD fluent rewrite — [091](../issues/091-lsp-svd-sourcemaps.md)).
-Library files do not require `main`. Details: [086](../issues/086-lsp.md).
+goto uses `loadProject` with an overlay of open LSP buffers. After `$fn` /
+`$device` expand (including SVD fluent rewrite),
+[`SourceMap`](../lib/source_map.dart) remaps positions
+([091](../issues/091-lsp-svd-sourcemaps.md)). Library files do not require
+`main`. Details: [086](../issues/086-lsp.md).
 
 ## Flags before / with `run`
 
