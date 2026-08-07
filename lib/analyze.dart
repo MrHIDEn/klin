@@ -55,8 +55,9 @@ final class AnalysisResult {
 /// [loadProject] so imports / siblings resolve and cross-file definitions
 /// work. Falls back to a single-file parse if the project load fails.
 ///
-/// Check-phase errors are collected per function (`collectErrors: true`) so the
-/// LSP can show more than one diagnostic. Lex/parse stay fail-fast.
+/// Check-phase errors are collected per function (`collectErrors: true`).
+/// Lex stays fail-fast; parse recovers at declaration/statement boundaries when
+/// analyzing for the LSP (`Parser(collectErrors: true)`).
 ///
 /// [requireMain] defaults to `false` (library-friendly). CLI compile paths keep
 /// calling [Checker.check] with the default `true`.
@@ -193,7 +194,10 @@ AnalysisResult _analyzeExpanded({
   required bool requireMain,
 }) {
   try {
-    final program = Parser(Lexer(expanded).tokenize()).parse();
+    final program = Parser(
+      Lexer(expanded).tokenize(),
+      collectErrors: true,
+    ).parse();
     return _checkProgram(
       path: path,
       program: program,
@@ -209,10 +213,50 @@ AnalysisResult _analyzeExpanded({
       positionsSkewed: skewed,
       sourceMap: map,
     );
+  } on ParseErrors catch (e) {
+    final parseDiags = [
+      for (final err in e.errors)
+        _mappedDiagnostic(
+          path,
+          err.message,
+          err.pos,
+          map,
+          skewed,
+          errorPath: err.path,
+        ),
+    ];
+    final program = e.program;
+    if (program == null) {
+      return AnalysisResult(
+        diagnostics: parseDiags,
+        positionsSkewed: skewed,
+        sourceMap: map,
+      );
+    }
+    final checked = _checkProgram(
+      path: path,
+      program: program,
+      map: map,
+      skewed: skewed,
+      requireMain: requireMain,
+    );
+    return AnalysisResult(
+      diagnostics: [...parseDiags, ...checked.diagnostics],
+      program: checked.program ?? program,
+      positionsSkewed: skewed,
+      sourceMap: map,
+    );
   } on ParseError catch (e) {
     return AnalysisResult(
       diagnostics: [
-        _mappedDiagnostic(path, e.message, e.pos, map, skewed),
+        _mappedDiagnostic(
+          path,
+          e.message,
+          e.pos,
+          map,
+          skewed,
+          errorPath: e.path,
+        ),
       ],
       positionsSkewed: skewed,
       sourceMap: map,

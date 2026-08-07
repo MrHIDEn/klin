@@ -185,7 +185,8 @@ fn main(): void {
         source: broken,
         requireMain: false,
       );
-      expect(brokenResult.program, isNull);
+      // Trailing `p.` is a parse error; recovery may still yield a partial AST.
+      expect(brokenResult.diagnostics, isNotEmpty);
 
       final (line, col) = _after(broken, 'let z: i32 = p.');
       final items = completeAt(

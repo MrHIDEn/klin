@@ -1,5 +1,7 @@
 import 'package:klin/analyze.dart';
 import 'package:klin/fmt.dart';
+import 'package:klin/lexer.dart';
+import 'package:klin/parser.dart';
 import 'package:klin/token.dart';
 import 'package:test/test.dart';
 
@@ -19,18 +21,62 @@ fn foo(): void {
       expect(result.program, isNotNull);
     });
 
-    test('parse error yields one diagnostic with line/col', () {
+    test('parse error yields diagnostic with line/col', () {
       const source = '''
 fn foo(): void {
 ''';
       final result = analyzeSource(path: 'bad.kl', source: source);
-      expect(result.diagnostics, hasLength(1));
-      final d = result.diagnostics.single;
+      expect(result.diagnostics, isNotEmpty);
+      final d = result.diagnostics.first;
       expect(d.path, 'bad.kl');
       expect(d.message, isNotEmpty);
       expect(d.pos.line, greaterThanOrEqualTo(1));
       expect(d.pos.col, greaterThanOrEqualTo(1));
-      expect(result.program, isNull);
+    });
+
+    test('parse recovery reports multiple decl errors (issue 092)', () {
+      const source = '''
+fn broken( {
+fn ok(): void {
+}
+fn also_broken( {
+''';
+      final result = analyzeSource(
+        path: 'multi_parse.kl',
+        source: source,
+        requireMain: false,
+      );
+      expect(result.diagnostics.length, greaterThanOrEqualTo(2));
+      expect(result.program, isNotNull);
+      expect(
+        result.program!.funcs.any((f) => f.name == 'ok'),
+        isTrue,
+        reason: 'recovery should keep the valid `ok` function',
+      );
+    });
+
+    test('parse recovery reports stmt error and keeps later stmts', () {
+      const source = '''
+fn main(): void {
+    let = 1
+    let y: i32 = 2
+}
+''';
+      final result = analyzeSource(path: 'stmt.kl', source: source);
+      expect(result.diagnostics, isNotEmpty);
+      expect(result.program, isNotNull);
+    });
+
+    test('CLI-style Parser remains fail-fast without collectErrors', () {
+      const source = '''
+fn broken( {
+fn ok(): void {
+}
+''';
+      expect(
+        () => Parser(Lexer(source).tokenize()).parse(),
+        throwsA(isA<ParseError>()),
+      );
     });
 
     test('check error keeps program for navigation', () {
