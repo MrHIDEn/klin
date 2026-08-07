@@ -1,5 +1,6 @@
 import 'package:klin/analyze.dart';
 import 'package:klin/complete.dart';
+import 'package:klin/lsp/documents.dart';
 import 'package:klin/lsp/server.dart';
 import 'package:klin/token.dart';
 import 'package:lsp_server/lsp_server.dart';
@@ -100,6 +101,45 @@ void main() {
       expect(
         toLspCompletionKind(KlinCompletionKind.function),
         CompletionItemKind.Function,
+      );
+    });
+  });
+
+  group('DocumentStore', () {
+    test('lastGood ignores analysis with parse errors (issue 092)', () {
+      final docs = DocumentStore();
+      const uri = 'file:///tmp/t.kl';
+      const cleanSrc = '''
+struct Point { x: i32 y: i32 }
+fn main(): void {
+}
+''';
+      final good = analyzeSource(
+        path: 't.kl',
+        source: cleanSrc,
+        requireMain: false,
+      );
+      expect(good.hasParseErrors, isFalse);
+      docs.setAnalysis(uri, good);
+      expect(docs.lastGood(uri)?.program, isNotNull);
+
+      final broken = analyzeSource(
+        path: 't.kl',
+        source: '''
+struct Point { x: i32 y: i32 }
+fn main(): void {
+    let z: i32 = p.
+}
+''',
+        requireMain: false,
+      );
+      expect(broken.hasParseErrors, isTrue);
+      expect(broken.program, isNotNull);
+      docs.setAnalysis(uri, broken);
+      expect(
+        identical(docs.lastGood(uri)?.program, good.program),
+        isTrue,
+        reason: 'partial parse must not replace lastGood',
       );
     });
   });

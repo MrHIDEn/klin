@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:klin/analyze.dart';
 import 'package:klin/fmt.dart';
+import 'package:klin/lexer.dart';
+import 'package:klin/parser.dart';
 import 'package:klin/token.dart';
 import 'package:test/test.dart';
 
@@ -19,18 +23,165 @@ fn foo(): void {
       expect(result.program, isNotNull);
     });
 
-    test('parse error yields one diagnostic with line/col', () {
+    test('parse error yields diagnostic with line/col', () {
       const source = '''
 fn foo(): void {
 ''';
       final result = analyzeSource(path: 'bad.kl', source: source);
-      expect(result.diagnostics, hasLength(1));
-      final d = result.diagnostics.single;
+      expect(result.diagnostics, isNotEmpty);
+      final d = result.diagnostics.first;
       expect(d.path, 'bad.kl');
       expect(d.message, isNotEmpty);
       expect(d.pos.line, greaterThanOrEqualTo(1));
       expect(d.pos.col, greaterThanOrEqualTo(1));
-      expect(result.program, isNull);
+    });
+
+    test('parse recovery reports multiple decl errors (issue 092)', () {
+      const source = '''
+fn broken( {
+fn ok(): void {
+}
+fn also_broken( {
+''';
+      final result = analyzeSource(
+        path: 'multi_parse.kl',
+        source: source,
+        requireMain: false,
+      );
+      expect(result.diagnostics.length, greaterThanOrEqualTo(2));
+      expect(result.program, isNotNull);
+      expect(result.hasParseErrors, isTrue);
+      expect(
+        result.program!.funcs.any((f) => f.name == 'ok'),
+        isTrue,
+        reason: 'recovery should keep the valid `ok` function',
+      );
+    });
+
+    test('LSP overlay path still uses parse recovery (issue 092)', () {
+      final dir = Directory.systemTemp.createTempSync('klin_092_');
+      addTearDown(() {
+        if (dir.existsSync()) dir.deleteSync(recursive: true);
+      });
+      const source = '''
+fn broken( {
+fn ok(): void {
+}
+fn also_broken( {
+''';
+      final file = File('${dir.path}/multi_parse.kl')
+        ..writeAsStringSync(source);
+      final abs = file.absolute.path;
+      final result = analyzeSource(
+        path: abs,
+        source: source,
+        requireMain: false,
+        sourceOverlay: {abs: source},
+      );
+      expect(result.diagnostics.length, greaterThanOrEqualTo(2));
+      expect(result.program, isNotNull);
+      expect(
+        result.program!.funcs.any((f) => f.name == 'ok'),
+        isTrue,
+      );
+    });
+
+    test('LSP overlay keeps project-level ParseError without path', () {
+      final dir = Directory.systemTemp.createTempSync('klin_092_alias_');
+      addTearDown(() {
+        if (dir.existsSync()) dir.deleteSync(recursive: true);
+      });
+      final b = File('${dir.path}/b.kl')
+        ..writeAsStringSync('module b\nfn fb(): void {}\n');
+      final c = File('${dir.path}/c.kl')
+        ..writeAsStringSync('module c\nfn fc(): void {}\n');
+      final a = File('${dir.path}/a.kl')
+        ..writeAsStringSync('''
+module a
+import "b" x
+import "c" x
+fn main(): void {
+}
+''');
+      final absA = a.absolute.path;
+      final result = analyzeSource(
+        path: absA,
+        source: a.readAsStringSync(),
+        requireMain: false,
+        sourceOverlay: {
+          absA: a.readAsStringSync(),
+          b.absolute.path: b.readAsStringSync(),
+          c.absolute.path: c.readAsStringSync(),
+        },
+      );
+      expect(result.diagnostics, isNotEmpty);
+      expect(
+        result.diagnostics.any((d) => d.message.contains('already bound')),
+        isTrue,
+        reason: 'must not swallow pathless project ParseError via fall-through',
+      );
+    });
+
+    test('LSP overlay does not fall through on same-basename foreign parse', () {
+      final root = Directory.systemTemp.createTempSync('klin_092_base_');
+      addTearDown(() {
+        if (root.existsSync()) root.deleteSync(recursive: true);
+      });
+      final app = Directory('${root.path}/app')..createSync();
+      final lib = Directory('${root.path}/lib')..createSync();
+      final foreign = File('${lib.path}/main.kl')
+        ..writeAsStringSync('fn broken( {\n');
+      final open = File('${app.path}/main.kl')
+        ..writeAsStringSync('''
+import "../lib/main" util
+fn main(): void {
+}
+''');
+      // Call with relative basename so a naive sameDiagnosticPath(path)
+      // would match the foreign file.
+      final result = analyzeSource(
+        path: open.path,
+        source: open.readAsStringSync(),
+        requireMain: false,
+        sourceOverlay: {
+          open.absolute.path: open.readAsStringSync(),
+          foreign.absolute.path: foreign.readAsStringSync(),
+        },
+      );
+      expect(result.diagnostics, isNotEmpty);
+      expect(
+        result.diagnostics.any(
+          (d) =>
+              d.message.contains('expected') ||
+              sameDiagnosticPath(d.path, foreign.absolute.path),
+        ),
+        isTrue,
+        reason: 'foreign same-basename syntax error must not be dropped',
+      );
+    });
+
+    test('parse recovery reports stmt error and keeps later stmts', () {
+      const source = '''
+fn main(): void {
+    let = 1
+    let y: i32 = 2
+}
+''';
+      final result = analyzeSource(path: 'stmt.kl', source: source);
+      expect(result.diagnostics, isNotEmpty);
+      expect(result.program, isNotNull);
+    });
+
+    test('CLI-style Parser remains fail-fast without collectErrors', () {
+      const source = '''
+fn broken( {
+fn ok(): void {
+}
+''';
+      expect(
+        () => Parser(Lexer(source).tokenize()).parse(),
+        throwsA(isA<ParseError>()),
+      );
     });
 
     test('check error keeps program for navigation', () {

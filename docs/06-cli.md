@@ -41,9 +41,10 @@ Starts an LSP server on stdin/stdout (no args). Editors wire it as:
 Dev without install: `dart run bin/klin.dart lsp`.
 
 MVP: full-document sync, publish diagnostics (check errors collected per
-function), formatting, hover / definition / completion / rename. Cross-file
-goto uses `loadProject` with an overlay of open LSP buffers. After `$fn` /
-`$device` expand (including SVD fluent rewrite),
+function; parse recovers at decl/stmt boundaries —
+[092](../issues/092-lsp-parse-recovery.md)), formatting, hover / definition /
+completion / rename. Cross-file goto uses `loadProject` with an overlay of open
+LSP buffers. After `$fn` / `$device` expand (including SVD fluent rewrite),
 [`SourceMap`](../lib/source_map.dart) remaps positions
 ([091](../issues/091-lsp-svd-sourcemaps.md)). Library files do not require
 `main`. Details: [086](../issues/086-lsp.md).

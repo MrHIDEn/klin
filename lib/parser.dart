@@ -19,6 +19,19 @@ final class ParseError implements Exception {
   }
 }
 
+/// Multiple [ParseError]s when [Parser] runs with `collectErrors: true` (LSP).
+final class ParseErrors implements Exception {
+  final List<ParseError> errors;
+
+  /// Partial program when recovery produced usable decls (may be empty).
+  final Program? program;
+
+  const ParseErrors(this.errors, {this.program});
+
+  @override
+  String toString() => errors.map((e) => e.toString()).join('\n');
+}
+
 /// Grammar 004:
 ///   program := func+ eof
 ///   func    := "fn" ident "(" params? ")" (":" ident)? block
@@ -52,6 +65,10 @@ final class Parser {
   int _i = 0;
   final Set<String> _importedModules = {};
 
+  /// Collect parse errors and recover (Language Server); CLI keeps fail-fast.
+  final bool collectErrors;
+  final List<ParseError> _errors = [];
+
   /// While parsing a `match` subject or pattern, a bare `name {` is the match
   /// body brace, not a struct literal. Reset inside `(`/`[`/arg lists, where a
   /// `{` after a name is unambiguously a struct literal.
@@ -61,11 +78,20 @@ final class Parser {
   /// While > 0, a newline before `(` does not break a call (Go-like).
   int _exprParenDepth = 0;
 
-  Parser(this._tokens);
+  Parser(this._tokens, {this.collectErrors = false});
 
   Program parse() {
     final unit = parseUnit();
-    return Program(unit.structs, unit.funcs, unit.pos, enums: unit.enums);
+    final program = Program(
+      unit.structs,
+      unit.funcs,
+      unit.pos,
+      enums: unit.enums,
+    );
+    if (_errors.isNotEmpty) {
+      throw ParseErrors(_errors, program: program);
+    }
+    return program;
   }
 
   /// Parse a single expression (used for `${…}` interpolation slots).
@@ -95,39 +121,57 @@ final class Parser {
       imports.add(_importSpec());
     }
     while (!_check(TokenKind.eof)) {
-      final attrs = _attrs();
-      var isPub = false;
-      if (_check(TokenKind.pub)) {
-        _advance();
-        isPub = true;
-      }
-      if (_check(TokenKind.struct)) {
-        final decl = _struct(isPub, attrs);
-        structs.add(decl);
-        decls.add(decl);
-      } else if (_check(TokenKind.enum_)) {
-        final decl = _enum(isPub, attrs);
-        enums.add(decl);
-        decls.add(decl);
-      } else if (_check(TokenKind.async_)) {
-        _advance();
-        if (!_check(TokenKind.fn)) {
-          throw ParseError('expected `fn` after `async`', _current.pos);
+      try {
+        final attrs = _attrs();
+        var isPub = false;
+        if (_check(TokenKind.pub)) {
+          _advance();
+          isPub = true;
         }
-        final decl = _func(isPub, attrs, isAsync: true);
-        funcs.add(decl);
-        decls.add(decl);
-      } else if (_check(TokenKind.fn)) {
-        final decl = _func(isPub, attrs);
-        funcs.add(decl);
-        decls.add(decl);
-      } else {
-        throw ParseError(
-            'expected struct, enum or function declaration', _current.pos);
+        if (_check(TokenKind.struct)) {
+          final decl = _struct(isPub, attrs);
+          structs.add(decl);
+          decls.add(decl);
+        } else if (_check(TokenKind.enum_)) {
+          final decl = _enum(isPub, attrs);
+          enums.add(decl);
+          decls.add(decl);
+        } else if (_check(TokenKind.async_)) {
+          _advance();
+          if (!_check(TokenKind.fn)) {
+            throw ParseError('expected `fn` after `async`', _current.pos);
+          }
+          final decl = _func(isPub, attrs, isAsync: true);
+          funcs.add(decl);
+          decls.add(decl);
+        } else if (_check(TokenKind.fn)) {
+          final decl = _func(isPub, attrs);
+          funcs.add(decl);
+          decls.add(decl);
+        } else {
+          throw ParseError(
+              'expected struct, enum or function declaration', _current.pos);
+        }
+      } on ParseError catch (e) {
+        if (!collectErrors) rethrow;
+        _errors.add(e);
+        if (!_check(TokenKind.eof)) _advance();
+        _synchronizeDecl();
       }
     }
     if (funcs.isEmpty && structs.isEmpty && enums.isEmpty) {
-      throw ParseError('expected declaration', _current.pos);
+      if (_errors.isEmpty) {
+        throw ParseError('expected declaration', _current.pos);
+      }
+      return ModuleUnit(
+        declaredName: declaredName,
+        imports: imports,
+        structs: structs,
+        enums: enums,
+        funcs: funcs,
+        decls: decls,
+        pos: _current.pos,
+      );
     }
     _expect(TokenKind.eof, 'expected end of file');
     final pos = structs.isNotEmpty
@@ -146,6 +190,21 @@ final class Parser {
       decls: decls,
       pos: pos,
     );
+  }
+
+  /// Skip junk until the next top-level declaration keyword (or eof).
+  void _synchronizeDecl() {
+    while (!_check(TokenKind.eof)) {
+      if (_check(TokenKind.fn) ||
+          _check(TokenKind.struct) ||
+          _check(TokenKind.enum_) ||
+          _check(TokenKind.async_) ||
+          _check(TokenKind.pub) ||
+          _check(TokenKind.atSign)) {
+        return;
+      }
+      _advance();
+    }
   }
 
   /// `import <ident|"path"> [alias]` (issue 048).
@@ -373,10 +432,47 @@ final class Parser {
     final open = _expect(TokenKind.lBrace, 'oczekiwano `{`');
     final stmts = <Stmt>[];
     while (!_check(TokenKind.rBrace) && !_check(TokenKind.eof)) {
-      stmts.add(_stmt());
+      try {
+        stmts.add(_stmt());
+      } on ParseError catch (e) {
+        if (!collectErrors) rethrow;
+        _errors.add(e);
+        if (!_check(TokenKind.eof) && !_check(TokenKind.rBrace)) {
+          _advance();
+        }
+        _synchronizeStmt();
+      }
     }
     _expect(TokenKind.rBrace, 'oczekiwano `}`');
     return Block(stmts, open.pos);
+  }
+
+  /// Skip junk until the next statement start or closing `}`.
+  void _synchronizeStmt() {
+    while (!_check(TokenKind.eof) && !_check(TokenKind.rBrace)) {
+      if (_check(TokenKind.let) ||
+          _check(TokenKind.if_) ||
+          _check(TokenKind.while_) ||
+          _check(TokenKind.for_) ||
+          _check(TokenKind.match_) ||
+          _check(TokenKind.return_) ||
+          _check(TokenKind.defer_) ||
+          _check(TokenKind.asm_) ||
+          _check(TokenKind.break_) ||
+          _check(TokenKind.continue_) ||
+          _check(TokenKind.lBrace)) {
+        return;
+      }
+      if (_check(TokenKind.ident) &&
+          _i + 1 < _tokens.length &&
+          (_tokens[_i + 1].kind == TokenKind.colonEqual ||
+              _tokens[_i + 1].kind == TokenKind.lParen ||
+              _tokens[_i + 1].kind == TokenKind.equal ||
+              _tokens[_i + 1].kind == TokenKind.dot)) {
+        return;
+      }
+      _advance();
+    }
   }
 
   Stmt _stmt() {
